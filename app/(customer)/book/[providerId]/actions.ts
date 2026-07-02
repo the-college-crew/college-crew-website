@@ -1,0 +1,94 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { z } from "zod";
+
+import { getSession } from "@/lib/auth/session";
+import { PLATFORM_FEE_RATE } from "@/lib/site";
+import { createClient } from "@/lib/supabase/server";
+
+export type BookingFormState = { error?: string };
+
+const bookingSchema = z.object({
+  providerId: z.string().uuid(),
+  providerServiceId: z.string().uuid("Pick a service."),
+  scheduledAt: z
+    .string()
+    .min(1, "Pick a date and time.")
+    .refine((value) => !Number.isNaN(Date.parse(value)), "Pick a valid date.")
+    .refine(
+      (value) => new Date(value).getTime() > Date.now(),
+      "Pick a time in the future.",
+    ),
+  address: z.string().trim().min(5, "Enter the service address."),
+  details: z.string().trim().max(2000).optional().default(""),
+});
+
+/**
+ * Creates a booking *request* — no charge happens here (SPEC §3:
+ * charge-after-acceptance). Price is snapshotted server-side from the
+ * provider's published pricing; the client never sets money fields.
+ */
+export async function createBookingRequest(
+  _prev: BookingFormState,
+  formData: FormData,
+): Promise<BookingFormState> {
+  const session = await getSession();
+  if (!session) {
+    return { error: "Log in to request a booking." };
+  }
+  if (session.profile.role !== "customer") {
+    return { error: "Only customer accounts can request bookings." };
+  }
+  // Pilot decision: verified email before booking.
+  if (!session.user.email_confirmed_at) {
+    return {
+      error:
+        "Confirm your email first — check your inbox for the confirmation link.",
+    };
+  }
+
+  const parsed = bookingSchema.safeParse({
+    providerId: formData.get("providerId"),
+    providerServiceId: formData.get("providerServiceId"),
+    scheduledAt: formData.get("scheduledAt"),
+    address: formData.get("address"),
+    details: formData.get("details"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const supabase = await createClient();
+
+  // Visible via RLS only while the provider is approved.
+  const { data: offered } = await supabase
+    .from("provider_services")
+    .select("id, provider_id, service_id, price_cents, price_type")
+    .eq("id", parsed.data.providerServiceId)
+    .maybeSingle();
+
+  if (!offered || offered.provider_id !== parsed.data.providerId) {
+    return { error: "That service isn't available from this provider." };
+  }
+
+  // Quote-priced services start at $0 and get priced in chat — the charge
+  // flow for quotes is an open question (SPEC §10); pilot books them at $0.
+  const priceCents = offered.price_type === "quote" ? 0 : offered.price_cents;
+
+  const { error } = await supabase.from("bookings").insert({
+    customer_id: session.user.id,
+    provider_id: offered.provider_id,
+    service_id: offered.service_id,
+    scheduled_at: new Date(parsed.data.scheduledAt).toISOString(),
+    address: parsed.data.address,
+    details: parsed.data.details,
+    price_cents: priceCents,
+    platform_fee_cents: Math.round(priceCents * PLATFORM_FEE_RATE),
+  });
+  if (error) {
+    return { error: "Could not send the request — try again." };
+  }
+
+  redirect("/dashboard?requested=1");
+}
