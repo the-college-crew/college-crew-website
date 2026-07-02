@@ -1,49 +1,96 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@import "tailwindcss";
+
+/*
+ * College Crew design tokens.
+ *
+ * Identity: varsity collegiate — crew blue + quad green (from the wireframe
+ * palette), gold for trust badges, condensed athletic display type. The
+ * signature element is the two-tone "pennant stripe" (see @utility pennant).
+ */
+@theme {
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow-condensed), var(--font-public-sans),
+    ui-sans-serif, sans-serif;
+
+  /* Crew blue — primary */
+  --color-crew-50: #f1f4fa;
+  --color-crew-100: #e5eaf5;
+  --color-crew-200: #c9d4ea;
+  --color-crew-300: #a5b8db;
+  --color-crew-400: #7a93c8;
+  --color-crew-500: #4c6fb5;
+  --color-crew-600: #3d5c9c;
+  --color-crew-700: #334c82;
+  --color-crew-800: #2c4069;
+  --color-crew-900: #263551;
+
+  /* Quad green — money, success, verified work */
+  --color-quad-50: #eef7f2;
+  --color-quad-100: #e4f1e9;
+  --color-quad-200: #c3e0d0;
+  --color-quad-300: #96c9ac;
+  --color-quad-400: #64ab84;
+  --color-quad-500: #3e8e63;
+  --color-quad-600: #327551;
+  --color-quad-700: #285f41;
+  --color-quad-800: #214c35;
+  --color-quad-900: #1c3e2c;
+
+  /* Varsity gold — badges and callouts only; spend it sparingly */
+  --color-gold-100: #fff5dc;
+  --color-gold-300: #f0d391;
+  --color-gold-400: #e3b95e;
+  --color-gold-700: #92691c;
+  --color-gold-800: #785611;
+
+  /* Neutrals */
+  --color-ink: #23252b;
+  --color-ink-soft: #4a4d55;
+  --color-mist: #878c95;
+  --color-line: #d9dce2;
+  --color-court: #f4f5f7;
+  --color-paper: #ffffff;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--color-court);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-crew-600);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-html {
-  height: 100%;
-}
+/*
+ * Signature: the pennant stripe — a two-tone crew-blue/quad-green top edge
+ * on the site header and key cards. Pair with overflow-hidden on rounded
+ * containers.
+ */
+@utility pennant {
+  position: relative;
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(
+      90deg,
+      var(--color-crew-600) 0 62%,
+      var(--color-quad-500) 62% 100%
+    );
   }
 }
