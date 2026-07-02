@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# College Crew
 
-## Getting Started
+A curated, hyperlocal marketplace connecting neighbors with verified student
+providers (18+) for everyday home services. 7-week pilot, one neighborhood.
 
-First, run the development server:
+- **Spec:** `docs/SPEC.md` (authoritative) · **Wireframe:** `docs/wireframe.html`
+- **Working agreements:** `CLAUDE.md`
+
+## Stack
+
+Next.js 16 (App Router, TypeScript) · React 19 · Tailwind CSS 4 · Supabase
+(Postgres, Auth, Storage, Realtime, Edge Functions) · Stripe Connect Express
+(test mode, currently stubbed) · Vercel
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in real values (shared out-of-band)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Without `.env.local` the app still runs: pages render with empty data and a
+banner explains what's missing. Auth, data, and chat activate once the
+Supabase keys are in place.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Database
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The schema (tables, RLS, storage buckets, seed services) lives in
+`supabase/migrations/`. One owner (Ari) runs schema changes:
 
-## Learn More
+```bash
+npx supabase link --project-ref <ref>   # once
+npx supabase db push                    # apply migrations
+npx supabase functions deploy moderate-message
+```
 
-To learn more about Next.js, take a look at the following resources:
+After pushing, regenerate types:
+`npx supabase gen types typescript --linked > lib/db/types.ts`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Command             | What it does              |
+| ------------------- | ------------------------- |
+| `npm run dev`       | local dev server          |
+| `npm run build`     | production build          |
+| `npm run start`     | serve the build           |
+| `npm run lint`      | ESLint                    |
+| `npm run typecheck` | TypeScript, no emit       |
 
-## Deploy on Vercel
+## Layout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/
+  (auth)/       shared: login, signup, email-confirmation callback
+  (customer)/   Zach: landing, browse, profiles, booking, confirm & pay,
+                dashboard, about, blog
+  (provider)/   Ari: onboarding wizard, dashboard, jobs & pricing, settings
+  (admin)/      Ari: provider approvals, service curation
+  (shared)/     messaging thread (both roles)
+  actions/      cross-group Server Actions
+  api/webhooks/stripe   payment webhook (inert until Stripe exists)
+components/     shared UI (+ design tokens in app/globals.css)
+lib/
+  supabase/     the ONLY three clients: client / server / admin (+ proxy helper)
+  auth/         session + role guards
+  db/           generated-style types + shared queries
+  stripe/       payment seams (stubbed until the test account exists)
+supabase/
+  migrations/   schema + RLS + seed
+  functions/    moderate-message Edge Function (chat moderation)
+proxy.ts        session refresh + optimistic route protection (Next 16 middleware)
+```
