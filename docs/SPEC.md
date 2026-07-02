@@ -1,4 +1,4 @@
-# HomeGrown — Product Spec (Pilot v1)
+# CollegeCrew — Product Spec (Pilot v1)
 
 Read this before planning any feature. It's the authoritative text reference;
 `wireframe.html` is the visual companion. Where they differ, this doc wins
@@ -8,7 +8,7 @@ Read this before planning any feature. It's the authoritative text reference;
 
 ## 1. Product summary
 
-HomeGrown is a curated, hyperlocal marketplace connecting neighbors with
+CollegeCrew is a curated, hyperlocal marketplace connecting neighbors with
 verified student providers (18+) for everyday home and household services.
 Providers are **either student-run businesses or individual students**,
 depending on the service (e.g. window washing → a business; babysitting → an

@@ -8,6 +8,8 @@ proof of concept.
 **Full product spec:** `docs/SPEC.md` — read it before planning any feature.
 **Visual reference:** `docs/wireframe.html` — open it to see screen layout.
 
+Github repo is PUBLIC. make sure anything committed to github is not private or confidential info.
+
 ---
 
 ## Workflow: plan and confirm before building
