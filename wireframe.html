@@ -1,0 +1,669 @@
+<!doctype html>
+<!--
+  HomeGrown — Wireframe Skeleton v1
+  Low-fidelity. Structure & flow only (no visual design yet). Mobile-first.
+
+  INTERACTIVE BITS (click to try):
+  - Sidebar switches screens.
+  - Customer dashboard: Upcoming / Past tabs.
+  - Provider onboarding: a real step-by-step wizard (Next / Back) — each step is its own page.
+  - Provider dashboard: month calendar — booking days are highlighted; click one to see the job.
+  - Jobs & pricing: Upcoming jobs / Services & pricing tabs.
+
+  HOW TO EDIT:
+  - Each screen is a <section class="screen" id="...">.
+  - Amber <div class="note"> = my reasoning + open questions (star).
+  - Reusable: .bar .box .btn(.primary/.ghost/.sm) .field .card .chip .badge .pill .tabwrap/.tabpanel.
+  - Add a screen: copy a <section>, give it an id, add a matching sidebar <button data-s="id">.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HomeGrown — Wireframe Skeleton v1</title>
+<style>
+  :root{
+    --bg:#E9EAEE; --ink:#2B2D33; --muted:#878C95; --line:#C4C8CF;
+    --fill:#F1F2F4; --bar:#D7DADF; --paper:#FFFFFF;
+    --accent:#4C6FB5; --accent-soft:#E5EAF5;
+    --green:#3E8E63; --green-soft:#E4F1E9;
+    --note:#FFF5DC; --note-line:#E3B95E; --note-ink:#785611;
+    --mono:ui-monospace,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45}
+  header.top{padding:14px 20px;background:#fff;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px}
+  header.top h1{font-size:15px;margin:0;letter-spacing:.2px}
+  header.top h1 b{color:var(--accent)}
+  header.top .sub{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .legend{margin-left:auto;display:flex;gap:14px;font-family:var(--mono);font-size:10.5px;color:var(--muted);flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .swatch{width:12px;height:12px;border-radius:2px;display:inline-block}
+  .wrap{display:flex;align-items:flex-start;min-height:calc(100vh - 52px)}
+  nav.side{width:236px;flex:none;background:#fff;border-right:1px solid var(--line);padding:14px 10px;position:sticky;top:0}
+  nav.side .grp{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:14px 10px 6px}
+  nav.side .grp:first-child{margin-top:2px}
+  nav.side button{display:block;width:100%;text-align:left;border:0;background:none;padding:7px 10px;border-radius:6px;font:inherit;color:var(--ink);cursor:pointer}
+  nav.side button:hover{background:var(--fill)}
+  nav.side button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  nav.side button .n{font-family:var(--mono);font-size:10px;color:var(--muted);margin-right:8px}
+  nav.side button.active .n{color:var(--accent)}
+  main.stage{flex:1;padding:26px;display:flex;justify-content:center;gap:24px;flex-wrap:wrap}
+  .phone{width:380px;flex:none;background:var(--paper);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 8px 30px rgba(40,45,60,.08);align-self:flex-start;position:relative}
+  .phone .status{height:26px;background:#fff;border-bottom:1px solid var(--fill);display:flex;align-items:center;justify-content:center}
+  .phone .status::before{content:"";width:70px;height:5px;border-radius:3px;background:var(--bar)}
+  .app{padding:0 0 16px}
+  .appbar{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--fill);position:sticky;top:0;background:#fff;z-index:2}
+  .appbar .ico{width:22px;height:22px;border:1px solid var(--line);border-radius:5px;flex:none;display:grid;place-items:center;color:var(--muted);font-size:12px}
+  .appbar .title{font-weight:600}
+  .appbar .right{margin-left:auto;color:var(--accent);font-size:13px}
+  .scr{padding:16px}
+  .bar{height:9px;background:var(--bar);border-radius:4px;margin:7px 0}
+  .bar.w90{width:90%}.bar.w75{width:75%}.bar.w60{width:60%}.bar.w45{width:45%}.bar.w30{width:30%}
+  .box{background:var(--fill);border:1px dashed var(--line);border-radius:8px;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);font-size:11px;text-align:center;padding:8px}
+  .h{font-weight:700;font-size:18px;margin:2px 0 4px}.h.big{font-size:24px}
+  .lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:16px 0 7px}
+  .muted{color:var(--muted)}
+  .btn{display:block;width:100%;text-align:center;padding:11px;border:1px solid var(--accent);border-radius:9px;color:var(--accent);font-weight:600;margin:9px 0;background:#fff;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.sm{display:inline-block;width:auto;padding:6px 14px;font-size:12px;margin:0}
+  .btn.ghost{border-color:var(--line);color:var(--muted);font-weight:500}
+  .field{border:1px solid var(--line);border-radius:8px;padding:11px 12px;color:var(--muted);font-size:13px;margin:8px 0;background:#fff}
+  .row{display:flex;gap:8px}.row>*{flex:1}
+  .chip{display:inline-block;border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:12px;color:var(--ink);margin:0 6px 8px 0;white-space:nowrap;background:#fff;cursor:pointer}
+  .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .chips{display:flex;flex-wrap:wrap;overflow-x:auto}
+  .card{border:1px solid var(--line);border-radius:11px;padding:12px;margin:10px 0;background:#fff}
+  .pcard{display:flex;gap:11px;align-items:center}
+  .avatar{width:48px;height:48px;border-radius:50%;background:var(--fill);border:1px dashed var(--line);flex:none}
+  .avatar.lg{width:74px;height:74px}
+  .badge{display:inline-flex;align-items:center;gap:4px;background:var(--green-soft);color:var(--green);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600}
+  .badge.amber{background:#FBEFD6;color:#9A6B12}
+  .star{color:#C99A2E;font-size:12px}
+  .pill{display:inline-block;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600}
+  .pill.req{background:#FBEFD6;color:#9A6B12}.pill.ok{background:var(--green-soft);color:var(--green)}.pill.done{background:var(--accent-soft);color:var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+  .svc{aspect-ratio:1;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:11px;text-align:center;color:var(--ink);padding:6px}
+  .svc .ic{width:26px;height:26px;border-radius:6px;background:var(--fill);border:1px dashed var(--line)}
+  .steps{display:flex;gap:6px;margin:0 0 16px}
+  .steps .st{flex:1;text-align:center;font-size:10.5px;font-family:var(--mono);color:var(--muted)}
+  .steps .st .d{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);margin:0 auto 5px;display:grid;place-items:center}
+  .steps .st.on .d{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .steps .st.on{color:var(--accent)}
+  .steps .st.done .d{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+  .tabs{display:flex;gap:18px;border-bottom:1px solid var(--fill);margin-bottom:6px}
+  .tabs .t{padding:8px 0;font-size:13px;color:var(--muted);cursor:pointer}
+  .tabs .t.on{color:var(--ink);font-weight:600;border-bottom:2px solid var(--accent)}
+  .tabpanel.hide,.wstep.hide,.hide{display:none}
+  .sum{display:flex;justify-content:space-between;padding:7px 0;font-size:13px}
+  .sum.tot{border-top:1px solid var(--fill);margin-top:4px;padding-top:10px;font-weight:700}
+  .banner{background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:11px 12px;display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .banner .t{font-weight:600;color:var(--accent);font-size:13px}
+  .cal{border:1px solid var(--line);border-radius:11px;padding:11px;background:#fff}
+  .cal .mhead{display:flex;justify-content:space-between;align-items:center;font-weight:600;margin-bottom:8px}
+  .cal .mhead span{color:var(--muted);cursor:pointer;font-size:16px}
+  .dow,.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .dow div{text-align:center;font-size:10px;color:var(--muted);font-family:var(--mono);padding:2px 0}
+  .day{aspect-ratio:1;display:grid;place-items:center;font-size:12px;border-radius:7px;color:var(--ink)}
+  .day.mut{color:#CDD0D6}
+  .day.has{background:var(--accent-soft);color:var(--accent);font-weight:700;cursor:pointer;position:relative}
+  .day.has::after{content:"";position:absolute;bottom:4px;width:4px;height:4px;border-radius:50%;background:var(--accent)}
+  .day.sel{outline:2px solid var(--accent)}
+  .caldetail{border:1px dashed var(--line);border-radius:9px;padding:11px;margin-top:10px;font-size:13px;background:var(--fill)}
+  .caldetail .muted{font-size:12px}
+  .team{display:flex;gap:11px;align-items:center;margin:9px 0}
+  .team .avatar{width:42px;height:42px}
+  .note{width:300px;flex:none;align-self:flex-start;background:var(--note);border:1px solid var(--note-line);border-left-width:4px;border-radius:8px;padding:14px 15px;color:var(--note-ink);font-size:12.5px;line-height:1.5}
+  .note h4{margin:0 0 7px;font-family:var(--mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase}
+  .note p{margin:0 0 9px}
+  .note .q{display:block;margin-top:9px;padding-top:9px;border-top:1px dashed var(--note-line)}
+  .note b{color:#5c410c}
+  .board{flex:1;min-width:300px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .board h2{margin:0 0 4px;font-size:17px}
+  .lane{margin:18px 0}
+  .lane .ltag{font-family:var(--mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+  .node{border:1px solid var(--line);border-radius:9px;padding:9px 13px;font-size:12.5px;background:#fff}
+  .node.start{border-color:var(--accent);color:var(--accent);font-weight:600}
+  .node.gate{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+  .node.admin{border-style:dashed}
+  .node.side{color:var(--muted)}
+  .arrow{color:var(--muted);font-size:14px}
+  .screen{display:none}.screen.active{display:contents}
+  @media(max-width:900px){
+    nav.side{position:static;width:100%;border-right:0;border-bottom:1px solid var(--line)}
+    .wrap{flex-direction:column}.note{width:380px}
+  }
+</style>
+
+<header class="top">
+  <h1><b>HomeGrown</b> — Wireframe Skeleton <span class="sub">v1</span></h1>
+  <span class="sub">low-fidelity · structure & flow · click around</span>
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--bar)"></i>copy</span>
+    <span><i class="swatch" style="background:var(--fill);border:1px dashed var(--line)"></i>image / map</span>
+    <span><i class="swatch" style="background:var(--note);border:1px solid var(--note-line)"></i>notes · star = open question</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" id="nav">
+    <div class="grp">Overview</div>
+    <button data-s="map" class="active"><span class="n">00</span>Sitemap &amp; flow</button>
+    <div class="grp">Customer</div>
+    <button data-s="landing"><span class="n">01</span>Landing</button>
+    <button data-s="browse"><span class="n">02</span>Browse providers</button>
+    <button data-s="profile"><span class="n">03</span>Provider profile</button>
+    <button data-s="booking"><span class="n">04</span>Booking &amp; pay</button>
+    <button data-s="cust"><span class="n">05</span>Customer dashboard</button>
+    <button data-s="about"><span class="n">06</span>About us</button>
+    <button data-s="blog"><span class="n">07</span>Blog</button>
+    <div class="grp">Provider</div>
+    <button data-s="onboard"><span class="n">08</span>Onboarding (wizard)</button>
+    <button data-s="pdash"><span class="n">09</span>Provider dashboard</button>
+    <button data-s="jobs"><span class="n">10</span>Jobs &amp; pricing</button>
+    <button data-s="psettings"><span class="n">11</span>Profile &amp; settings</button>
+    <div class="grp">Admin (founders)</div>
+    <button data-s="admin"><span class="n">12</span>Admin dashboard</button>
+    <div class="grp">Shared</div>
+    <button data-s="auth"><span class="n">13</span>Sign up / Log in</button>
+  </nav>
+
+  <main class="stage" id="stage">
+
+    <!-- 00 SITEMAP -->
+    <section class="screen active" id="map">
+      <div class="board">
+        <h2>How the screens connect</h2>
+        <p class="muted" style="margin:0">Three audiences, one app. The provider flow now defers Stripe until <b style="color:var(--green)">after verification</b>.</p>
+        <div class="lane"><div class="ltag">Customer journey</div>
+          <div class="flow">
+            <div class="node start">Landing</div><span class="arrow">&rarr;</span>
+            <div class="node">Browse</div><span class="arrow">&rarr;</span>
+            <div class="node">Provider profile</div><span class="arrow">&rarr;</span>
+            <div class="node">Booking</div><span class="arrow">&rarr;</span>
+            <div class="node">Pay (Stripe)</div><span class="arrow">&rarr;</span>
+            <div class="node">My bookings</div>
+            <span class="arrow">&middot;</span><div class="node side">About</div><span class="arrow">&middot;</span><div class="node side">Blog</div>
+          </div>
+        </div>
+        <div class="lane"><div class="ltag">Provider journey</div>
+          <div class="flow">
+            <div class="node start">Sign up (.edu)</div><span class="arrow">&rarr;</span>
+            <div class="node">Verify (ID upload)</div><span class="arrow">&rarr;</span>
+            <div class="node">Set services + pricing</div><span class="arrow">&rarr;</span>
+            <div class="node">Submit</div><span class="arrow">&rarr;</span>
+            <div class="node gate">&check; Approved</div><span class="arrow">&rarr;</span>
+            <div class="node">Connect Stripe</div><span class="arrow">&rarr;</span>
+            <div class="node">Dashboard &middot; Calendar &middot; Jobs</div>
+          </div>
+        </div>
+        <div class="lane"><div class="ltag">Admin · founders only</div>
+          <div class="flow">
+            <div class="node admin">Approve providers</div><span class="arrow">&middot;</span>
+            <div class="node admin">Verification queue</div><span class="arrow">&middot;</span>
+            <div class="node admin">Curate services</div><span class="arrow">&middot;</span>
+            <div class="node admin">Oversee bookings</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h4>What changed in v1</h4>
+        <p>Provider side grew into a real product: a step-by-step <b>onboarding wizard</b>, a <b>calendar</b> on the dashboard, and dedicated <b>Jobs &amp; pricing</b> and <b>Profile &amp; settings</b> pages.</p>
+        <p>Customer side gained <b>About</b> and <b>Blog</b>, and completed jobs now live under <b>Past</b>.</p>
+        <span class="q">star Still open from v0: charge timing (upfront vs after accept), and fixed prices vs "request a quote" on the public profile.</span>
+      </div>
+    </section>
+
+    <!-- 01 LANDING -->
+    <section class="screen" id="landing">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&#9776;</div><div class="title">HomeGrown</div><div class="right">Log in</div></div>
+        <div class="scr">
+          <div class="h big">Hire a verified student for your home.</div>
+          <div class="bar w90"></div><div class="bar w75"></div>
+          <a class="btn primary">Browse services near you</a>
+          <a class="btn">I'm a student — start earning</a>
+          <div class="badge" style="margin-top:6px">&check; Every provider is a verified student, 18+</div>
+          <div class="lbl">How it works</div>
+          <div class="grid3">
+            <div class="svc"><div class="ic"></div>1 · Pick a service</div>
+            <div class="svc"><div class="ic"></div>2 · Book a student</div>
+            <div class="svc"><div class="ic"></div>3 · Pay securely</div>
+          </div>
+          <div class="lbl">Services in your area</div>
+          <div class="grid3">
+            <div class="svc"><div class="ic"></div>Window wash</div>
+            <div class="svc"><div class="ic"></div>Power wash</div>
+            <div class="svc"><div class="ic"></div>Garage clean</div>
+            <div class="svc"><div class="ic"></div>Junk removal</div>
+            <div class="svc"><div class="ic"></div>Moving help</div>
+            <div class="svc"><div class="ic"></div>House clean</div>
+            <div class="svc"><div class="ic"></div>Babysitting</div>
+            <div class="svc muted"><div class="ic"></div>+ more</div>
+          </div>
+          <div class="lbl">Learn more</div>
+          <div class="row"><a class="btn ghost sm" style="flex:1">Our mission &rarr;</a><a class="btn ghost sm" style="flex:1">Blog &rarr;</a></div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Landing · the pitch</h4>
+        <p>Pushes to Browse, with links out to <b>About</b> and <b>Blog</b> for the brand/mission layer (Gianna). Two doors: customers and students.</p>
+        <span class="q">star Lead with mission story or browse-utility? Utility first here, mission as the trust line + links.</span>
+      </div>
+    </section>
+
+    <!-- 02 BROWSE -->
+    <section class="screen" id="browse">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">Browse</div><div class="right">&#128205; Maple St &#9662;</div></div>
+        <div class="scr">
+          <div class="field">&#128269; Search a service…</div>
+          <div class="chips">
+            <span class="chip on">All</span><span class="chip">Window</span><span class="chip">Power wash</span>
+            <span class="chip">Garage</span><span class="chip">Junk</span><span class="chip">Moving</span><span class="chip">Cleaning</span><span class="chip">Babysitting</span>
+          </div>
+          <div class="muted" style="font-size:12px">8 student providers near you</div>
+          <div class="card pcard"><div class="avatar"></div><div style="flex:1">
+            <div style="font-weight:600">Jordan's Window Co. <span class="badge">&check;</span></div>
+            <div class="muted" style="font-size:12px">Window &amp; power washing · from $80</div>
+            <div style="font-size:12px"><span class="star">&starf;&starf;&starf;&starf;&starf;</span> 4.9 (23)</div></div><a class="btn sm">View</a></div>
+          <div class="card pcard"><div class="avatar"></div><div style="flex:1">
+            <div style="font-weight:600">Mia R. <span class="badge amber">ID pending</span></div>
+            <div class="muted" style="font-size:12px">Babysitting · $18/hr</div>
+            <div style="font-size:12px"><span class="star">&starf;&starf;&starf;&starf;&star;</span> 4.6 (8)</div></div><a class="btn sm">View</a></div>
+          <div class="card pcard"><div class="avatar"></div><div style="flex:1">
+            <div style="font-weight:600">Haul Bros <span class="badge">&check;</span></div>
+            <div class="muted" style="font-size:12px">Junk removal · moving · from $120</div>
+            <div style="font-size:12px"><span class="star">&starf;&starf;&starf;&starf;&starf;</span> 5.0 (11)</div></div><a class="btn sm">View</a></div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Browse · the demand side</h4>
+        <p>Scoped to the launch neighborhood. Cards show who / price / rating + the <b>verified badge</b>. Shows both a business and an individual.</p>
+        <span class="q">star Filter by service first, or show everyone? star Show unverified providers at all, or only after ID check?</span>
+      </div>
+    </section>
+
+    <!-- 03 PROFILE (public) -->
+    <section class="screen" id="profile">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">Provider</div><div class="right">&#8599; Share</div></div>
+        <div class="scr">
+          <div style="display:flex;gap:13px;align-items:center">
+            <div class="avatar lg"></div>
+            <div><div class="h" style="margin:0">Jordan's Window Co.</div>
+              <div class="badge">&check; Verified student</div> <div class="badge amber">&check; Background check</div>
+              <div style="font-size:13px;margin-top:5px"><span class="star">&starf;&starf;&starf;&starf;&starf;</span> 4.9 · 23 reviews</div></div>
+          </div>
+          <div class="lbl">About</div><div class="bar w90"></div><div class="bar w60"></div>
+          <div class="lbl">Services &amp; pricing</div>
+          <div class="card"><div class="sum"><span>Window washing</span><b>from $80</b></div>
+            <div class="sum" style="border-top:1px solid var(--fill)"><span>Power washing</span><b>from $120</b></div></div>
+          <div class="lbl">Availability</div>
+          <div class="muted" style="font-size:12px">Weekends · weekday evenings</div>
+          <div class="lbl">Reviews</div>
+          <div class="card"><div style="font-size:12px"><span class="star">&starf;&starf;&starf;&starf;&starf;</span> · Sam K.</div><div class="bar w90"></div></div>
+        </div>
+        <div style="padding:12px 16px;border-top:1px solid var(--fill)"><a class="btn primary" style="margin:0">Request booking</a></div>
+      </div></div>
+      <div class="note">
+        <h4>Provider profile · public view</h4>
+        <p>What customers see. This page is <b>generated from the provider's own Profile &amp; settings</b> (screen 11) — bio, services, availability all flow from there.</p>
+        <span class="q">star Fixed prices vs "request a quote" (moving help is fuzzy)?</span>
+      </div>
+    </section>
+
+    <!-- 04 BOOKING -->
+    <section class="screen" id="booking">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">Request a booking</div></div>
+        <div class="scr">
+          <div class="steps"><div class="st on"><div class="d">1</div>Details</div><div class="st"><div class="d">2</div>Review</div><div class="st"><div class="d">3</div>Pay</div></div>
+          <div class="lbl">Service</div><div class="field">Window washing — Jordan's Window Co.</div>
+          <div class="lbl">When</div><div class="row"><div class="field">Date &#128197;</div><div class="field">Time &#9201;</div></div>
+          <div class="lbl">Where</div><div class="field">Your address</div>
+          <div class="lbl">Details for the provider</div><div class="field" style="height:64px">e.g. 8 ground-floor windows, side gate code…</div>
+          <div class="lbl">Estimated total</div>
+          <div class="card"><div class="sum"><span>Window washing</span><span>$120.00</span></div>
+            <div class="sum tot"><span>You pay</span><span>$120.00</span></div>
+            <div class="muted" style="font-size:11px">Provider receives $102 · HomeGrown keeps 15%</div></div>
+          <a class="btn primary">Continue to payment</a>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Booking &amp; pay</h4>
+        <p>Customer sees only the job price; your 15% comes out of the provider's cut. Hands off to <b>Stripe</b> (test mode for the demo).</p>
+        <span class="q">star Charge upfront and refund if declined, or charge only after the provider accepts? Still the key unresolved fork.</span>
+      </div>
+    </section>
+
+    <!-- 05 CUSTOMER DASH -->
+    <section class="screen" id="cust">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&#9776;</div><div class="title">My bookings</div><div class="right">&#9678;</div></div>
+        <div class="scr">
+          <div class="tabwrap">
+            <div class="tabs"><div class="t on" data-tab="cust-up">Upcoming</div><div class="t" data-tab="cust-past">Past</div></div>
+            <div class="tabpanel" id="cust-up">
+              <div class="card"><div style="display:flex;justify-content:space-between"><b>Window washing</b><span class="pill req">Requested</span></div>
+                <div class="muted" style="font-size:12px">Jordan's Window Co. · Sat 10am</div>
+                <div style="margin-top:8px"><a class="btn sm ghost">Message</a> <a class="btn sm ghost">Cancel</a></div></div>
+              <div class="card"><div style="display:flex;justify-content:space-between"><b>Junk removal</b><span class="pill ok">Confirmed</span></div>
+                <div class="muted" style="font-size:12px">Haul Bros · Sun 1pm</div></div>
+            </div>
+            <div class="tabpanel hide" id="cust-past">
+              <div class="card"><div style="display:flex;justify-content:space-between"><b>Babysitting</b><span class="pill done">Completed</span></div>
+                <div class="muted" style="font-size:12px">Mia R. · last Fri · <a style="color:var(--accent)">Leave a review</a></div></div>
+              <div class="card"><div style="display:flex;justify-content:space-between"><b>House cleaning</b><span class="pill done">Completed</span></div>
+                <div class="muted" style="font-size:12px">Tidy Tigers · Apr 12 · &starf; reviewed</div></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Customer dashboard &check; fixed</h4>
+        <p><b>Completed jobs now live under Past</b> (click the tab) — Upcoming shows only Requested + Confirmed. Status pills mirror the bookings state machine.</p>
+        <span class="q">star In-app messaging in scope for v1, or punt to text and add chat later? I'd still cut it from v1.</span>
+      </div>
+    </section>
+
+    <!-- 06 ABOUT -->
+    <section class="screen" id="about">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">About us</div></div>
+        <div class="scr">
+          <div class="h big">Backing the next generation.</div>
+          <div class="box" style="height:120px;margin:8px 0">mission image / video</div>
+          <div class="lbl">Our mission</div>
+          <div class="bar w90"></div><div class="bar w90"></div><div class="bar w60"></div>
+          <div class="lbl">Why students</div>
+          <div class="bar w90"></div><div class="bar w75"></div>
+          <div class="lbl">Meet the team</div>
+          <div class="team"><div class="avatar"></div><div><b>Zach</b><div class="muted" style="font-size:12px">Co-founder · Engineering</div></div></div>
+          <div class="team"><div class="avatar"></div><div><b>Ari</b><div class="muted" style="font-size:12px">Co-founder · Engineering</div></div></div>
+          <div class="team"><div class="avatar"></div><div><b>Max</b><div class="muted" style="font-size:12px">Co-founder · Finance &amp; Ops</div></div></div>
+          <div class="team"><div class="avatar"></div><div><b>Gianna</b><div class="muted" style="font-size:12px">Co-founder · Marketing</div></div></div>
+          <a class="btn primary">Browse services near you</a>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>About us · the mission (new)</h4>
+        <p>Gianna's heartstrings story, in full. Mission + "why students" + a real team section — the team faces build trust that this is local people, not a faceless platform.</p>
+        <span class="q">star Real names/photos public, or first-names only for privacy? star Include your school / the mentored-program angle?</span>
+      </div>
+    </section>
+
+    <!-- 07 BLOG -->
+    <section class="screen" id="blog">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">Blog</div><div class="right">&#128269;</div></div>
+        <div class="scr">
+          <div class="card" style="padding:0;overflow:hidden">
+            <div class="box" style="height:120px;border:0;border-radius:0">featured post image</div>
+            <div style="padding:12px"><div class="muted" style="font-size:11px">Featured · Apr 2026</div>
+              <b>5 signs your driveway needs a power wash</b><div class="bar w90"></div><div class="bar w60"></div></div></div>
+          <div class="lbl">Recent posts</div>
+          <div class="card"><b>Student spotlight: meet Jordan</b><div class="muted" style="font-size:12px">Apr 18 · 3 min read</div></div>
+          <div class="card"><b>How much should you tip for moving help?</b><div class="muted" style="font-size:12px">Apr 11 · 2 min read</div></div>
+          <div class="card"><b>Spring cleaning checklist for busy families</b><div class="muted" style="font-size:12px">Apr 4 · 4 min read</div></div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Blog (new)</h4>
+        <p>Light content engine — local home tips, student spotlights, seasonal checklists. Good for <b>SEO and brand</b>, low cost if AI-drafted.</p>
+        <span class="q">star AI-generate, but who reviews before publish? star Worth building in v1, or a fast-follow after the demo? I'd lean fast-follow.</span>
+      </div>
+    </section>
+
+    <!-- 08 ONBOARDING WIZARD -->
+    <section class="screen" id="onboard">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">Become a provider</div></div>
+        <div class="scr" id="wizard">
+          <div class="steps">
+            <div class="st on" data-step="1"><div class="d">1</div>Account</div>
+            <div class="st" data-step="2"><div class="d">2</div>Verify</div>
+            <div class="st" data-step="3"><div class="d">3</div>Services</div>
+            <div class="st" data-step="4"><div class="d">4</div>Review</div>
+          </div>
+
+          <div class="wstep" data-page="1">
+            <div class="lbl">Step 1 · Your account</div>
+            <div class="field">you@school.edu</div>
+            <div class="field">Create a password</div>
+            <div class="field">&#9744; I confirm I'm 18 or older</div>
+            <a class="btn primary" data-go="next">Next &rarr;</a>
+          </div>
+
+          <div class="wstep hide" data-page="2">
+            <div class="lbl">Step 2 · Verify your identity</div>
+            <div class="box" style="height:96px">Upload student ID</div>
+            <div class="muted" style="font-size:12px">Reviewed manually by HomeGrown. You'll be notified when approved.</div>
+            <a class="btn primary" data-go="next">Next &rarr;</a>
+            <a class="btn ghost" data-go="back">&larr; Back</a>
+          </div>
+
+          <div class="wstep hide" data-page="3">
+            <div class="lbl">Step 3 · What you offer</div>
+            <div class="card"><div class="row"><div class="field" style="flex:2;margin:0">Service &#9662;</div><div class="field" style="flex:1;margin:0">$ price</div></div></div>
+            <a class="btn ghost sm">+ Add another service</a>
+            <a class="btn primary" style="margin-top:12px" data-go="next">Next &rarr;</a>
+            <a class="btn ghost" data-go="back">&larr; Back</a>
+          </div>
+
+          <div class="wstep hide" data-page="4">
+            <div class="lbl">Step 4 · Review &amp; submit</div>
+            <div class="card"><div class="sum"><span class="muted">Email</span><span>you@school.edu</span></div>
+              <div class="sum"><span class="muted">ID</span><span>uploaded</span></div>
+              <div class="sum"><span class="muted">Services</span><span>Window washing · $80</span></div></div>
+            <div class="muted" style="font-size:12px">Payment setup (Stripe) comes after you're approved.</div>
+            <a class="btn primary" style="margin-top:8px">Submit for approval</a>
+            <a class="btn ghost" data-go="back">&larr; Back</a>
+          </div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Onboarding · step-by-step wizard &check; rebuilt</h4>
+        <p>Now a <b>true multi-page wizard</b> — one form per page, Next/Back (click through it). Per your note, <b>Stripe is removed from onboarding</b> and happens <b>after verification/approval</b> (prompted on the dashboard + in settings).</p>
+        <span class="q">star Should "Submit" require all services filled, or can they add services later? star Pricing freedom — free-form or pick from ranges you set?</span>
+      </div>
+    </section>
+
+    <!-- 09 PROVIDER DASH + CALENDAR -->
+    <section class="screen" id="pdash">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&#9776;</div><div class="title">Dashboard</div><div class="right">&#9678;</div></div>
+        <div class="scr">
+          <div class="banner"><div style="flex:1"><div class="t">Connect Stripe to get paid</div><div class="muted" style="font-size:11px">You're approved — set up payouts to start accepting jobs.</div></div><a class="btn sm primary">Connect</a></div>
+          <div class="grid2">
+            <div class="card" style="margin:0"><div class="muted" style="font-size:11px">This month</div><div class="h" style="margin:2px 0">$306</div></div>
+            <div class="card" style="margin:0"><div class="muted" style="font-size:11px">Pending payout</div><div class="h" style="margin:2px 0">$102</div></div>
+          </div>
+          <div class="lbl">New requests</div>
+          <div class="card"><div style="display:flex;justify-content:space-between"><b>Window washing</b><span class="pill req">New</span></div>
+            <div class="muted" style="font-size:12px">Sat 10am · Maple St · $120</div>
+            <div style="margin-top:9px"><a class="btn sm primary">Accept</a> <a class="btn sm ghost">Decline</a></div></div>
+          <div class="lbl">Your calendar</div>
+          <div class="cal">
+            <div class="mhead"><span>&lsaquo;</span><div>April 2026</div><span>&rsaquo;</span></div>
+            <div class="dow"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
+            <div class="grid7" id="calGrid"></div>
+          </div>
+          <div class="caldetail" id="calDetail"><b>Tap a highlighted day</b><div class="muted">Booking days are marked. Tap one to see the job, time and location.</div></div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Provider dashboard + calendar &check; added</h4>
+        <p>Kept earnings + accept/decline, added the <b>calendar</b> you asked for: booking days are highlighted — <b>tap one</b> to see the job, time and location. The <b>Stripe banner</b> up top is the post-approval connect prompt.</p>
+        <span class="q">star Calendar feeds from accepted bookings + availability. Month view enough, or also a day/agenda list?</span>
+      </div>
+    </section>
+
+    <!-- 10 JOBS & PRICING -->
+    <section class="screen" id="jobs">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&#9776;</div><div class="title">Jobs &amp; pricing</div><div class="right">&#9678;</div></div>
+        <div class="scr">
+          <div class="tabwrap">
+            <div class="tabs"><div class="t on" data-tab="job-up">Upcoming jobs</div><div class="t" data-tab="job-price">Services &amp; pricing</div></div>
+            <div class="tabpanel" id="job-up">
+              <div class="card"><div style="display:flex;justify-content:space-between"><b>Window washing</b><span class="pill ok">Confirmed</span></div>
+                <div class="muted" style="font-size:12px">Sat Apr 19 · 10am · Maple St · $120</div></div>
+              <div class="card"><div style="display:flex;justify-content:space-between"><b>Power washing</b><span class="pill ok">Confirmed</span></div>
+                <div class="muted" style="font-size:12px">Sun Apr 20 · 9am · Oak Ave · $140</div></div>
+              <div class="card"><div style="display:flex;justify-content:space-between"><b>Window washing</b><span class="pill req">Requested</span></div>
+                <div class="muted" style="font-size:12px">Tue Apr 22 · 2pm · Elm St · $90</div></div>
+            </div>
+            <div class="tabpanel hide" id="job-price">
+              <div class="muted" style="font-size:12px">Set what you charge per service. Customers see these on your profile.</div>
+              <div class="card"><div class="sum"><span>Window washing</span><span><b>$80</b> · edit</span></div>
+                <div class="sum" style="border-top:1px solid var(--fill)"><span>Power washing</span><span><b>$120</b> · edit</span></div></div>
+              <a class="btn ghost sm">+ Add a service</a>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Jobs &amp; pricing (new)</h4>
+        <p>Two jobs-to-be-done: see the <b>list of upcoming jobs</b> (the calendar's companion view) and <b>manage service pricing</b> (click the tabs). Pricing edits here update the public profile.</p>
+        <span class="q">star Pricing editable here AND in Profile &amp; settings — pick one home for it, or fine in both? I'd make this the single source.</span>
+      </div>
+    </section>
+
+    <!-- 11 PROVIDER PROFILE & SETTINGS -->
+    <section class="screen" id="psettings">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">Profile &amp; settings</div></div>
+        <div class="scr">
+          <div style="display:flex;gap:12px;align-items:center"><div class="avatar lg"></div><a class="btn sm ghost">Change photo</a></div>
+          <div class="lbl">Short bio</div>
+          <div class="field" style="height:60px">A line or two customers see on your profile…</div>
+          <div class="lbl">Availability</div>
+          <div class="chips"><span class="chip on">Mon</span><span class="chip on">Tue</span><span class="chip">Wed</span><span class="chip on">Thu</span><span class="chip on">Fri</span><span class="chip on">Sat</span><span class="chip">Sun</span></div>
+          <div class="row"><div class="field">From 9am</div><div class="field">To 6pm</div></div>
+          <div class="lbl">Account</div>
+          <div class="field">Username · jordanwindow</div>
+          <div class="field">Email · jordan@school.edu</div>
+          <div class="field">Change password</div>
+          <div class="lbl">Payments</div>
+          <div class="card"><div class="sum"><span>Stripe</span><span class="badge">&check; Connected</span></div>
+            <div class="sum" style="border-top:1px solid var(--fill)"><span class="muted">Payouts</span><span>Manage on Stripe &#8599;</span></div></div>
+          <div class="lbl">Trust</div>
+          <div class="card"><div class="sum"><span>Background check</span><span class="badge amber">+ Add badge ($)</span></div></div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Provider profile &amp; settings (new)</h4>
+        <p>The provider's self-management hub: <b>bio</b>, <b>availability</b> (feeds the calendar + booking), and settings — <b>username, email, password, Stripe</b>. The optional background-check upsell lives here too.</p>
+        <span class="q">star Availability as day-toggles + hours (drawn) enough, or per-day custom hours? star Post-approval Stripe connect can also live here — agree?</span>
+      </div>
+    </section>
+
+    <!-- 12 ADMIN -->
+    <section class="screen" id="admin">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&#9881;</div><div class="title">Admin · founders</div></div>
+        <div class="scr">
+          <div class="tabwrap">
+            <div class="tabs"><div class="t on" data-tab="adm-app">Approvals</div><div class="t" data-tab="adm-svc">Services</div></div>
+            <div class="tabpanel" id="adm-app">
+              <div class="lbl">Pending providers</div>
+              <div class="card"><div style="display:flex;gap:10px;align-items:center"><div class="avatar"></div>
+                <div style="flex:1"><b>Mia R.</b><div class="muted" style="font-size:12px">mia@school.edu · Babysitting</div></div></div>
+                <div class="box" style="height:54px;margin:9px 0">student ID preview</div>
+                <div><a class="btn sm primary">Approve</a> <a class="btn sm ghost">Reject</a></div></div>
+            </div>
+            <div class="tabpanel hide" id="adm-svc">
+              <div class="lbl">Curated services (toggle live)</div>
+              <div class="card"><div class="sum"><span>Window washing</span><span class="badge">live</span></div>
+                <div class="sum" style="border-top:1px solid var(--fill)"><span>Babysitting</span><span class="badge">live</span></div>
+                <div class="sum" style="border-top:1px solid var(--fill)"><span class="muted">Lawn care</span><span class="badge amber">off</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Admin · your control panel</h4>
+        <p>Founders-only, non-negotiable for the pilot: the <b>verification gate</b> (approve providers — this flips them to "approved" and unlocks Stripe) and <b>service curation</b>.</p>
+        <span class="q">star Who gets admin access — all four, or just you and Ari?</span>
+      </div>
+    </section>
+
+    <!-- 13 AUTH -->
+    <section class="screen" id="auth">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="title">Welcome to HomeGrown</div></div>
+        <div class="scr">
+          <div class="tabs"><div class="t on">Sign up</div><div class="t">Log in</div></div>
+          <div class="lbl">I'm here to…</div>
+          <div class="row"><div class="chip on" style="flex:1;text-align:center">Hire help</div><div class="chip" style="flex:1;text-align:center">Earn as a student</div></div>
+          <div class="lbl">Email</div><div class="field">you@email.com</div>
+          <div class="muted" style="font-size:11px">Providers must use a .edu email</div>
+          <div class="lbl">Password</div><div class="field">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</div>
+          <div class="field">&#9744; I confirm I'm 18 or older</div>
+          <a class="btn primary">Create account</a>
+          <a class="btn ghost">Continue with Google</a>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Auth · shared front door</h4>
+        <p>One entry; the "hire vs earn" choice sets the role in <code>profiles</code> and routes the experience. 18+ gate sits here. Powered by Supabase Auth.</p>
+        <span class="q">star Google sign-in now or later? star Email verification required before booking?</span>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const nav = document.getElementById('nav'), screens = document.querySelectorAll('.screen');
+  nav.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    nav.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    screens.forEach(s=>s.classList.toggle('active', s.id===b.dataset.s));
+    document.querySelector('main.stage').scrollIntoView({behavior:'smooth',block:'start'});
+  });
+
+  document.addEventListener('click', e => {
+    const t = e.target.closest('.t[data-tab]'); if(!t) return;
+    const wrap = t.closest('.tabwrap'); if(!wrap) return;
+    wrap.querySelectorAll('.tabs .t').forEach(x=>x.classList.remove('on')); t.classList.add('on');
+    wrap.querySelectorAll('.tabpanel').forEach(p=>p.classList.add('hide'));
+    wrap.querySelector('#'+t.dataset.tab).classList.remove('hide');
+  });
+
+  let step = 1; const wiz = document.getElementById('wizard');
+  function showStep(n){
+    wiz.querySelectorAll('.wstep').forEach(p=>p.classList.toggle('hide', +p.dataset.page!==n));
+    wiz.querySelectorAll('.steps .st').forEach(s=>{
+      const k=+s.dataset.step; s.classList.toggle('on',k===n); s.classList.toggle('done',k<n);
+    });
+  }
+  wiz.addEventListener('click', e=>{
+    const g=e.target.closest('[data-go]'); if(!g) return;
+    step += (g.dataset.go==='next'?1:-1); step=Math.max(1,Math.min(4,step)); showStep(step);
+  });
+
+  const bookings = {
+    8:{s:'Window washing', t:'10:00am', l:'Maple St'},
+    14:{s:'Power washing', t:'9:00am', l:'Oak Ave'},
+    15:{s:'Babysitting', t:'6:00pm', l:'Birch Ln'},
+    22:{s:'Junk removal', t:'1:00pm', l:'Elm St'}
+  };
+  const grid = document.getElementById('calGrid'), detail = document.getElementById('calDetail');
+  const lead = 3, days = 30;
+  for(let i=0;i<lead;i++){ const d=document.createElement('div'); d.className='day mut'; grid.appendChild(d); }
+  for(let n=1;n<=days;n++){
+    const d=document.createElement('div'); d.className='day'; d.textContent=n;
+    if(bookings[n]){ d.classList.add('has'); d.dataset.n=n; }
+    grid.appendChild(d);
+  }
+  grid.addEventListener('click', e=>{
+    const d=e.target.closest('.day.has'); if(!d) return;
+    grid.querySelectorAll('.day').forEach(x=>x.classList.remove('sel')); d.classList.add('sel');
+    const b=bookings[d.dataset.n];
+    detail.innerHTML = '<b>'+b.s+'</b> · April '+d.dataset.n+'<div class="muted">'+b.t+' · '+b.l+'</div>';
+  });
+</script>
