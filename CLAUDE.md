@@ -53,8 +53,8 @@ When a request is ambiguous, ask clarifying questions instead of guessing.
 
 ## Conventions
 
-- **Branching:** work on feature branches off an updated `main`; open a PR to
-  merge. Never commit directly to `main`.
+- **Branching:** committing directly to `main` is OK. Feature branches and PRs
+  are optional — use them for larger or riskier changes when you want review.
 - **Commits:** small and frequent, present-tense messages ("add booking form").
 - **Module ownership (to minimize merge conflicts — confirm/adjust):**
   - Zach → customer-facing (landing, browse, public profile, booking,
