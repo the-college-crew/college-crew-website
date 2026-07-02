@@ -39,17 +39,56 @@ When a request is ambiguous, ask clarifying questions instead of guessing.
 
 ## Stack
 
-- **Framework:** Next.js (App Router, TypeScript) on **Vercel**
+- **Framework:** Next.js **16.2.9** (App Router, TypeScript) + **React 19**, on
+  **Vercel**
 - **Backend:** **Supabase** — Postgres, Auth, Storage, Row-Level Security
 - **Payments:** **Stripe Connect (Express)** — test mode during the pilot
 - **Realtime/chat:** Supabase Realtime + a Supabase Edge Function for moderation
+
+> **Framework versions are newer than your training data.** Next.js 16 / React
+> 19 have breaking changes (async request APIs, caching defaults, file
+> conventions). `AGENTS.md` and `node_modules/next/dist/docs/` are
+> **authoritative over anything you remember** — read the relevant guide before
+> writing route, server-component, or data-fetching code.
 
 ## Commands (once scaffolded)
 
 - `npm run dev` — local dev server
 - `npm run build` / `npm run start` — production build / serve
-- `npm run lint` / `npm run typecheck` — checks before committing
+- `npm run lint` / `npm run typecheck` — checks before committing (both scripts
+  plus eslint + typescript are added in the skeleton build; the base scaffold
+  ships only dev/build/start)
 - `npx supabase migration new <name>` / `npx supabase db push` — schema changes
+
+## Architecture / folder layout
+
+Routes are split into **App Router route groups**, mapped to owners to minimize
+merge conflicts during parallel work:
+
+- `app/(customer)/…` → **Zach** — landing, browse, public profile, booking,
+  confirm & pay, customer dashboard, about, blog.
+- `app/(provider)/…` and `app/(admin)/…` → **Ari** — onboarding, provider
+  dashboard, jobs & pricing, profile & settings; admin approval + curation.
+- `app/(auth)/…` → **shared** — sign up / log in, role selection, 18+ gate.
+
+Supporting directories:
+
+- `lib/supabase/` — the three Supabase clients (see Code conventions).
+- `lib/stripe/` — Stripe server client + Connect helpers (test mode).
+- `lib/db/types.ts` — generated Supabase DB types (single source of truth for
+  row shapes).
+- `components/` — shared UI; area-specific components co-locate under their
+  route group.
+- `app/actions/` (or co-located `actions.ts`) — Server Actions for mutations.
+- `supabase/migrations/` — schema; one owner runs migrations (see below).
+
+**Environment:** the skeleton ships a committed `.env.example` enumerating all
+required vars — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY`, plus Stripe (`STRIPE_SECRET_KEY`,
+`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`). Real values live
+in `.env.local` only. **Supabase project is provisioned; the Stripe test
+account is not set up yet** — Stripe wiring stays placeholder/deferred until it
+exists (test mode only regardless).
 
 ## Conventions
 
@@ -89,8 +128,15 @@ items unless asked — when in doubt, plan first and confirm.
 ## Code conventions
 
 - TypeScript everywhere; prefer server components, use client components only
-  when interactivity requires it.
-- Co-locate the Supabase client in a single `lib/supabase` module; never
-  instantiate clients ad hoc.
+  when interactivity requires it. (The base scaffold is currently JavaScript —
+  the skeleton build converts it to TypeScript: adds `tsconfig.json`,
+  `typescript` + `@types`, and renames existing files.)
+- **Supabase clients live in `lib/supabase/` and come in exactly three flavors,
+  never instantiated ad hoc:**
+  - `client.ts` — **browser** client (anon key), for client components.
+  - `server.ts` — **server** client (anon key, cookie-based session), for
+    server components, route handlers, and Server Actions.
+  - `admin.ts` — **service-role** client that **bypasses RLS**. Server-only —
+    must never be imported into anything shipped to the browser.
 - Keep the curated service list driven by the `services` table (admin-toggled),
   never hard-coded in the UI.
