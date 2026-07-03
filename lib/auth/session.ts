@@ -59,6 +59,27 @@ export const getOwnProviderProfile = cache(
   },
 );
 
+/** Admin "view as" switcher cookie. Set only by app/actions/view-as.ts. */
+export const VIEW_AS_COOKIE = "cc-view-as";
+
+const VIEW_AS_ROLES: readonly UserRole[] = ["customer", "provider", "admin"];
+
+/**
+ * The role the app should treat the current user as. Everyone gets their real
+ * role, except admins with a view-as cookie (the header switcher), who get the
+ * cookie's role. Preview only, not a privilege sandbox: Server Actions and RLS
+ * still run as the real identity, and the cookie is ignored for non-admins.
+ */
+export const getEffectiveRole = cache(async (): Promise<UserRole | null> => {
+  const session = await getSession();
+  if (!session) return null;
+  if (session.profile.role !== "admin") return session.profile.role;
+
+  const cookieStore = await cookies();
+  const viewAs = cookieStore.get(VIEW_AS_COOKIE)?.value as UserRole | undefined;
+  return viewAs && VIEW_AS_ROLES.includes(viewAs) ? viewAs : "admin";
+});
+
 export function homePathFor(role: UserRole) {
   switch (role) {
     case "admin":
@@ -95,6 +116,15 @@ export async function requireRole(
     );
   }
   if (session.profile.role !== role) {
+    // Admins may preview other roles' pages via the view-as switcher.
+    // (requireRole("admin") never lands here for real admins, so /admin
+    // stays open to them regardless of the cookie — they can always switch
+    // back.)
+    if (session.profile.role === "admin") {
+      const effective = await getEffectiveRole();
+      if (effective === role) return session;
+      redirect(homePathFor(effective ?? "admin"));
+    }
     redirect(homePathFor(session.profile.role));
   }
   return session;

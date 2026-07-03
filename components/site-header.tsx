@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { signOut } from "@/app/(auth)/actions";
 import { buttonClasses } from "@/components/ui/button";
-import { getSession, homePathFor } from "@/lib/auth/session";
+import { ViewAsSwitcher } from "@/components/view-as-switcher";
+import { getEffectiveRole, getSession, homePathFor } from "@/lib/auth/session";
 import { SITE } from "@/lib/site";
 
 export function Wordmark() {
@@ -20,6 +21,8 @@ export function Wordmark() {
 /** Customer-facing site chrome; auth-aware on the right side. */
 export async function SiteHeader() {
   const session = await getSession();
+  const effectiveRole = session ? await getEffectiveRole() : null;
+  const isAdmin = session?.profile.role === "admin";
 
   return (
     <header className="pennant sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
@@ -45,8 +48,11 @@ export async function SiteHeader() {
         <div className="flex items-center gap-2">
           {session ? (
             <>
+              {isAdmin ? (
+                <ViewAsSwitcher current={effectiveRole ?? "admin"} />
+              ) : null}
               <Link
-                href={homePathFor(session.profile.role)}
+                href={homePathFor(effectiveRole ?? session.profile.role)}
                 className={buttonClasses({ variant: "secondary", size: "sm" })}
               >
                 Dashboard

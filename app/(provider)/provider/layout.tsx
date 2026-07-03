@@ -3,7 +3,8 @@ import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
 import { Wordmark } from "@/components/site-header";
 import { buttonClasses } from "@/components/ui/button";
-import { getSession } from "@/lib/auth/session";
+import { ViewAsSwitcher } from "@/components/view-as-switcher";
+import { getEffectiveRole, getSession } from "@/lib/auth/session";
 
 /**
  * Provider shell. Deliberately lighter than the customer chrome — this is a
@@ -16,7 +17,11 @@ export default async function ProviderLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  const isProvider = session?.profile.role === "provider";
+  const isAdmin = session?.profile.role === "admin";
+  // Effective role so admins previewing via the view-as switcher get the
+  // provider nav too (their pages show the no-profile/onboarding states).
+  const effectiveRole = session ? await getEffectiveRole() : null;
+  const isProvider = effectiveRole === "provider";
 
   return (
     <>
@@ -29,14 +34,19 @@ export default async function ProviderLayout({
             </span>
           </div>
           {session ? (
-            <form action={signOut}>
-              <button
-                type="submit"
-                className={buttonClasses({ variant: "ghost", size: "sm" })}
-              >
-                Log out
-              </button>
-            </form>
+            <div className="flex items-center gap-3">
+              {isAdmin ? (
+                <ViewAsSwitcher current={effectiveRole ?? "admin"} />
+              ) : null}
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className={buttonClasses({ variant: "ghost", size: "sm" })}
+                >
+                  Log out
+                </button>
+              </form>
+            </div>
           ) : (
             <Link
               href="/login?next=/provider/dashboard"
