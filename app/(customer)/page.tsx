@@ -39,9 +39,9 @@ export default async function LandingPage() {
           <span className="text-crew-600">to-do list</span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base text-ink-soft">
-          Hire verified college students for lawn care, babysitting, cleaning,
-          tutoring, and more. Browse, book, and pay in one place — and back a
-          young person while you&apos;re at it.
+          Hire verified college students for lawn care, babysitting, pressure
+          washing, tutoring, and more. Browse, book, and pay in one place — and
+          back a young person while you&apos;re at it.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href="/browse" className={buttonClasses({ size: "lg" })}>
