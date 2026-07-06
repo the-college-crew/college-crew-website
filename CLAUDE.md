@@ -126,16 +126,8 @@ exists (test mode only regardless).
 
 ## Claude Code integrations
 
-When using Stripe, Vercel, Resend, or Supabase in Claude Code, **use the official
-plugins** instead of MCP servers:
-- `vercel@claude-plugins-official` — for deployments, logs, and project management
-- `resend@claude-plugins-official` — for email templating and sending
-- `supabase@claude-plugins-official` — for database, auth, and Realtime queries
-- **Stripe:** no official plugin; use the Stripe MCP server for API access, and
-  the `/stripe-best-practices` skill for integration decisions and guidance
+When using Stripe, Vercel, Resend, or Supabase in Claude Code utilize MCP (if it exists) for any necessary read or write needed. If applicable, load any corresponding skill/plugins downloaded.
 
-Install plugins with `claude plugin install <name>`. These bundle pre-configured
-MCP servers and provide the same functionality with less manual setup.
 
 ## Pilot scope discipline
 
