@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import { createClient } from "@/lib/supabase/server";
 import { formatOfferedPrice } from "@/lib/utils";
 
@@ -25,7 +26,12 @@ export default async function OnboardingReviewPage() {
     .select("id, price_cents, price_type, unit, service:services(name)")
     .eq("provider_id", profile.id);
 
-  const ready = Boolean(profile.id_document_url) && (offerings?.length ?? 0) > 0;
+  const schoolEmail = await getVerifiedSchoolEmail(session.user.id);
+
+  const ready =
+    Boolean(schoolEmail) &&
+    Boolean(profile.id_document_url) &&
+    (offerings?.length ?? 0) > 0;
 
   return (
     <div>
@@ -42,8 +48,23 @@ export default async function OnboardingReviewPage() {
             <dd className="font-medium">{session.profile.full_name}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-mist">School email</dt>
+            <dt className="text-mist">Email</dt>
             <dd className="font-medium">{session.user.email}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-mist">School email</dt>
+            <dd className="font-medium">
+              {schoolEmail ? (
+                `${schoolEmail.email} ✓`
+              ) : (
+                <Link
+                  href="/provider/onboarding/verify"
+                  className="text-crew-700 underline"
+                >
+                  Not verified — verify it
+                </Link>
+              )}
+            </dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-mist">Student ID</dt>

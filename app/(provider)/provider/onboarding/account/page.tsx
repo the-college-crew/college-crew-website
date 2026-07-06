@@ -55,7 +55,7 @@ export default async function OnboardingAccountPage() {
               <dd className="font-medium">{session.profile.full_name}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-mist">School email</dt>
+              <dt className="text-mist">Email</dt>
               <dd className="font-medium">{session.user.email}</dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -76,8 +76,8 @@ export default async function OnboardingAccountPage() {
           <p>
             You&apos;re signed in as a{" "}
             {session.profile.role === "admin" ? "founder" : "customer"}.
-            Provider accounts use a separate school (.edu) email — log out
-            first, then start onboarding.
+            Provider accounts are separate — log out first, then start
+            onboarding.
           </p>
           <Link
             href="/"

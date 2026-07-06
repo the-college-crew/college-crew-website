@@ -126,13 +126,9 @@ async function signUp(
     data = parsed.data;
   }
 
-  // Student gate for providers: .edu email + manual ID review later.
-  if (role === "provider" && !data.email.toLowerCase().endsWith(".edu")) {
-    return {
-      error:
-        "Providers sign up with their school (.edu) email — that's how we verify you're a student.",
-    };
-  }
+  // Providers sign up with any email (personal is fine). Student status is
+  // proven later in onboarding by verifying a school (.edu) email via OTP and
+  // by manual student-ID review — not by the login address.
 
   const origin = await siteOrigin();
   const confirmedNext =

@@ -25,6 +25,27 @@ async function setVerification(
 
   const providerId = z.string().uuid().parse(formData.get("providerId"));
   const admin = createAdminClient();
+
+  // Don't let a provider go live without a verified school (.edu) email —
+  // it's a required student proof alongside the manual ID review.
+  if (status === "approved") {
+    const { data: prof } = await admin
+      .from("provider_profiles")
+      .select("user_id")
+      .eq("id", providerId)
+      .maybeSingle();
+    if (prof) {
+      const { data: school } = await admin
+        .from("provider_school_emails")
+        .select("user_id")
+        .eq("user_id", prof.user_id)
+        .maybeSingle();
+      if (!school) {
+        redirect("/admin/providers?err=unverified");
+      }
+    }
+  }
+
   const { error } = await admin
     .from("provider_profiles")
     .update({ verification_status: status })

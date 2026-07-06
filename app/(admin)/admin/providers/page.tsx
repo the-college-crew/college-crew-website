@@ -50,9 +50,21 @@ export default async function AdminProvidersPage({
     .select("*, user:profiles(full_name), provider_services(id)")
     .order("created_at", { ascending: true });
 
+  // Verified school (.edu) emails, keyed by user (no direct FK to join on).
+  const { data: schoolRows } = await supabase
+    .from("provider_school_emails")
+    .select("user_id, email");
+  const schoolByUser = new Map(
+    (schoolRows ?? []).map((r) => [r.user_id, r.email]),
+  );
+
   const providers = (data ?? []) as Row[];
+  // Ready for review only once BOTH student proofs are in: verified .edu + ID.
   const queue = providers.filter(
-    (p) => p.verification_status === "pending" && p.id_document_url,
+    (p) =>
+      p.verification_status === "pending" &&
+      p.id_document_url &&
+      schoolByUser.has(p.user_id),
   );
   const rest = providers.filter((p) => !queue.includes(p));
 
@@ -75,6 +87,13 @@ export default async function AdminProvidersPage({
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           SUPABASE_SERVICE_ROLE_KEY is missing — approvals need it. Add it to
           .env.local.
+        </div>
+      ) : null}
+
+      {err === "unverified" ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          That provider hasn&apos;t verified a school (.edu) email yet — they
+          can&apos;t be approved until they do.
         </div>
       ) : null}
 
@@ -103,6 +122,9 @@ export default async function AdminProvidersPage({
                       {formatDate(provider.created_at)} ·{" "}
                       {provider.provider_services.length} service
                       {provider.provider_services.length === 1 ? "" : "s"}
+                    </p>
+                    <p className="mt-0.5 text-sm text-quad-700">
+                      School email: {schoolByUser.get(provider.user_id)} ✓
                     </p>
                   </div>
                   <Badge tone="gold">Pending review</Badge>
@@ -166,6 +188,12 @@ export default async function AdminProvidersPage({
                   {!provider.id_document_url ? (
                     <span className="ml-2 text-xs text-mist">
                       (no ID uploaded yet)
+                    </span>
+                  ) : null}
+                  {provider.verification_status === "pending" &&
+                  !schoolByUser.has(provider.user_id) ? (
+                    <span className="ml-2 text-xs text-mist">
+                      (school email not verified)
                     </span>
                   ) : null}
                 </span>

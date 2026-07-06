@@ -383,6 +383,70 @@ export type Database = {
           },
         ];
       };
+      provider_email_verifications: {
+        Row: {
+          user_id: string;
+          email: string;
+          code_hash: string;
+          attempts: number;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          email: string;
+          code_hash: string;
+          attempts?: number;
+          expires_at: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          email?: string;
+          code_hash?: string;
+          attempts?: number;
+          expires_at?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "provider_email_verifications_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      provider_school_emails: {
+        Row: {
+          user_id: string;
+          email: string;
+          verified_at: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          email: string;
+          verified_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          email?: string;
+          verified_at?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "provider_school_emails_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       moderation_events: {
         Row: {
           id: string;
@@ -470,6 +534,10 @@ export type Conversation = Database["public"]["Tables"]["conversations"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type ModerationEvent =
   Database["public"]["Tables"]["moderation_events"]["Row"];
+export type ProviderEmailVerification =
+  Database["public"]["Tables"]["provider_email_verifications"]["Row"];
+export type ProviderSchoolEmail =
+  Database["public"]["Tables"]["provider_school_emails"]["Row"];
 export type ProviderRating =
   Database["public"]["Views"]["provider_ratings"]["Row"];
 export type ProviderReview =

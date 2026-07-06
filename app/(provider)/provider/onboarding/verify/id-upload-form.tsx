@@ -35,7 +35,7 @@ export function IdUploadForm({ hasDocument }: { hasDocument: boolean }) {
       <FieldError>{state.error}</FieldError>
 
       <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Uploading…" : "Upload & continue →"}
+        {pending ? "Uploading…" : hasDocument ? "Replace ID" : "Upload student ID"}
       </Button>
     </form>
   );

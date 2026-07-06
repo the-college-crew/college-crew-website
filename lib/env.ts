@@ -18,3 +18,12 @@ export function hasServiceRoleEnv() {
 export function hasStripeEnv() {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
+
+/**
+ * Resend is optional: without a key we log OTP codes server-side instead of
+ * emailing them, so provider .edu verification is testable before the account
+ * exists. lib/email/send.ts branches on this.
+ */
+export function hasResendEnv() {
+  return Boolean(process.env.RESEND_API_KEY);
+}

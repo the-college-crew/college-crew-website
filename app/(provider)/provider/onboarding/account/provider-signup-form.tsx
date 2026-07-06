@@ -41,18 +41,18 @@ export function ProviderSignupForm() {
       </div>
 
       <div>
-        <Label htmlFor="email">School email</Label>
+        <Label htmlFor="email">Email</Label>
         <Input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="you@school.edu"
+          placeholder="you@email.com"
           required
         />
         <FieldHint>
-          Must be a .edu address — it&apos;s how we verify you&apos;re a
-          student.
+          Use any email — you&apos;ll verify your school (.edu) email during
+          onboarding to confirm you&apos;re a student.
         </FieldHint>
       </div>
 

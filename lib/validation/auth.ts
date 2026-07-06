@@ -15,6 +15,23 @@ export const emailSchema = z
   .trim()
   .email("Enter a valid email address.");
 
+/**
+ * School email: a valid address on a .edu domain. Used to verify student
+ * status separately from the (now personal) login email. Lower-cased so the
+ * stored value and the uniqueness index agree.
+ */
+export const schoolEmailSchema = emailSchema
+  .toLowerCase()
+  .refine((value) => value.endsWith(".edu"), {
+    message: "Use your school email — it must end in .edu.",
+  });
+
+/** Six-digit numeric OTP emailed to the .edu address. */
+export const otpCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, "Enter the 6-digit code from your email.");
+
 /** Password rules live in lib/auth/password-strength so client + server agree. */
 export const passwordSchema = z.string().superRefine((value, ctx) => {
   const { acceptable, checks } = evaluatePassword(value);
