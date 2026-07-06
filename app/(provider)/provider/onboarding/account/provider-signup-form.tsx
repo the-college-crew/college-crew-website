@@ -3,8 +3,18 @@
 import { useActionState } from "react";
 
 import { signUpProvider, type AuthFormState } from "@/app/(auth)/actions";
+import { AddressFields } from "@/components/auth/address-fields";
+import { PasswordField } from "@/components/auth/password-field";
+import { SignupSuccess } from "@/components/auth/signup-success";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
+
+// Latest DOB that still makes someone 18 today — nudges the date picker.
+function maxDobToday() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 18);
+  return d.toISOString().slice(0, 10);
+}
 
 export function ProviderSignupForm() {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
@@ -14,9 +24,11 @@ export function ProviderSignupForm() {
 
   if (state.success) {
     return (
-      <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-        {state.success} Then log in to continue with verification.
-      </div>
+      <SignupSuccess
+        email={state.email}
+        message={state.success}
+        extra="Then log in to continue with verification."
+      />
     );
   }
 
@@ -44,21 +56,23 @@ export function ProviderSignupForm() {
       </div>
 
       <div>
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="dateOfBirth">Date of birth</Label>
         <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
+          id="dateOfBirth"
+          name="dateOfBirth"
+          type="date"
+          autoComplete="bday"
+          max={maxDobToday()}
           required
         />
+        <FieldHint>
+          You must be 18 or older. We re-check this against your ID later.
+        </FieldHint>
       </div>
 
-      <label className="flex items-start gap-2 text-sm text-ink-soft">
-        <input type="checkbox" name="over18" required className="mt-0.5" />
-        I&apos;m 18 or older.
-      </label>
+      <PasswordField confirm />
+
+      <AddressFields legend="Business / student address" />
 
       <FieldError>{state.error}</FieldError>
 

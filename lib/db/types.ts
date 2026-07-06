@@ -40,18 +40,36 @@ export type Database = {
           id: string;
           role: UserRole;
           full_name: string;
+          date_of_birth: string | null;
+          address_line1: string;
+          address_line2: string;
+          city: string;
+          state: string;
+          postal_code: string;
           created_at: string;
         };
         Insert: {
           id: string;
           role?: UserRole;
           full_name?: string;
+          date_of_birth?: string | null;
+          address_line1?: string;
+          address_line2?: string;
+          city?: string;
+          state?: string;
+          postal_code?: string;
           created_at?: string;
         };
         Update: {
           id?: string;
           role?: UserRole;
           full_name?: string;
+          date_of_birth?: string | null;
+          address_line1?: string;
+          address_line2?: string;
+          city?: string;
+          state?: string;
+          postal_code?: string;
           created_at?: string;
         };
         Relationships: [];

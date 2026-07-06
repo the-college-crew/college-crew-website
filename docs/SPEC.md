@@ -40,8 +40,10 @@ payment and keeps a commission.
 - **Charge after acceptance.** Customer *requests* (no charge) → provider
   *accepts* → customer gets a notice with full details and a **Confirm & pay**
   button → payment runs → booking confirmed.
-- **18+ only at launch** — deliberate, for legal simplicity. Verified via .edu
-  email + manual student-ID review.
+- **18+ only at launch** — deliberate, for legal simplicity. Providers enter a
+  **date of birth at signup** (a real 18+ gate, enforced server-side — replaces
+  the old self-attest checkbox), re-verified via **.edu email + manual
+  student-ID review**. Customers are not age-gated at signup.
 - **Liability** for the work rests with the independent providers; the platform
   connects, verifies, and processes payments. State this in ToS.
 - **Optional paid background check** — a trust badge + small platform margin.
@@ -63,7 +65,10 @@ Role is chosen at signup and stored on the profile; it routes the experience.
 ## 5. Data model (starting point)
 
 - **profiles** (extends Supabase auth): `id`, `role` (customer|provider|admin),
-  `full_name`, `created_at`.
+  `full_name`, `date_of_birth` (providers only — the 18+ gate; null for
+  customers), structured address (`address_line1`, `address_line2`, `city`,
+  `state`, `postal_code` — home address for customers, business/student address
+  for providers, collected at signup), `created_at`.
 - **services** (admin-curated catalog): `id`, `name`, `slug`, `category`,
   `is_live`. UI reads from here — never hard-code the service list.
 - **provider_profiles**: `id`, `user_id`→profiles, `display_name`, `bio`,
@@ -76,7 +81,8 @@ Role is chosen at signup and stored on the profile; it routes the experience.
   `provider_id`→provider_profiles, `service_id`→services, `price`,
   `price_type` (fixed|quote), `unit` (per_job|per_hour).
 - **bookings**: `id`, `customer_id`, `provider_id`, `service_id`, `status`
-  (see state machine), `scheduled_at`, `address`, `details`, `price`,
+  (see state machine), `scheduled_at`, `address` (job location; prefillable
+  from the customer's saved home address), `details`, `price`,
   `platform_fee`, `stripe_payment_intent_id`, `created_at`.
 - **reviews**: `id`, `booking_id`, `rating` (1–5), `text`, `created_at`.
 - **messages** / **conversations**: thread tied to a provider+customer (and
@@ -165,8 +171,9 @@ the wireframe next pass.
 
 ### Provider
 - **Onboarding (wizard)** — step-by-step, **one form per page**, Next/Back:
-  (1) account (.edu + 18+ + password), (2) verify (student-ID upload, manual
-  review), (3) services + pricing, (4) review & submit. **Stripe is NOT here** —
+  (1) account (.edu email + date of birth (18+) + password + address),
+  (2) verify (student-ID upload, manual review), (3) services + pricing,
+  (4) review & submit. **Stripe is NOT here** —
   it's connected after approval.
 - **Provider dashboard** — earnings summary, new requests (accept/decline), a
   **month calendar** (booking days highlighted; tap a day → job + time +
@@ -186,8 +193,14 @@ the wireframe next pass.
 - **Admin dashboard** — provider approval queue (review ID → approve/reject,
   which flips status to `approved` and unlocks Stripe) and service curation
   (toggle which services are live).
-- **Auth** — shared sign up / log in; "hire vs earn" sets the role; 18+ gate;
-  Supabase Auth.
+- **Auth** — shared sign up / log in; "hire vs earn" sets the role. Signup
+  collects a structured **address** (home for customers, business/student for
+  providers) and, for providers, a **date-of-birth 18+ gate**; passwords
+  require a confirm field + a strength check. **Email verification is required
+  but never soft-locks** — resend is available on every "check your email"
+  surface and expired links route to a resend page. Includes a full
+  **password-reset flow** (forgot → email → reset). Supabase Auth; email
+  delivery to real users needs custom SMTP (see §6/§9).
 
 ## 9. Pilot v1 vs. deferred
 
@@ -196,7 +209,8 @@ provider onboarding wizard + manual verification; admin approval/curation;
 Stripe Connect (test mode) with charge-after-accept; browse/profile/booking/
 confirm-&-pay; customer + provider dashboards; provider calendar; jobs &
 pricing; profile & settings; reviews; messaging scaffold with regex moderation;
-About page; Blog route (empty).
+About page; Blog route (empty); custom SMTP (e.g. Resend) so auth
+confirmation/reset emails reach real users, not just team addresses.
 
 **Deferred (do not build unless asked):** flexible per-service availability
 (ship a simple version first); messaging model-moderation tuning + review
@@ -213,7 +227,10 @@ mobile; live Stripe; automated (non-manual) verification.
   surface) or only after a request exists? Block/redact/flag default.
 - Availability granularity for the pilot (day toggles + hours vs. per-day).
 - Admin access: all four founders, or just Zach + Ari.
-- Auth: Google sign-in now or later; require email verification before booking.
+- Auth: Google sign-in now or later. **(Resolved)** Email verification is
+  **required at signup** — kept, but with bulletproof resend + a password-reset
+  flow so it can never soft-lock a user. Requires custom SMTP to be configured
+  (Supabase's built-in email only reaches team addresses and caps at ~2/hour).
 
 ---
 

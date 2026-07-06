@@ -3,6 +3,9 @@
 import { useActionState } from "react";
 
 import { signUpCustomer, type AuthFormState } from "@/app/(auth)/actions";
+import { AddressFields } from "@/components/auth/address-fields";
+import { PasswordField } from "@/components/auth/password-field";
+import { SignupSuccess } from "@/components/auth/signup-success";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
 
@@ -13,11 +16,7 @@ export function SignupForm() {
   );
 
   if (state.success) {
-    return (
-      <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-        {state.success}
-      </div>
-    );
+    return <SignupSuccess email={state.email} message={state.success} />;
   }
 
   return (
@@ -41,22 +40,9 @@ export function SignupForm() {
         </FieldHint>
       </div>
 
-      <div>
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          required
-        />
-      </div>
+      <PasswordField confirm />
 
-      <label className="flex items-start gap-2 text-sm text-ink-soft">
-        <input type="checkbox" name="over18" required className="mt-0.5" />
-        I&apos;m 18 or older.
-      </label>
+      <AddressFields legend="Home address" />
 
       <FieldError>{state.error}</FieldError>
 

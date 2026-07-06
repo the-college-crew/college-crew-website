@@ -3,7 +3,8 @@ import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
 import { Wordmark } from "@/components/site-header";
 import { buttonClasses } from "@/components/ui/button";
-import { requireRole } from "@/lib/auth/session";
+import { ViewAsSwitcher } from "@/components/view-as-switcher";
+import { getEffectiveRole, requireRole } from "@/lib/auth/session";
 
 /**
  * Founders-only area. The layout gates for UX; every admin action re-checks
@@ -16,6 +17,7 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   await requireRole("admin", "/admin");
+  const effectiveRole = await getEffectiveRole();
 
   return (
     <>
@@ -27,14 +29,17 @@ export default async function AdminLayout({
               Admin
             </span>
           </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className={buttonClasses({ variant: "ghost", size: "sm" })}
-            >
-              Log out
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <ViewAsSwitcher current={effectiveRole ?? "admin"} />
+            <form action={signOut}>
+              <button
+                type="submit"
+                className={buttonClasses({ variant: "ghost", size: "sm" })}
+              >
+                Log out
+              </button>
+            </form>
+          </div>
         </div>
         <nav
           aria-label="Admin"

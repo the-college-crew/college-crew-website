@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { passwordSchema } from "@/lib/validation/auth";
 
 import { savePricingRows } from "../_lib/pricing";
 
@@ -100,10 +101,6 @@ export async function saveSettingsPricing(
   revalidatePath("/provider/jobs");
   return { success: "Pricing saved — your public profile is updated." };
 }
-
-const passwordSchema = z
-  .string()
-  .min(8, "New password must be at least 8 characters.");
 
 export async function updatePassword(
   _prev: SettingsFormState,

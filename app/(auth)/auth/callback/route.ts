@@ -4,8 +4,13 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Auth callback: handles Supabase email-confirmation links (both the PKCE
- * `code` flow and the `token_hash` OTP flow) and lands the user on `next`.
+ * Auth callback: handles Supabase email links — both the PKCE `code` flow and
+ * the `token_hash` OTP flow — for signup confirmation and password recovery,
+ * then lands the user on `next`.
+ *
+ * On failure we never dead-end: a recovery link sends the user to
+ * /forgot-password to request a fresh one; a signup link sends them to
+ * /verify-email to resend the confirmation.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -28,9 +33,19 @@ export async function GET(request: Request) {
     if (!error) return NextResponse.redirect(`${origin}${next}`);
   }
 
+  // Failed / expired link. Route to a recovery surface, not a dead end.
+  const isRecovery = type === "recovery" || next === "/reset-password";
+  if (isRecovery) {
+    return NextResponse.redirect(
+      `${origin}/forgot-password?error=${encodeURIComponent(
+        "That reset link has expired — request a new one below.",
+      )}`,
+    );
+  }
+
   return NextResponse.redirect(
-    `${origin}/login?error=${encodeURIComponent(
-      "That confirmation link is invalid or expired — try logging in or signing up again.",
+    `${origin}/verify-email?error=${encodeURIComponent(
+      "That confirmation link is invalid or expired — send yourself a new one below.",
     )}`,
   );
 }

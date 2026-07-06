@@ -119,6 +119,10 @@ exists (test mode only regardless).
 - **Stripe is test mode** for the pilot. Do not flip to live keys without an
   explicit decision.
 - **No real PII in seed/test data.**
+- **`noindex` is ON during the pilot.** `app/layout.tsx` sets a site-wide
+  `robots: { index: false, follow: false }` so Google doesn't index thin,
+  unfinished pages. **On launch day, REMOVE that `robots` block** (and add a
+  sitemap) so the finished site can be indexed. Don't leave it on by accident.
 
 ## Pilot scope discipline
 
