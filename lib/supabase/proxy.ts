@@ -19,6 +19,7 @@ const PROTECTED_PREFIXES = [
   "/messages",
   "/book",
   "/bookings",
+  "/account",
 ];
 
 // The onboarding wizard's account step doubles as provider signup, so it

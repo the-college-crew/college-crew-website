@@ -9,8 +9,25 @@ import { US_STATES } from "@/lib/constants/us-states";
  * no JS: users can pick from the 50 states + DC or type the code/name (the
  * server normalizes it). autoComplete attrs let the browser autofill the whole
  * block — a cheap first step toward richer address suggestions later.
+ *
+ * `defaults` pre-fills the inputs for editing (e.g. the account settings page);
+ * omit it for a blank signup form.
  */
-export function AddressFields({ legend = "Address" }: { legend?: string }) {
+export type AddressDefaults = {
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+};
+
+export function AddressFields({
+  legend = "Address",
+  defaults,
+}: {
+  legend?: string;
+  defaults?: AddressDefaults;
+}) {
   return (
     <fieldset className="space-y-4">
       <legend className="mb-1 text-sm font-medium text-ink">{legend}</legend>
@@ -21,6 +38,7 @@ export function AddressFields({ legend = "Address" }: { legend?: string }) {
           id="address_line1"
           name="address_line1"
           autoComplete="address-line1"
+          defaultValue={defaults?.address_line1}
           required
         />
       </div>
@@ -31,6 +49,7 @@ export function AddressFields({ legend = "Address" }: { legend?: string }) {
           id="address_line2"
           name="address_line2"
           autoComplete="address-line2"
+          defaultValue={defaults?.address_line2}
         />
       </div>
 
@@ -41,6 +60,7 @@ export function AddressFields({ legend = "Address" }: { legend?: string }) {
             id="city"
             name="city"
             autoComplete="address-level2"
+            defaultValue={defaults?.city}
             required
           />
         </div>
@@ -54,6 +74,7 @@ export function AddressFields({ legend = "Address" }: { legend?: string }) {
             autoComplete="address-level1"
             placeholder="State"
             className="sm:w-28"
+            defaultValue={defaults?.state}
             required
           />
           <datalist id="us-states">
@@ -73,6 +94,7 @@ export function AddressFields({ legend = "Address" }: { legend?: string }) {
             pattern="\d{5}"
             maxLength={5}
             placeholder="12345"
+            defaultValue={defaults?.postal_code}
             className="sm:w-24"
             required
           />

@@ -1,10 +1,10 @@
 import Link from "next/link";
 
-import { signOut } from "@/app/(auth)/actions";
 import { Wordmark } from "@/components/site-header";
 import { buttonClasses } from "@/components/ui/button";
+import { UserMenu } from "@/components/user-menu";
 import { ViewAsSwitcher } from "@/components/view-as-switcher";
-import { getEffectiveRole, getSession } from "@/lib/auth/session";
+import { getEffectiveRole, getSession, homePathFor } from "@/lib/auth/session";
 
 /**
  * Provider shell. Deliberately lighter than the customer chrome — this is a
@@ -38,14 +38,11 @@ export default async function ProviderLayout({
               {isAdmin ? (
                 <ViewAsSwitcher current={effectiveRole ?? "admin"} />
               ) : null}
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className={buttonClasses({ variant: "ghost", size: "sm" })}
-                >
-                  Log out
-                </button>
-              </form>
+              <UserMenu
+                name={session.profile.full_name}
+                email={session.user.email ?? ""}
+                homePath={homePathFor(effectiveRole ?? session.profile.role)}
+              />
             </div>
           ) : (
             <Link

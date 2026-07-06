@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { signOut } from "@/app/(auth)/actions";
+import { UserMenu } from "@/components/user-menu";
 import { ViewAsSwitcher } from "@/components/view-as-switcher";
 import { getEffectiveRole, getSession, homePathFor } from "@/lib/auth/session";
 import { SITE } from "@/lib/site";
@@ -77,20 +77,11 @@ export async function SiteHeader() {
               {isAdmin ? (
                 <ViewAsSwitcher current={effectiveRole ?? "admin"} />
               ) : null}
-              <Link
-                href={homePathFor(effectiveRole ?? session.profile.role)}
-                className="rounded-full border border-forest-800/25 px-4 py-1.5 text-sm font-semibold text-forest-800 transition-colors hover:bg-forest-800/[0.06]"
-              >
-                Dashboard
-              </Link>
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className="rounded-full px-3 py-1.5 text-sm font-semibold text-bark-soft transition-colors hover:text-forest-700"
-                >
-                  Log out
-                </button>
-              </form>
+              <UserMenu
+                name={session.profile.full_name}
+                email={session.user.email ?? ""}
+                homePath={homePathFor(effectiveRole ?? session.profile.role)}
+              />
             </>
           ) : (
             <>
