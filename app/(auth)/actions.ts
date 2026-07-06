@@ -290,6 +290,20 @@ export async function resetPassword(
   redirect(homePathFor((profile?.role ?? "customer") as UserRole));
 }
 
+/**
+ * Lightweight "is there a session yet?" poll for the post-signup panel. Once
+ * the confirmation link (opened in another tab of the same browser) sets the
+ * shared session cookie, this returns true and the panel advances the user in.
+ */
+export async function checkSignedIn(): Promise<boolean> {
+  if (!hasSupabaseEnv()) return false;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return Boolean(user);
+}
+
 export async function signOut() {
   if (hasSupabaseEnv()) {
     const supabase = await createClient();

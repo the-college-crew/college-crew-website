@@ -16,7 +16,13 @@ export function SignupForm() {
   );
 
   if (state.success) {
-    return <SignupSuccess email={state.email} message={state.success} />;
+    return (
+      <SignupSuccess
+        email={state.email}
+        message={state.success}
+        redirectTo="/dashboard"
+      />
+    );
   }
 
   return (

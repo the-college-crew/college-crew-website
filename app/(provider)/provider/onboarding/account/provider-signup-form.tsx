@@ -27,7 +27,8 @@ export function ProviderSignupForm() {
       <SignupSuccess
         email={state.email}
         message={state.success}
-        extra="Then log in to continue with verification."
+        extra="We'll take you to the next step automatically."
+        redirectTo="/provider/onboarding/verify"
       />
     );
   }
