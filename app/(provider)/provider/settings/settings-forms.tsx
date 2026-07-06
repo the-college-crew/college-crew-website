@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { PasswordField } from "@/components/auth/password-field";
 import { Button } from "@/components/ui/button";
 import {
   FieldError,
@@ -169,15 +170,7 @@ export function PasswordForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="max-w-xs">
-        <Label htmlFor="password">New password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          required
-        />
+        <PasswordField label="New password" confirm confirmLabel="Confirm new password" />
       </div>
       <SaveRow state={state} pending={pending} label="Update password" />
     </form>
