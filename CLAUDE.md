@@ -124,6 +124,19 @@ exists (test mode only regardless).
   unfinished pages. **On launch day, REMOVE that `robots` block** (and add a
   sitemap) so the finished site can be indexed. Don't leave it on by accident.
 
+## Claude Code integrations
+
+When using Stripe, Vercel, Resend, or Supabase in Claude Code, **use the official
+plugins** instead of MCP servers:
+- `vercel@claude-plugins-official` — for deployments, logs, and project management
+- `resend@claude-plugins-official` — for email templating and sending
+- `supabase@claude-plugins-official` — for database, auth, and Realtime queries
+- **Stripe:** no official plugin; use the Stripe MCP server for API access, and
+  the `/stripe-best-practices` skill for integration decisions and guidance
+
+Install plugins with `claude plugin install <name>`. These bundle pre-configured
+MCP servers and provide the same functionality with less manual setup.
+
 ## Pilot scope discipline
 
 Build the **pilot v1** described in `docs/SPEC.md`. Several capabilities are
