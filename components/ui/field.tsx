@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 const controlClasses =
-  "block w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-mist disabled:bg-court disabled:text-mist";
+  "block w-full rounded-xl border border-stone bg-paper px-3 py-2 text-sm text-ink placeholder:text-mist shadow-sm shadow-viridian/5 disabled:bg-stone disabled:text-mist";
 
 export function Label({
   className,

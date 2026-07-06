@@ -4,9 +4,17 @@
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=dwnaaffrffdgrautgigw"
     },
+    "vercel": {
+      "type": "http",
+      "url": "https://mcp.vercel.com"
+    },
     "stripe": {
       "type": "http",
       "url": "https://mcp.stripe.com"
+    },
+    "resend": {
+      "type": "http",
+      "url": "https://mcp.resend.com"
     }
   }
 }

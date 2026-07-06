@@ -11,7 +11,7 @@ export default function ErrorBoundary({
 }) {
   return (
     <main className="mx-auto flex max-w-md flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
-      <h1 className="font-display text-2xl font-semibold uppercase tracking-wide">
+      <h1 className="font-display text-2xl font-semibold">
         Something went wrong
       </h1>
       <p className="text-sm text-ink-soft">

@@ -42,7 +42,7 @@ export default async function ProviderProfilePage({
       {/* Identity */}
       <Card pennant className="p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-display text-3xl font-semibold uppercase tracking-wide">
+          <h1 className="font-display text-3xl font-semibold">
             {provider.display_name || "Student provider"}
           </h1>
           <VerifiedBadge />
@@ -81,7 +81,7 @@ export default async function ProviderProfilePage({
 
       {/* Services & pricing */}
       <Card className="p-6">
-        <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+        <h2 className="font-display text-xl font-semibold">
           Services & pricing
         </h2>
         <ul className="mt-4 divide-y divide-line">
@@ -101,7 +101,7 @@ export default async function ProviderProfilePage({
 
       {/* Availability */}
       <Card className="p-6">
-        <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+        <h2 className="font-display text-xl font-semibold">
           Availability
         </h2>
         {days.length === 0 && !provider.availability.note ? (
@@ -133,7 +133,7 @@ export default async function ProviderProfilePage({
 
       {/* Reviews */}
       <Card className="p-6">
-        <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+        <h2 className="font-display text-xl font-semibold">
           Reviews
         </h2>
         {provider.reviews.length === 0 ? (

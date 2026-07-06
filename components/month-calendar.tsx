@@ -69,7 +69,7 @@ export function MonthCalendar({ bookings }: { bookings: CalendarBooking[] }) {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg font-semibold uppercase tracking-wide">
+        <h3 className="font-display text-lg font-semibold">
           {monthLabel}
         </h3>
         <div className="flex gap-1">

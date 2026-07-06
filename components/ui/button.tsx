@@ -4,10 +4,10 @@ type Variant = "primary" | "secondary" | "success" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
 const variantClasses: Record<Variant, string> = {
-  primary: "bg-crew-600 text-white hover:bg-crew-700",
-  secondary: "border border-line bg-paper text-ink hover:bg-crew-50",
-  success: "bg-quad-600 text-white hover:bg-quad-700",
-  ghost: "text-crew-700 hover:bg-crew-50",
+  primary: "bg-viridian text-shell hover:bg-viridian-ink",
+  secondary: "border border-viridian/35 bg-transparent text-viridian hover:bg-stone/45",
+  success: "bg-honeydew text-viridian hover:bg-honeydew/80",
+  ghost: "text-viridian hover:bg-stone/45",
   danger: "border border-red-200 bg-paper text-red-700 hover:bg-red-50",
 };
 
@@ -28,7 +28,7 @@ export function buttonClasses({
   className?: string;
 } = {}) {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50",
+    "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50",
     variantClasses[variant],
     sizeClasses[size],
     className,

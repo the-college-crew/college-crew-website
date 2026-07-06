@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
-import { Barlow_Condensed, Newsreader, Public_Sans } from "next/font/google";
+import { Manrope, Newsreader } from "next/font/google";
 
 import { DevBanner } from "@/components/dev-banner";
 import { SITE } from "@/lib/site";
 
 import "./globals.css";
 
-const displayFont = Barlow_Condensed({
-  weight: ["500", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-barlow-condensed",
-});
-
-const bodyFont = Public_Sans({
+const bodyFont = Manrope({
   subsets: ["latin"],
   variable: "--font-public-sans",
 });
@@ -47,7 +41,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${displayFont.variable} ${bodyFont.variable} ${serifFont.variable}`}
+      className={`${bodyFont.variable} ${serifFont.variable}`}
     >
       <body className="flex min-h-screen flex-col font-sans">
         <DevBanner />

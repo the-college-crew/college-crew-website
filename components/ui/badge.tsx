@@ -3,10 +3,10 @@ import { cn } from "@/lib/utils";
 type Tone = "gold" | "green" | "blue" | "gray" | "red";
 
 const toneClasses: Record<Tone, string> = {
-  gold: "border-gold-400/60 bg-gold-100 text-gold-800",
-  green: "border-quad-200 bg-quad-100 text-quad-800",
-  blue: "border-crew-200 bg-crew-100 text-crew-800",
-  gray: "border-line bg-court text-ink-soft",
+  gold: "border-honeydew bg-honeydew text-viridian",
+  green: "border-honeydew bg-honeydew text-viridian",
+  blue: "border-sky bg-sky text-viridian",
+  gray: "border-stone bg-stone text-ink-soft",
   red: "border-red-200 bg-red-50 text-red-800",
 };
 

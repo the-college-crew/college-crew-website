@@ -32,7 +32,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
   return (
     <Card pennant className="flex flex-col gap-3 p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="font-display text-xl font-semibold uppercase tracking-wide">
+        <h3 className="font-display text-xl font-semibold">
           {provider.display_name || "Student provider"}
         </h3>
         <VerifiedBadge />

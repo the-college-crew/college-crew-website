@@ -25,11 +25,11 @@ export default async function ProviderLayout({
 
   return (
     <>
-      <header className="pennant border-b border-line bg-paper">
+      <header className="border-b border-viridian/10 bg-viridian text-shell">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
           <div className="flex items-center gap-3">
-            <Wordmark />
-            <span className="rounded-full border border-crew-200 bg-crew-100 px-2.5 py-0.5 font-display text-xs font-semibold uppercase tracking-wide text-crew-800">
+            <Wordmark tone="dark" />
+            <span className="rounded-full border border-shell/20 bg-shell/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-honeydew">
               Provider
             </span>
           </div>
@@ -47,7 +47,11 @@ export default async function ProviderLayout({
           ) : (
             <Link
               href="/login?next=/provider/dashboard"
-              className={buttonClasses({ variant: "ghost", size: "sm" })}
+              className={buttonClasses({
+                variant: "secondary",
+                size: "sm",
+                className: "border-shell/30 text-shell hover:bg-shell/10",
+              })}
             >
               Log in
             </Link>
@@ -56,15 +60,15 @@ export default async function ProviderLayout({
         {isProvider ? (
           <nav
             aria-label="Provider"
-            className="mx-auto flex max-w-5xl gap-6 px-4 pb-3 text-sm font-medium text-ink-soft"
+            className="mx-auto flex max-w-5xl gap-6 px-4 pb-3 text-sm font-semibold text-shell/70"
           >
-            <Link href="/provider/dashboard" className="hover:text-crew-700">
+            <Link href="/provider/dashboard" className="hover:text-shell">
               Dashboard
             </Link>
-            <Link href="/provider/jobs" className="hover:text-crew-700">
+            <Link href="/provider/jobs" className="hover:text-shell">
               Jobs & pricing
             </Link>
-            <Link href="/provider/settings" className="hover:text-crew-700">
+            <Link href="/provider/settings" className="hover:text-shell">
               Profile & settings
             </Link>
           </nav>

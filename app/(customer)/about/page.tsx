@@ -40,7 +40,7 @@ export default function AboutPage() {
       <section aria-labelledby="why-students">
         <h2
           id="why-students"
-          className="font-display text-2xl font-semibold uppercase tracking-wide"
+          className="font-display text-2xl font-semibold"
         >
           Why students?
         </h2>
@@ -56,14 +56,14 @@ export default function AboutPage() {
       <section aria-labelledby="team">
         <h2
           id="team"
-          className="font-display text-2xl font-semibold uppercase tracking-wide"
+          className="font-display text-2xl font-semibold"
         >
           The team
         </h2>
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {TEAM.map((member) => (
             <Card key={member.name} pennant className="p-4 text-center">
-              <p className="font-display text-lg font-semibold uppercase tracking-wide">
+              <p className="font-display text-lg font-semibold">
                 {member.name}
               </p>
               <p className="mt-1 text-xs text-mist">{member.role}</p>

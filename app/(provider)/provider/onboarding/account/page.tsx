@@ -24,7 +24,7 @@ export default async function OnboardingAccountPage() {
 
       {!session ? (
         <Card pennant className="p-6">
-          <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+          <h2 className="font-display text-xl font-semibold">
             Create your account
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
@@ -46,7 +46,7 @@ export default async function OnboardingAccountPage() {
         </Card>
       ) : session.profile.role === "provider" ? (
         <Card pennant className="p-6">
-          <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+          <h2 className="font-display text-xl font-semibold">
             Account ready ✓
           </h2>
           <dl className="mt-4 space-y-2 text-sm">

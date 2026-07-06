@@ -43,7 +43,7 @@ export default async function OnboardingVerifyPage() {
       <WizardSteps current="verify" />
 
       <Card pennant className="p-6">
-        <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+        <h2 className="font-display text-xl font-semibold">
           Verify your school email
         </h2>
         <p className="mt-1 text-sm text-ink-soft">
@@ -61,7 +61,7 @@ export default async function OnboardingVerifyPage() {
       </Card>
 
       <Card pennant className="mt-4 p-6">
-        <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+        <h2 className="font-display text-xl font-semibold">
           Upload your student ID
         </h2>
         <p className="mt-1 text-sm text-ink-soft">

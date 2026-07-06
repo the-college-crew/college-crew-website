@@ -14,7 +14,7 @@ export default async function VerifyEmailPage({
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold uppercase tracking-wide">
+      <h1 className="font-display text-2xl font-semibold">
         Verify your email
       </h1>
       <p className="mt-1 text-sm text-ink-soft">

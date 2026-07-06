@@ -11,7 +11,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-xl border border-line bg-paper shadow-sm",
+        "rounded-2xl border border-stone bg-paper shadow-sm shadow-viridian/5",
         pennant && "pennant overflow-hidden",
         className,
       )}

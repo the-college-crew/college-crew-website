@@ -11,12 +11,16 @@ export default function SharedLayout({
 }) {
   return (
     <>
-      <header className="pennant border-b border-line bg-paper">
+      <header className="border-b border-viridian/10 bg-viridian text-shell">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
-          <Wordmark />
+          <Wordmark tone="dark" />
           <Link
             href="/"
-            className={buttonClasses({ variant: "ghost", size: "sm" })}
+            className={buttonClasses({
+              variant: "secondary",
+              size: "sm",
+              className: "border-shell/30 text-shell hover:bg-shell/10",
+            })}
           >
             Home
           </Link>
