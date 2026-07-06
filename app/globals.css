@@ -50,9 +50,45 @@
   --color-line: #d9dce2;
   --color-court: #f4f5f7;
   --color-paper: #ffffff;
+
+  /*
+   * Landing "at home / on campus" palette — FRONT PAGE ONLY.
+   * Warm cream canvas, deep forest CTAs, pale sage trust chips, and a cool
+   * blue-gray glow. Additive: no existing crew/quad/ink token is touched, so
+   * every other page renders exactly as before.
+   */
+  --color-cream: #f4f1e6;
+  --color-cream-card: #fbfaf3;
+  --color-sand: #e9e1cf;
+  --color-forest-950: #1b261d;
+  --color-forest-900: #22301f;
+  --color-forest-800: #2b3a2e;
+  --color-forest-700: #37493a;
+  --color-forest-600: #47594a;
+  --color-forest-100: #dbe2d7;
+  --color-sage-100: #e6e7cb;
+  --color-sage-200: #d7dab2;
+  --color-sage-700: #5f6535;
+  --color-haze-200: #cdd6e0;
+  --color-haze-300: #b9c5d4;
+  --color-bark: #24271f;
+  --color-bark-soft: #585a4e;
+  --color-bark-line: #ddd6c4;
 }
 
 @layer base {
+  /*
+   * Full-bleed sections (the landing canvas) break out of the centered layout
+   * with vw-based margins, and 100vw includes the vertical scrollbar — the
+   * breakout overhangs the viewport by half the scrollbar width, which spawns
+   * a horizontal scrollbar. Clip the stray pixels at the root. Must be `clip`,
+   * not `hidden`: hidden creates a scroll container and breaks the sticky
+   * header.
+   */
+  html {
+    overflow-x: clip;
+  }
+
   body {
     background-color: var(--color-court);
     color: var(--color-ink);
@@ -93,4 +129,27 @@
       var(--color-quad-500) 62% 100%
     );
   }
+}
+
+/*
+ * Landing canvas — a cool blue-gray glow anchored top-left, dissolving into a
+ * warm cream field that settles to sand at the foot of the page. This is the
+ * gradient the front page extends downward so the page reads as one finished
+ * surface rather than a hero bolted onto a gray body.
+ */
+@utility home-canvas {
+  background-color: var(--color-cream);
+  background-image:
+    radial-gradient(
+      88% 62% at 14% -6%,
+      var(--color-haze-300) 0%,
+      color-mix(in srgb, var(--color-haze-200) 55%, transparent) 34%,
+      transparent 62%
+    ),
+    linear-gradient(
+      180deg,
+      var(--color-cream) 0%,
+      var(--color-cream) 52%,
+      var(--color-sand) 100%
+    );
 }

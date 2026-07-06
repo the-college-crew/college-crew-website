@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Barlow_Condensed, Public_Sans } from "next/font/google";
+import { Barlow_Condensed, Newsreader, Public_Sans } from "next/font/google";
 
 import { DevBanner } from "@/components/dev-banner";
 import { SITE } from "@/lib/site";
@@ -17,6 +17,14 @@ const bodyFont = Public_Sans({
   variable: "--font-public-sans",
 });
 
+// Editorial serif for the cream/forest design system (landing + shared chrome).
+const serifFont = Newsreader({
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-newsreader",
+});
+
 export const metadata: Metadata = {
   title: {
     default: `${SITE.name} — student help for your home`,
@@ -31,7 +39,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${displayFont.variable} ${bodyFont.variable}`}>
+    <html
+      lang="en"
+      className={`${displayFont.variable} ${bodyFont.variable} ${serifFont.variable}`}
+    >
       <body className="flex min-h-screen flex-col font-sans">
         <DevBanner />
         {children}

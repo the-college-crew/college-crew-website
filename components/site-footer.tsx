@@ -1,59 +1,62 @@
 import Link from "next/link";
 
+import { Wordmark } from "@/components/site-header";
 import { NEIGHBORHOOD, SITE } from "@/lib/site";
+
+const EXPLORE = [
+  { href: "/browse", label: "Browse providers" },
+  { href: "/provider/onboarding/account", label: "Earn as a student" },
+  { href: "/about", label: "About us" },
+  { href: "/blog", label: "Blog" },
+];
 
 export function SiteFooter() {
   return (
-    <footer className="mt-16 border-t border-line bg-paper">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-3">
-        <div>
-          <p className="font-display text-lg font-bold uppercase tracking-wide">
-            <span className="text-ink">College</span>{" "}
-            <span className="text-crew-600">Crew</span>
-          </p>
-          <p className="mt-2 max-w-xs text-sm text-ink-soft">{SITE.tagline}</p>
-          <p className="mt-2 text-xs text-mist">
-            Now serving {NEIGHBORHOOD.name} — our pilot neighborhood.
-          </p>
+    <footer className="bg-forest-900 text-cream">
+      <div className="mx-auto max-w-6xl px-4 py-14">
+        <div className="grid gap-10 sm:grid-cols-3">
+          <div>
+            <Wordmark tone="dark" />
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-forest-100">
+              {SITE.tagline}
+            </p>
+            <p className="mt-3 text-xs text-sage-200">
+              Now serving {NEIGHBORHOOD.name} — our pilot neighborhood.
+            </p>
+          </div>
+
+          <nav aria-label="Footer" className="text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sage-200">
+              Explore
+            </p>
+            <ul className="mt-4 space-y-2.5 text-forest-100">
+              {EXPLORE.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="transition-colors hover:text-cream"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div className="text-xs leading-relaxed text-forest-100/80">
+            <p>
+              Every provider is a verified college student (18+). Providers are
+              independent — {SITE.name} connects, verifies, and processes
+              payments.
+            </p>
+          </div>
         </div>
 
-        <nav aria-label="Footer" className="text-sm">
-          <p className="font-display text-sm font-semibold uppercase tracking-[0.18em] text-mist">
-            Explore
-          </p>
-          <ul className="mt-3 space-y-2 text-ink-soft">
-            <li>
-              <Link href="/browse" className="hover:text-crew-700">
-                Browse providers
-              </Link>
-            </li>
-            <li>
-              <Link href="/provider/onboarding/account" className="hover:text-crew-700">
-                Earn as a student
-              </Link>
-            </li>
-            <li>
-              <Link href="/about" className="hover:text-crew-700">
-                About us
-              </Link>
-            </li>
-            <li>
-              <Link href="/blog" className="hover:text-crew-700">
-                Blog
-              </Link>
-            </li>
-          </ul>
-        </nav>
-
-        <div className="text-xs text-mist">
+        <div className="mt-12 flex flex-col gap-2 border-t border-cream/15 pt-6 text-xs text-sage-200 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            Every provider is a verified college student (18+). Providers are
-            independent — {SITE.name} connects, verifies, and processes
-            payments.
-          </p>
-          <p className="mt-3">
             © {new Date().getFullYear()} {SITE.name}
           </p>
+          <p>Verified students · Curated services · Paid securely in-app</p>
         </div>
       </div>
     </footer>

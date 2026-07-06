@@ -1,18 +1,44 @@
 import Link from "next/link";
 
 import { signOut } from "@/app/(auth)/actions";
-import { buttonClasses } from "@/components/ui/button";
 import { getSession, homePathFor } from "@/lib/auth/session";
 import { SITE } from "@/lib/site";
+import { cn } from "@/lib/utils";
 
-export function Wordmark() {
+const serif = "font-[family-name:var(--font-newsreader)]";
+
+const NAV = [
+  { href: "/browse", label: "Browse" },
+  { href: "/about", label: "About" },
+  { href: "/blog", label: "Blog" },
+];
+
+/**
+ * College Crew wordmark: a forest logo tile + name. `tone` flips it for use on
+ * dark surfaces (the forest footer) vs. light ones (the header).
+ */
+export function Wordmark({ tone = "light" }: { tone?: "light" | "dark" }) {
+  const onDark = tone === "dark";
   return (
-    <Link
-      href="/"
-      className="font-display text-xl font-bold uppercase tracking-wide"
-    >
-      <span className="text-ink">College</span>{" "}
-      <span className="text-crew-600">Crew</span>
+    <Link href="/" className="flex items-center gap-2.5">
+      <span
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg text-lg font-semibold",
+          serif,
+          onDark ? "bg-cream text-forest-900" : "bg-forest-800 text-cream",
+        )}
+        aria-hidden
+      >
+        C
+      </span>
+      <span
+        className={cn(
+          "text-lg font-semibold tracking-tight",
+          onDark ? "text-cream" : "text-bark",
+        )}
+      >
+        College Crew
+      </span>
     </Link>
   );
 }
@@ -22,39 +48,39 @@ export async function SiteHeader() {
   const session = await getSession();
 
   return (
-    <header className="pennant sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-bark-line/70 bg-cream/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-8">
           <Wordmark />
           <nav
             aria-label="Main"
-            className="hidden items-center gap-6 text-sm font-medium text-ink-soft sm:flex"
+            className="hidden items-center gap-6 text-sm font-medium text-bark-soft sm:flex"
           >
-            <Link href="/browse" className="hover:text-crew-700">
-              Browse
-            </Link>
-            <Link href="/about" className="hover:text-crew-700">
-              About
-            </Link>
-            <Link href="/blog" className="hover:text-crew-700">
-              Blog
-            </Link>
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="transition-colors hover:text-forest-700"
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {session ? (
             <>
               <Link
                 href={homePathFor(session.profile.role)}
-                className={buttonClasses({ variant: "secondary", size: "sm" })}
+                className="rounded-full border border-forest-800/25 px-4 py-1.5 text-sm font-semibold text-forest-800 transition-colors hover:bg-forest-800/[0.06]"
               >
                 Dashboard
               </Link>
               <form action={signOut}>
                 <button
                   type="submit"
-                  className={buttonClasses({ variant: "ghost", size: "sm" })}
+                  className="rounded-full px-3 py-1.5 text-sm font-semibold text-bark-soft transition-colors hover:text-forest-700"
                 >
                   Log out
                 </button>
@@ -64,13 +90,13 @@ export async function SiteHeader() {
             <>
               <Link
                 href="/login"
-                className={buttonClasses({ variant: "ghost", size: "sm" })}
+                className="rounded-full px-3 py-1.5 text-sm font-semibold text-bark-soft transition-colors hover:text-forest-700"
               >
                 Log in
               </Link>
               <Link
                 href="/signup"
-                className={buttonClasses({ variant: "primary", size: "sm" })}
+                className="rounded-full bg-forest-800 px-4 py-1.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-900"
               >
                 Get started
               </Link>
@@ -82,17 +108,17 @@ export async function SiteHeader() {
       {/* Mobile nav row */}
       <nav
         aria-label="Main mobile"
-        className="flex items-center gap-6 border-t border-line px-4 py-2 text-sm font-medium text-ink-soft sm:hidden"
+        className="flex items-center gap-6 border-t border-bark-line/70 px-4 py-2 text-sm font-medium text-bark-soft sm:hidden"
       >
-        <Link href="/browse" className="hover:text-crew-700">
-          Browse
-        </Link>
-        <Link href="/about" className="hover:text-crew-700">
-          About
-        </Link>
-        <Link href="/blog" className="hover:text-crew-700">
-          Blog
-        </Link>
+        {NAV.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="transition-colors hover:text-forest-700"
+          >
+            {item.label}
+          </Link>
+        ))}
       </nav>
       <span className="sr-only">{SITE.name}</span>
     </header>
