@@ -29,8 +29,9 @@ export default async function DeleteAccountPage() {
           <li>• (Providers) your storefront, services, and pricing</li>
         </ul>
         <p className="mt-4 text-sm text-ink-soft">
-          There&apos;s no way to recover any of this afterward. If you have an
-          active booking, you&apos;ll need to cancel or complete it first.
+          Any upcoming bookings or appointments will be{" "}
+          <span className="font-medium text-ink">automatically cancelled</span>.
+          There&apos;s no way to recover any of this afterward.
         </p>
 
         <div className="mt-6 border-t border-line pt-6">

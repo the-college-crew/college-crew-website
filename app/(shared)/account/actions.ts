@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
-import type { BookingStatus } from "@/lib/db/types";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -79,13 +78,6 @@ export async function updatePassword(
   return { success: "Password updated." };
 }
 
-// In-flight bookings block deletion (money / commitment in play).
-const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [
-  "requested",
-  "accepted",
-  "paid",
-];
-
 export async function deleteAccount(
   _prev: AccountFormState,
   formData: FormData,
@@ -110,34 +102,10 @@ export async function deleteAccount(
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Refuse while any in-flight booking exists (as customer or provider).
-  const { data: activeAsCustomer } = await admin
-    .from("bookings")
-    .select("id")
-    .eq("customer_id", user.id)
-    .in("status", ACTIVE_BOOKING_STATUSES)
-    .limit(1);
-
-  let hasActiveAsProvider = false;
-  if (providerProfile) {
-    const { data } = await admin
-      .from("bookings")
-      .select("id")
-      .eq("provider_id", providerProfile.id)
-      .in("status", ACTIVE_BOOKING_STATUSES)
-      .limit(1);
-    hasActiveAsProvider = (data?.length ?? 0) > 0;
-  }
-
-  if ((activeAsCustomer?.length ?? 0) > 0 || hasActiveAsProvider) {
-    return {
-      error:
-        "You have active bookings. Cancel or complete them before deleting your account.",
-    };
-  }
-
-  // Clear booking history so the RESTRICT FKs don't block the cascade
-  // (reviews cascade off bookings automatically).
+  // Hard delete: remove all of the user's bookings (as customer and as
+  // provider). This is the "auto-cancel" the confirmation page warns about, and
+  // it clears the RESTRICT FKs that would otherwise block the cascade. Reviews
+  // cascade off bookings automatically.
   await admin.from("bookings").delete().eq("customer_id", user.id);
   if (providerProfile) {
     await admin.from("bookings").delete().eq("provider_id", providerProfile.id);
