@@ -56,7 +56,7 @@ export default async function AdminFlaggedPage() {
       <RealtimeRefresh channel="admin-flagged" table="moderation_events" />
       <PageHeader
         title="Flagged messages"
-        description="Messages where the regex scan or gpt-5.4-nano caught possible off-platform contact info. Redacted messages were hidden inline; flagged ones were delivered as-is for you to review."
+        description="Messages the regex scan or gpt-5.4-nano flagged for possible off-platform contact info. Nothing is redacted — messages are always delivered in full; they're logged here for your review."
       />
 
       <section aria-labelledby="events">

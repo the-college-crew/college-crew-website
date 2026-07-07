@@ -3,19 +3,20 @@
 // Clients call this function to send a chat message; RLS has no insert
 // policy on `messages`, so moderation cannot be bypassed client-side.
 //
-// Two-layer scan:
-//   1. Cheap regex pass (below, working) — obvious phones, emails, handles,
-//      payment apps, "text me instead".
-//   2. Low-latency model backstop — PLUGGABLE, see modelModerationPass().
+// Two-layer, FLAG-ONLY scan:
+//   1. Cheap regex pass (below) — obvious phones, emails, handles, payment
+//      apps, "text me instead".
+//   2. gpt-5.4-nano backstop — catches obfuscated contact info the regex
+//      misses, using a rolling window of the last 10 messages for context.
 //
 // CRITICAL POLICY NUANCE: the customer's address and job logistics are
-// legitimate and must NOT be blocked. Only off-platform CONTACT CHANNELS
+// legitimate and must NOT be flagged. Only off-platform CONTACT CHANNELS
 // (phone, email, social, payment apps) are targets. Keep every pattern —
-// and eventually the model prompt — written around exactly that line.
+// and the model prompt — written around exactly that line.
 //
-// Handling: redact the offending span inline + tell the sender, AND log the
-// original to moderation_events for founder review. Never hard-block the
-// whole message.
+// Handling: NEVER modify or redact the message — it is always delivered in
+// full. If either layer detects contact info, mark it `flagged`, log the
+// original to moderation_events for founder review, and email the founders.
 //
 // Deploy: npx supabase functions deploy moderate-message
 
@@ -29,7 +30,7 @@ const corsHeaders = {
 
 type Pattern = { name: string; regex: RegExp };
 
-// Layer 1: regex pass. Deliberately conservative so street addresses and
+// Layer 1: regex detection. Deliberately conservative so street addresses and
 // job details never match (e.g. phone requires a full 10-digit shape).
 const PATTERNS: Pattern[] = [
   {
@@ -65,33 +66,24 @@ const PATTERNS: Pattern[] = [
   },
 ];
 
-const REDACTION = "[hidden — keep it on College Crew]";
-
-function regexModerationPass(body: string): {
-  cleaned: string;
-  matched: string[];
-} {
-  let cleaned = body;
+// Returns the names of the patterns that fired. Flag-only — the message text
+// is never modified.
+function regexModerationPass(body: string): string[] {
   const matched: string[] = [];
-
   for (const pattern of PATTERNS) {
-    if (pattern.regex.test(cleaned)) {
-      matched.push(pattern.name);
-      cleaned = cleaned.replace(pattern.regex, REDACTION);
-    }
+    if (pattern.regex.test(body)) matched.push(pattern.name);
     pattern.regex.lastIndex = 0;
   }
-
-  return { cleaned, matched };
+  return matched;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
 // Layer 2: OpenAI MODEL BACKSTOP — gpt-5.4-nano, FLAG-ONLY.
 //
-// The model reads each message (already run through the regex layer) and
-// catches contact-info exchange the regexes miss ("find me on insta",
-// "venmo same name", "five five five…", handwaved handles). Unlike the regex
-// layer it does NOT rewrite the text — it only FLAGS: the message is delivered
+// The model reads the latest message (raw — nothing is ever redacted) together
+// with a rolling window of the last MODEL_WINDOW messages in the thread, so it
+// can catch contact info split across turns ("what's your #?" → "555…") or
+// answered from earlier context. It only FLAGS: the message is delivered
 // unchanged, marked `flagged`, logged to moderation_events, and the founders
 // are emailed. Set OPENAI_API_KEY on the function to enable it
 // (`npx supabase secrets set OPENAI_API_KEY=...`); with no key it no-ops and
@@ -104,8 +96,9 @@ function regexModerationPass(body: string): {
 // ─────────────────────────────────────────────────────────────────────────
 const MODEL = "gpt-5.4-nano";
 const MODEL_TIMEOUT_MS = 2500;
+const MODEL_WINDOW = 10; // rolling context: last N messages the model can see
 
-const MODERATION_POLICY = `You review one chat message between a customer and a student service provider on a home-services marketplace. Your ONLY job is to detect attempts to move the relationship off-platform by sharing a private CONTACT CHANNEL: phone numbers (including spelled-out or obfuscated), personal emails, social handles/usernames, or payment apps (Venmo, Cash App, Zelle, PayPal, Apple Pay). The customer's street ADDRESS and any job logistics (times, tasks, gate codes, pricing) are legitimate — never flag those. Report whether the message contains any such off-platform contact channel and which categories apply. Do not rewrite the message.`;
+const MODERATION_POLICY = `You review the LATEST chat message between a customer and a student service provider on a home-services marketplace. You are also given the recent conversation, for CONTEXT ONLY. Your ONLY job is to decide whether the LATEST message is part of an attempt to move the relationship off-platform by sharing a private CONTACT CHANNEL: phone numbers (including spelled-out or obfuscated), personal emails, social handles/usernames, or payment apps (Venmo, Cash App, Zelle, PayPal, Apple Pay). Use the prior messages to catch contact info that is split across turns or that answers an earlier request. The customer's street ADDRESS and any job logistics (times, tasks, gate codes, pricing) are legitimate — never flag those. Report whether the LATEST message contains or completes such an off-platform contact channel, and which categories apply. Do not rewrite anything.`;
 
 // Structured output: guarantees a parseable, fixed-shape reply.
 const RESPONSE_FORMAT = {
@@ -140,9 +133,37 @@ const RESPONSE_FORMAT = {
 // Returns the flagged categories (prefixed `model:`) or null. FLAG-ONLY: it
 // never touches the message text. Fails open — any error, timeout, or malformed
 // response returns null so a model outage can never block a legitimate message.
-async function modelModerationPass(body: string): Promise<string[] | null> {
+async function modelModerationPass(
+  admin: ReturnType<typeof createClient>,
+  conversationId: string,
+  currentText: string,
+  currentSenderId: string,
+): Promise<string[] | null> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey || !body.trim()) return null;
+  if (!apiKey || !currentText.trim()) return null;
+
+  // Rolling context window: the last MODEL_WINDOW messages already in the
+  // thread (the current one isn't inserted yet), replayed oldest-first.
+  const { data: history } = await admin
+    .from("messages")
+    .select("sender_id, body")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(MODEL_WINDOW);
+  const transcript = (history ?? [])
+    .reverse()
+    .map(
+      (m: { sender_id: string; body: string }) =>
+        `${m.sender_id === currentSenderId ? "SENDER" : "OTHER"}: ${m.body}`,
+    )
+    .join("\n");
+  const userContent = [
+    "Recent conversation (context only, oldest first):",
+    transcript || "(no prior messages)",
+    "",
+    "LATEST message to review (from SENDER):",
+    currentText,
+  ].join("\n");
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
@@ -158,7 +179,7 @@ async function modelModerationPass(body: string): Promise<string[] | null> {
         model: MODEL,
         messages: [
           { role: "system", content: MODERATION_POLICY },
-          { role: "user", content: body },
+          { role: "user", content: userContent },
         ],
         response_format: RESPONSE_FORMAT,
       }),
@@ -190,7 +211,7 @@ async function modelModerationPass(body: string): Promise<string[] | null> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Founder notification — emailed whenever a message is flagged/redacted.
+// Founder notification — emailed whenever a message is flagged.
 //
 // Edge functions run in Deno and cannot import the app's lib/email/send.ts, so
 // this hits the Resend REST API directly. Mirrors that file's stub behavior:
@@ -299,26 +320,22 @@ Deno.serve(async (request) => {
       return json({ error: "Conversation not found." }, 404);
     }
 
-    // Moderation. Layer 1 (regex) REDACTS spans inline and delivers. Layer 2
-    // (gpt-5.4-nano) only FLAGS what regex missed — the text is delivered
-    // unchanged. Status is `redacted` if regex rewrote the body, else `flagged`
-    // if the model caught something, else `clean`.
-    const { cleaned, matched: regexMatched } = regexModerationPass(text);
-    const modelMatched = (await modelModerationPass(cleaned)) ?? [];
+    // Moderation is FLAG-ONLY: the message is never modified. Layer 1 (regex)
+    // and Layer 2 (gpt-5.4-nano, with a rolling MODEL_WINDOW-message context)
+    // each just DETECT off-platform contact info. Any hit → `flagged`, logged,
+    // and the founders emailed; the full original text is always delivered.
+    const regexMatched = regexModerationPass(text);
+    const modelMatched =
+      (await modelModerationPass(admin, conversation_id, text, user.id)) ?? [];
     const matched = [...regexMatched, ...modelMatched];
-    const moderationStatus =
-      regexMatched.length > 0
-        ? "redacted"
-        : modelMatched.length > 0
-          ? "flagged"
-          : "clean";
+    const moderationStatus = matched.length > 0 ? "flagged" : "clean";
 
     const { data: message, error: insertError } = await admin
       .from("messages")
       .insert({
         conversation_id,
         sender_id: user.id,
-        body: cleaned,
+        body: text,
         image_path: image,
         moderation_status: moderationStatus,
       })
