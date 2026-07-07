@@ -1,19 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, type MouseEvent, type ReactNode } from "react";
+import { useTopLoader } from "nextjs-toploader";
+import { useCallback, useEffect, type MouseEvent, type ReactNode } from "react";
 
 import { buttonClasses } from "@/components/ui/button";
 
 export function ProviderModal({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const loader = useTopLoader();
+
+  // router.back() isn't covered by nextjs-toploader's automatic hooks (only
+  // <Link> clicks and push/replace are), so start the site-wide loader by
+  // hand; its own popstate listener still ends it.
+  const goBack = useCallback(() => {
+    loader.start();
+    router.back();
+  }, [loader, router]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") router.back();
+      if (event.key === "Escape") goBack();
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -21,10 +31,10 @@ export function ProviderModal({ children }: { children: ReactNode }) {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [router]);
+  }, [goBack]);
 
   function closeOnBackdrop(event: MouseEvent<HTMLDivElement>) {
-    if (event.target === event.currentTarget) router.back();
+    if (event.target === event.currentTarget) goBack();
   }
 
   return (
@@ -41,7 +51,7 @@ export function ProviderModal({ children }: { children: ReactNode }) {
       >
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={goBack}
           className={buttonClasses({
             variant: "ghost",
             size: "sm",

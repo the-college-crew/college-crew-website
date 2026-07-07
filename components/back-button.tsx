@@ -1,20 +1,27 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useTopLoader } from "nextjs-toploader";
 
 /**
  * Universal back button, rendered top-right of a page's `PageHeader` (aligned
  * with the title) on the light content surface. Shows on every page except the
  * homepage and steps back through history, falling back to the homepage on a
  * direct load.
+ *
+ * `nextjs-toploader`'s automatic hooks only cover `<Link>` clicks and, via its
+ * `/app` router shim, `push`/`replace` — `router.back()` isn't wrapped, so we
+ * start the site-wide loader by hand (its own popstate listener still ends it).
  */
 export function BackButton() {
   const pathname = usePathname();
   const router = useRouter();
+  const loader = useTopLoader();
 
   if (pathname === "/") return null;
 
   const goBack = () => {
+    loader.start();
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
