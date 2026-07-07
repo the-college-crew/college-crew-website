@@ -200,7 +200,9 @@ export default async function LandingPage() {
       <FeaturesSection />
       <TestimonialsSection />
       <FAQList />
-      <CTASection showProviderCta={showProviderCtas} primaryCta={primaryCta} />
+      {showProviderCtas ? (
+        <CTASection showProviderCta={showProviderCtas} primaryCta={primaryCta} />
+      ) : null}
     </div>
   );
 }
