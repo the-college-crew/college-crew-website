@@ -41,10 +41,10 @@ const SERVICES = [
     icon: "DW",
   },
   {
-    name: "Housekeeping & cleaning",
-    cadence: "Biweekly",
-    blurb: "Proven willingness to pay from dual-income families, high lifetime value.",
-    icon: "HC",
+    name: "House Management",
+    cadence: "Flexible",
+    blurb: "Errands and home tasks like package returns, grocery pickup, and check-ins.",
+    icon: "HM",
   },
   {
     name: "Tutoring & test prep",
@@ -53,10 +53,28 @@ const SERVICES = [
     icon: "TT",
   },
   {
-    name: "Moving & junk removal",
+    name: "Youth Sports Coaching",
+    cadence: "Weekly",
+    blurb: "Student athletes coach kids on fundamentals, confidence, and sport-specific skills.",
+    icon: "SC",
+  },
+  {
+    name: "Hauling & junk removal",
     cadence: "One-off",
     blurb: "High ticket, low trust barrier: a great first booking for new families.",
-    icon: "MJ",
+    icon: "HJ",
+  },
+  {
+    name: "Pressure washing",
+    cadence: "Seasonal",
+    blurb: "Driveways, patios, and outdoor surfaces handled by equipped student crews.",
+    icon: "PW",
+  },
+  {
+    name: "Window washing",
+    cadence: "Seasonal",
+    blurb: "Interior and exterior windows from student-run crews with the right gear.",
+    icon: "WW",
   },
   {
     name: "Babysitting",
@@ -379,7 +397,7 @@ function ServicesSection() {
             <div>
               <span className="brand-eyebrow">What you can book</span>
               <h2 className="mt-4 max-w-2xl font-display text-4xl font-semibold leading-tight text-viridian">
-                Six services, matched to what students do best.
+                Services matched to what students do best.
               </h2>
             </div>
             <div

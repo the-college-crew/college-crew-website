@@ -38,6 +38,21 @@ npx supabase functions deploy moderate-message
 After pushing, regenerate types:
 `npx supabase gen types typescript --linked > lib/db/types.ts`
 
+### Service catalog
+
+The live pilot catalog is stored in the `services` table and administered from
+`/admin/services`. Current seeded services:
+
+- Lawn & yard care
+- Dog walking & pet sitting
+- Tutoring
+- Hauling & junk removal
+- Babysitting
+- Pressure washing
+- Window washing
+- House Management
+- Youth Sports Coaching
+
 ## Commands
 
 | Command             | What it does              |

@@ -83,6 +83,28 @@ const PROVIDERS = [
     ],
   },
   {
+    key: "avery",
+    full_name: "Avery Kim",
+    display_name: "Avery K.",
+    provider_type: "individual",
+    bio: "Organized, detail-oriented helper for errands and home tasks: Amazon returns, grocery pickup, mail sorting, and quick home check-ins.",
+    availability: { days: ["mon", "tue", "thu", "sun"], note: "Afternoons and early evenings" },
+    services: [
+      { slug: "house-management", price_cents: 2200, price_type: "fixed", unit: "per_hour" },
+    ],
+  },
+  {
+    key: "marcus",
+    full_name: "Marcus Reed",
+    display_name: "Marcus R.",
+    provider_type: "individual",
+    bio: "Former varsity soccer and basketball captain. I coach kids on fundamentals, confidence, footwork, and game-day preparation.",
+    availability: { days: ["wed", "fri", "sat", "sun"], note: "After school and weekends" },
+    services: [
+      { slug: "youth-sports-coaching", price_cents: 3000, price_type: "fixed", unit: "per_hour" },
+    ],
+  },
+  {
     key: "tyler",
     full_name: "Tyler Brooks",
     display_name: "Tyler B.",
@@ -108,6 +130,8 @@ const REVIEWS = [
   { marker: "maya-riley", provider: "maya", customer: "riley", slug: "lawn-yard-care", price_cents: 4500, rating: 4, text: "Great job on the lawn, showed up right on time." },
   { marker: "clearview-alex", provider: "clearview", customer: "alex", slug: "window-washing", price_cents: 6000, rating: 5, text: "Windows have never been this clean. Super professional." },
   { marker: "sam-riley", provider: "sam", customer: "riley", slug: "tutoring", price_cents: 2500, rating: 5, text: "Helped my son with calculus — his grade jumped a letter." },
+  { marker: "avery-alex", provider: "avery", customer: "alex", slug: "house-management", price_cents: 4400, rating: 5, text: "Avery handled returns, groceries, and a quick house check exactly as requested." },
+  { marker: "marcus-riley", provider: "marcus", customer: "riley", slug: "youth-sports-coaching", price_cents: 3000, rating: 5, text: "Marcus made soccer practice fun and gave our daughter drills she actually wants to do." },
   { marker: "tyler-alex", provider: "tyler", customer: "alex", slug: "hauling", price_cents: 8000, rating: 4, text: "Cleared out the garage in an afternoon. Would recommend." },
 ];
 
