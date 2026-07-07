@@ -4,6 +4,7 @@ import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { getSession } from "@/lib/auth/session";
 import { PLATFORM_FEE_RATE, SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Our mission for students" };
@@ -23,7 +24,8 @@ const PRINCIPLES = [
   },
 ] as const;
 
-export default function StudentMissionPage() {
+export default async function StudentMissionPage() {
+  const session = await getSession();
   const providerFeePercent = Math.round(PLATFORM_FEE_RATE * 100);
 
   return (
@@ -33,12 +35,14 @@ export default function StudentMissionPage() {
         title="A better way for students to earn locally"
         description={`${SITE.name} is here to help verified college students turn skill, reliability, and local trust into real work.`}
         actions={
-          <Link
-            href="/provider/onboarding/account"
-            className={buttonClasses({ size: "sm" })}
-          >
-            Start earning
-          </Link>
+          !session ? (
+            <Link
+              href="/provider/onboarding/account"
+              className={buttonClasses({ size: "sm" })}
+            >
+              Start earning
+            </Link>
+          ) : null
         }
       />
 

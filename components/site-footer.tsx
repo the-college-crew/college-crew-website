@@ -1,16 +1,25 @@
 import Link from "next/link";
 
 import { Wordmark } from "@/components/site-header";
+import { getSession } from "@/lib/auth/session";
 import { NEIGHBORHOOD, SITE } from "@/lib/site";
 
 const EXPLORE = [
   { href: "/browse", label: "Browse providers" },
-  { href: "/provider/onboarding/account", label: "Earn as a student" },
   { href: "/about", label: "About us" },
   { href: "/blog", label: "Blog" },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const session = await getSession();
+  const exploreItems = session
+    ? EXPLORE
+    : [
+        EXPLORE[0],
+        { href: "/provider/onboarding/account", label: "Earn as a student" },
+        ...EXPLORE.slice(1),
+      ];
+
   return (
     <footer className="relative overflow-hidden bg-viridian text-shell">
       <div
@@ -34,7 +43,7 @@ export function SiteFooter() {
               Explore
             </p>
             <ul className="mt-4 space-y-2.5 text-shell/70">
-              {EXPLORE.map((item) => (
+              {exploreItems.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}

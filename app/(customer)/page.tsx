@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { getSession } from "@/lib/auth/session";
+
 import { FAQList, HowItWorksTabs } from "./landing-client";
 
 const MARK_SRC = "/college-crew-mark.png";
@@ -110,10 +112,13 @@ const TESTIMONIALS = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await getSession();
+  const showProviderCtas = !session;
+
   return (
     <div className="home-canvas mx-[calc(50%-50vw)] -mt-8 -mb-24 w-screen max-w-[100vw] overflow-x-clip text-viridian">
-      <Hero />
+      <Hero showProviderCta={showProviderCtas} />
       <PhoneFloat />
 
       <section className="pb-2 text-center">
@@ -146,12 +151,12 @@ export default function LandingPage() {
       <FeaturesSection />
       <TestimonialsSection />
       <FAQList />
-      <CTASection />
+      <CTASection showProviderCta={showProviderCtas} />
     </div>
   );
 }
 
-function Hero() {
+function Hero({ showProviderCta }: { showProviderCta: boolean }) {
   return (
     <section className="relative overflow-hidden bg-stone px-4 py-16 text-center sm:py-20 lg:pb-48">
       <DecorativeMark className="absolute top-6 right-6 hidden w-44 opacity-20 sm:block" />
@@ -182,12 +187,14 @@ function Hero() {
           >
             Book a student
           </Link>
-          <Link
-            href="/provider/onboarding/account"
-            className="inline-flex items-center justify-center rounded-xl border-2 border-viridian/35 px-7 py-4 text-sm font-bold text-viridian transition hover:bg-shell/40"
-          >
-            Join as a student
-          </Link>
+          {showProviderCta ? (
+            <Link
+              href="/provider/onboarding/account"
+              className="inline-flex items-center justify-center rounded-xl border-2 border-viridian/35 px-7 py-4 text-sm font-bold text-viridian transition hover:bg-shell/40"
+            >
+              Join as a student
+            </Link>
+          ) : null}
         </div>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
           {[
@@ -476,7 +483,7 @@ function TestimonialsSection() {
   );
 }
 
-function CTASection() {
+function CTASection({ showProviderCta }: { showProviderCta: boolean }) {
   return (
     <section className="brand-section text-center">
       <div className="mx-auto max-w-2xl px-4">
@@ -494,12 +501,14 @@ function CTASection() {
           >
             Book a student
           </Link>
-          <Link
-            href="/provider/onboarding/account"
-            className="inline-flex items-center justify-center rounded-xl border-2 border-viridian px-7 py-4 text-sm font-bold text-viridian transition hover:bg-stone/45"
-          >
-            Join as a student
-          </Link>
+          {showProviderCta ? (
+            <Link
+              href="/provider/onboarding/account"
+              className="inline-flex items-center justify-center rounded-xl border-2 border-viridian px-7 py-4 text-sm font-bold text-viridian transition hover:bg-stone/45"
+            >
+              Join as a student
+            </Link>
+          ) : null}
         </div>
       </div>
     </section>

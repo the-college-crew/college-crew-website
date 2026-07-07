@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonClasses } from "@/components/ui/button";
+import { getSession } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 
 import { SignupForm } from "./signup-form";
@@ -18,7 +19,7 @@ export default async function SignupPage({
 }: {
   searchParams: Promise<{ role?: string }>;
 }) {
-  const { role } = await searchParams;
+  const [{ role }, session] = await Promise.all([searchParams, getSession()]);
   const earning = role === "earn";
 
   const tab = (active: boolean) =>
@@ -70,12 +71,19 @@ export default async function SignupPage({
               After the founders approve your ID, you&apos;ll connect a bank
               account through Stripe and go live.
             </p>
-            <Link
-              href="/provider/onboarding/account"
-              className={buttonClasses({ size: "lg", className: "w-full" })}
-            >
-              Start provider onboarding
-            </Link>
+            {!session ? (
+              <Link
+                href="/provider/onboarding/account"
+                className={buttonClasses({ size: "lg", className: "w-full" })}
+              >
+                Start provider onboarding
+              </Link>
+            ) : (
+              <p className="rounded-xl border border-line bg-court p-3 text-sm text-ink-soft">
+                You&apos;re already signed in. Provider accounts are separate,
+                so provider onboarding is hidden for this session.
+              </p>
+            )}
           </div>
         ) : (
           <SignupForm />
