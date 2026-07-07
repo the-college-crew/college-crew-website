@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import type { ProviderProfile } from "@/lib/db/types";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -77,6 +78,13 @@ export default async function AdminProvidersPage({
 
   return (
     <div className="space-y-8">
+      {/* New signups, ID uploads, and school-email verifications all move the
+          review queue — listen to both tables that feed it. */}
+      <RealtimeRefresh channel="admin-providers" table="provider_profiles" />
+      <RealtimeRefresh
+        channel="admin-school-emails"
+        table="provider_school_emails"
+      />
       <PageHeader
         eyebrow="Founders"
         title="Provider approvals"

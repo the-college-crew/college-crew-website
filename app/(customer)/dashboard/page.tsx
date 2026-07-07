@@ -7,6 +7,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
 import type { BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
@@ -64,6 +65,11 @@ export default async function CustomerDashboardPage({
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresh
+        channel={`customer-bookings:${session.user.id}`}
+        table="bookings"
+        filter={`customer_id=eq.${session.user.id}`}
+      />
       <PageHeader
         eyebrow={`Hi${session.profile.full_name ? `, ${session.profile.full_name.split(" ")[0]}` : ""}`}
         title="My bookings"

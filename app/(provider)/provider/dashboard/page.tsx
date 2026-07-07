@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import type { BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
@@ -76,6 +77,11 @@ export default async function ProviderDashboardPage({
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresh
+        channel={`provider-bookings:${profile.id}`}
+        table="bookings"
+        filter={`provider_id=eq.${profile.id}`}
+      />
       <PageHeader
         eyebrow={profile.display_name}
         title="Dashboard"

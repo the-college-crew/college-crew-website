@@ -36,29 +36,43 @@ export function ChatThread({
   }
 
   useEffect(() => {
-    const channel = supabase()
-      .channel(`messages:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const incoming = payload.new as Message;
-          setMessages((current) =>
-            current.some((m) => m.id === incoming.id)
-              ? current
-              : [...current, incoming],
-          );
-        },
-      )
-      .subscribe();
+    const client = supabase();
+    let channel: ReturnType<typeof client.channel> | null = null;
+    let active = true;
+
+    (async () => {
+      // Realtime enforces RLS, and messages are readable only `to
+      // authenticated`. Without the user's JWT on the socket, the channel
+      // joins but never delivers a row — messages appear only on reload.
+      // Set the token before subscribing so inserts stream in live.
+      await client.realtime.setAuth();
+      if (!active) return;
+
+      channel = client
+        .channel(`messages:${conversationId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const incoming = payload.new as Message;
+            setMessages((current) =>
+              current.some((m) => m.id === incoming.id)
+                ? current
+                : [...current, incoming],
+            );
+          },
+        )
+        .subscribe();
+    })();
 
     return () => {
-      supabase().removeChannel(channel);
+      active = false;
+      if (channel) client.removeChannel(channel);
     };
   }, [conversationId]);
 
