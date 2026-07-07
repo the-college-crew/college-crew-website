@@ -121,7 +121,7 @@
 }
 
 @utility home-canvas {
-  background: var(--color-shell);
+  background: var(--color-paper);
 }
 
 @utility brand-section {
