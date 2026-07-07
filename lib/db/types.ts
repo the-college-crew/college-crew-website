@@ -454,6 +454,8 @@ export type Database = {
           original_body: string;
           matched_patterns: string[];
           created_at: string;
+          resolved_at: string | null;
+          resolved_by: string | null;
         };
         Insert: {
           id?: string;
@@ -461,6 +463,8 @@ export type Database = {
           original_body: string;
           matched_patterns?: string[];
           created_at?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
         };
         Update: {
           id?: string;
@@ -468,6 +472,8 @@ export type Database = {
           original_body?: string;
           matched_patterns?: string[];
           created_at?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
         };
         Relationships: [
           {

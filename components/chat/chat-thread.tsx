@@ -170,12 +170,9 @@ export function ChatThread({
                     )}
                   >
                     {formatTime(message.created_at)}
-                    {message.moderation_status === "redacted"
-                      ? " · contact info hidden — keep it on College Crew"
-                      : null}
-                    {message.moderation_status === "flagged"
-                      ? " · held for review"
-                      : null}
+                    {/* Moderation is flag-only and SILENT: a flagged message is
+                        delivered in full with no signal to either participant.
+                        Flags surface only to admins on /admin/flagged. */}
                   </p>
                 </div>
               </div>
