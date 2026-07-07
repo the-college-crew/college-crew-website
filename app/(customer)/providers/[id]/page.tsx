@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ViewTransition } from "react";
 
 import { Rating } from "@/components/provider-card";
 import {
@@ -39,45 +40,47 @@ export default async function ProviderProfilePage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {/* Identity */}
-      <Card pennant className="p-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-display text-3xl font-semibold">
-            {provider.display_name || "Student provider"}
-          </h1>
-          <VerifiedBadge />
-          {provider.background_check_status === "passed" ? (
-            <BackgroundCheckBadge />
+      {/* Identity — morph target for the Browse card's ViewTransition. */}
+      <ViewTransition name={`provider-${provider.id}`} share="morph">
+        <Card pennant className="p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-display text-3xl font-semibold">
+              {provider.display_name || "Student provider"}
+            </h1>
+            <VerifiedBadge />
+            {provider.background_check_status === "passed" ? (
+              <BackgroundCheckBadge />
+            ) : null}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <Badge tone={provider.provider_type === "business" ? "blue" : "gray"}>
+              {provider.provider_type === "business"
+                ? "Student business"
+                : "Hardworking individual"}
+            </Badge>
+            {provider.neighborhood ? (
+              <span className="text-xs text-mist">{provider.neighborhood}</span>
+            ) : null}
+            <Rating rating={provider.rating} />
+          </div>
+          {provider.bio ? (
+            <p className="mt-4 text-sm leading-relaxed text-ink-soft">
+              {provider.bio}
+            </p>
           ) : null}
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <Badge tone={provider.provider_type === "business" ? "blue" : "gray"}>
-            {provider.provider_type === "business"
-              ? "Student business"
-              : "Individual student"}
-          </Badge>
-          {provider.neighborhood ? (
-            <span className="text-xs text-mist">{provider.neighborhood}</span>
-          ) : null}
-          <Rating rating={provider.rating} />
-        </div>
-        {provider.bio ? (
-          <p className="mt-4 text-sm leading-relaxed text-ink-soft">
-            {provider.bio}
-          </p>
-        ) : null}
-        <div className="mt-5">
-          <Link
-            href={`/book/${provider.id}`}
-            className={buttonClasses({ size: "lg" })}
-          >
-            Request booking
-          </Link>
-          <p className="mt-2 text-xs text-mist">
-            No charge until they accept — you confirm and pay afterward.
-          </p>
-        </div>
-      </Card>
+          <div className="mt-5">
+            <Link
+              href={`/book/${provider.id}`}
+              className={buttonClasses({ size: "lg" })}
+            >
+              Request booking
+            </Link>
+            <p className="mt-2 text-xs text-mist">
+              No charge until they accept — you confirm and pay afterward.
+            </p>
+          </div>
+        </Card>
+      </ViewTransition>
 
       {/* Services & pricing */}
       <Card className="p-6">

@@ -35,3 +35,51 @@ export function VerifiedBadge() {
 export function BackgroundCheckBadge() {
   return <Badge tone="green">✓ Background checked</Badge>;
 }
+
+/**
+ * Compact checkmark circle used on dense surfaces (Browse cards); the full
+ * label lives in a hover tooltip + sr-only text. Profile and booking pages
+ * keep the spelled-out badges above — hover is invisible on touch, and those
+ * are the pages where the trust promise must be explicit.
+ *
+ * The tooltip opens downward: card containers are overflow-hidden, so an
+ * upward tooltip would clip at the card edge.
+ */
+export function CheckCircle({
+  tone,
+  label,
+}: {
+  tone: "gold" | "green";
+  label: string;
+}) {
+  return (
+    <span className="group relative inline-flex">
+      <span
+        aria-hidden
+        className={cn(
+          "flex size-5 items-center justify-center rounded-full text-[11px] font-bold",
+          tone === "gold"
+            ? "bg-gold-400 text-gold-800"
+            : "bg-viridian text-shell",
+        )}
+      >
+        ✓
+      </span>
+      <span className="sr-only">{label}</span>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-full z-10 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-viridian px-2 py-1 text-[11px] font-medium text-shell opacity-0 transition-opacity group-hover:opacity-100"
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
+
+export function VerifiedCheck() {
+  return <CheckCircle tone="gold" label="Verified student" />;
+}
+
+export function BackgroundCheck() {
+  return <CheckCircle tone="green" label="Background checked" />;
+}

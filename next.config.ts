@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
     // upload form advertises so legitimate files reach the action instead of
     // throwing a framework error before our validation runs.
     serverActions: { bodySizeLimit: "10mb" },
+    // Experimental flag powering the browse-card → profile morph via React's
+    // <ViewTransition>. Removing it degrades navigation to an instant swap.
+    viewTransition: true,
   },
 };
 

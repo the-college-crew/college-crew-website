@@ -1,7 +1,8 @@
-import Link from "next/link";
+import { ViewTransition } from "react";
 
-import { Badge, BackgroundCheckBadge, VerifiedBadge } from "@/components/ui/badge";
-import { buttonClasses } from "@/components/ui/button";
+import { ProviderCardLink } from "@/components/provider-card-link";
+import { ServiceBanner } from "@/components/service-banner";
+import { Badge, BackgroundCheck, VerifiedCheck } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { ProviderCard as ProviderCardData } from "@/lib/db/queries";
 import { formatOfferedPrice } from "@/lib/utils";
@@ -27,55 +28,61 @@ export function Rating({
   );
 }
 
-/** Roster-style card used on Browse; all data comes from approved providers. */
+/**
+ * Roster-style card used on Browse; all data comes from approved providers.
+ * The whole card links to the profile (flip + morph via ProviderCardLink);
+ * the ViewTransition name pairs with the profile page's identity card.
+ */
 export function ProviderCard({ provider }: { provider: ProviderCardData }) {
   return (
-    <Card pennant className="flex flex-col gap-3 p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="font-display text-xl font-semibold">
-          {provider.display_name || "Student provider"}
-        </h3>
-        <VerifiedBadge />
-        {provider.background_check_status === "passed" ? (
-          <BackgroundCheckBadge />
-        ) : null}
-      </div>
-
-      <div className="flex items-center gap-3">
-        <Badge tone={provider.provider_type === "business" ? "blue" : "gray"}>
-          {provider.provider_type === "business"
-            ? "Student business"
-            : "Individual student"}
-        </Badge>
-        <Rating rating={provider.rating} />
-      </div>
-
-      {provider.bio ? (
-        <p className="line-clamp-2 text-sm text-ink-soft">{provider.bio}</p>
-      ) : null}
-
-      <ul className="flex flex-wrap gap-2">
-        {provider.services.map((offered) => (
-          <li
-            key={offered.id}
-            className="rounded-full border border-line bg-court px-3 py-1 text-xs font-medium text-ink-soft"
-          >
-            {offered.service.name}
-            <span className="ml-1.5 font-semibold text-quad-700">
-              {formatOfferedPrice(offered)}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-auto pt-2">
-        <Link
-          href={`/providers/${provider.id}`}
-          className={buttonClasses({ variant: "secondary", size: "sm" })}
+    <ViewTransition name={`provider-${provider.id}`} share="morph">
+      <ProviderCardLink href={`/providers/${provider.id}`}>
+        <Card
+          pennant
+          className="flex flex-col transition-shadow group-hover/flip:shadow-md group-hover/flip:shadow-viridian/10"
         >
-          View profile
-        </Link>
-      </div>
-    </Card>
+          <ServiceBanner services={provider.services} />
+
+          <div className="flex flex-col gap-2.5 p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-display text-xl font-semibold">
+                {provider.display_name || "Student provider"}
+              </h3>
+              <VerifiedCheck />
+              {provider.background_check_status === "passed" ? (
+                <BackgroundCheck />
+              ) : null}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Badge tone={provider.provider_type === "business" ? "blue" : "gray"}>
+                {provider.provider_type === "business"
+                  ? "Student business"
+                  : "Hardworking individual"}
+              </Badge>
+              <Rating rating={provider.rating} />
+            </div>
+
+            {provider.bio ? (
+              <p className="line-clamp-1 text-sm text-ink-soft">{provider.bio}</p>
+            ) : null}
+
+            <ul className="flex flex-wrap gap-2">
+              {provider.services.map((offered) => (
+                <li
+                  key={offered.id}
+                  className="rounded-full border border-line bg-court px-3 py-1 text-xs font-medium text-ink-soft"
+                >
+                  {offered.service.name}
+                  <span className="ml-1.5 font-semibold text-quad-700">
+                    {formatOfferedPrice(offered)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Card>
+      </ProviderCardLink>
+    </ViewTransition>
   );
 }
