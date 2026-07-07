@@ -71,7 +71,6 @@ export default async function CustomerDashboardPage({
         filter={`customer_id=eq.${session.user.id}`}
       />
       <PageHeader
-        eyebrow={`Hi${session.profile.full_name ? `, ${session.profile.full_name.split(" ")[0]}` : ""}`}
         title="My bookings"
         actions={
           <Link href="/browse" className={buttonClasses({ size: "sm" })}>

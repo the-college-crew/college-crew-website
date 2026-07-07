@@ -12,7 +12,6 @@ export default function AboutPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-10">
       <PageHeader
-        eyebrow="Our mission"
         title="About us"
         description={SITE.tagline}
       />

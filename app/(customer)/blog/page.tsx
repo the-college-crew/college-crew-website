@@ -15,7 +15,6 @@ export default function BlogPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <PageHeader
-        eyebrow="From the crew"
         title="Blog"
         description="Local tips, student spotlights, and seasonal checklists."
       />

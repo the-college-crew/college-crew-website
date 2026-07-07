@@ -31,7 +31,6 @@ export default async function StudentMissionPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-10">
       <PageHeader
-        eyebrow="For students"
         title="A better way for students to earn locally"
         description={`${SITE.name} is here to help verified college students turn skill, reliability, and local trust into real work.`}
         actions={

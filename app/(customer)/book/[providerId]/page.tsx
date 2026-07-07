@@ -28,7 +28,6 @@ export default async function BookingPage({
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
-        eyebrow="Booking request"
         title={provider.display_name || "Request booking"}
         description={
           <span className="inline-flex items-center gap-2">

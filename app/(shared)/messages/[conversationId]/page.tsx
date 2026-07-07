@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { BackButton } from "@/components/back-button";
 import { ChatThread } from "@/components/chat/chat-thread";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -45,13 +46,16 @@ export default async function ConversationPage({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6">
-      <div className="mb-4">
-        <p className="font-display text-xs font-semibold text-mist">
-          Conversation
-        </p>
-        <h1 className="font-display text-2xl font-semibold">
-          {otherName || "Conversation"}
-        </h1>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <p className="font-display text-xs font-semibold text-mist">
+            Conversation
+          </p>
+          <h1 className="font-display text-2xl font-semibold">
+            {otherName || "Conversation"}
+          </h1>
+        </div>
+        <BackButton />
       </div>
 
       <Card pennant className="flex min-h-[60vh] flex-1 flex-col p-0">

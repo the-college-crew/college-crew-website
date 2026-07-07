@@ -30,7 +30,6 @@ export default async function AdminServicesPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Founders"
         title="Service curation"
         description="Toggle which services are live platform-wide. Hidden services disappear from Browse and onboarding, but existing bookings keep their history."
       />

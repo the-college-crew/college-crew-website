@@ -83,7 +83,6 @@ export default async function ProviderDashboardPage({
         filter={`provider_id=eq.${profile.id}`}
       />
       <PageHeader
-        eyebrow={profile.display_name}
         title="Dashboard"
         description="Requests, earnings, and your month at a glance."
       />

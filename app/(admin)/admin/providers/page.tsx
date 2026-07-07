@@ -86,7 +86,6 @@ export default async function AdminProvidersPage({
         table="provider_school_emails"
       />
       <PageHeader
-        eyebrow="Founders"
         title="Provider approvals"
         description="Review student IDs by hand. Approving flips the provider live in Browse and unlocks their Stripe connection."
       />
