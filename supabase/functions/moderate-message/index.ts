@@ -255,7 +255,7 @@ async function sendFlagNotification(opts: {
     `Sender (user id): ${opts.senderId}`,
     `Message id: ${opts.messageId}`,
     "",
-    "Original message:",
+    "Flagged conversation (most recent last; SENDER = the flagged user):",
     opts.original,
     "",
     "Review it in the admin dashboard → Flagged messages.",
@@ -376,20 +376,28 @@ Deno.serve(async (request) => {
       return json({ error: "Could not send the message." }, 500);
     }
 
-    // Log the original for founder review, then email the founders. The email
-    // runs after the response (waitUntil) so it never adds send latency; it
-    // also never throws, so it can't affect delivery.
+    // Log the flag for founder review, then email the founders. The email runs
+    // after the response (waitUntil) so it never adds send latency; it also
+    // never throws, so it can't affect delivery.
     if (matched.length > 0) {
+      // Capture the WHOLE group the scan saw — the rolling window plus this
+      // message, oldest-first — so review sees the full picture when contact
+      // info is hidden across several messages. SENDER = who sent this message;
+      // message_id still points to the specific message that tripped the flag.
+      const flaggedGroup = [...history, { sender_id: user.id, body: text }]
+        .map((m) => `${m.sender_id === user.id ? "SENDER" : "OTHER"}: ${m.body}`)
+        .join("\n");
+
       await admin.from("moderation_events").insert({
         message_id: message.id,
-        original_body: text,
+        original_body: flaggedGroup,
         matched_patterns: matched,
       });
       const notify = sendFlagNotification({
         messageId: message.id,
         senderId: user.id,
         matched,
-        original: text,
+        original: flaggedGroup,
       });
       // @ts-ignore — EdgeRuntime is provided by the Supabase Deno runtime.
       if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(notify);

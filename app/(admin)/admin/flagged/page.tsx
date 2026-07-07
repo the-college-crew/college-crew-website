@@ -56,7 +56,7 @@ export default async function AdminFlaggedPage() {
       <RealtimeRefresh channel="admin-flagged" table="moderation_events" />
       <PageHeader
         title="Flagged messages"
-        description="Messages the regex scan or gpt-5.4-nano flagged for possible off-platform contact info. Nothing is redacted — messages are always delivered in full; they're logged here for your review."
+        description="Messages the regex scan or gpt-5.4-nano flagged for possible off-platform contact info. Each entry shows the whole recent conversation so you can spot contact info split across several messages. Nothing is redacted — messages are always delivered in full; they're logged here for your review."
       />
 
       <section aria-labelledby="events">
@@ -86,7 +86,13 @@ export default async function AdminFlaggedPage() {
                     <Badge tone={statusTone[status]}>{status}</Badge>
                   </div>
 
-                  <p className="mt-3 whitespace-pre-wrap rounded-lg border border-line bg-honeydew/40 p-3 text-sm">
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-ink-soft">
+                    Flagged conversation
+                    <span className="ml-1 font-normal normal-case tracking-normal text-mist">
+                      (most recent last · SENDER = {event.message?.sender?.full_name || "flagged user"})
+                    </span>
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap rounded-lg border border-line bg-honeydew/40 p-3 text-sm">
                     {event.original_body}
                   </p>
 
