@@ -16,10 +16,16 @@ export async function cancelBooking(formData: FormData) {
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
 
   const supabase = await createClient();
+  // Only 'requested' and 'accepted' can be cancelled. Scoping the update to
+  // those states means a stale click after the provider already declined (or
+  // the booking otherwise moved on) updates zero rows instead of tripping the
+  // state-machine trigger with an illegal transition. revalidate then refreshes
+  // the page to the real status.
   const { error } = await supabase
     .from("bookings")
     .update({ status: "cancelled" })
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .in("status", ["requested", "accepted"]);
   if (error) {
     throw new Error(`Could not cancel: ${error.message}`);
   }

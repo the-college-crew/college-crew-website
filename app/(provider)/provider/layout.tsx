@@ -68,6 +68,9 @@ export default async function ProviderLayout({
             <Link href="/provider/jobs" className="hover:text-shell">
               Jobs & pricing
             </Link>
+            <Link href="/messages" className="hover:text-shell">
+              Messages
+            </Link>
             <Link href="/provider/settings" className="hover:text-shell">
               Profile & settings
             </Link>

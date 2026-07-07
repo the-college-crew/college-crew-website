@@ -1,0 +1,121 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { getSession, homePathFor, requireUser } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+import { formatDateTime } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Messages" };
+
+type ConversationRow = {
+  id: string;
+  customer_id: string;
+  created_at: string;
+  customer: { full_name: string };
+  provider: { display_name: string };
+};
+
+/**
+ * Messages inbox: every thread the signed-in user is part of, newest activity
+ * first. This is the always-available way back into a conversation — including
+ * declined-booking threads that don't surface on either dashboard. RLS scopes
+ * conversations (and messages) to members, so this only ever lists the caller's
+ * own threads.
+ */
+export default async function MessagesPage() {
+  const user = await requireUser("/messages");
+  const supabase = await createClient();
+
+  const { data: conversationData } = await supabase
+    .from("conversations")
+    .select(
+      "id, customer_id, created_at, customer:profiles(full_name), provider:provider_profiles(display_name)",
+    );
+  const conversations = (conversationData ?? []) as ConversationRow[];
+
+  // Latest message per thread, in one query, for the preview + sort order.
+  const ids = conversations.map((c) => c.id);
+  const latest = new Map<string, { body: string; created_at: string }>();
+  if (ids.length > 0) {
+    const { data: messages } = await supabase
+      .from("messages")
+      .select("conversation_id, body, image_path, created_at")
+      .in("conversation_id", ids)
+      .order("created_at", { ascending: false });
+    for (const m of messages ?? []) {
+      if (latest.has(m.conversation_id)) continue; // desc order → first is newest
+      latest.set(m.conversation_id, {
+        body: m.body || (m.image_path ? "📷 Photo" : ""),
+        created_at: m.created_at,
+      });
+    }
+  }
+
+  const activityAt = (c: ConversationRow) =>
+    latest.get(c.id)?.created_at ?? c.created_at;
+  const sorted = [...conversations].sort(
+    (a, b) => Date.parse(activityAt(b)) - Date.parse(activityAt(a)),
+  );
+
+  const session = await getSession();
+  const backHref = session ? homePathFor(session.profile.role) : "/";
+
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 py-8">
+      <PageHeader
+        title="Messages"
+        description="Your conversations with customers and providers."
+        actions={
+          <Link
+            href={backHref}
+            className="text-sm font-semibold text-crew-700 hover:underline"
+          >
+            ← Dashboard
+          </Link>
+        }
+      />
+
+      {sorted.length === 0 ? (
+        <EmptyState title="No conversations yet">
+          Chats open from a booking request. Once you&apos;ve requested or
+          accepted a job, the conversation shows up here.
+        </EmptyState>
+      ) : (
+        <ul className="mt-6 space-y-3">
+          {sorted.map((conversation) => {
+            const isCustomer = conversation.customer_id === user.id;
+            const otherName = isCustomer
+              ? conversation.provider.display_name
+              : conversation.customer.full_name;
+            const preview = latest.get(conversation.id);
+
+            return (
+              <li key={conversation.id}>
+                <Link href={`/messages/${conversation.id}`} className="block">
+                  <Card className="p-4 transition-colors hover:bg-crew-50">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="font-display font-semibold text-ink">
+                        {otherName || "Conversation"}
+                      </p>
+                      {preview ? (
+                        <span className="shrink-0 text-xs text-mist">
+                          {formatDateTime(preview.created_at)}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 truncate text-sm text-ink-soft">
+                      {preview?.body || "No messages yet"}
+                    </p>
+                  </Card>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}

@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getSession } from "@/lib/auth/session";
+import {
+  getOrCreateConversationId,
+  sendModeratedMessage,
+} from "@/lib/messaging/conversation";
 import { PLATFORM_FEE_RATE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
@@ -76,18 +80,40 @@ export async function createBookingRequest(
   // flow for quotes is an open question (SPEC §10); pilot books them at $0.
   const priceCents = offered.price_type === "quote" ? 0 : offered.price_cents;
 
-  const { error } = await supabase.from("bookings").insert({
-    customer_id: session.user.id,
-    provider_id: offered.provider_id,
-    service_id: offered.service_id,
-    scheduled_at: new Date(parsed.data.scheduledAt).toISOString(),
-    address: parsed.data.address,
-    details: parsed.data.details,
-    price_cents: priceCents,
-    platform_fee_cents: Math.round(priceCents * PLATFORM_FEE_RATE),
-  });
-  if (error) {
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .insert({
+      customer_id: session.user.id,
+      provider_id: offered.provider_id,
+      service_id: offered.service_id,
+      scheduled_at: new Date(parsed.data.scheduledAt).toISOString(),
+      address: parsed.data.address,
+      details: parsed.data.details,
+      price_cents: priceCents,
+      platform_fee_cents: Math.round(priceCents * PLATFORM_FEE_RATE),
+    })
+    .select("id")
+    .single();
+  if (error || !booking) {
     return { error: "Could not send the request — try again." };
+  }
+
+  // Seed the chat with the customer's note so it's the opening message when
+  // either party opens the thread. Best-effort: the booking is already made, so
+  // a moderation hiccup shouldn't fail the request — the note also stays on the
+  // booking card. Sent under the customer's session, so it's attributed to them
+  // (the provider may be the one who first opens the thread).
+  if (parsed.data.details) {
+    try {
+      const conversationId = await getOrCreateConversationId(supabase, {
+        customerId: session.user.id,
+        providerId: offered.provider_id,
+        bookingId: booking.id,
+      });
+      await sendModeratedMessage(supabase, conversationId, parsed.data.details);
+    } catch {
+      // Non-fatal — the request still went through.
+    }
   }
 
   redirect("/dashboard?requested=1");

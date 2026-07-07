@@ -8,6 +8,10 @@ import { z } from "zod";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import type { BookingStatus } from "@/lib/db/types";
 import { hasServiceRoleEnv } from "@/lib/env";
+import {
+  getOrCreateConversationId,
+  sendModeratedMessage,
+} from "@/lib/messaging/conversation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createConnectOnboardingLink } from "@/lib/stripe/connect";
@@ -52,46 +56,13 @@ async function loadBookingParties(
   return booking as BookingParties;
 }
 
-/**
- * Find (or open) the one conversation for a booking's customer+provider pair
- * and return its id. Same find-or-create as openConversationForBooking, but
- * returns the id so accept/decline can act on the thread instead of just
- * redirecting into it.
- */
-async function getOrCreateConversationId(
-  supabase: ServerClient,
-  booking: BookingParties,
-): Promise<string> {
-  const { data: existing } = await supabase
-    .from("conversations")
-    .select("id")
-    .eq("customer_id", booking.customer_id)
-    .eq("provider_id", booking.provider_id)
-    .maybeSingle();
-  if (existing) return existing.id;
-
-  const { data: created, error } = await supabase
-    .from("conversations")
-    .insert({
-      customer_id: booking.customer_id,
-      provider_id: booking.provider_id,
-      booking_id: booking.id,
-    })
-    .select("id")
-    .single();
-  if (created) return created.id;
-
-  // Unique(customer, provider) race — the thread appeared meanwhile.
-  if (error?.code === "23505") {
-    const { data: raced } = await supabase
-      .from("conversations")
-      .select("id")
-      .eq("customer_id", booking.customer_id)
-      .eq("provider_id", booking.provider_id)
-      .single();
-    if (raced) return raced.id;
-  }
-  throw new Error("Could not open the conversation.");
+/** Find (or open) the conversation for a booking's customer+provider pair. */
+function conversationIdFor(supabase: ServerClient, booking: BookingParties) {
+  return getOrCreateConversationId(supabase, {
+    customerId: booking.customer_id,
+    providerId: booking.provider_id,
+    bookingId: booking.id,
+  });
 }
 
 /**
@@ -115,7 +86,7 @@ export async function acceptBooking(formData: FormData) {
     throw new Error(`Could not accept the booking: ${error.message}`);
   }
 
-  const conversationId = await getOrCreateConversationId(supabase, booking);
+  const conversationId = await conversationIdFor(supabase, booking);
 
   revalidatePath("/provider/dashboard");
   revalidatePath("/provider/jobs");
@@ -149,23 +120,12 @@ export async function declineBooking(formData: FormData) {
     throw new Error(`Could not decline the booking: ${error.message}`);
   }
 
-  const conversationId = await getOrCreateConversationId(supabase, booking);
+  const conversationId = await conversationIdFor(supabase, booking);
 
-  // Send the provider's note through moderation (the only write path into
-  // messages), carrying the caller's session so the function sees who's asking.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const { error: sendError } = await supabase.functions.invoke(
-    "moderate-message",
-    {
-      body: { conversation_id: conversationId, body: message, image_path: null },
-      headers: session
-        ? { Authorization: `Bearer ${session.access_token}` }
-        : undefined,
-    },
-  );
-  if (sendError) {
+  // The provider's note becomes the opening message so the customer can
+  // counter — sent through moderation like any other message.
+  const sent = await sendModeratedMessage(supabase, conversationId, message);
+  if (!sent) {
     throw new Error(
       "Declined — but the note didn't send. Open the chat to message the customer.",
     );
