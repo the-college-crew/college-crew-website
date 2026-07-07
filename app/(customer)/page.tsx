@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { getEffectiveRole, getSession } from "@/lib/auth/session";
+import { getLiveServices } from "@/lib/db/queries";
+import type { Service } from "@/lib/db/types";
 
 type Cta = { href: string; label: string };
 
@@ -27,62 +29,78 @@ const TRUST_ITEMS = [
   },
 ];
 
-const SERVICES = [
-  {
-    name: "Lawn & yard care",
+type ServiceDisplay = {
+  cadence: string;
+  blurb: string;
+  icon: string;
+};
+
+const SERVICE_DISPLAY: Record<string, ServiceDisplay> = {
+  "lawn-yard-care": {
     cadence: "Weekly",
     blurb: "The demand anchor: sell as a full-season package, not a one-off mow.",
     icon: "LC",
   },
-  {
-    name: "Dog walking & pet sitting",
+  "pet-care": {
     cadence: "Daily/weekly",
     blurb: "High-frequency, low trust barrier: bundle walks into weekly charges.",
     icon: "DW",
   },
-  {
-    name: "House Management",
+  "house-management": {
     cadence: "Flexible",
     blurb: "Errands and home tasks like package returns, grocery pickup, and check-ins.",
     icon: "HM",
   },
-  {
-    name: "Tutoring & test prep",
+  tutoring: {
     cadence: "Seasonal",
     blurb: "Where students have the biggest edge: sells well as session packages.",
     icon: "TT",
   },
-  {
-    name: "Youth Sports Coaching",
+  "youth-sports-coaching": {
     cadence: "Weekly",
     blurb: "Student athletes coach kids on fundamentals, confidence, and sport-specific skills.",
     icon: "SC",
   },
-  {
-    name: "Hauling & junk removal",
+  hauling: {
     cadence: "One-off",
     blurb: "High ticket, low trust barrier: a great first booking for new families.",
     icon: "HJ",
   },
-  {
-    name: "Pressure washing",
+  "pressure-washing": {
     cadence: "Seasonal",
     blurb: "Driveways, patios, and outdoor surfaces handled by equipped student crews.",
     icon: "PW",
   },
-  {
-    name: "Window washing",
+  "window-washing": {
     cadence: "Seasonal",
     blurb: "Interior and exterior windows from student-run crews with the right gear.",
     icon: "WW",
   },
-  {
-    name: "Babysitting",
+  babysitting: {
     cadence: "Coming soon",
     blurb: "Highest demand, highest trust bar: added once vetting is fully in place.",
     icon: "BS",
   },
-];
+};
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join("");
+}
+
+function serviceDisplay(service: Service): ServiceDisplay {
+  return (
+    SERVICE_DISPLAY[service.slug] ?? {
+      cadence: service.category,
+      blurb: "Verified student help for practical jobs around the neighborhood.",
+      icon: initials(service.name) || "CC",
+    }
+  );
+}
 
 const FEATURES = [
   {
@@ -105,7 +123,7 @@ const FEATURES = [
   },
   {
     title: "Bundled & recurring",
-    body: "Lawn care, dog walking, and tutoring sell as season passes and packages, not one-off jobs.",
+    body: "Repeat jobs can be booked as season passes and packages, not just one-off requests.",
     tone: "bg-sky",
     icon: CircleIcon,
   },
@@ -120,20 +138,23 @@ const TESTIMONIALS = [
   },
   {
     quote:
-      "My reviews from mowing lawns at home actually count for something near campus now. That never used to be true.",
+      "My reviews from helping families at home actually count for something near campus now. That never used to be true.",
     name: "Ethan M.",
     detail: "Student, Northwestern '27",
   },
   {
     quote:
-      "Booking the season pass for lawn care instead of texting back and forth every week has been the easiest part.",
+      "Booking a recurring job instead of texting back and forth every week has been the easiest part.",
     name: "The Alvarez family",
     detail: "Parents, Glenview",
   },
 ];
 
 export default async function LandingPage() {
-  const session = await getSession();
+  const [session, services] = await Promise.all([
+    getSession(),
+    getLiveServices(),
+  ]);
   const showProviderCtas = !session;
   const role = session ? await getEffectiveRole() : null;
 
@@ -147,7 +168,7 @@ export default async function LandingPage() {
   return (
     <div className="home-canvas mx-[calc(50%-50vw)] -mt-8 -mb-24 w-screen max-w-[100vw] overflow-x-clip text-viridian">
       <Hero showProviderCta={showProviderCtas} primaryCta={primaryCta} />
-      <PhoneFloat />
+      <PhoneFloat services={services} />
 
       <section className="pb-2 text-center">
         <div className="mx-auto max-w-6xl px-4">
@@ -175,7 +196,7 @@ export default async function LandingPage() {
 
       <Comparison />
       <HowItWorksTabs />
-      <ServicesSection />
+      <ServicesSection services={services} />
       <FeaturesSection />
       <TestimonialsSection />
       <FAQList />
@@ -201,8 +222,8 @@ function Hero({
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-viridian/75 sm:text-lg">
           College Crew connects families with verified college students for
-          lawn care, dog walking, cleaning, tutoring, and more - matched by
-          proximity and school, and paid securely in the app.
+          practical neighborhood help - matched by proximity and school, and
+          paid securely in the app.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
@@ -240,7 +261,9 @@ function Hero({
   );
 }
 
-function PhoneFloat() {
+function PhoneFloat({ services }: { services: Service[] }) {
+  const shownServices = services.slice(0, 3);
+
   return (
     <div className="relative z-20 -mt-24 flex justify-center px-4 pb-16 sm:-mt-36">
       <div className="absolute bottom-10 left-[calc(50%-260px)] hidden h-72 w-72 rounded-full bg-sky opacity-60 blur-md sm:block" />
@@ -248,25 +271,34 @@ function PhoneFloat() {
         <div className="rounded-[1.6rem] bg-shell p-4">
           <h2 className="font-display text-2xl font-semibold">Book a job</h2>
           <div className="mt-4 flex gap-2 overflow-hidden">
-            <span className="rounded-full bg-viridian px-4 py-2 text-xs font-bold text-shell">
-              Lawn care
-            </span>
-            <span className="rounded-full bg-stone px-4 py-2 text-xs font-semibold">
-              Dog walking
-            </span>
-            <span className="rounded-full bg-stone px-4 py-2 text-xs font-semibold">
-              Tutoring
-            </span>
+            {shownServices.length > 0 ? (
+              shownServices.map((service, index) => (
+                <span
+                  key={service.id}
+                  className={
+                    index === 0
+                      ? "rounded-full bg-viridian px-4 py-2 text-xs font-bold text-shell"
+                      : "rounded-full bg-stone px-4 py-2 text-xs font-semibold"
+                  }
+                >
+                  {service.name}
+                </span>
+              ))
+            ) : (
+              <span className="rounded-full bg-viridian px-4 py-2 text-xs font-bold text-shell">
+                Browse
+              </span>
+            )}
           </div>
 
           <div className="mt-4 overflow-hidden rounded-2xl bg-stone">
             <div className="flex h-28 items-center justify-center bg-[repeating-linear-gradient(135deg,var(--color-sky)_0_12px,var(--color-honeydew)_12px_24px)] text-xs font-bold uppercase tracking-[0.12em] text-viridian/45">
-              yard photo
+              job details
             </div>
             <div className="p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="font-bold">Weekly mow + edge</p>
+                  <p className="font-bold">Neighborhood help</p>
                   <p className="mt-1 text-xs text-viridian/65">
                     123 Maple Street
                   </p>
@@ -388,7 +420,7 @@ function CompareColumn({
   );
 }
 
-function ServicesSection() {
+function ServicesSection({ services }: { services: Service[] }) {
   return (
     <>
       <section className="brand-section pb-10">
@@ -411,28 +443,37 @@ function ServicesSection() {
       </section>
       <section className="pb-20">
         <div className="mx-auto grid max-w-6xl gap-5 px-4 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((service) => (
-            <Link
-              key={service.name}
-              href="/browse"
-              className="group rounded-3xl border border-stone bg-shell p-7 transition hover:-translate-y-0.5 hover:border-viridian"
-            >
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-sky text-xs font-black text-viridian">
-                {service.icon}
-              </div>
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="text-base font-bold text-viridian">
-                  {service.name}
-                </h3>
-                <span className="whitespace-nowrap rounded-full bg-stone px-3 py-1 text-[0.68rem] font-bold text-viridian/55">
-                  {service.cadence}
-                </span>
-              </div>
-              <p className="text-sm leading-relaxed text-viridian/70">
-                {service.blurb}
-              </p>
-            </Link>
-          ))}
+          {services.length === 0 ? (
+            <div className="rounded-3xl border border-stone bg-shell p-7 text-sm text-viridian/70 sm:col-span-2 lg:col-span-3">
+              Live services will appear here once the catalog is available.
+            </div>
+          ) : null}
+          {services.map((service) => {
+            const display = serviceDisplay(service);
+
+            return (
+              <Link
+                key={service.id}
+                href={`/browse?service=${service.slug}`}
+                className="group rounded-3xl border border-stone bg-shell p-7 transition hover:-translate-y-0.5 hover:border-viridian"
+              >
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-sky text-xs font-black text-viridian">
+                  {display.icon}
+                </div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="text-base font-bold text-viridian">
+                    {service.name}
+                  </h3>
+                  <span className="whitespace-nowrap rounded-full bg-stone px-3 py-1 text-[0.68rem] font-bold text-viridian/55">
+                    {display.cadence}
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed text-viridian/70">
+                  {display.blurb}
+                </p>
+              </Link>
+            );
+          })}
         </div>
       </section>
     </>

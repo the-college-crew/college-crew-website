@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Our mission for students" };
 const PRINCIPLES = [
   {
     title: "Earn through real neighborhood demand",
-    body: "College Crew is built around practical home and household services that neighbors already need, from yard work to cleaning, moving help, tutoring, and more.",
+    body: "College Crew is built around practical services that neighbors already need, with the live catalog curated by the founders.",
   },
   {
     title: "Build trust before the first job",

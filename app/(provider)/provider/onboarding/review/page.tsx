@@ -23,15 +23,18 @@ export default async function OnboardingReviewPage() {
   const supabase = await createClient();
   const { data: offerings } = await supabase
     .from("provider_services")
-    .select("id, price_cents, price_type, unit, service:services(name)")
+    .select("id, price_cents, price_type, unit, service:services(name, is_live)")
     .eq("provider_id", profile.id);
+  const liveOfferings = (offerings ?? []).filter(
+    (offered) => offered.service?.is_live,
+  );
 
   const schoolEmail = await getVerifiedSchoolEmail(session.user.id);
 
   const ready =
     Boolean(schoolEmail) &&
     Boolean(profile.id_document_url) &&
-    (offerings?.length ?? 0) > 0;
+    liveOfferings.length > 0;
 
   return (
     <div>
@@ -84,9 +87,9 @@ export default async function OnboardingReviewPage() {
           <div>
             <dt className="text-mist">Services</dt>
             <dd className="mt-1.5">
-              {offerings && offerings.length > 0 ? (
+              {liveOfferings.length > 0 ? (
                 <ul className="space-y-1">
-                  {offerings.map((offered) => (
+                  {liveOfferings.map((offered) => (
                     <li
                       key={offered.id}
                       className="flex justify-between gap-4 rounded-lg bg-court px-3 py-1.5"
@@ -103,9 +106,15 @@ export default async function OnboardingReviewPage() {
                   href="/provider/onboarding/services"
                   className="text-crew-700 underline"
                 >
-                  None yet — pick your services
+                  None currently live — pick your services
                 </Link>
               )}
+              {(offerings?.length ?? 0) > liveOfferings.length ? (
+                <p className="mt-2 text-xs text-mist">
+                  Hidden service offerings are preserved and will reappear if a
+                  founder makes that service live again.
+                </p>
+              ) : null}
             </dd>
           </div>
         </dl>

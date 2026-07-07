@@ -47,11 +47,14 @@ export default async function ProviderJobsPage() {
       .order("scheduled_at", { ascending: true }),
     supabase
       .from("provider_services")
-      .select("id, price_cents, price_type, unit, service:services(name)")
+      .select("id, price_cents, price_type, unit, service:services(name, is_live)")
       .eq("provider_id", profile.id),
   ]);
 
   const jobs = (jobsData ?? []) as JobRow[];
+  const liveOfferings = (offerings ?? []).filter(
+    (offered) => offered.service?.is_live,
+  );
 
   return (
     <div className="space-y-8">
@@ -147,13 +150,13 @@ export default async function ProviderJobsPage() {
           </Link>
         </div>
         <Card className="mt-3 p-4">
-          {!offerings || offerings.length === 0 ? (
+          {liveOfferings.length === 0 ? (
             <p className="text-sm text-mist">
-              No services yet — set them up in Profile & settings.
+              No live services yet — set them up in Profile & settings.
             </p>
           ) : (
             <ul className="divide-y divide-line text-sm">
-              {offerings.map((offered) => (
+              {liveOfferings.map((offered) => (
                 <li
                   key={offered.id}
                   className="flex justify-between gap-4 py-2.5"
@@ -169,6 +172,8 @@ export default async function ProviderJobsPage() {
           <p className="mt-3 border-t border-line pt-3 text-xs text-mist">
             Read-only here on purpose — pricing is edited in one place
             (Profile & settings) so your public profile always matches.
+            Hidden service offerings are preserved and reappear if a founder
+            makes that service live again.
           </p>
         </Card>
       </section>

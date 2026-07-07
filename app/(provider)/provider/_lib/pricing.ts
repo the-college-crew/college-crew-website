@@ -73,15 +73,22 @@ export async function savePricingRows(
     return { error: "Pick at least one service to offer." };
   }
 
-  // Replace: drop deselected offerings, then upsert the current set.
+  // Replace only currently-live offerings. Hidden service offerings are
+  // preserved so they reappear unchanged if an admin makes the service live.
   const keepIds = selected.map((row) => row.service_id);
-  const { error: deleteError } = await supabase
-    .from("provider_services")
-    .delete()
-    .eq("provider_id", providerId)
-    .not("service_id", "in", `(${keepIds.join(",")})`);
-  if (deleteError) {
-    return { error: "Could not save services — try again." };
+  const liveIdsToRemove = services
+    .map((service) => service.id)
+    .filter((serviceId) => !keepIds.includes(serviceId));
+
+  if (liveIdsToRemove.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("provider_services")
+      .delete()
+      .eq("provider_id", providerId)
+      .in("service_id", liveIdsToRemove);
+    if (deleteError) {
+      return { error: "Could not save services — try again." };
+    }
   }
 
   const { error: upsertError } = await supabase

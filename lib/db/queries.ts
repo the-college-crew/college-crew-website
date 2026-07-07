@@ -147,6 +147,11 @@ export async function getPublicProviderProfile(
     days?: string[];
     note?: string;
   };
+  const liveServices = provider.provider_services.filter(
+    (ps) => ps.service.is_live,
+  );
+
+  if (liveServices.length === 0) return null;
 
   return {
     id: provider.id,
@@ -155,7 +160,7 @@ export async function getPublicProviderProfile(
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
     background_check_status: provider.background_check_status,
-    services: provider.provider_services.filter((ps) => ps.service.is_live),
+    services: liveServices,
     rating: rating
       ? { avg: Number(rating.avg_rating), count: rating.review_count }
       : null,

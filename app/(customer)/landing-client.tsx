@@ -6,7 +6,7 @@ const PARENT_STEPS = [
   {
     n: "1",
     title: "Post what you need",
-    body: "Lawn care, dog walking, cleaning, tutoring: describe the job and your schedule.",
+    body: "Describe the job, timing, and what kind of student help would make it easier.",
   },
   {
     n: "2",

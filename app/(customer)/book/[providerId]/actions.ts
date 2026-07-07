@@ -68,11 +68,19 @@ export async function createBookingRequest(
   // Visible via RLS only while the provider is approved.
   const { data: offered } = await supabase
     .from("provider_services")
-    .select("id, provider_id, service_id, price_cents, price_type")
+    .select("id, provider_id, service_id, price_cents, price_type, service:services(is_live)")
     .eq("id", parsed.data.providerServiceId)
     .maybeSingle();
 
-  if (!offered || offered.provider_id !== parsed.data.providerId) {
+  const service = Array.isArray(offered?.service)
+    ? offered.service[0]
+    : offered?.service;
+
+  if (
+    !offered ||
+    offered.provider_id !== parsed.data.providerId ||
+    !service?.is_live
+  ) {
     return { error: "That service isn't available from this provider." };
   }
 
