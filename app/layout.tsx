@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Newsreader } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 
 import { DevBanner } from "@/components/dev-banner";
 import { SITE } from "@/lib/site";
@@ -49,6 +50,12 @@ export default function RootLayout({
       className={`${bodyFont.variable} ${serifFont.variable}`}
     >
       <body className="flex min-h-screen flex-col font-sans">
+        <NextTopLoader
+          color="#344945"
+          height={3}
+          showSpinner={false}
+          shadow="0 0 10px #344945, 0 0 5px #344945"
+        />
         <DevBanner />
         {children}
       </body>
