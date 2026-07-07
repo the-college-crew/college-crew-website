@@ -3,11 +3,13 @@
 // Clients call this function to send a chat message; RLS has no insert
 // policy on `messages`, so moderation cannot be bypassed client-side.
 //
-// Two-layer, FLAG-ONLY scan:
+// Two-layer, FLAG-ONLY scan. Both layers judge the CURRENT message against a
+// rolling window of the last 10 messages, so contact info split across turns
+// ("555" then "123 4567") still gets caught:
 //   1. Cheap regex pass (below) — obvious phones, emails, handles, payment
 //      apps, "text me instead".
 //   2. gpt-5.4-nano backstop — catches obfuscated contact info the regex
-//      misses, using a rolling window of the last 10 messages for context.
+//      misses.
 //
 // CRITICAL POLICY NUANCE: the customer's address and job logistics are
 // legitimate and must NOT be flagged. Only off-platform CONTACT CHANNELS
@@ -66,23 +68,44 @@ const PATTERNS: Pattern[] = [
   },
 ];
 
-// Returns the names of the patterns that fired. Flag-only — the message text
-// is never modified.
-function regexModerationPass(body: string): string[] {
-  const matched: string[] = [];
+// Which patterns fire on a blob of text. Resets lastIndex because these regexes
+// are /g, which makes .test() stateful across calls.
+function regexDetect(text: string): Set<string> {
+  const hits = new Set<string>();
   for (const pattern of PATTERNS) {
-    if (pattern.regex.test(body)) matched.push(pattern.name);
+    if (pattern.regex.test(text)) hits.add(pattern.name);
     pattern.regex.lastIndex = 0;
   }
-  return matched;
+  return hits;
+}
+
+// Layer 1 detection over a rolling window. Flag-only — text is never modified.
+// A pattern counts against the CURRENT message if it fires on the current text
+// alone, OR if joining the recent window + current produces a match that the
+// window WITHOUT the current message did not — i.e. the current message
+// completes contact info split across turns ("555" then "123 4567"). Matches
+// contained entirely in older messages are ignored here: they were already
+// flagged when those messages were sent, so we don't re-flag them every turn.
+function regexModerationPass(current: string, priorWindow: string): string[] {
+  const inCurrent = regexDetect(current);
+  if (!priorWindow.trim()) return [...inCurrent];
+
+  const inPriorOnly = regexDetect(priorWindow);
+  const inCombined = regexDetect(`${priorWindow}\n${current}`);
+
+  const matched = new Set(inCurrent);
+  for (const name of inCombined) {
+    if (!inPriorOnly.has(name)) matched.add(name); // new, boundary-completing
+  }
+  return [...matched];
 }
 
 // ─────────────────────────────────────────────────────────────────────────
 // Layer 2: OpenAI MODEL BACKSTOP — gpt-5.4-nano, FLAG-ONLY.
 //
 // The model reads the latest message (raw — nothing is ever redacted) together
-// with a rolling window of the last MODEL_WINDOW messages in the thread, so it
-// can catch contact info split across turns ("what's your #?" → "555…") or
+// with the same rolling window of the last CONTEXT_WINDOW messages, so it can
+// catch contact info split across turns ("what's your #?" → "555…") or
 // answered from earlier context. It only FLAGS: the message is delivered
 // unchanged, marked `flagged`, logged to moderation_events, and the founders
 // are emailed. Set OPENAI_API_KEY on the function to enable it
@@ -96,7 +119,7 @@ function regexModerationPass(body: string): string[] {
 // ─────────────────────────────────────────────────────────────────────────
 const MODEL = "gpt-5.4-nano";
 const MODEL_TIMEOUT_MS = 2500;
-const MODEL_WINDOW = 10; // rolling context: last N messages the model can see
+const CONTEXT_WINDOW = 10; // rolling window: last N messages BOTH layers see
 
 const MODERATION_POLICY = `You review the LATEST chat message between a customer and a student service provider on a home-services marketplace. You are also given the recent conversation, for CONTEXT ONLY. Your ONLY job is to decide whether the LATEST message is part of an attempt to move the relationship off-platform by sharing a private CONTACT CHANNEL: phone numbers (including spelled-out or obfuscated), personal emails, social handles/usernames, or payment apps (Venmo, Cash App, Zelle, PayPal, Apple Pay). Use the prior messages to catch contact info that is split across turns or that answers an earlier request. The customer's street ADDRESS and any job logistics (times, tasks, gate codes, pricing) are legitimate — never flag those. Report whether the LATEST message contains or completes such an off-platform contact channel, and which categories apply. Do not rewrite anything.`;
 
@@ -134,26 +157,19 @@ const RESPONSE_FORMAT = {
 // never touches the message text. Fails open — any error, timeout, or malformed
 // response returns null so a model outage can never block a legitimate message.
 async function modelModerationPass(
-  admin: ReturnType<typeof createClient>,
-  conversationId: string,
   currentText: string,
   currentSenderId: string,
+  history: Array<{ sender_id: string; body: string }>,
 ): Promise<string[] | null> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey || !currentText.trim()) return null;
 
-  // Rolling context window: the last MODEL_WINDOW messages already in the
-  // thread (the current one isn't inserted yet), replayed oldest-first.
-  const { data: history } = await admin
-    .from("messages")
-    .select("sender_id, body")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: false })
-    .limit(MODEL_WINDOW);
-  const transcript = (history ?? [])
-    .reverse()
+  // Rolling context window (already fetched, oldest-first): label each prior
+  // message by who sent it so the model can follow a split-across-turns
+  // exchange. It still judges only the LATEST message.
+  const transcript = history
     .map(
-      (m: { sender_id: string; body: string }) =>
+      (m) =>
         `${m.sender_id === currentSenderId ? "SENDER" : "OTHER"}: ${m.body}`,
     )
     .join("\n");
@@ -320,13 +336,28 @@ Deno.serve(async (request) => {
       return json({ error: "Conversation not found." }, 404);
     }
 
+    // Rolling context window shared by both layers: the last CONTEXT_WINDOW
+    // messages already in the thread (the current one isn't inserted yet),
+    // oldest-first.
+    const { data: historyRows } = await admin
+      .from("messages")
+      .select("sender_id, body")
+      .eq("conversation_id", conversation_id)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_WINDOW);
+    const history = ((historyRows ?? []) as Array<{
+      sender_id: string;
+      body: string;
+    }>).reverse();
+    const priorWindow = history.map((m) => m.body).join("\n");
+
     // Moderation is FLAG-ONLY: the message is never modified. Layer 1 (regex)
-    // and Layer 2 (gpt-5.4-nano, with a rolling MODEL_WINDOW-message context)
-    // each just DETECT off-platform contact info. Any hit → `flagged`, logged,
-    // and the founders emailed; the full original text is always delivered.
-    const regexMatched = regexModerationPass(text);
+    // and Layer 2 (gpt-5.4-nano) each judge the CURRENT message against the
+    // rolling window and only DETECT off-platform contact info. Any hit →
+    // `flagged`, logged, and the founders emailed; full text always delivered.
+    const regexMatched = regexModerationPass(text, priorWindow);
     const modelMatched =
-      (await modelModerationPass(admin, conversation_id, text, user.id)) ?? [];
+      (await modelModerationPass(text, user.id, history)) ?? [];
     const matched = [...regexMatched, ...modelMatched];
     const moderationStatus = matched.length > 0 ? "flagged" : "clean";
 
