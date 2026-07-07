@@ -3,12 +3,10 @@
 import { usePathname, useRouter } from "next/navigation";
 
 /**
- * Universal back button for the app headers. Shows on every page except the
- * homepage and steps back through history (falling back to the homepage on a
- * direct load). Styled for the forest (`bg-viridian`) header — light text, so
- * it stays visible; deliberately not `buttonClasses` since the `secondary`
- * variant's dark colors would win over an override (cn concatenates, it does
- * not tailwind-merge).
+ * Universal back button, rendered top-right of a page's `PageHeader` (aligned
+ * with the title) on the light content surface. Shows on every page except the
+ * homepage and steps back through history, falling back to the homepage on a
+ * direct load.
  */
 export function BackButton() {
   const pathname = usePathname();
@@ -28,7 +26,7 @@ export function BackButton() {
     <button
       type="button"
       onClick={goBack}
-      className="inline-flex items-center gap-1.5 rounded-xl border border-shell/30 px-3 py-1.5 text-xs font-semibold text-shell transition-colors hover:bg-shell/10"
+      className="inline-flex items-center gap-1.5 rounded-xl border border-viridian/25 px-3 py-1.5 text-xs font-semibold text-viridian transition-colors hover:bg-viridian/5"
     >
       <span aria-hidden="true">←</span>
       <span className="hidden sm:inline">Back</span>

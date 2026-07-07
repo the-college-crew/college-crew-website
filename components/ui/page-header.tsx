@@ -1,23 +1,21 @@
+import { BackButton } from "@/components/back-button";
+
 export function PageHeader({
-  eyebrow,
   title,
   description,
   actions,
+  back = true,
 }: {
-  eyebrow?: string;
   title: string;
   description?: React.ReactNode;
   actions?: React.ReactNode;
+  /** Show the universal back button top-right. Off for a page's home base. */
+  back?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
-        {eyebrow ? (
-          <p className="brand-eyebrow">
-            {eyebrow}
-          </p>
-        ) : null}
-        <h1 className="mt-3 font-display text-3xl font-semibold leading-tight text-viridian sm:text-4xl">
+        <h1 className="font-display text-3xl font-semibold leading-tight text-viridian sm:text-4xl">
           {title}
         </h1>
         {description ? (
@@ -26,7 +24,12 @@ export function PageHeader({
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
+      {actions || back ? (
+        <div className="flex shrink-0 items-center gap-2">
+          {actions}
+          {back ? <BackButton /> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

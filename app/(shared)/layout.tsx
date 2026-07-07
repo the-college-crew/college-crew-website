@@ -1,4 +1,3 @@
-import { BackButton } from "@/components/back-button";
 import { Wordmark } from "@/components/site-header";
 import { UserMenu } from "@/components/user-menu";
 import {
@@ -23,10 +22,7 @@ export default async function SharedLayout({
     <>
       <header className="border-b border-viridian/10 bg-viridian text-shell">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
-          <div className="flex items-center gap-3">
-            <Wordmark tone="dark" />
-            <BackButton />
-          </div>
+          <Wordmark tone="dark" />
           {session && role ? (
             <UserMenu
               name={session.profile.full_name}

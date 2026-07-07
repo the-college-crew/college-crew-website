@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 
-import { BackButton } from "@/components/back-button";
 import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
 import { ViewAsSwitcher } from "@/components/view-as-switcher";
@@ -71,7 +70,6 @@ export async function SiteHeader() {
         <div className="flex items-center gap-3 sm:gap-8">
           <MobileNav nav={NAV} isAuthed={Boolean(session)} />
           <Wordmark tone="dark" />
-          <BackButton />
           <nav
             aria-label="Main"
             className="hidden items-center gap-6 text-sm font-semibold text-shell/75 sm:flex"

@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { BackButton } from "@/components/back-button";
 import { MobileNav } from "@/components/mobile-nav";
 import { Wordmark } from "@/components/site-header";
 import { UserMenu } from "@/components/user-menu";
@@ -35,7 +34,6 @@ export default async function AdminLayout({
             <span className="rounded-full border border-honeydew/60 bg-honeydew px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-viridian">
               Admin
             </span>
-            <BackButton />
           </div>
           <div className="flex items-center gap-3">
             <ViewAsSwitcher current={effectiveRole ?? "admin"} />

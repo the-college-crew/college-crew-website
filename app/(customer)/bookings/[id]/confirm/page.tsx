@@ -48,7 +48,6 @@ export default async function ConfirmPayPage({
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
-        eyebrow="One last step"
         title="Confirm & pay"
         description="The provider accepted your request. Confirm the details below to lock it in."
       />

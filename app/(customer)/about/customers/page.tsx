@@ -27,7 +27,6 @@ export default function CustomerMissionPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-10">
       <PageHeader
-        eyebrow="For customers"
         title="A simpler way to get trusted help at home"
         description={`${SITE.name} helps neighbors turn everyday household needs into opportunities for verified local students.`}
         actions={

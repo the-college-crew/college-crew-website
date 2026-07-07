@@ -62,7 +62,6 @@ export default async function ProviderSettingsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={profile.display_name}
         title="Profile & settings"
         description="Your storefront, availability, pricing (the source of truth), and account."
       />

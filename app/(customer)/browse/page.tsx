@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSession } from "@/lib/auth/session";
 import { getApprovedProviders, getLiveServices } from "@/lib/db/queries";
-import { NEIGHBORHOOD } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Browse providers" };
 
@@ -27,7 +26,6 @@ export default async function BrowsePage({
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={NEIGHBORHOOD.name}
         title="Browse the crew"
         description="Verified student providers in your neighborhood — businesses and individuals. Only ID-approved students are listed."
       />

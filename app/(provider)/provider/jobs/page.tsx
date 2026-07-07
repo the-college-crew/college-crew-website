@@ -61,7 +61,6 @@ export default async function ProviderJobsPage() {
         filter={`provider_id=eq.${profile.id}`}
       />
       <PageHeader
-        eyebrow={profile.display_name}
         title="Jobs & pricing"
         description="Your upcoming jobs, and the pricing customers currently see."
       />
