@@ -50,11 +50,14 @@ export default function RootLayout({
       className={`${bodyFont.variable} ${serifFont.variable}`}
     >
       <body className="flex min-h-screen flex-col font-sans">
+        {/* Gold, not forest: the sticky header is bg-viridian (#344945), so a
+            forest bar would be invisible against it. Gold reads on both the
+            forest header and the cream body. */}
         <NextTopLoader
-          color="#344945"
+          color="#c5c27d"
           height={3}
           showSpinner={false}
-          shadow="0 0 10px #344945, 0 0 5px #344945"
+          shadow="0 0 10px #c5c27d, 0 0 5px #c5c27d"
         />
         <DevBanner />
         {children}
