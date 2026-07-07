@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BackButton } from "@/components/back-button";
 import { MobileNav } from "@/components/mobile-nav";
 import { Wordmark } from "@/components/site-header";
 import { buttonClasses } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export default async function ProviderLayout({
             <span className="rounded-full border border-shell/20 bg-shell/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-honeydew">
               Provider
             </span>
+            <BackButton />
           </div>
           {session ? (
             <div className="flex items-center gap-3">
