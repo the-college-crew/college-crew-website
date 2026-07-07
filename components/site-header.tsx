@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 
+import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
 import { ViewAsSwitcher } from "@/components/view-as-switcher";
 import { getEffectiveRole, getSession, homePathFor } from "@/lib/auth/session";
@@ -61,7 +62,8 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-viridian/10 bg-viridian text-shell">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-3 sm:gap-8">
+          <MobileNav nav={NAV} isAuthed={Boolean(session)} />
           <Wordmark tone="dark" />
           <nav
             aria-label="Main"
@@ -92,7 +94,8 @@ export async function SiteHeader() {
               />
             </>
           ) : (
-            <>
+            // On mobile these live inside the hamburger panel instead.
+            <div className="hidden items-center gap-1.5 sm:flex">
               <Link
                 href="/login"
                 className="rounded-xl border border-shell/30 px-3.5 py-2 text-sm font-semibold text-shell transition-colors hover:bg-shell/10"
@@ -105,26 +108,10 @@ export async function SiteHeader() {
               >
                 Get started
               </Link>
-            </>
+            </div>
           )}
         </div>
       </div>
-
-      {/* Mobile nav row */}
-      <nav
-        aria-label="Main mobile"
-        className="flex items-center gap-6 border-t border-shell/15 px-4 py-2 text-sm font-semibold text-shell/75 sm:hidden"
-      >
-        {NAV.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="transition-colors hover:text-shell"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
       <span className="sr-only">{SITE.name}</span>
     </header>
   );
