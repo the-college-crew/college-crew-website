@@ -12,7 +12,10 @@ import { hasResendEnv } from "@/lib/env";
  * server-only: never bundle the API key path into the browser.
  */
 
-const FROM = process.env.EMAIL_FROM ?? "College Crew <onboarding@resend.dev>";
+// `??` alone would keep an empty/blank EMAIL_FROM ("") — which Resend rejects
+// as an invalid `from`. Trim and fall back on any blank value, not just unset.
+const FROM =
+  process.env.EMAIL_FROM?.trim() || "College Crew <onboarding@resend.dev>";
 
 type SendResult = { ok: true } | { ok: false; error: string };
 

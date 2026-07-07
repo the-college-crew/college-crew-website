@@ -166,6 +166,13 @@ export async function sendSchoolEmailOtp(
   }
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+
+  // Send FIRST: a failed delivery must not persist a code or burn the resend
+  // cooldown (the cooldown reads created_at on this row). Only on a confirmed
+  // send do we record the pending verification.
+  const sent = await sendSchoolOtpEmail(email, code);
+  if (!sent.ok) return { error: `Could not send the code: ${sent.error}` };
+
   const { error: upsertError } = await admin
     .from("provider_email_verifications")
     .upsert({
@@ -177,9 +184,6 @@ export async function sendSchoolEmailOtp(
       created_at: new Date().toISOString(),
     });
   if (upsertError) return { error: "Could not start verification — try again." };
-
-  const sent = await sendSchoolOtpEmail(email, code);
-  if (!sent.ok) return { error: `Could not send the code: ${sent.error}` };
 
   revalidatePath("/provider/onboarding/verify");
   return { notice: `We sent a 6-digit code to ${email}. It expires in 15 minutes.` };
