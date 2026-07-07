@@ -151,3 +151,8 @@ items unless asked — when in doubt, plan first and confirm.
     must never be imported into anything shipped to the browser.
 - Keep the curated service list driven by the `services` table (admin-toggled),
   never hard-coded in the UI.
+- **Route-change progress bar:** the app uses `nextjs-toploader`, mounted once
+  in `app/layout.tsx` with the gold color `#c5c27d` (chosen to read over both
+  the forest header and cream body). It applies globally across all routes — any
+  new routing additions inherit it automatically. Don't add a second loader or
+  override its color; keep the single site-wide instance in that one gold.
