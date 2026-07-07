@@ -8,27 +8,27 @@ import { cn } from "@/lib/utils";
 const config: Record<BookingStatus, { label: string; classes: string }> = {
   requested: {
     label: "Requested",
-    classes: "border-gold-400/60 bg-gold-100 text-gold-800",
+    classes: "border-honeydew bg-honeydew text-viridian",
   },
   accepted: {
     label: "Accepted — awaiting payment",
-    classes: "border-crew-200 bg-crew-100 text-crew-800",
+    classes: "border-sky bg-sky text-viridian",
   },
   paid: {
     label: "Confirmed",
-    classes: "border-quad-200 bg-quad-100 text-quad-800",
+    classes: "border-honeydew bg-honeydew text-viridian",
   },
   completed: {
     label: "Completed",
-    classes: "border-quad-200 bg-paper text-quad-700",
+    classes: "border-honeydew bg-paper text-viridian",
   },
   declined: {
     label: "Declined",
-    classes: "border-line bg-court text-ink-soft",
+    classes: "border-stone bg-stone text-ink-soft",
   },
   cancelled: {
     label: "Cancelled",
-    classes: "border-line bg-court text-ink-soft",
+    classes: "border-stone bg-stone text-ink-soft",
   },
 };
 

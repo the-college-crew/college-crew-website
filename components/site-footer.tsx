@@ -12,29 +12,33 @@ const EXPLORE = [
 
 export function SiteFooter() {
   return (
-    <footer className="bg-forest-900 text-cream">
-      <div className="mx-auto max-w-6xl px-4 py-14">
+    <footer className="relative overflow-hidden bg-viridian text-shell">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-10 -bottom-16 h-64 w-64 rounded-full bg-shell/5"
+      />
+      <div className="relative mx-auto max-w-6xl px-4 py-14">
         <div className="grid gap-10 sm:grid-cols-3">
           <div>
             <Wordmark tone="dark" />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-forest-100">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-shell/70">
               {SITE.tagline}
             </p>
-            <p className="mt-3 text-xs text-sage-200">
+            <p className="mt-3 text-xs text-honeydew">
               Now serving {NEIGHBORHOOD.name} — our pilot neighborhood.
             </p>
           </div>
 
           <nav aria-label="Footer" className="text-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sage-200">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-honeydew">
               Explore
             </p>
-            <ul className="mt-4 space-y-2.5 text-forest-100">
+            <ul className="mt-4 space-y-2.5 text-shell/70">
               {EXPLORE.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="transition-colors hover:text-cream"
+                    className="transition-colors hover:text-shell"
                   >
                     {item.label}
                   </Link>
@@ -43,7 +47,7 @@ export function SiteFooter() {
             </ul>
           </nav>
 
-          <div className="text-xs leading-relaxed text-forest-100/80">
+          <div className="text-xs leading-relaxed text-shell/65">
             <p>
               Every provider is a verified college student (18+). Providers are
               independent — {SITE.name} connects, verifies, and processes
@@ -52,7 +56,7 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-2 border-t border-cream/15 pt-6 text-xs text-sage-200 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 flex flex-col gap-2 border-t border-shell/15 pt-6 text-xs text-shell/50 sm:flex-row sm:items-center sm:justify-between">
           <p>
             © {new Date().getFullYear()} {SITE.name}
           </p>

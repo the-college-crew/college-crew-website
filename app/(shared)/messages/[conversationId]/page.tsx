@@ -52,10 +52,10 @@ export default async function ConversationPage({
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-mist">
+          <p className="font-display text-xs font-semibold text-mist">
             Conversation
           </p>
-          <h1 className="font-display text-2xl font-semibold uppercase tracking-wide">
+          <h1 className="font-display text-2xl font-semibold">
             {otherName || "Conversation"}
           </h1>
         </div>

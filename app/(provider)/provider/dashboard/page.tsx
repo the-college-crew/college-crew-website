@@ -132,7 +132,7 @@ export default async function ProviderDashboardPage({
             <p className="font-display text-2xl font-bold text-crew-700 sm:text-3xl">
               {stat.value}
             </p>
-            <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-mist">
+            <p className="font-display text-xs font-semibold text-mist">
               {stat.label}
             </p>
             <p className="text-[11px] text-mist">{stat.hint}</p>
@@ -145,7 +145,7 @@ export default async function ProviderDashboardPage({
         <section aria-labelledby="requests">
           <h2
             id="requests"
-            className="font-display text-xl font-semibold uppercase tracking-wide"
+            className="font-display text-xl font-semibold"
           >
             New requests
           </h2>
@@ -158,7 +158,7 @@ export default async function ProviderDashboardPage({
             ) : (
               requests.map((booking) => (
                 <Card key={booking.id} pennant className="p-4">
-                  <p className="font-display text-lg font-semibold uppercase tracking-wide">
+                  <p className="font-display text-lg font-semibold">
                     {booking.service.name}
                   </p>
                   <p className="mt-0.5 text-sm text-ink-soft">
@@ -204,7 +204,7 @@ export default async function ProviderDashboardPage({
         <section aria-labelledby="calendar">
           <h2
             id="calendar"
-            className="font-display text-xl font-semibold uppercase tracking-wide"
+            className="font-display text-xl font-semibold"
           >
             Your month
           </h2>

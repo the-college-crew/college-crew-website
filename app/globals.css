@@ -1,79 +1,72 @@
 @import "tailwindcss";
 
-/*
- * College Crew design tokens.
- *
- * Identity: varsity collegiate — crew blue + quad green (from the wireframe
- * palette), gold for trust badges, condensed athletic display type. The
- * signature element is the two-tone "pennant stripe" (see @utility pennant).
- */
 @theme {
   --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-barlow-condensed), var(--font-public-sans),
-    ui-sans-serif, sans-serif;
+  --font-display: var(--font-newsreader), Georgia, serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
 
-  /* Crew blue — primary */
-  --color-crew-50: #f1f4fa;
-  --color-crew-100: #e5eaf5;
-  --color-crew-200: #c9d4ea;
-  --color-crew-300: #a5b8db;
-  --color-crew-400: #7a93c8;
-  --color-crew-500: #4c6fb5;
-  --color-crew-600: #3d5c9c;
-  --color-crew-700: #334c82;
-  --color-crew-800: #2c4069;
-  --color-crew-900: #263551;
+  /* New College Crew palette from the standalone homepage design. */
+  --color-shell: #f7f5f1;
+  --color-stone: #e0dcd1;
+  --color-sky: #d5e3e8;
+  --color-honeydew: #e4e3bc;
+  --color-viridian: #344945;
+  --color-viridian-ink: #2a3a37;
 
-  /* Quad green — money, success, verified work */
-  --color-quad-50: #eef7f2;
-  --color-quad-100: #e4f1e9;
-  --color-quad-200: #c3e0d0;
-  --color-quad-300: #96c9ac;
-  --color-quad-400: #64ab84;
-  --color-quad-500: #3e8e63;
-  --color-quad-600: #327551;
-  --color-quad-700: #285f41;
-  --color-quad-800: #214c35;
-  --color-quad-900: #1c3e2c;
+  /* Compatibility aliases used throughout existing operational pages. */
+  --color-crew-50: #fbfaf7;
+  --color-crew-100: #f0eee6;
+  --color-crew-200: #d8d3c6;
+  --color-crew-300: #c4bcaa;
+  --color-crew-400: #86938f;
+  --color-crew-500: #596b66;
+  --color-crew-600: #344945;
+  --color-crew-700: #2f413d;
+  --color-crew-800: #2a3a37;
+  --color-crew-900: #22312e;
 
-  /* Varsity gold — badges and callouts only; spend it sparingly */
-  --color-gold-100: #fff5dc;
-  --color-gold-300: #f0d391;
-  --color-gold-400: #e3b95e;
-  --color-gold-700: #92691c;
-  --color-gold-800: #785611;
+  --color-quad-50: #f7f6e9;
+  --color-quad-100: #e4e3bc;
+  --color-quad-200: #d5d39e;
+  --color-quad-300: #c2bf7e;
+  --color-quad-400: #a8a461;
+  --color-quad-500: #85813f;
+  --color-quad-600: #696632;
+  --color-quad-700: #555229;
+  --color-quad-800: #424022;
+  --color-quad-900: #33321c;
+
+  --color-gold-100: #f6f2d1;
+  --color-gold-300: #e4e3bc;
+  --color-gold-400: #c5c27d;
+  --color-gold-700: #5f6535;
+  --color-gold-800: #4b512b;
 
   /* Neutrals */
-  --color-ink: #23252b;
-  --color-ink-soft: #4a4d55;
-  --color-mist: #878c95;
-  --color-line: #d9dce2;
-  --color-court: #f4f5f7;
-  --color-paper: #ffffff;
+  --color-ink: #344945;
+  --color-ink-soft: #66736f;
+  --color-mist: #89928f;
+  --color-line: #d7d1c3;
+  --color-court: #f7f5f1;
+  --color-paper: #fffdf8;
 
-  /*
-   * Landing "at home / on campus" palette — FRONT PAGE ONLY.
-   * Warm cream canvas, deep forest CTAs, pale sage trust chips, and a cool
-   * blue-gray glow. Additive: no existing crew/quad/ink token is touched, so
-   * every other page renders exactly as before.
-   */
-  --color-cream: #f4f1e6;
-  --color-cream-card: #fbfaf3;
-  --color-sand: #e9e1cf;
-  --color-forest-950: #1b261d;
-  --color-forest-900: #22301f;
-  --color-forest-800: #2b3a2e;
-  --color-forest-700: #37493a;
-  --color-forest-600: #47594a;
-  --color-forest-100: #dbe2d7;
-  --color-sage-100: #e6e7cb;
-  --color-sage-200: #d7dab2;
+  --color-cream: #f7f5f1;
+  --color-cream-card: #fffdf8;
+  --color-sand: #e0dcd1;
+  --color-forest-950: #22312e;
+  --color-forest-900: #2a3a37;
+  --color-forest-800: #344945;
+  --color-forest-700: #405854;
+  --color-forest-600: #596b66;
+  --color-forest-100: #e2e8e5;
+  --color-sage-100: #e4e3bc;
+  --color-sage-200: #d5d39e;
   --color-sage-700: #5f6535;
-  --color-haze-200: #cdd6e0;
-  --color-haze-300: #b9c5d4;
-  --color-bark: #24271f;
-  --color-bark-soft: #585a4e;
-  --color-bark-line: #ddd6c4;
+  --color-haze-200: #d5e3e8;
+  --color-haze-300: #bed2da;
+  --color-bark: #344945;
+  --color-bark-soft: #66736f;
+  --color-bark-line: #d7d1c3;
 }
 
 @layer base {
@@ -90,13 +83,13 @@
   }
 
   body {
-    background-color: var(--color-court);
+    background-color: var(--color-shell);
     color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
   }
 
   *:focus-visible {
-    outline: 2px solid var(--color-crew-600);
+    outline: 2px solid var(--color-viridian);
     outline-offset: 2px;
   }
 
@@ -110,11 +103,6 @@
   }
 }
 
-/*
- * Signature: the pennant stripe — a two-tone crew-blue/quad-green top edge
- * on the site header and key cards. Pair with overflow-hidden on rounded
- * containers.
- */
 @utility pennant {
   position: relative;
 
@@ -125,31 +113,30 @@
     height: 4px;
     background: linear-gradient(
       90deg,
-      var(--color-crew-600) 0 62%,
-      var(--color-quad-500) 62% 100%
+      var(--color-viridian) 0 50%,
+      var(--color-honeydew) 50% 75%,
+      var(--color-sky) 75% 100%
     );
   }
 }
 
-/*
- * Landing canvas — a cool blue-gray glow anchored top-left, dissolving into a
- * warm cream field that settles to sand at the foot of the page. This is the
- * gradient the front page extends downward so the page reads as one finished
- * surface rather than a hero bolted onto a gray body.
- */
 @utility home-canvas {
-  background-color: var(--color-cream);
-  background-image:
-    radial-gradient(
-      88% 62% at 14% -6%,
-      var(--color-haze-300) 0%,
-      color-mix(in srgb, var(--color-haze-200) 55%, transparent) 34%,
-      transparent 62%
-    ),
-    linear-gradient(
-      180deg,
-      var(--color-cream) 0%,
-      var(--color-cream) 52%,
-      var(--color-sand) 100%
-    );
+  background: var(--color-shell);
+}
+
+@utility brand-section {
+  padding-block: 4.5rem;
+}
+
+@utility brand-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--color-honeydew);
+  color: var(--color-viridian);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }

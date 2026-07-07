@@ -1,6 +1,6 @@
-# HomeGrown — CLAUDE.md
+# College Crew — CLAUDE.md
 
-Student-only home-services marketplace (working name "HomeGrown"). A curated,
+Student-only home-services marketplace (named "College Crew"). A curated,
 hyperlocal web app connecting neighbors with verified student providers (18+)
 for everyday home/household services. 7-week pilot, one neighborhood, goal =
 proof of concept.

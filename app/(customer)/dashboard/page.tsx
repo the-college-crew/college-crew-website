@@ -127,7 +127,7 @@ export default async function CustomerDashboardPage({
               <Card className="p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-display text-lg font-semibold uppercase tracking-wide">
+                    <p className="font-display text-lg font-semibold">
                       {booking.service.name}
                     </p>
                     <p className="mt-0.5 text-sm text-ink-soft">

@@ -38,7 +38,7 @@ export default async function OnboardingReviewPage() {
       <WizardSteps current="review" />
 
       <Card pennant className="p-6">
-        <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+        <h2 className="font-display text-xl font-semibold">
           Review & submit
         </h2>
 

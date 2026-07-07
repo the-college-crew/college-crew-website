@@ -63,7 +63,7 @@ export default async function ProviderJobsPage() {
       <section aria-labelledby="upcoming-jobs">
         <h2
           id="upcoming-jobs"
-          className="font-display text-xl font-semibold uppercase tracking-wide"
+          className="font-display text-xl font-semibold"
         >
           Upcoming jobs
         </h2>
@@ -78,7 +78,7 @@ export default async function ProviderJobsPage() {
               <Card key={job.id} className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="font-display text-lg font-semibold uppercase tracking-wide">
+                    <p className="font-display text-lg font-semibold">
                       {job.service.name}
                     </p>
                     <p className="mt-0.5 text-sm text-ink-soft">
@@ -130,7 +130,7 @@ export default async function ProviderJobsPage() {
         <div className="flex items-center justify-between">
           <h2
             id="pricing"
-            className="font-display text-xl font-semibold uppercase tracking-wide"
+            className="font-display text-xl font-semibold"
           >
             Your pricing
           </h2>

@@ -34,7 +34,7 @@ export default async function OnboardingServicesPage() {
       <WizardSteps current="services" />
 
       <Card pennant className="p-6">
-        <h2 className="font-display text-xl font-semibold uppercase tracking-wide">
+        <h2 className="font-display text-xl font-semibold">
           What do you offer?
         </h2>
         <p className="mt-1 text-sm text-ink-soft">

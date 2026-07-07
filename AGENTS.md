@@ -1,6 +1,6 @@
-# HomeGrown — CLAUDE.md
+# College Crew — AGENTS.md
 
-Student-only home-services marketplace (working name "HomeGrown"). A curated,
+Student-only home-services marketplace (named "College Crew"). A curated,
 hyperlocal web app connecting neighbors with verified student providers (18+)
 for everyday home/household services. 7-week pilot, one neighborhood, goal =
 proof of concept.
@@ -113,7 +113,7 @@ exists (test mode only regardless).
   shared out-of-band, never in the repo.
 - **Watch `ANTHROPIC_API_KEY`:** if either dev has it set in their shell,
   Claude Code bills the API instead of the Pro plan. Use `/login` to stay on
-  the subscription.
+  the subscription. - this is for CLAUDE CODE, do the same rule for CODEX.
 - **RLS on by default.** Every table has row-level security; customers and
   providers can only read/write their own rows. Admin role bypasses via policy.
 - **Stripe is test mode** for the pilot. Do not flip to live keys without an
@@ -124,9 +124,9 @@ exists (test mode only regardless).
   unfinished pages. **On launch day, REMOVE that `robots` block** (and add a
   sitemap) so the finished site can be indexed. Don't leave it on by accident.
 
-## Claude Code integrations
+## CODEX integrations
 
-When using Stripe, Vercel, Resend, or Supabase in Claude Code utilize MCP (if it exists) for any necessary read or write needed. If applicable, load any corresponding skill/plugins downloaded.
+When using Stripe, Vercel, Resend, or Supabase in CODEX utilize MCP (if it exists) for any necessary read or write needed. If applicable, load any corresponding skill/plugins downloaded.
 
 
 ## Pilot scope discipline

@@ -10,7 +10,7 @@ export default function GoodbyePage() {
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-16">
       <Card className="p-8 text-center">
-        <h1 className="font-display text-2xl font-semibold uppercase tracking-wide text-ink">
+        <h1 className="font-display text-2xl font-semibold text-ink">
           Your account has been deleted
         </h1>
         <p className="mt-3 text-sm text-ink-soft">

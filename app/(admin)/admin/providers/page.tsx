@@ -100,7 +100,7 @@ export default async function AdminProvidersPage({
       <section aria-labelledby="queue">
         <h2
           id="queue"
-          className="font-display text-xl font-semibold uppercase tracking-wide"
+          className="font-display text-xl font-semibold"
         >
           Review queue ({queueWithDocs.length})
         </h2>
@@ -114,7 +114,7 @@ export default async function AdminProvidersPage({
               <Card key={provider.id} pennant className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-display text-lg font-semibold uppercase tracking-wide">
+                    <p className="font-display text-lg font-semibold">
                       {provider.display_name || "Unnamed provider"}
                     </p>
                     <p className="mt-0.5 text-sm text-ink-soft">
@@ -170,7 +170,7 @@ export default async function AdminProvidersPage({
       <section aria-labelledby="all-providers">
         <h2
           id="all-providers"
-          className="font-display text-xl font-semibold uppercase tracking-wide"
+          className="font-display text-xl font-semibold"
         >
           All providers
         </h2>
