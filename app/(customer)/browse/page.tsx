@@ -49,7 +49,7 @@ export default async function BrowsePage({
             : "Approved providers will appear here as the crew grows."}
         </EmptyState>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="mx-auto max-w-3xl space-y-4">
           {providers.map((provider) => (
             <ProviderCard key={provider.id} provider={provider} />
           ))}

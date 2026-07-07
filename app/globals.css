@@ -128,6 +128,35 @@
   padding-block: 4.5rem;
 }
 
+/*
+ * Browse card → profile morph (React <ViewTransition share="morph">, enabled
+ * via experimental.viewTransition in next.config.ts). The blur hides
+ * pixel-interpolation artifacts mid-flight.
+ */
+::view-transition-group(.morph) {
+  animation-duration: 400ms;
+}
+
+::view-transition-image-pair(.morph) {
+  animation-name: via-blur;
+}
+
+@keyframes via-blur {
+  30% {
+    filter: blur(3px);
+  }
+}
+
+/* The base-layer reduced-motion rule only covers elements, not these pseudos. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+  }
+}
+
 @utility brand-eyebrow {
   display: inline-flex;
   align-items: center;
