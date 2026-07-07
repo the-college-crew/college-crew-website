@@ -86,36 +86,165 @@ function regexModerationPass(body: string): {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Layer 2: OpenAI MODEL BACKSTOP — PLUGGABLE, deliberately deferred.
+// Layer 2: OpenAI MODEL BACKSTOP — gpt-5.4-nano, FLAG-ONLY.
 //
-// This is the open gap for looping in an OpenAI model that reads each message
-// and catches contact-info exchange the regexes miss ("find me on insta",
-// "venmo same name", "five five five…", handwaved handles). Everything is
-// wired except the API call: set OPENAI_API_KEY on the function
-// (`npx supabase secrets set OPENAI_API_KEY=...`) and fill in the fetch below.
+// The model reads each message (already run through the regex layer) and
+// catches contact-info exchange the regexes miss ("find me on insta",
+// "venmo same name", "five five five…", handwaved handles). Unlike the regex
+// layer it does NOT rewrite the text — it only FLAGS: the message is delivered
+// unchanged, marked `flagged`, logged to moderation_events, and the founders
+// are emailed. Set OPENAI_API_KEY on the function to enable it
+// (`npx supabase secrets set OPENAI_API_KEY=...`); with no key it no-ops and
+// the regex layer stands alone.
 //
-// The prompt MUST encode the policy nuance from the top of this file: the
+// The prompt encodes the policy nuance from the top of this file: the
 // customer's ADDRESS and job logistics are legitimate and must pass; only
 // off-platform CONTACT CHANNELS (phone, email, social, payment apps) are
-// targets. Return null to pass the message through unchanged, or
-// { cleaned, matched } to redact spans / flag for founder review.
-//
-// Deferred per SPEC §7: final policy tuning + the founder review dashboard.
+// targets. It IDENTIFIES categories — it never rewrites the message.
 // ─────────────────────────────────────────────────────────────────────────
-const MODERATION_POLICY = `You review one chat message between a customer and a student service provider on a home-services marketplace. Your ONLY job is to catch attempts to move the relationship off-platform by sharing a private CONTACT CHANNEL: phone numbers (including spelled-out or obfuscated), personal emails, social handles/usernames, or payment apps (Venmo, Cash App, Zelle, PayPal, Apple Pay). The customer's street ADDRESS and any job logistics (times, tasks, gate codes, pricing) are legitimate — never flag those. Reply with the message rewritten so each offending span is replaced by "${"[hidden — keep it on College Crew]"}", plus the list of what you caught.`;
+const MODEL = "gpt-5.4-nano";
+const MODEL_TIMEOUT_MS = 2500;
 
-async function modelModerationPass(
-  body: string,
-): Promise<{ cleaned: string; matched: string[] } | null> {
+const MODERATION_POLICY = `You review one chat message between a customer and a student service provider on a home-services marketplace. Your ONLY job is to detect attempts to move the relationship off-platform by sharing a private CONTACT CHANNEL: phone numbers (including spelled-out or obfuscated), personal emails, social handles/usernames, or payment apps (Venmo, Cash App, Zelle, PayPal, Apple Pay). The customer's street ADDRESS and any job logistics (times, tasks, gate codes, pricing) are legitimate — never flag those. Report whether the message contains any such off-platform contact channel and which categories apply. Do not rewrite the message.`;
+
+// Structured output: guarantees a parseable, fixed-shape reply.
+const RESPONSE_FORMAT = {
+  type: "json_schema",
+  json_schema: {
+    name: "contact_info_scan",
+    strict: true,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        contact_info_detected: { type: "boolean" },
+        categories: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: [
+              "phone",
+              "email",
+              "social_handle",
+              "payment_app",
+              "other_contact_channel",
+            ],
+          },
+        },
+      },
+      required: ["contact_info_detected", "categories"],
+    },
+  },
+};
+
+// Returns the flagged categories (prefixed `model:`) or null. FLAG-ONLY: it
+// never touches the message text. Fails open — any error, timeout, or malformed
+// response returns null so a model outage can never block a legitimate message.
+async function modelModerationPass(body: string): Promise<string[] | null> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) return null; // Not wired yet — regex layer stands alone.
+  if (!apiKey || !body.trim()) return null;
 
-  // TODO(openai): call the OpenAI API with MODERATION_POLICY as the system
-  // prompt and `body` as the user message, parse the structured response into
-  // { cleaned, matched }, and return it. Fail open (return null) on any error
-  // or timeout so a model outage never blocks a legitimate message.
-  void MODERATION_POLICY;
-  return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: MODERATION_POLICY },
+          { role: "user", content: body },
+        ],
+        response_format: RESPONSE_FORMAT,
+      }),
+    });
+    if (!res.ok) {
+      console.error("openai moderation non-ok:", res.status);
+      return null;
+    }
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== "string") return null;
+    const parsed = JSON.parse(content) as {
+      contact_info_detected?: boolean;
+      categories?: unknown;
+    };
+    if (!parsed.contact_info_detected) return null;
+    const categories = Array.isArray(parsed.categories)
+      ? parsed.categories.filter((c): c is string => typeof c === "string")
+      : [];
+    // Detected but no category named — still flag it generically.
+    const matched = categories.length > 0 ? categories : ["other_contact_channel"];
+    return matched.map((c) => `model:${c}`);
+  } catch (cause) {
+    console.error("openai moderation failed (failing open):", cause);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Founder notification — emailed whenever a message is flagged/redacted.
+//
+// Edge functions run in Deno and cannot import the app's lib/email/send.ts, so
+// this hits the Resend REST API directly. Mirrors that file's stub behavior:
+// with no RESEND_API_KEY set on the function it logs instead of sending, so the
+// whole path is testable before the Resend account/domain exists. Never throws
+// — a notification failure must not affect message delivery.
+// ─────────────────────────────────────────────────────────────────────────
+const NOTIFY_TO = ["Ari@thecollegecrew.com", "zach@thecollegecrew.com"];
+
+async function sendFlagNotification(opts: {
+  messageId: string;
+  senderId: string;
+  matched: string[];
+  original: string;
+}): Promise<void> {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  const from =
+    Deno.env.get("EMAIL_FROM")?.trim() ||
+    "College Crew <onboarding@resend.dev>";
+  const subject = "College Crew: a chat message was flagged";
+  const text = [
+    "A chat message was flagged for possible off-platform contact info.",
+    "",
+    `What matched: ${opts.matched.join(", ")}`,
+    `Sender (user id): ${opts.senderId}`,
+    `Message id: ${opts.messageId}`,
+    "",
+    "Original message:",
+    opts.original,
+    "",
+    "Review it in the admin dashboard → Flagged messages.",
+  ].join("\n");
+
+  if (!apiKey) {
+    console.info(
+      `[email:stub] flag notification to ${NOTIFY_TO.join(", ")} — ${opts.matched.join(", ")}`,
+    );
+    return;
+  }
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to: NOTIFY_TO, subject, text }),
+    });
+    if (!res.ok) {
+      console.error("flag notification non-ok:", res.status, await res.text());
+    }
+  } catch (cause) {
+    console.error("flag notification failed:", cause);
+  }
 }
 
 Deno.serve(async (request) => {
@@ -170,13 +299,19 @@ Deno.serve(async (request) => {
       return json({ error: "Conversation not found." }, 404);
     }
 
-    // Moderation: regex layer, then the (pluggable) model backstop.
-    let { cleaned, matched } = regexModerationPass(text);
-    const modelResult = await modelModerationPass(cleaned);
-    if (modelResult) {
-      cleaned = modelResult.cleaned;
-      matched = [...matched, ...modelResult.matched];
-    }
+    // Moderation. Layer 1 (regex) REDACTS spans inline and delivers. Layer 2
+    // (gpt-5.4-nano) only FLAGS what regex missed — the text is delivered
+    // unchanged. Status is `redacted` if regex rewrote the body, else `flagged`
+    // if the model caught something, else `clean`.
+    const { cleaned, matched: regexMatched } = regexModerationPass(text);
+    const modelMatched = (await modelModerationPass(cleaned)) ?? [];
+    const matched = [...regexMatched, ...modelMatched];
+    const moderationStatus =
+      regexMatched.length > 0
+        ? "redacted"
+        : modelMatched.length > 0
+          ? "flagged"
+          : "clean";
 
     const { data: message, error: insertError } = await admin
       .from("messages")
@@ -185,7 +320,7 @@ Deno.serve(async (request) => {
         sender_id: user.id,
         body: cleaned,
         image_path: image,
-        moderation_status: matched.length > 0 ? "redacted" : "clean",
+        moderation_status: moderationStatus,
       })
       .select("*")
       .single();
@@ -193,13 +328,24 @@ Deno.serve(async (request) => {
       return json({ error: "Could not send the message." }, 500);
     }
 
-    // Log the original for founder review (admin-only table).
+    // Log the original for founder review, then email the founders. The email
+    // runs after the response (waitUntil) so it never adds send latency; it
+    // also never throws, so it can't affect delivery.
     if (matched.length > 0) {
       await admin.from("moderation_events").insert({
         message_id: message.id,
         original_body: text,
         matched_patterns: matched,
       });
+      const notify = sendFlagNotification({
+        messageId: message.id,
+        senderId: user.id,
+        matched,
+        original: text,
+      });
+      // @ts-ignore — EdgeRuntime is provided by the Supabase Deno runtime.
+      if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(notify);
+      else await notify;
     }
 
     return json({ message });

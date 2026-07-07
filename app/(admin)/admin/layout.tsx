@@ -9,6 +9,7 @@ import { getEffectiveRole, homePathFor, requireRole } from "@/lib/auth/session";
 const ADMIN_NAV = [
   { href: "/admin/providers", label: "Provider approvals" },
   { href: "/admin/services", label: "Service curation" },
+  { href: "/admin/flagged", label: "Flagged messages" },
 ];
 
 /**
@@ -53,6 +54,9 @@ export default async function AdminLayout({
           </Link>
           <Link href="/admin/services" className="hover:text-shell">
             Service curation
+          </Link>
+          <Link href="/admin/flagged" className="hover:text-shell">
+            Flagged messages
           </Link>
         </nav>
       </header>
