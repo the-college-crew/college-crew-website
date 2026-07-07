@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { getSession, homePathFor, requireUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
 
@@ -60,22 +60,11 @@ export default async function MessagesPage() {
     (a, b) => Date.parse(activityAt(b)) - Date.parse(activityAt(a)),
   );
 
-  const session = await getSession();
-  const backHref = session ? homePathFor(session.profile.role) : "/";
-
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
       <PageHeader
         title="Messages"
         description="Your conversations with customers and providers."
-        actions={
-          <Link
-            href={backHref}
-            className="text-sm font-semibold text-crew-700 hover:underline"
-          >
-            ← Dashboard
-          </Link>
-        }
       />
 
       {sorted.length === 0 ? (

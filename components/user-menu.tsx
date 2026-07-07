@@ -42,12 +42,14 @@ export function UserMenu({
   homePath,
   accountHref = "/account",
   messagesHref = "/messages",
+  dashboardLabel = "Dashboard",
 }: {
   name: string;
   email: string;
   homePath: string;
   accountHref?: string;
   messagesHref?: string;
+  dashboardLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -140,7 +142,7 @@ export function UserMenu({
               className={itemClass}
               onClick={() => setOpen(false)}
             >
-              Dashboard
+              {dashboardLabel}
             </Link>
             <Link
               href={messagesHref}

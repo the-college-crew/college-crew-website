@@ -91,6 +91,15 @@ export function homePathFor(role: UserRole) {
   }
 }
 
+/**
+ * Label for a role's home destination. The customer's `/dashboard` is titled
+ * "My bookings", so the menu/back-button reads that; providers and admins get
+ * the generic "Dashboard".
+ */
+export function dashboardLabelFor(role: UserRole) {
+  return role === "customer" ? "My Bookings" : "Dashboard";
+}
+
 export async function requireUser(nextPath?: string): Promise<User> {
   const user = await getUser();
   if (!user) {

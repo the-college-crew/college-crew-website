@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { getSession } from "@/lib/auth/session";
+import { getEffectiveRole, getSession } from "@/lib/auth/session";
+
+type Cta = { href: string; label: string };
 
 import { FAQList, HowItWorksTabs } from "./landing-client";
 
@@ -115,10 +117,18 @@ const TESTIMONIALS = [
 export default async function LandingPage() {
   const session = await getSession();
   const showProviderCtas = !session;
+  const role = session ? await getEffectiveRole() : null;
+
+  // Providers already have an account — send them to their dashboard instead
+  // of the customer browse flow. Everyone else gets the "Book a student" CTA.
+  const primaryCta: Cta =
+    role === "provider"
+      ? { href: "/provider/dashboard", label: "View dashboard" }
+      : { href: "/browse", label: "Book a student" };
 
   return (
     <div className="home-canvas mx-[calc(50%-50vw)] -mt-8 -mb-24 w-screen max-w-[100vw] overflow-x-clip text-viridian">
-      <Hero showProviderCta={showProviderCtas} />
+      <Hero showProviderCta={showProviderCtas} primaryCta={primaryCta} />
       <PhoneFloat />
 
       <section className="pb-2 text-center">
@@ -151,12 +161,18 @@ export default async function LandingPage() {
       <FeaturesSection />
       <TestimonialsSection />
       <FAQList />
-      <CTASection showProviderCta={showProviderCtas} />
+      <CTASection showProviderCta={showProviderCtas} primaryCta={primaryCta} />
     </div>
   );
 }
 
-function Hero({ showProviderCta }: { showProviderCta: boolean }) {
+function Hero({
+  showProviderCta,
+  primaryCta,
+}: {
+  showProviderCta: boolean;
+  primaryCta: Cta;
+}) {
   return (
     <section className="relative overflow-hidden bg-stone px-4 py-16 text-center sm:py-20 lg:pb-48">
       <DecorativeMark className="absolute top-6 right-6 hidden w-44 opacity-20 sm:block" />
@@ -182,10 +198,10 @@ function Hero({ showProviderCta }: { showProviderCta: boolean }) {
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
-            href="/browse"
+            href={primaryCta.href}
             className="inline-flex items-center justify-center rounded-xl bg-viridian px-7 py-4 text-sm font-bold text-shell transition hover:bg-viridian-ink"
           >
-            Book a student
+            {primaryCta.label}
           </Link>
           {showProviderCta ? (
             <Link
@@ -483,7 +499,13 @@ function TestimonialsSection() {
   );
 }
 
-function CTASection({ showProviderCta }: { showProviderCta: boolean }) {
+function CTASection({
+  showProviderCta,
+  primaryCta,
+}: {
+  showProviderCta: boolean;
+  primaryCta: Cta;
+}) {
   return (
     <section className="brand-section text-center">
       <div className="mx-auto max-w-2xl px-4">
@@ -496,10 +518,10 @@ function CTASection({ showProviderCta }: { showProviderCta: boolean }) {
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
-            href="/browse"
+            href={primaryCta.href}
             className="inline-flex items-center justify-center rounded-xl bg-viridian px-7 py-4 text-sm font-bold text-shell transition hover:bg-viridian-ink"
           >
-            Book a student
+            {primaryCta.label}
           </Link>
           {showProviderCta ? (
             <Link
