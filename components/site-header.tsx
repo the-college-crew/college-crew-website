@@ -4,7 +4,12 @@ import Image from "next/image";
 import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
 import { ViewAsSwitcher } from "@/components/view-as-switcher";
-import { getEffectiveRole, getSession, homePathFor } from "@/lib/auth/session";
+import {
+  dashboardLabelFor,
+  getEffectiveRole,
+  getSession,
+  homePathFor,
+} from "@/lib/auth/session";
 import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -91,6 +96,9 @@ export async function SiteHeader() {
                 name={session.profile.full_name}
                 email={session.user.email ?? ""}
                 homePath={homePathFor(effectiveRole ?? session.profile.role)}
+                dashboardLabel={dashboardLabelFor(
+                  effectiveRole ?? session.profile.role,
+                )}
               />
             </>
           ) : (
