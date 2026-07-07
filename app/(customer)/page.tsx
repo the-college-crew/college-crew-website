@@ -177,16 +177,6 @@ function Hero({
     <section className="relative overflow-hidden bg-stone px-4 py-16 text-center sm:py-20 lg:pb-48">
       <DecorativeMark className="absolute top-6 right-6 hidden w-44 opacity-20 sm:block" />
       <div className="relative z-10 mx-auto max-w-[760px]">
-        <div className="mx-auto mb-7 flex h-24 w-24 items-center justify-center rounded-3xl bg-viridian/10 p-4">
-          <Image
-            src={MARK_SRC}
-            alt=""
-            width={96}
-            height={88}
-            className="h-full w-full object-contain"
-            priority
-          />
-        </div>
         <span className="brand-eyebrow">Your neighbors, your students</span>
         <h1 className="mt-6 font-display text-[2.3rem] font-semibold leading-[1.06] text-viridian sm:text-[3.75rem]">
           Hometown help, from someone your block already trusts.
