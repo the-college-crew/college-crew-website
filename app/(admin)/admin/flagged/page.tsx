@@ -157,38 +157,54 @@ export default async function AdminFlaggedPage() {
               const providerName = meta?.provider?.display_name || "Provider";
 
               return (
-                <Card key={conversationId} pennant className="p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-display text-lg font-semibold">
-                        {customerName} <span className="text-mist">↔</span>{" "}
-                        {providerName}
-                      </p>
-                      <p className="mt-0.5 text-sm text-ink-soft">
-                        {flagCount} {flagCount === 1 ? "flag" : "flags"}
-                        {latestFlag ? ` · latest ${formatDate(latestFlag)}` : ""}
-                      </p>
-                    </div>
-                    <form action={resolveConversationFlags}>
-                      <input
-                        type="hidden"
-                        name="conversationId"
-                        value={conversationId}
-                      />
-                      <Button type="submit" variant="success" size="sm">
-                        Resolve chat
-                      </Button>
-                    </form>
-                  </div>
+                <Card key={conversationId} pennant className="relative p-4">
+                  {/* Resolve floats outside the <summary> so clicking it submits
+                      instead of toggling the collapse. */}
+                  <form
+                    action={resolveConversationFlags}
+                    className="absolute right-4 top-4 z-10"
+                  >
+                    <input
+                      type="hidden"
+                      name="conversationId"
+                      value={conversationId}
+                    />
+                    <Button type="submit" variant="success" size="sm">
+                      Resolve chat
+                    </Button>
+                  </form>
 
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-ink-soft">
-                    Full conversation
-                    <span className="ml-1 font-normal normal-case tracking-normal text-mist">
-                      (oldest first · highlighted = flagged)
-                    </span>
-                  </p>
+                  {/* Collapsed by default; the header (summary) toggles it. */}
+                  <details className="group">
+                    <summary className="flex cursor-pointer list-none items-start gap-2 pr-28 [&::-webkit-details-marker]:hidden">
+                      <span
+                        aria-hidden
+                        className="mt-1 shrink-0 text-mist transition-transform group-open:rotate-90"
+                      >
+                        ▸
+                      </span>
+                      <div>
+                        <p className="font-display text-lg font-semibold">
+                          {customerName} <span className="text-mist">↔</span>{" "}
+                          {providerName}
+                        </p>
+                        <p className="mt-0.5 text-sm text-ink-soft">
+                          {flagCount} {flagCount === 1 ? "flag" : "flags"}
+                          {latestFlag
+                            ? ` · latest ${formatDate(latestFlag)}`
+                            : ""}
+                        </p>
+                      </div>
+                    </summary>
 
-                  <div className="mt-2 space-y-2 rounded-lg border border-line bg-honeydew/30 p-3">
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-ink-soft">
+                      Full conversation
+                      <span className="ml-1 font-normal normal-case tracking-normal text-mist">
+                        (oldest first · highlighted = flagged)
+                      </span>
+                    </p>
+
+                    <div className="mt-2 space-y-2 rounded-lg border border-line bg-honeydew/30 p-3">
                     {messages.length === 0 ? (
                       <p className="text-sm text-mist">
                         No messages in this conversation.
@@ -239,7 +255,8 @@ export default async function AdminFlaggedPage() {
                         );
                       })
                     )}
-                  </div>
+                    </div>
+                  </details>
                 </Card>
               );
             })
