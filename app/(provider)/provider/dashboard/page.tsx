@@ -14,7 +14,8 @@ import type { BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
-import { acceptBooking, connectStripe, declineBooking } from "../actions";
+import { connectStripe } from "../actions";
+import { RequestActions } from "./request-actions";
 
 export const metadata: Metadata = { title: "Provider dashboard" };
 
@@ -180,20 +181,15 @@ export default async function ProviderDashboardPage({
                       15% platform fee)
                     </span>
                   </p>
-                  <div className="mt-3 flex gap-2">
-                    <form action={acceptBooking}>
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <Button type="submit" variant="success" size="sm">
-                        Accept
-                      </Button>
-                    </form>
-                    <form action={declineBooking}>
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <Button type="submit" variant="danger" size="sm">
-                        Decline
-                      </Button>
-                    </form>
-                  </div>
+                  <RequestActions
+                    job={{
+                      id: booking.id,
+                      serviceName: booking.service.name,
+                      customerName: booking.customer.full_name,
+                      whenLabel: formatDateTime(booking.scheduled_at),
+                      address: booking.address,
+                    }}
+                  />
                 </Card>
               ))
             )}

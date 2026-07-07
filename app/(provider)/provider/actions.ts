@@ -18,6 +18,9 @@ import { createConnectOnboardingLink } from "@/lib/stripe/connect";
  * database trigger enforces the state machine — even if this code is wrong.
  */
 
+type ServerClient = Awaited<ReturnType<typeof createClient>>;
+type BookingParties = { id: string; customer_id: string; provider_id: string };
+
 async function setBookingStatus(formData: FormData, status: BookingStatus) {
   await requireRole("provider");
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
@@ -35,12 +38,142 @@ async function setBookingStatus(formData: FormData, status: BookingStatus) {
   revalidatePath("/provider/jobs");
 }
 
-export async function acceptBooking(formData: FormData) {
-  await setBookingStatus(formData, "accepted");
+/** Load a booking's parties. RLS scopes this to bookings the caller is in. */
+async function loadBookingParties(
+  supabase: ServerClient,
+  bookingId: string,
+): Promise<BookingParties> {
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, customer_id, provider_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) throw new Error("Booking not found.");
+  return booking as BookingParties;
 }
 
+/**
+ * Find (or open) the one conversation for a booking's customer+provider pair
+ * and return its id. Same find-or-create as openConversationForBooking, but
+ * returns the id so accept/decline can act on the thread instead of just
+ * redirecting into it.
+ */
+async function getOrCreateConversationId(
+  supabase: ServerClient,
+  booking: BookingParties,
+): Promise<string> {
+  const { data: existing } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("customer_id", booking.customer_id)
+    .eq("provider_id", booking.provider_id)
+    .maybeSingle();
+  if (existing) return existing.id;
+
+  const { data: created, error } = await supabase
+    .from("conversations")
+    .insert({
+      customer_id: booking.customer_id,
+      provider_id: booking.provider_id,
+      booking_id: booking.id,
+    })
+    .select("id")
+    .single();
+  if (created) return created.id;
+
+  // Unique(customer, provider) race — the thread appeared meanwhile.
+  if (error?.code === "23505") {
+    const { data: raced } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("customer_id", booking.customer_id)
+      .eq("provider_id", booking.provider_id)
+      .single();
+    if (raced) return raced.id;
+  }
+  throw new Error("Could not open the conversation.");
+}
+
+/**
+ * Accept a request: confirm the job, open the chat, and drop the provider in
+ * it. The confirmation ("does this time/place work?") happens client-side, so
+ * reaching here means the provider already said yes. The DB trigger still
+ * enforces that only the provider can move requested → accepted.
+ */
+export async function acceptBooking(formData: FormData) {
+  await requireRole("provider");
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const supabase = await createClient();
+
+  const booking = await loadBookingParties(supabase, bookingId);
+
+  const { error } = await supabase
+    .from("bookings")
+    .update({ status: "accepted" })
+    .eq("id", bookingId);
+  if (error) {
+    throw new Error(`Could not accept the booking: ${error.message}`);
+  }
+
+  const conversationId = await getOrCreateConversationId(supabase, booking);
+
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  redirect(`/messages/${conversationId}`);
+}
+
+/**
+ * Decline a request with a note (e.g. "can't do that time — Saturday?"). The
+ * note becomes the opening message of the chat so the customer can counter.
+ * It goes through the moderate-message function like any other message — never
+ * a direct insert — so contact-info scanning still applies.
+ */
 export async function declineBooking(formData: FormData) {
-  await setBookingStatus(formData, "declined");
+  await requireRole("provider");
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const message = z
+    .string()
+    .trim()
+    .min(1, "Add a quick note so the customer knows why.")
+    .max(4000)
+    .parse(formData.get("message"));
+  const supabase = await createClient();
+
+  const booking = await loadBookingParties(supabase, bookingId);
+
+  const { error } = await supabase
+    .from("bookings")
+    .update({ status: "declined" })
+    .eq("id", bookingId);
+  if (error) {
+    throw new Error(`Could not decline the booking: ${error.message}`);
+  }
+
+  const conversationId = await getOrCreateConversationId(supabase, booking);
+
+  // Send the provider's note through moderation (the only write path into
+  // messages), carrying the caller's session so the function sees who's asking.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const { error: sendError } = await supabase.functions.invoke(
+    "moderate-message",
+    {
+      body: { conversation_id: conversationId, body: message, image_path: null },
+      headers: session
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : undefined,
+    },
+  );
+  if (sendError) {
+    throw new Error(
+      "Declined — but the note didn't send. Open the chat to message the customer.",
+    );
+  }
+
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  redirect(`/messages/${conversationId}`);
 }
 
 export async function completeBooking(formData: FormData) {

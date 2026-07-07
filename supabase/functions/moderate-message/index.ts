@@ -86,19 +86,35 @@ function regexModerationPass(body: string): {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Layer 2: MODEL BACKSTOP — PLUGGABLE, deliberately unimplemented.
+// Layer 2: OpenAI MODEL BACKSTOP — PLUGGABLE, deliberately deferred.
 //
-// Wire a low-latency model here to catch evasions the regexes miss
-// ("find me on insta", "venmo same name", "five five five…"). The prompt
-// must encode the policy nuance above: allow addresses and job logistics,
-// catch only off-platform contact channels. Return null to pass the message
-// through, or { cleaned, matched } to redact/flag.
+// This is the open gap for looping in an OpenAI model that reads each message
+// and catches contact-info exchange the regexes miss ("find me on insta",
+// "venmo same name", "five five five…", handwaved handles). Everything is
+// wired except the API call: set OPENAI_API_KEY on the function
+// (`npx supabase secrets set OPENAI_API_KEY=...`) and fill in the fetch below.
+//
+// The prompt MUST encode the policy nuance from the top of this file: the
+// customer's ADDRESS and job logistics are legitimate and must pass; only
+// off-platform CONTACT CHANNELS (phone, email, social, payment apps) are
+// targets. Return null to pass the message through unchanged, or
+// { cleaned, matched } to redact spans / flag for founder review.
 //
 // Deferred per SPEC §7: final policy tuning + the founder review dashboard.
 // ─────────────────────────────────────────────────────────────────────────
+const MODERATION_POLICY = `You review one chat message between a customer and a student service provider on a home-services marketplace. Your ONLY job is to catch attempts to move the relationship off-platform by sharing a private CONTACT CHANNEL: phone numbers (including spelled-out or obfuscated), personal emails, social handles/usernames, or payment apps (Venmo, Cash App, Zelle, PayPal, Apple Pay). The customer's street ADDRESS and any job logistics (times, tasks, gate codes, pricing) are legitimate — never flag those. Reply with the message rewritten so each offending span is replaced by "${"[hidden — keep it on College Crew]"}", plus the list of what you caught.`;
+
 async function modelModerationPass(
-  _body: string,
+  body: string,
 ): Promise<{ cleaned: string; matched: string[] } | null> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) return null; // Not wired yet — regex layer stands alone.
+
+  // TODO(openai): call the OpenAI API with MODERATION_POLICY as the system
+  // prompt and `body` as the user message, parse the structured response into
+  // { cleaned, matched }, and return it. Fail open (return null) on any error
+  // or timeout so a model outage never blocks a legitimate message.
+  void MODERATION_POLICY;
   return null;
 }
 
