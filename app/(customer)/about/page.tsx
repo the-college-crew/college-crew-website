@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { NEIGHBORHOOD, SITE, TEAM } from "@/lib/site";
@@ -51,6 +53,56 @@ export default function AboutPage() {
           moments. Money stays in the neighborhood, and young people build
           something real before they graduate.
         </p>
+      </section>
+
+      <section aria-labelledby="learn-more">
+        <h2
+          id="learn-more"
+          className="font-display text-2xl font-semibold"
+        >
+          Learn more about our mission
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Card pennant className="flex flex-col p-5">
+            <h3 className="font-display text-xl font-semibold">
+              For students
+            </h3>
+            <p className="mt-3 flex-1 text-sm leading-relaxed text-ink-soft">
+              See how {SITE.name} helps verified students earn locally, build a
+              reputation, and get paid through a safer, more organized system.
+            </p>
+            <Link
+              href="/about/students"
+              className={buttonClasses({
+                variant: "secondary",
+                size: "sm",
+                className: "mt-5 self-start",
+              })}
+            >
+              Learn about students
+            </Link>
+          </Card>
+
+          <Card pennant className="flex flex-col p-5">
+            <h3 className="font-display text-xl font-semibold">
+              For customers
+            </h3>
+            <p className="mt-3 flex-1 text-sm leading-relaxed text-ink-soft">
+              Learn how neighbors can book trusted local help, support young
+              people, and handle household work without starting from scratch.
+            </p>
+            <Link
+              href="/about/customers"
+              className={buttonClasses({
+                variant: "secondary",
+                size: "sm",
+                className: "mt-5 self-start",
+              })}
+            >
+              Learn about customers
+            </Link>
+          </Card>
+        </div>
       </section>
 
       <section aria-labelledby="team">
