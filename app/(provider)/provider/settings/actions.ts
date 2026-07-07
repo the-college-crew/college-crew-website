@@ -10,7 +10,11 @@ import { passwordSchema } from "@/lib/validation/auth";
 
 import { savePricingRows } from "../_lib/pricing";
 
-export type SettingsFormState = { error?: string; success?: string };
+export type SettingsFormState = {
+  error?: string;
+  success?: string;
+  fieldErrors?: Record<string, string>;
+};
 
 const profileSchema = z.object({
   displayName: z.string().trim().min(1, "Enter a display name."),
@@ -95,7 +99,9 @@ export async function saveSettingsPricing(
   if (!profile) redirect("/provider/onboarding/account");
 
   const result = await savePricingRows(profile.id, formData);
-  if (result.error) return { error: result.error };
+  if (result.error || result.fieldErrors) {
+    return { error: result.error, fieldErrors: result.fieldErrors };
+  }
 
   revalidatePath("/provider/settings");
   revalidatePath("/provider/jobs");

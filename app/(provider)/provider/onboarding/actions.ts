@@ -19,7 +19,10 @@ import { savePricingRows } from "../_lib/pricing";
  * Stripe is deliberately NOT here — it connects after admin approval.
  */
 
-export type OnboardingFormState = { error?: string };
+export type OnboardingFormState = {
+  error?: string;
+  fieldErrors?: Record<string, string>;
+};
 
 /** Account step "Continue": creates the provider_profiles row if missing. */
 export async function startProviderProfile() {
@@ -97,7 +100,7 @@ export async function saveOnboardingPricing(
   if (!profile) redirect("/provider/onboarding/account");
 
   const result = await savePricingRows(profile.id, formData);
-  if (result.error) return result;
+  if (result.error || result.fieldErrors) return result;
 
   redirect("/provider/onboarding/review");
 }

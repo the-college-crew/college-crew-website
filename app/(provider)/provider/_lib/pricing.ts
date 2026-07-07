@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function savePricingRows(
   providerId: string,
   formData: FormData,
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; fieldErrors?: Record<string, string> }> {
   const supabase = await createClient();
 
   const { data: services } = await supabase
@@ -30,6 +30,10 @@ export async function savePricingRows(
     price_type: PriceType;
     unit: PriceUnit;
   }> = [];
+  // Collect EVERY offending row so the provider fixes them in one pass,
+  // rather than resubmitting once per bad service. Keyed by service id so
+  // the form can flag the exact row.
+  const fieldErrors: Record<string, string> = {};
 
   for (const service of services) {
     if (formData.get(`offer_${service.id}`) !== "on") continue;
@@ -48,7 +52,8 @@ export async function savePricingRows(
       priceType === "quote" ? 0 : Math.round((dollars || 0) * 100);
 
     if (priceType === "fixed" && (!Number.isFinite(dollars) || dollars <= 0)) {
-      return { error: "Enter a price for every fixed-price service you offer." };
+      fieldErrors[service.id] = "Enter a price above $0.";
+      continue;
     }
 
     selected.push({
@@ -58,6 +63,10 @@ export async function savePricingRows(
       price_type: priceType,
       unit,
     });
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors };
   }
 
   if (selected.length === 0) {
