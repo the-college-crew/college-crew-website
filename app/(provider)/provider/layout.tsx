@@ -1,10 +1,18 @@
 import Link from "next/link";
 
+import { MobileNav } from "@/components/mobile-nav";
 import { Wordmark } from "@/components/site-header";
 import { buttonClasses } from "@/components/ui/button";
 import { UserMenu } from "@/components/user-menu";
 import { ViewAsSwitcher } from "@/components/view-as-switcher";
 import { getEffectiveRole, getSession, homePathFor } from "@/lib/auth/session";
+
+const PROVIDER_NAV = [
+  { href: "/provider/dashboard", label: "Dashboard" },
+  { href: "/provider/jobs", label: "Jobs & pricing" },
+  { href: "/messages", label: "Messages" },
+  { href: "/provider/settings", label: "Profile & settings" },
+];
 
 /**
  * Provider shell. Deliberately lighter than the customer chrome — this is a
@@ -25,9 +33,12 @@ export default async function ProviderLayout({
 
   return (
     <>
-      <header className="border-b border-viridian/10 bg-viridian text-shell">
+      <header className="relative border-b border-viridian/10 bg-viridian text-shell">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
           <div className="flex items-center gap-3">
+            {isProvider ? (
+              <MobileNav nav={PROVIDER_NAV} isAuthed />
+            ) : null}
             <Wordmark tone="dark" />
             <span className="rounded-full border border-shell/20 bg-shell/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-honeydew">
               Provider
@@ -60,7 +71,7 @@ export default async function ProviderLayout({
         {isProvider ? (
           <nav
             aria-label="Provider"
-            className="mx-auto flex max-w-5xl gap-6 px-4 pb-3 text-sm font-semibold text-shell/70"
+            className="mx-auto hidden max-w-5xl gap-6 px-4 pb-3 text-sm font-semibold text-shell/70 sm:flex"
           >
             <Link href="/provider/dashboard" className="hover:text-shell">
               Dashboard

@@ -1,9 +1,15 @@
 import Link from "next/link";
 
+import { MobileNav } from "@/components/mobile-nav";
 import { Wordmark } from "@/components/site-header";
 import { UserMenu } from "@/components/user-menu";
 import { ViewAsSwitcher } from "@/components/view-as-switcher";
 import { getEffectiveRole, homePathFor, requireRole } from "@/lib/auth/session";
+
+const ADMIN_NAV = [
+  { href: "/admin/providers", label: "Provider approvals" },
+  { href: "/admin/services", label: "Service curation" },
+];
 
 /**
  * Founders-only area. The layout gates for UX; every admin action re-checks
@@ -20,9 +26,10 @@ export default async function AdminLayout({
 
   return (
     <>
-      <header className="border-b border-viridian/10 bg-viridian text-shell">
+      <header className="relative border-b border-viridian/10 bg-viridian text-shell">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
           <div className="flex items-center gap-3">
+            <MobileNav nav={ADMIN_NAV} isAuthed />
             <Wordmark tone="dark" />
             <span className="rounded-full border border-honeydew/60 bg-honeydew px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-viridian">
               Admin
@@ -39,7 +46,7 @@ export default async function AdminLayout({
         </div>
         <nav
           aria-label="Admin"
-          className="mx-auto flex max-w-5xl gap-6 px-4 pb-3 text-sm font-semibold text-shell/70"
+          className="mx-auto hidden max-w-5xl gap-6 px-4 pb-3 text-sm font-semibold text-shell/70 sm:flex"
         >
           <Link href="/admin/providers" className="hover:text-shell">
             Provider approvals
