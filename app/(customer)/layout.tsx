@@ -3,8 +3,10 @@ import { SiteHeader } from "@/components/site-header";
 
 export default function CustomerLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  modal: React.ReactNode;
 }) {
   return (
     <>
@@ -13,6 +15,7 @@ export default function CustomerLayout({
         {children}
       </main>
       <SiteFooter />
+      {modal}
     </>
   );
 }

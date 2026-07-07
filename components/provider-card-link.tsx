@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { ViewTransition } from "react";
 import {
   useEffect,
   useRef,
@@ -12,11 +13,8 @@ import {
 
 import { cn } from "@/lib/utils";
 
-/*
- * Slightly longer than the 300ms CSS transition so the navigation snapshot
- * (which the view-transition morph starts from) captures the settled backside,
- * not a mid-flip frame.
- */
+// Slightly longer than the 300ms CSS transition, so the card flip completes
+// before the intercepted-route profile morph starts as a separate beat.
 const FLIP_MS = 320;
 
 /**
@@ -33,8 +31,10 @@ export function ProviderCardLink({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [flipped, setFlipped] = useState(false);
   const timeoutRef = useRef<number | null>(null);
+  const modalOpenedRef = useRef(false);
 
   useEffect(() => {
     // bfcache can restore the page mid-flip on back-nav; land unflipped.
@@ -45,6 +45,20 @@ export function ProviderCardLink({
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (pathname === href) {
+      modalOpenedRef.current = true;
+      return;
+    }
+    if (!modalOpenedRef.current || !flipped) return;
+
+    const resetId = window.setTimeout(() => {
+      setFlipped(false);
+      modalOpenedRef.current = false;
+    }, 0);
+    return () => window.clearTimeout(resetId);
+  }, [flipped, href, pathname]);
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
     if (
@@ -61,6 +75,7 @@ export function ProviderCardLink({
       router.push(href);
       return;
     }
+    modalOpenedRef.current = false;
     setFlipped(true);
     timeoutRef.current = window.setTimeout(() => router.push(href), FLIP_MS);
   }
@@ -88,5 +103,27 @@ export function ProviderCardLink({
         </div>
       </div>
     </Link>
+  );
+}
+
+export function ProviderCardViewTransition({
+  href,
+  name,
+  children,
+}: {
+  href: string;
+  name: string;
+  children: ReactNode;
+}) {
+  const pathname = usePathname();
+
+  if (pathname === href) {
+    return <>{children}</>;
+  }
+
+  return (
+    <ViewTransition name={name} share="morph">
+      {children}
+    </ViewTransition>
   );
 }

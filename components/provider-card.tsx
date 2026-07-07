@@ -1,6 +1,7 @@
-import { ViewTransition } from "react";
-
-import { ProviderCardLink } from "@/components/provider-card-link";
+import {
+  ProviderCardLink,
+  ProviderCardViewTransition,
+} from "@/components/provider-card-link";
 import { ServiceBanner } from "@/components/service-banner";
 import { Badge, BackgroundCheck, VerifiedCheck } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -34,9 +35,11 @@ export function Rating({
  * the ViewTransition name pairs with the profile page's identity card.
  */
 export function ProviderCard({ provider }: { provider: ProviderCardData }) {
+  const href = `/providers/${provider.id}`;
+
   return (
-    <ViewTransition name={`provider-${provider.id}`} share="morph">
-      <ProviderCardLink href={`/providers/${provider.id}`}>
+    <ProviderCardViewTransition href={href} name={`provider-${provider.id}`}>
+      <ProviderCardLink href={href}>
         <Card
           pennant
           className="flex flex-col transition-shadow group-hover/flip:shadow-md group-hover/flip:shadow-viridian/10"
@@ -83,6 +86,6 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
           </div>
         </Card>
       </ProviderCardLink>
-    </ViewTransition>
+    </ProviderCardViewTransition>
   );
 }
