@@ -136,8 +136,10 @@ export function EditableText({
         contentEditable={isEditing ? editableMode : undefined}
         suppressContentEditableWarning
         onClickCapture={(e) => {
-          // Keep wrapping <Link>s from navigating while edit mode is on.
+          // Text is inert in edit mode: don't navigate a wrapping <Link> or
+          // toggle a wrapping button (FAQ accordion).
           e.preventDefault();
+          e.stopPropagation();
         }}
         onDoubleClick={startEditing}
         onKeyDown={(e) => {

@@ -6,7 +6,7 @@ export function PageHeader({
   actions,
   back = true,
 }: {
-  title: string;
+  title: React.ReactNode;
   description?: React.ReactNode;
   actions?: React.ReactNode;
   /** Show the universal back button top-right. Off for a page's home base. */

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Editable } from "@/components/content/editable";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -27,8 +28,16 @@ export default function CustomerMissionPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-10">
       <PageHeader
-        title="A simpler way to get trusted help at home"
-        description={`${SITE.name} helps neighbors turn everyday household needs into opportunities for verified local students.`}
+        title={
+          <Editable k="about-customers.header.title">
+            A simpler way to get trusted help at home
+          </Editable>
+        }
+        description={
+          <Editable k="about-customers.header.description">
+            {`${SITE.name} helps neighbors turn everyday household needs into opportunities for verified local students.`}
+          </Editable>
+        }
         actions={
           <Link href="/browse" className={buttonClasses({ size: "sm" })}>
             Browse providers
@@ -38,16 +47,18 @@ export default function CustomerMissionPage() {
 
       <section className="space-y-4 text-sm leading-relaxed text-ink-soft">
         <p>
-          Home projects, errands, and recurring chores often need a person you
-          can trust more than a giant marketplace. {SITE.name} is designed for
-          neighbors who want reliable help and like the idea that their money
-          backs young people in their own community.
+          <Editable k="about-customers.intro.p1">
+            {`Home projects, errands, and recurring chores often need a person you can trust more than a giant marketplace. ${SITE.name} is designed for neighbors who want reliable help and like the idea that their money backs young people in their own community.`}
+          </Editable>
         </p>
         <p>
-          During the pilot, we are keeping the marketplace intentionally small:
-          one neighborhood, curated services, and a limited group of verified
-          student providers. That focus helps us learn what customers need,
-          support students well, and keep the experience personal.
+          <Editable k="about-customers.intro.p2">
+            During the pilot, we are keeping the marketplace intentionally
+            small: one neighborhood, curated services, and a limited group of
+            verified student providers. That focus helps us learn what
+            customers need, support students well, and keep the experience
+            personal.
+          </Editable>
         </p>
       </section>
 
@@ -56,16 +67,22 @@ export default function CustomerMissionPage() {
           id="customer-outcomes"
           className="font-display text-2xl font-semibold"
         >
-          What customers can achieve
+          <Editable k="about-customers.outcomes.heading">
+            What customers can achieve
+          </Editable>
         </h2>
         <div className="mt-4 grid gap-4">
-          {OUTCOMES.map((outcome) => (
+          {OUTCOMES.map((outcome, index) => (
             <Card key={outcome.title} pennant className="p-5">
               <h3 className="font-display text-xl font-semibold">
-                {outcome.title}
+                <Editable k={`about-customers.outcomes.${index}.title`}>
+                  {outcome.title}
+                </Editable>
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                {outcome.body}
+                <Editable k={`about-customers.outcomes.${index}.body`}>
+                  {outcome.body}
+                </Editable>
               </p>
             </Card>
           ))}
@@ -77,27 +94,28 @@ export default function CustomerMissionPage() {
           id="customer-flow"
           className="font-display text-2xl font-semibold"
         >
-          How it works
+          <Editable k="about-customers.flow.heading">How it works</Editable>
         </h2>
         <div className="mt-3 space-y-3 text-sm leading-relaxed text-ink-soft">
           <p>
-            Customers browse student providers in {NEIGHBORHOOD.name}, choose a
-            service, request a booking, and share the details needed for the
-            job. The provider accepts or declines the request before payment is
-            collected.
+            <Editable k="about-customers.flow.p1">
+              {`Customers browse student providers in ${NEIGHBORHOOD.name}, choose a service, request a booking, and share the details needed for the job. The provider accepts or declines the request before payment is collected.`}
+            </Editable>
           </p>
           <p>
-            Once a provider accepts, the customer confirms and pays in the app.
-            That keeps the booking record, appointment details, and payment
-            flow in one place while the student handles the work.
+            <Editable k="about-customers.flow.p2">
+              Once a provider accepts, the customer confirms and pays in the
+              app. That keeps the booking record, appointment details, and
+              payment flow in one place while the student handles the work.
+            </Editable>
           </p>
         </div>
       </section>
 
       <p className="text-xs leading-relaxed text-mist">
-        Providers on {SITE.name} are independent. College Crew connects
-        customers with verified student providers, curates the marketplace, and
-        processes payments for the pilot.
+        <Editable k="about-customers.disclaimer">
+          {`Providers on ${SITE.name} are independent. College Crew connects customers with verified student providers, curates the marketplace, and processes payments for the pilot.`}
+        </Editable>
       </p>
 
       <div className="flex flex-wrap gap-3">

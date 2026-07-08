@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Editable } from "@/components/content/editable";
 import { Wordmark } from "@/components/site-header";
 import { getSession } from "@/lib/auth/session";
 import { NEIGHBORHOOD, SITE } from "@/lib/site";
@@ -31,10 +32,12 @@ export async function SiteFooter() {
           <div>
             <Wordmark tone="dark" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-shell/70">
-              {SITE.tagline}
+              <Editable k="footer.tagline">{SITE.tagline}</Editable>
             </p>
             <p className="mt-3 text-xs text-honeydew">
-              Now serving {NEIGHBORHOOD.name} — our pilot neighborhood.
+              <Editable k="footer.pilot-note">
+                {`Now serving ${NEIGHBORHOOD.name} — our pilot neighborhood.`}
+              </Editable>
             </p>
           </div>
 
@@ -58,9 +61,9 @@ export async function SiteFooter() {
 
           <div className="text-xs leading-relaxed text-shell/65">
             <p>
-              Every provider is a verified college student (18+). Providers are
-              independent — {SITE.name} connects, verifies, and processes
-              payments.
+              <Editable k="footer.independent">
+                {`Every provider is a verified college student (18+). Providers are independent — ${SITE.name} connects, verifies, and processes payments.`}
+              </Editable>
             </p>
           </div>
         </div>
@@ -69,7 +72,11 @@ export async function SiteFooter() {
           <p>
             © {new Date().getFullYear()} {SITE.name}
           </p>
-          <p>Verified students · Curated services · Paid securely in-app</p>
+          <p>
+            <Editable k="footer.strapline">
+              Verified students · Curated services · Paid securely in-app
+            </Editable>
+          </p>
         </div>
       </div>
     </footer>
