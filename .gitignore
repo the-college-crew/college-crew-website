@@ -44,3 +44,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# product spec kept out of the public repo (shared out-of-band; lives locally only)
+docs/SPEC.md
