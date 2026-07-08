@@ -3,6 +3,7 @@ import { Manrope, Newsreader } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 
 import { DevBanner } from "@/components/dev-banner";
+import { FeedbackLauncher } from "@/components/feedback-launcher";
 import { SITE } from "@/lib/site";
 
 import "./globals.css";
@@ -61,6 +62,7 @@ export default function RootLayout({
         />
         <DevBanner />
         {children}
+        <FeedbackLauncher />
       </body>
     </html>
   );

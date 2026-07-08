@@ -52,6 +52,7 @@ export function UserMenu({
   currentRole,
   accountHref = "/account",
   messagesHref = "/messages",
+  supportHref = "/support",
   dashboardLabel = "Dashboard",
 }: {
   name: string;
@@ -61,6 +62,7 @@ export function UserMenu({
   currentRole?: UserRole;
   accountHref?: string;
   messagesHref?: string;
+  supportHref?: string;
   dashboardLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -189,6 +191,14 @@ export function UserMenu({
               onClick={() => setOpen(false)}
             >
               Messages
+            </Link>
+            <Link
+              href={supportHref}
+              role="menuitem"
+              className={itemClass}
+              onClick={() => setOpen(false)}
+            >
+              Feedback &amp; support
             </Link>
           </div>
 

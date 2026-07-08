@@ -9,6 +9,7 @@ const EXPLORE = [
   { href: "/browse", label: "Browse providers" },
   { href: "/about", label: "About us" },
   { href: "/blog", label: "Blog" },
+  { href: "/support", label: "Feedback & support" },
 ];
 
 export async function SiteFooter() {

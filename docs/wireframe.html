@@ -165,8 +165,10 @@
     <button data-s="psettings"><span class="n">11</span>Profile &amp; settings</button>
     <div class="grp">Admin (founders)</div>
     <button data-s="admin"><span class="n">12</span>Admin dashboard</button>
+    <button data-s="supportinbox"><span class="n">15</span>Support inbox</button>
     <div class="grp">Shared</div>
     <button data-s="auth"><span class="n">13</span>Sign up / Log in</button>
+    <button data-s="support"><span class="n">14</span>Feedback &amp; support</button>
   </nav>
 
   <main class="stage" id="stage">
@@ -184,7 +186,7 @@
             <div class="node">Booking</div><span class="arrow">&rarr;</span>
             <div class="node">Pay (Stripe)</div><span class="arrow">&rarr;</span>
             <div class="node">My bookings</div>
-            <span class="arrow">&middot;</span><div class="node side">About</div><span class="arrow">&middot;</span><div class="node side">Blog</div>
+            <span class="arrow">&middot;</span><div class="node side">About</div><span class="arrow">&middot;</span><div class="node side">Blog</div><span class="arrow">&middot;</span><div class="node side">Feedback / support</div>
           </div>
         </div>
         <div class="lane"><div class="ltag">Provider journey</div>
@@ -203,7 +205,8 @@
             <div class="node admin">Approve providers</div><span class="arrow">&middot;</span>
             <div class="node admin">Verification queue</div><span class="arrow">&middot;</span>
             <div class="node admin">Curate services</div><span class="arrow">&middot;</span>
-            <div class="node admin">Oversee bookings</div>
+            <div class="node admin">Oversee bookings</div><span class="arrow">&middot;</span>
+            <div class="node admin">Support inbox</div>
           </div>
         </div>
       </div>
@@ -610,6 +613,66 @@
         <h4>Auth · shared front door</h4>
         <p>One entry; the "hire vs earn" choice sets the role in <code>profiles</code> and routes the experience. 18+ gate sits here. Powered by Supabase Auth.</p>
         <span class="q">star Google sign-in now or later? star Email verification required before booking?</span>
+      </div>
+    </section>
+
+    <!-- 14 FEEDBACK & SUPPORT -->
+    <section class="screen" id="support">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">Feedback &amp; support</div></div>
+        <div class="scr">
+          <div class="h big">Help us make College Crew better.</div>
+          <div class="muted" style="font-size:12px">Share an idea, report a website problem, or tell us where you need help.</div>
+          <div class="lbl">What is this about?</div>
+          <div class="grid2">
+            <div class="card" style="margin:0"><b>Website</b><div class="muted" style="font-size:11px">Bug or usability</div></div>
+            <div class="card" style="margin:0"><b>Idea</b><div class="muted" style="font-size:11px">Feature or service</div></div>
+            <div class="card" style="margin:0"><b>Booking / job</b><div class="muted" style="font-size:11px">Customer or provider</div></div>
+            <div class="card" style="margin:0"><b>Account / payment</b><div class="muted" style="font-size:11px">Login, charge, payout</div></div>
+            <div class="card" style="margin:0"><b>Safety / trust</b></div>
+            <div class="card" style="margin:0"><b>Other</b></div>
+          </div>
+          <div class="lbl">How did this feel? <span class="muted">Optional</span></div>
+          <div class="chips"><span class="chip">Positive</span><span class="chip">Neutral</span><span class="chip">Frustrated</span></div>
+          <div class="lbl">Tell us more</div>
+          <div class="field" style="height:88px">What happened, what did you expect, or what should we build?</div>
+          <div class="field">&#9744; I’d like a response</div>
+          <a class="btn primary">Send feedback</a>
+          <div class="muted" style="font-size:10px;text-align:center">Do not include passwords, card details, or ID documents.</div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Feedback &amp; support · public pilot intake</h4>
+        <p>Available to guests and signed-in users from a temporary site-wide pill, the footer, and the account menu. The launcher preserves only the source pathname. Email is collected only when a reply is requested.</p>
+        <span class="q">Later: customer ticket history, attachments, outbound replies, and AI-derived sentiment trends.</span>
+      </div>
+    </section>
+
+    <!-- 15 ADMIN SUPPORT INBOX -->
+    <section class="screen" id="supportinbox">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&#9881;</div><div class="title">Admin · Support inbox</div></div>
+        <div class="scr">
+          <div class="chips"><span class="chip on">New</span><span class="chip">Reviewing</span><span class="chip">Resolved</span><span class="chip">All</span></div>
+          <div class="row"><div class="field">All topics &#9662;</div><div class="field">All sentiment &#9662;</div></div>
+          <div class="muted" style="font-size:12px">3 new tickets · newest first</div>
+          <div class="card">
+            <div><span class="badge amber">Website</span> <span class="pill req">New</span> <span class="badge amber">Frustrated</span></div>
+            <b style="display:block;margin-top:8px">The booking button disappeared on my phone…</b>
+            <div class="muted" style="font-size:11px;margin-top:4px">Guest · /providers/… · 8 min ago</div>
+            <div style="margin-top:9px"><a class="btn sm ghost">Mark reviewing</a> <a class="btn sm primary">Resolve</a></div>
+          </div>
+          <div class="card">
+            <div><span class="badge">Feature idea</span> <span class="pill req">New</span></div>
+            <b style="display:block;margin-top:8px">Could customers request recurring lawn care?</b>
+            <div class="muted" style="font-size:11px;margin-top:4px">Signed-in customer · /dashboard · 25 min ago</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="note">
+        <h4>Support inbox · lightweight triage</h4>
+        <p>Founder-only list with status, category, and sentiment filters; 25 tickets per page. Expand a card for the full message, reply email, and source pathname. Realtime refresh surfaces new submissions.</p>
+        <span class="q">No assignment, internal notes, app-sent replies, notifications, or sentiment charts in pilot v1.</span>
       </div>
     </section>
 

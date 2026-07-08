@@ -31,6 +31,15 @@ export type BookingStatus =
   | "declined"
   | "cancelled";
 export type ModerationStatus = "clean" | "redacted" | "flagged";
+export type SupportTicketCategory =
+  | "website"
+  | "feature_or_service"
+  | "booking_or_job"
+  | "account_or_payment"
+  | "safety_or_trust"
+  | "other";
+export type SupportTicketSentiment = "positive" | "neutral" | "frustrated";
+export type SupportTicketStatus = "new" | "reviewing" | "resolved";
 
 export type Database = {
   public: {
@@ -476,6 +485,69 @@ export type Database = {
           },
         ];
       };
+      support_tickets: {
+        Row: {
+          id: string;
+          submitter_id: string | null;
+          category: SupportTicketCategory;
+          sentiment: SupportTicketSentiment | null;
+          message: string;
+          wants_reply: boolean;
+          contact_email: string | null;
+          source_path: string | null;
+          status: SupportTicketStatus;
+          created_at: string;
+          updated_at: string;
+          resolved_at: string | null;
+          resolved_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          submitter_id?: string | null;
+          category: SupportTicketCategory;
+          sentiment?: SupportTicketSentiment | null;
+          message: string;
+          wants_reply?: boolean;
+          contact_email?: string | null;
+          source_path?: string | null;
+          status?: SupportTicketStatus;
+          created_at?: string;
+          updated_at?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          submitter_id?: string | null;
+          category?: SupportTicketCategory;
+          sentiment?: SupportTicketSentiment | null;
+          message?: string;
+          wants_reply?: boolean;
+          contact_email?: string | null;
+          source_path?: string | null;
+          status?: SupportTicketStatus;
+          created_at?: string;
+          updated_at?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_submitter_id_fkey";
+            columns: ["submitter_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "support_tickets_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       moderation_events: {
         Row: {
           id: string;
@@ -574,6 +646,8 @@ export type ProviderEmailVerification =
 export type ProviderSchoolEmail =
   Database["public"]["Tables"]["provider_school_emails"]["Row"];
 export type SiteContent = Database["public"]["Tables"]["site_content"]["Row"];
+export type SupportTicket =
+  Database["public"]["Tables"]["support_tickets"]["Row"];
 export type ProviderRating =
   Database["public"]["Views"]["provider_ratings"]["Row"];
 export type ProviderReview =

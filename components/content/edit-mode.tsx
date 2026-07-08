@@ -37,8 +37,8 @@ export function EditModeToggle() {
       onClick={() => setEditing(!editing)}
       className={
         editing
-          ? "fixed bottom-4 right-4 z-50 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-amber-600"
-          : "fixed bottom-4 right-4 z-50 rounded-full bg-viridian px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:opacity-90"
+          ? "fixed bottom-[calc(max(1rem,env(safe-area-inset-bottom))+3.5rem)] right-4 z-50 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-amber-600"
+          : "fixed bottom-[calc(max(1rem,env(safe-area-inset-bottom))+3.5rem)] right-4 z-50 rounded-full bg-viridian px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:opacity-90"
       }
     >
       {editing ? "Done editing" : "Edit page"}
