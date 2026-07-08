@@ -8,11 +8,12 @@ proof of concept.
 **Full product spec:** `docs/SPEC.md` — read it before planning any feature.
 **Visual reference:** `docs/wireframe.html` — open it to see screen layout.
 
-Github repo is PRIVATE (the-college-crew org, GitHub Free plan). Still never
-commit secrets or credentials — keep keys in `.env.local` (gitignored). Note:
-on a free private repo GitHub disables branch protection and rulesets, so
-`main` is not machine-protected; land changes via a feature branch + PR by
-convention anyway.
+Github repo is PUBLIC (the-college-crew org). Kept public deliberately:
+Vercel's free Hobby plan won't auto-deploy a private *organization-owned* repo,
+and this project relies on push-to-deploy — so making the repo private breaks
+production deploys (going private would require upgrading Vercel to Pro, or
+moving the repo to a personal GitHub account). Because it's public, NEVER
+commit secrets or confidential info — keys live in `.env.local` (gitignored).
 
 ---
 
