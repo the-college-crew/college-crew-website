@@ -98,8 +98,10 @@ exists (test mode only regardless).
 
 ## Conventions
 
-- **Branching:** committing directly to `main` is OK. Feature branches and PRs
-  are optional — use them for larger or riskier changes when you want review.
+- **Branching:** commit work through a feature branch + PR into `main`, not
+  direct pushes. Direct-to-`main` only when explicitly agreed for a given
+  change (e.g. a quick doc fix). This supersedes the earlier "direct to main
+  is OK" guidance now that branch + PR is the standing convention.
 - **Commits:** small and frequent, present-tense messages ("add booking form").
 - **Module ownership (to minimize merge conflicts — confirm/adjust):**
   - Zach → customer-facing (landing, browse, public profile, booking,
