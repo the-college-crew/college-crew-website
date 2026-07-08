@@ -8,7 +8,11 @@ proof of concept.
 **Full product spec:** `docs/SPEC.md` — read it before planning any feature.
 **Visual reference:** `docs/wireframe.html` — open it to see screen layout.
 
-Github repo is PUBLIC. make sure anything committed to github is not private or confidential info.
+Github repo is PRIVATE (the-college-crew org, GitHub Free plan). Still never
+commit secrets or credentials — keep keys in `.env.local` (gitignored). Note:
+on a free private repo GitHub disables branch protection and rulesets, so
+`main` is not machine-protected; land changes via a feature branch + PR by
+convention anyway.
 
 ---
 
