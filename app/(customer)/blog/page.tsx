@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Editable } from "@/components/content/editable";
 import { buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -15,11 +16,17 @@ export default function BlogPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <PageHeader
-        title="Blog"
-        description="Local tips, student spotlights, and seasonal checklists."
+        title={<Editable k="blog.header.title">Blog</Editable>}
+        description={
+          <Editable k="blog.header.description">
+            Local tips, student spotlights, and seasonal checklists.
+          </Editable>
+        }
       />
       <EmptyState
-        title="First post coming soon"
+        title={
+          <Editable k="blog.empty.title">First post coming soon</Editable>
+        }
         action={
           <Link
             href="/browse"
@@ -29,8 +36,9 @@ export default function BlogPage() {
           </Link>
         }
       >
-        We&apos;re heads-down getting the pilot ready. Posts land here once
-        the crew is up and running.
+        <Editable k="blog.empty.body">
+          {`We're heads-down getting the pilot ready. Posts land here once the crew is up and running.`}
+        </Editable>
       </EmptyState>
     </div>
   );

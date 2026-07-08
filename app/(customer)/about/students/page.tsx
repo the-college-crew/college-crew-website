@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Editable } from "@/components/content/editable";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -31,8 +32,16 @@ export default async function StudentMissionPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-10">
       <PageHeader
-        title="A better way for students to earn locally"
-        description={`${SITE.name} is here to help verified college students turn skill, reliability, and local trust into real work.`}
+        title={
+          <Editable k="about-students.header.title">
+            A better way for students to earn locally
+          </Editable>
+        }
+        description={
+          <Editable k="about-students.header.description">
+            {`${SITE.name} is here to help verified college students turn skill, reliability, and local trust into real work.`}
+          </Editable>
+        }
         actions={
           !session ? (
             <Link
@@ -47,17 +56,17 @@ export default async function StudentMissionPage() {
 
       <section className="space-y-4 text-sm leading-relaxed text-ink-soft">
         <p>
-          We believe students should have a clearer path to earn money without
-          having to build a business from zero, rely on random posts, or manage
-          every booking by text. {SITE.name} gives students a simple place to
-          offer services, set pricing, receive requests, and build trust with
-          nearby customers.
+          <Editable k="about-students.intro.p1">
+            {`We believe students should have a clearer path to earn money without having to build a business from zero, rely on random posts, or manage every booking by text. ${SITE.name} gives students a simple place to offer services, set pricing, receive requests, and build trust with nearby customers.`}
+          </Editable>
         </p>
         <p>
-          The pilot is intentionally curated. We approve student providers
-          manually, keep the service list focused, and start with one local
-          neighborhood so students can serve real demand close to home or
-          campus.
+          <Editable k="about-students.intro.p2">
+            The pilot is intentionally curated. We approve student providers
+            manually, keep the service list focused, and start with one local
+            neighborhood so students can serve real demand close to home or
+            campus.
+          </Editable>
         </p>
       </section>
 
@@ -66,16 +75,22 @@ export default async function StudentMissionPage() {
           id="student-principles"
           className="font-display text-2xl font-semibold"
         >
-          How we work with students
+          <Editable k="about-students.principles.heading">
+            How we work with students
+          </Editable>
         </h2>
         <div className="mt-4 grid gap-4">
-          {PRINCIPLES.map((principle) => (
+          {PRINCIPLES.map((principle, index) => (
             <Card key={principle.title} pennant className="p-5">
               <h3 className="font-display text-xl font-semibold">
-                {principle.title}
+                <Editable k={`about-students.principles.${index}.title`}>
+                  {principle.title}
+                </Editable>
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                {principle.body}
+                <Editable k={`about-students.principles.${index}.body`}>
+                  {principle.body}
+                </Editable>
               </p>
             </Card>
           ))}
@@ -87,20 +102,23 @@ export default async function StudentMissionPage() {
           id="student-flow"
           className="font-display text-2xl font-semibold"
         >
-          What students can expect
+          <Editable k="about-students.flow.heading">
+            What students can expect
+          </Editable>
         </h2>
         <div className="mt-3 space-y-3 text-sm leading-relaxed text-ink-soft">
           <p>
-            Students sign up with a school email, confirm they are 18 or older,
-            submit student verification, choose services, and set pricing. Once
-            approved, they can receive customer requests and accept the jobs
-            that fit their schedule.
+            <Editable k="about-students.flow.p1">
+              Students sign up with a school email, confirm they are 18 or
+              older, submit student verification, choose services, and set
+              pricing. Once approved, they can receive customer requests and
+              accept the jobs that fit their schedule.
+            </Editable>
           </p>
           <p>
-            College Crew takes a {providerFeePercent}% platform fee from the
-            provider&apos;s side of completed jobs. Customers see clear prices,
-            and providers keep the rest after platform and payment processing
-            rules are applied.
+            <Editable k="about-students.flow.p2">
+              {`College Crew takes a ${providerFeePercent}% platform fee from the provider's side of completed jobs. Customers see clear prices, and providers keep the rest after platform and payment processing rules are applied.`}
+            </Editable>
           </p>
         </div>
       </section>

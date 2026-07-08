@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Editable } from "@/components/content/editable";
 import { ProviderCard } from "@/components/provider-card";
 import { ServiceChips } from "@/components/service-chips";
 import { buttonClasses } from "@/components/ui/button";
@@ -26,15 +27,20 @@ export default async function BrowsePage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Browse the crew"
-        description="Verified student providers in your neighborhood — businesses and individuals. Only ID-approved students are listed."
+        title={<Editable k="browse.header.title">Browse the crew</Editable>}
+        description={
+          <Editable k="browse.header.description">
+            Verified student providers in your neighborhood — businesses and
+            individuals. Only ID-approved students are listed.
+          </Editable>
+        }
       />
 
       <ServiceChips services={services} activeSlug={service} />
 
       {providers.length === 0 ? (
         <EmptyState
-          title="No providers yet"
+          title={<Editable k="browse.empty.title">No providers yet</Editable>}
           action={
             !session ? (
               <Link
@@ -46,9 +52,16 @@ export default async function BrowsePage({
             ) : undefined
           }
         >
-          {service
-            ? "Nobody offers this service yet — try another filter, or check back soon."
-            : "Approved providers will appear here as the crew grows."}
+          {service ? (
+            <Editable k="browse.empty.filtered">
+              Nobody offers this service yet — try another filter, or check
+              back soon.
+            </Editable>
+          ) : (
+            <Editable k="browse.empty.default">
+              Approved providers will appear here as the crew grows.
+            </Editable>
+          )}
         </EmptyState>
       ) : (
         <div className="mx-auto max-w-3xl space-y-4">

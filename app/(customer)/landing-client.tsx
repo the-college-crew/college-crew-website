@@ -2,77 +2,40 @@
 
 import { useState } from "react";
 
-const PARENT_STEPS = [
-  {
-    n: "1",
-    title: "Post what you need",
-    body: "Describe the job, timing, and what kind of student help would make it easier.",
-  },
-  {
-    n: "2",
-    title: "Get matched by proximity & school",
-    body: 'See verified students nearby, like "2 miles away - verified Northwestern sophomore," and pick one.',
-  },
-  {
-    n: "3",
-    title: "Book, pay, rebook",
-    body: "Pay securely in-app, rate the job, and set up recurring visits as a season pass.",
-  },
-];
+/**
+ * Interactive landing sections. All copy arrives pre-rendered from the server
+ * page (wrapped in <Editable> so admins can edit it inline); only the
+ * tab/accordion state lives here.
+ */
 
-const STUDENT_STEPS = [
-  {
-    n: "1",
-    title: "Get verified",
-    body: "Complete ID and background verification, and link your school to start taking jobs.",
-  },
-  {
-    n: "2",
-    title: "Take jobs near home or campus",
-    body: "Browse local families who want to book a verified student like you.",
-  },
-  {
-    n: "3",
-    title: "Get paid, keep your reputation",
-    body: "Get paid securely in-app, and carry your reviews with you between home and campus.",
-  },
-];
+export type Step = {
+  n: string;
+  title: React.ReactNode;
+  body: React.ReactNode;
+};
 
-const FAQS = [
-  {
-    q: "Is this only for teenagers?",
-    a: "No. Students on College Crew are enrolled college students, 18 and up, not minors.",
-  },
-  {
-    q: "How does payment work?",
-    a: "Booking, payment, and ratings all happen in the app. No cash and no separate Venmo requests.",
-  },
-  {
-    q: "What does the Trust & Safety fee cover?",
-    a: "A small per-booking fee funds ID verification, background checks, and support if something goes wrong.",
-  },
-  {
-    q: "Can I book the same student again next season?",
-    a: "Yes. Reviews and booking history travel with a student, so rebooking someone you liked is one tap.",
-  },
-  {
-    q: "Where is College Crew available?",
-    a: "We are launching in select suburban communities and nearby college campuses, with more areas coming soon.",
-  },
-];
-
-export function HowItWorksTabs() {
+export function HowItWorksTabs({
+  eyebrow,
+  heading,
+  parentSteps,
+  studentSteps,
+}: {
+  eyebrow: React.ReactNode;
+  heading: React.ReactNode;
+  parentSteps: Step[];
+  studentSteps: Step[];
+}) {
   const [tab, setTab] = useState<"families" | "students">("families");
-  const steps = tab === "families" ? PARENT_STEPS : STUDENT_STEPS;
+  const steps = tab === "families" ? parentSteps : studentSteps;
 
   return (
     <section id="how" className="brand-section bg-stone">
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
-            <span className="brand-eyebrow">How it works</span>
+            <span className="brand-eyebrow">{eyebrow}</span>
             <h2 className="mt-4 max-w-2xl font-display text-4xl font-semibold leading-tight text-viridian">
-              Simple for families. Rewarding for students.
+              {heading}
             </h2>
           </div>
           <div className="flex rounded-xl bg-shell p-1.5">
@@ -119,23 +82,36 @@ export function HowItWorksTabs() {
   );
 }
 
-export function FAQList() {
+export type FaqItem = {
+  q: React.ReactNode;
+  a: React.ReactNode;
+};
+
+export function FAQList({
+  eyebrow,
+  heading,
+  items,
+}: {
+  eyebrow: React.ReactNode;
+  heading: React.ReactNode;
+  items: FaqItem[];
+}) {
   const [open, setOpen] = useState(0);
 
   return (
     <section className="brand-section relative overflow-hidden bg-stone">
       <div className="mx-auto max-w-[792px] px-4">
-        <span className="brand-eyebrow">FAQ</span>
+        <span className="brand-eyebrow">{eyebrow}</span>
         <h2 className="mt-4 font-display text-4xl font-semibold text-viridian">
-          Good to know.
+          {heading}
         </h2>
         <div className="mt-7 space-y-3">
-          {FAQS.map((faq, index) => {
+          {items.map((faq, index) => {
             const isOpen = open === index;
 
             return (
               <div
-                key={faq.q}
+                key={index}
                 className="rounded-2xl bg-shell px-5 py-2 shadow-sm shadow-viridian/5"
               >
                 <button

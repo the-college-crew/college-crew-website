@@ -447,6 +447,35 @@ export type Database = {
           },
         ];
       };
+      site_content: {
+        Row: {
+          key: string;
+          value: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          key: string;
+          value: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          key?: string;
+          value?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_content_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       moderation_events: {
         Row: {
           id: string;
@@ -544,6 +573,7 @@ export type ProviderEmailVerification =
   Database["public"]["Tables"]["provider_email_verifications"]["Row"];
 export type ProviderSchoolEmail =
   Database["public"]["Tables"]["provider_school_emails"]["Row"];
+export type SiteContent = Database["public"]["Tables"]["site_content"]["Row"];
 export type ProviderRating =
   Database["public"]["Views"]["provider_ratings"]["Row"];
 export type ProviderReview =

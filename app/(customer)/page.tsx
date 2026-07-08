@@ -1,13 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { Editable } from "@/components/content/editable";
 import { getEffectiveRole, getSession } from "@/lib/auth/session";
+import { FAQS, PARENT_STEPS, STUDENT_STEPS } from "@/lib/content/defaults";
 import { getLiveServices } from "@/lib/db/queries";
 import type { Service } from "@/lib/db/types";
 
 type Cta = { href: string; label: string };
 
-import { FAQList, HowItWorksTabs } from "./landing-client";
+import { FAQList, HowItWorksTabs, type FaqItem, type Step } from "./landing-client";
 
 const MARK_SRC = "/college-crew-mark.png";
 
@@ -173,21 +175,27 @@ export default async function LandingPage() {
       <section className="pb-2 text-center">
         <div className="mx-auto max-w-6xl px-4">
           <span className="text-sm font-bold tracking-[0.02em] text-viridian/55">
-            Now booking in Highland Park and Lincoln Park
+            <Editable k="home.banner.note">
+              Now booking in Highland Park and Lincoln Park
+            </Editable>
           </span>
         </div>
       </section>
 
       <section id="safety" className="mt-10 bg-stone py-14">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-3">
-          {TRUST_ITEMS.map(({ title, body, icon: Icon }) => (
+          {TRUST_ITEMS.map(({ title, body, icon: Icon }, index) => (
             <div key={title} className="flex items-center gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-shell text-viridian">
                 <Icon className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold">{title}</h2>
-                <p className="mt-1 text-sm text-viridian/65">{body}</p>
+                <h2 className="text-base font-bold">
+                  <Editable k={`home.trust.${index}.title`}>{title}</Editable>
+                </h2>
+                <p className="mt-1 text-sm text-viridian/65">
+                  <Editable k={`home.trust.${index}.body`}>{body}</Editable>
+                </p>
               </div>
             </div>
           ))}
@@ -195,16 +203,45 @@ export default async function LandingPage() {
       </section>
 
       <Comparison />
-      <HowItWorksTabs />
+      <HowItWorksTabs
+        eyebrow={<Editable k="home.how.eyebrow">How it works</Editable>}
+        heading={
+          <Editable k="home.how.heading">
+            Simple for families. Rewarding for students.
+          </Editable>
+        }
+        parentSteps={editableSteps("home.how.families", PARENT_STEPS)}
+        studentSteps={editableSteps("home.how.students", STUDENT_STEPS)}
+      />
       <ServicesSection services={services} />
       <FeaturesSection />
       <TestimonialsSection />
-      <FAQList />
+      <FAQList
+        eyebrow={<Editable k="home.faq.eyebrow">FAQ</Editable>}
+        heading={<Editable k="home.faq.heading">Good to know.</Editable>}
+        items={FAQS.map(
+          (faq, index): FaqItem => ({
+            q: <Editable k={`home.faq.${index}.q`}>{faq.q}</Editable>,
+            a: <Editable k={`home.faq.${index}.a`}>{faq.a}</Editable>,
+          }),
+        )}
+      />
       {showProviderCtas ? (
         <CTASection showProviderCta={showProviderCtas} primaryCta={primaryCta} />
       ) : null}
     </div>
   );
+}
+
+function editableSteps(
+  prefix: string,
+  steps: { n: string; title: string; body: string }[],
+): Step[] {
+  return steps.map((step, index) => ({
+    n: step.n,
+    title: <Editable k={`${prefix}.${index}.title`}>{step.title}</Editable>,
+    body: <Editable k={`${prefix}.${index}.body`}>{step.body}</Editable>,
+  }));
 }
 
 function Hero({
@@ -218,14 +255,20 @@ function Hero({
     <section className="relative overflow-hidden bg-stone px-4 py-16 text-center sm:py-20 lg:pb-48">
       <DecorativeMark className="absolute top-6 right-6 hidden w-44 opacity-20 sm:block" />
       <div className="relative z-10 mx-auto max-w-[760px]">
-        <span className="brand-eyebrow">Your neighbors, your students</span>
+        <span className="brand-eyebrow">
+          <Editable k="home.hero.eyebrow">Your neighbors, your students</Editable>
+        </span>
         <h1 className="mt-6 font-display text-[2.3rem] font-semibold leading-[1.06] text-viridian sm:text-[3.75rem]">
-          Hometown help, from someone your block already trusts.
+          <Editable k="home.hero.title">
+            Hometown help, from someone your block already trusts.
+          </Editable>
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-viridian/75 sm:text-lg">
-          College Crew connects families with verified college students for
-          practical neighborhood help - matched by proximity and school, and
-          paid securely in the app.
+          <Editable k="home.hero.subtitle">
+            College Crew connects families with verified college students for
+            practical neighborhood help - matched by proximity and school, and
+            paid securely in the app.
+          </Editable>
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
@@ -248,13 +291,13 @@ function Hero({
             "Verified & background-checked",
             "Matched by proximity & school",
             "Secure in-app payment",
-          ].map((item) => (
+          ].map((item, index) => (
             <span
               key={item}
               className="flex items-center gap-2 text-sm font-semibold text-viridian/70"
             >
               <span className="h-2 w-2 rounded-full bg-viridian" />
-              {item}
+              <Editable k={`home.hero.points.${index}`}>{item}</Editable>
             </span>
           ))}
         </div>
@@ -352,34 +395,53 @@ function Comparison() {
     <section className="brand-section">
       <div className="relative mx-auto max-w-6xl px-4">
         <DecorativeMark className="absolute -top-6 right-4 hidden w-28 opacity-20 md:block" />
-        <span className="brand-eyebrow">Why College Crew</span>
+        <span className="brand-eyebrow">
+          <Editable k="home.compare.eyebrow">Why College Crew</Editable>
+        </span>
         <h2 className="mt-4 max-w-3xl font-display text-4xl font-semibold leading-tight text-viridian">
-          A good name in this town should count for something.
+          <Editable k="home.compare.heading">
+            A good name in this town should count for something.
+          </Editable>
         </h2>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-viridian/70">
-          Every student starts from zero in a new town twice a year. Care.com,
-          Thumbtack, and Nextdoor were never built around student identity or
-          the kind of trust neighbors build over time. College Crew was.
+          <Editable k="home.compare.body">
+            Every student starts from zero in a new town twice a year.
+            Care.com, Thumbtack, and Nextdoor were never built around student
+            identity or the kind of trust neighbors build over time. College
+            Crew was.
+          </Editable>
         </p>
         <div className="mt-9 grid gap-5 md:grid-cols-2">
           <CompareColumn
-            title="Care.com, Thumbtack, Nextdoor"
+            title={
+              <Editable k="home.compare.them.title">
+                Care.com, Thumbtack, Nextdoor
+              </Editable>
+            }
             items={[
               "Reputation is tied to the platform, not the person",
               "No sense of who's actually nearby or in school",
               "Anonymous listings, not a known, verified student",
               "Reviews don't travel if you move or switch apps",
-            ]}
+            ].map((item, index) => (
+              <Editable key={index} k={`home.compare.them.items.${index}`}>
+                {item}
+              </Editable>
+            ))}
           />
           <CompareColumn
             dark
-            title="College Crew"
+            title={<Editable k="home.compare.us.title">College Crew</Editable>}
             items={[
               "One profile, one reputation, home and campus",
               "Matched by proximity and school, not a random zip code",
               "Every student is ID and background-checked",
               "Reviews and ratings travel with you, always",
-            ]}
+            ].map((item, index) => (
+              <Editable key={index} k={`home.compare.us.items.${index}`}>
+                {item}
+              </Editable>
+            ))}
           />
         </div>
       </div>
@@ -392,8 +454,8 @@ function CompareColumn({
   items,
   dark = false,
 }: {
-  title: string;
-  items: string[];
+  title: React.ReactNode;
+  items: React.ReactNode[];
   dark?: boolean;
 }) {
   return (
@@ -414,8 +476,8 @@ function CompareColumn({
           dark ? "text-shell/85" : "text-viridian/75"
         }`}
       >
-        {items.map((item) => (
-          <li key={item}>{item}</li>
+        {items.map((item, index) => (
+          <li key={index}>{item}</li>
         ))}
       </ul>
     </div>
@@ -429,9 +491,13 @@ function ServicesSection({ services }: { services: Service[] }) {
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <span className="brand-eyebrow">What you can book</span>
+              <span className="brand-eyebrow">
+                <Editable k="home.services.eyebrow">What you can book</Editable>
+              </span>
               <h2 className="mt-4 max-w-2xl font-display text-4xl font-semibold leading-tight text-viridian">
-                Services matched to what students do best.
+                <Editable k="home.services.heading">
+                  Services matched to what students do best.
+                </Editable>
               </h2>
             </div>
             <div
@@ -467,11 +533,15 @@ function ServicesSection({ services }: { services: Service[] }) {
                     {service.name}
                   </h3>
                   <span className="whitespace-nowrap rounded-full bg-stone px-3 py-1 text-[0.68rem] font-bold text-viridian/55">
-                    {display.cadence}
+                    <Editable k={`home.services.${service.slug}.cadence`}>
+                      {display.cadence}
+                    </Editable>
                   </span>
                 </div>
                 <p className="text-sm leading-relaxed text-viridian/70">
-                  {display.blurb}
+                  <Editable k={`home.services.${service.slug}.blurb`}>
+                    {display.blurb}
+                  </Editable>
                 </p>
               </Link>
             );
@@ -486,21 +556,27 @@ function FeaturesSection() {
   return (
     <section id="features" className="brand-section bg-stone">
       <div className="mx-auto max-w-6xl px-4">
-        <span className="brand-eyebrow">Why families choose us</span>
+        <span className="brand-eyebrow">
+          <Editable k="home.features.eyebrow">Why families choose us</Editable>
+        </span>
         <h2 className="mt-4 font-display text-4xl font-semibold text-viridian">
-          Built for trust, front to back.
+          <Editable k="home.features.heading">
+            Built for trust, front to back.
+          </Editable>
         </h2>
         <div className="mt-10 grid gap-5 md:grid-cols-2">
-          {FEATURES.map(({ title, body, tone, icon: Icon }) => (
+          {FEATURES.map(({ title, body, tone, icon: Icon }, index) => (
             <div key={title} className="rounded-3xl bg-shell p-8">
               <div
                 className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl ${tone}`}
               >
                 <Icon className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-viridian">{title}</h3>
+              <h3 className="text-lg font-bold text-viridian">
+                <Editable k={`home.features.${index}.title`}>{title}</Editable>
+              </h3>
               <p className="mt-2 text-sm leading-relaxed text-viridian/70">
-                {body}
+                <Editable k={`home.features.${index}.body`}>{body}</Editable>
               </p>
             </div>
           ))}
@@ -510,11 +586,17 @@ function FeaturesSection() {
             ["ID & background checks", "Every student is verified before their first booking."],
             ["Guarantee & support", "If a job isn't done right, we make it right."],
             ["What the fee funds", "A small Trust & Safety fee on each booking covers all of the above."],
-          ].map(([title, body]) => (
+          ].map(([title, body], index) => (
             <div key={title}>
-              <h3 className="text-sm font-bold text-viridian">{title}</h3>
+              <h3 className="text-sm font-bold text-viridian">
+                <Editable k={`home.feature-notes.${index}.title`}>
+                  {title}
+                </Editable>
+              </h3>
               <p className="mt-2 text-sm leading-relaxed text-viridian/65">
-                {body}
+                <Editable k={`home.feature-notes.${index}.body`}>
+                  {body}
+                </Editable>
               </p>
             </div>
           ))}
@@ -528,19 +610,35 @@ function TestimonialsSection() {
   return (
     <section className="brand-section">
       <div className="mx-auto max-w-6xl px-4">
-        <span className="brand-eyebrow">Early feedback</span>
+        <span className="brand-eyebrow">
+          <Editable k="home.testimonials.eyebrow">Early feedback</Editable>
+        </span>
         <h2 className="mt-4 font-display text-4xl font-semibold text-viridian">
-          What families and students are saying.
+          <Editable k="home.testimonials.heading">
+            What families and students are saying.
+          </Editable>
         </h2>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {TESTIMONIALS.map((item) => (
+          {TESTIMONIALS.map((item, index) => (
             <figure key={item.name} className="rounded-3xl bg-stone p-7">
               <blockquote className="text-sm leading-relaxed text-viridian/85">
-                &quot;{item.quote}&quot;
+                &quot;
+                <Editable k={`home.testimonials.${index}.quote`}>
+                  {item.quote}
+                </Editable>
+                &quot;
               </blockquote>
               <figcaption className="mt-5">
-                <p className="text-sm font-bold text-viridian">{item.name}</p>
-                <p className="mt-1 text-xs text-viridian/55">{item.detail}</p>
+                <p className="text-sm font-bold text-viridian">
+                  <Editable k={`home.testimonials.${index}.name`}>
+                    {item.name}
+                  </Editable>
+                </p>
+                <p className="mt-1 text-xs text-viridian/55">
+                  <Editable k={`home.testimonials.${index}.detail`}>
+                    {item.detail}
+                  </Editable>
+                </p>
               </figcaption>
             </figure>
           ))}
@@ -561,11 +659,13 @@ function CTASection({
     <section className="brand-section text-center">
       <div className="mx-auto max-w-2xl px-4">
         <h2 className="font-display text-4xl font-semibold text-viridian">
-          Ready to join College Crew?
+          <Editable k="home.cta.heading">Ready to join College Crew?</Editable>
         </h2>
         <p className="mt-4 text-base leading-relaxed text-viridian/70">
-          Book trusted help nearby, or sign up to start earning and building a
-          reputation that follows you. It takes two minutes.
+          <Editable k="home.cta.body">
+            Book trusted help nearby, or sign up to start earning and building
+            a reputation that follows you. It takes two minutes.
+          </Editable>
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
