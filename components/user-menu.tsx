@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { signOut } from "@/app/(auth)/actions";
+import { setViewAs } from "@/app/actions/view-as";
+import type { UserRole } from "@/lib/db/types";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,6 +25,12 @@ const AVATAR_COLORS = [
   "bg-forest-600",
 ];
 
+const VIEWS: { role: UserRole; label: string }[] = [
+  { role: "admin", label: "Admin" },
+  { role: "customer", label: "Customer" },
+  { role: "provider", label: "Provider" },
+];
+
 function initialsFrom(name: string, email: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -40,6 +48,8 @@ export function UserMenu({
   name,
   email,
   homePath,
+  realRole,
+  currentRole,
   accountHref = "/account",
   messagesHref = "/messages",
   dashboardLabel = "Dashboard",
@@ -47,6 +57,8 @@ export function UserMenu({
   name: string;
   email: string;
   homePath: string;
+  realRole?: UserRole;
+  currentRole?: UserRole;
   accountHref?: string;
   messagesHref?: string;
   dashboardLabel?: string;
@@ -126,6 +138,32 @@ export function UserMenu({
             <p className="truncate text-sm font-semibold text-ink">{displayName}</p>
             <p className="truncate text-xs text-mist">{email}</p>
           </div>
+
+          {realRole === "admin" && currentRole ? (
+            <div className="border-b border-line px-3 py-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-mist">
+                Viewing as
+              </p>
+              <form action={setViewAs} className="grid grid-cols-3 gap-1">
+                {VIEWS.map((view) => (
+                  <button
+                    key={view.role}
+                    type="submit"
+                    name="viewAs"
+                    value={view.role}
+                    aria-pressed={currentRole === view.role}
+                    className={
+                      currentRole === view.role
+                        ? "rounded-lg bg-crew-600 px-2 py-1.5 text-xs font-semibold text-white"
+                        : "rounded-lg border border-line px-2 py-1.5 text-xs font-semibold text-ink-soft hover:bg-court hover:text-crew-700"
+                    }
+                  >
+                    {view.label}
+                  </button>
+                ))}
+              </form>
+            </div>
+          ) : null}
 
           <div className="pt-1.5">
             <Link

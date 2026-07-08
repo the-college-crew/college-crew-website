@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/session";
+import {
+  demoConversation,
+  demoMessagesFor,
+  getDemoPreview,
+} from "@/lib/demo/sample-preview";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
 
@@ -27,6 +33,47 @@ type ConversationRow = {
  */
 export default async function MessagesPage() {
   const user = await requireUser("/messages");
+  const demoPreview =
+    (await getDemoPreview("customer")) ?? (await getDemoPreview("provider"));
+  if (demoPreview) {
+    const latest = demoMessagesFor(demoPreview.role).at(-1);
+    const otherName =
+      demoPreview.role === "customer"
+        ? demoConversation.providerName
+        : demoConversation.customerName;
+
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4 py-8">
+        <PageHeader
+          title="Messages"
+          description="Your conversations with customers and providers."
+        />
+        <SamplePreviewBanner role={demoPreview.role} />
+        <ul className="mt-6 space-y-3">
+          <li>
+            <Link href="/messages/demo" className="block">
+              <Card className="p-4 transition-colors hover:bg-crew-50">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="font-display font-semibold text-ink">
+                    {otherName}
+                  </p>
+                  {latest ? (
+                    <span className="shrink-0 text-xs text-mist">
+                      {formatDateTime(latest.created_at)}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 truncate text-sm text-ink-soft">
+                  {latest?.body || "No messages yet"}
+                </p>
+              </Card>
+            </Link>
+          </li>
+        </ul>
+      </div>
+    );
+  }
+
   const supabase = await createClient();
 
   const { data: conversationData } = await supabase

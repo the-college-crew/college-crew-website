@@ -5,12 +5,18 @@ import {
   MonthCalendar,
   type CalendarBooking,
 } from "@/components/month-calendar";
+import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  demoBookings,
+  demoProviderProfile,
+  getDemoPreview,
+} from "@/lib/demo/sample-preview";
 import type { BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
@@ -43,6 +49,19 @@ export default async function ProviderDashboardPage({
     searchParams,
     requireRole("provider", "/provider/dashboard"),
   ]);
+  const demoPreview = await getDemoPreview("provider");
+  if (demoPreview) {
+    return (
+      <ProviderDashboardView
+        profile={demoProviderProfile}
+        bookings={demoBookings as ProviderBookingRow[]}
+        submitted={submitted}
+        stripe={stripe}
+        demo
+      />
+    );
+  }
+
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -56,6 +75,30 @@ export default async function ProviderDashboardPage({
     .order("scheduled_at", { ascending: true });
 
   const bookings = (data ?? []) as ProviderBookingRow[];
+
+  return (
+    <ProviderDashboardView
+      profile={profile}
+      bookings={bookings}
+      submitted={submitted}
+      stripe={stripe}
+    />
+  );
+}
+
+function ProviderDashboardView({
+  profile,
+  bookings,
+  submitted,
+  stripe,
+  demo = false,
+}: {
+  profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
+  bookings: ProviderBookingRow[];
+  submitted?: string;
+  stripe?: string;
+  demo?: boolean;
+}) {
   const requests = bookings.filter((b) => b.status === "requested");
   const earnedCents = bookings
     .filter((b) => b.status === "completed")
@@ -77,37 +120,41 @@ export default async function ProviderDashboardPage({
 
   return (
     <div className="space-y-6">
-      <RealtimeRefresh
-        channel={`provider-bookings:${profile.id}`}
-        table="bookings"
-        filter={`provider_id=eq.${profile.id}`}
-      />
+      {demo ? null : (
+        <RealtimeRefresh
+          channel={`provider-bookings:${profile.id}`}
+          table="bookings"
+          filter={`provider_id=eq.${profile.id}`}
+        />
+      )}
       <PageHeader
         title="Dashboard"
         description="Requests, earnings, and your month at a glance."
       />
+      {demo ? <SamplePreviewBanner role="provider" /> : null}
 
       {/* Status banners */}
-      {submitted ? (
+      {submitted && !demo ? (
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
           Onboarding submitted — a founder is reviewing your ID. You&apos;ll
           go live in Browse once approved.
         </div>
       ) : null}
-      {profile.verification_status === "pending" && !submitted ? (
+      {profile.verification_status === "pending" && !submitted && !demo ? (
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
           Verification under review. You can fine-tune your profile and
           pricing while you wait.
         </div>
       ) : null}
-      {profile.verification_status === "rejected" ? (
+      {profile.verification_status === "rejected" && !demo ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           Your verification was rejected. Re-upload a clearer student ID from
           the onboarding wizard, or contact the founders.
         </div>
       ) : null}
       {profile.verification_status === "approved" &&
-      !profile.stripe_account_id ? (
+      !profile.stripe_account_id &&
+      !demo ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-crew-200 bg-crew-100 p-4 text-sm text-crew-800">
           <p>
             <span className="font-semibold">You&apos;re approved!</span> Connect
@@ -120,7 +167,7 @@ export default async function ProviderDashboardPage({
           </form>
         </div>
       ) : null}
-      {stripe === "pending" ? (
+      {stripe === "pending" && !demo ? (
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
           Stripe isn&apos;t live yet — the platform&apos;s test account is
           still being set up. You&apos;ll be able to connect soon.
@@ -186,15 +233,31 @@ export default async function ProviderDashboardPage({
                       15% platform fee)
                     </span>
                   </p>
-                  <RequestActions
-                    job={{
-                      id: booking.id,
-                      serviceName: booking.service.name,
-                      customerName: booking.customer.full_name,
-                      whenLabel: formatDateTime(booking.scheduled_at),
-                      address: booking.address,
-                    }}
-                  />
+                  {demo ? (
+                    <div className="mt-3 flex gap-2">
+                      <Button type="button" size="sm" disabled>
+                        Accept
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        disabled
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  ) : (
+                    <RequestActions
+                      job={{
+                        id: booking.id,
+                        serviceName: booking.service.name,
+                        customerName: booking.customer.full_name,
+                        whenLabel: formatDateTime(booking.scheduled_at),
+                        address: booking.address,
+                      }}
+                    />
+                  )}
                 </Card>
               ))
             )}

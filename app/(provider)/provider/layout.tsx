@@ -4,7 +4,6 @@ import { MobileNav } from "@/components/mobile-nav";
 import { Wordmark } from "@/components/site-header";
 import { buttonClasses } from "@/components/ui/button";
 import { UserMenu } from "@/components/user-menu";
-import { ViewAsSwitcher } from "@/components/view-as-switcher";
 import { getEffectiveRole, getSession, homePathFor } from "@/lib/auth/session";
 
 const PROVIDER_NAV = [
@@ -25,7 +24,6 @@ export default async function ProviderLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  const isAdmin = session?.profile.role === "admin";
   // Effective role so admins previewing via the view-as switcher get the
   // provider nav too (their pages show the no-profile/onboarding states).
   const effectiveRole = session ? await getEffectiveRole() : null;
@@ -46,13 +44,12 @@ export default async function ProviderLayout({
           </div>
           {session ? (
             <div className="flex items-center gap-3">
-              {isAdmin ? (
-                <ViewAsSwitcher current={effectiveRole ?? "admin"} />
-              ) : null}
               <UserMenu
                 name={session.profile.full_name}
                 email={session.user.email ?? ""}
                 homePath={homePathFor(effectiveRole ?? session.profile.role)}
+                realRole={session.profile.role}
+                currentRole={effectiveRole ?? session.profile.role}
               />
             </div>
           ) : (

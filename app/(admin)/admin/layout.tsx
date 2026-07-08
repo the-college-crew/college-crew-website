@@ -3,7 +3,6 @@ import Link from "next/link";
 import { MobileNav } from "@/components/mobile-nav";
 import { Wordmark } from "@/components/site-header";
 import { UserMenu } from "@/components/user-menu";
-import { ViewAsSwitcher } from "@/components/view-as-switcher";
 import { getEffectiveRole, homePathFor, requireRole } from "@/lib/auth/session";
 
 const ADMIN_NAV = [
@@ -37,11 +36,12 @@ export default async function AdminLayout({
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <ViewAsSwitcher current={effectiveRole ?? "admin"} />
             <UserMenu
               name={session.profile.full_name}
               email={session.user.email ?? ""}
               homePath={homePathFor(effectiveRole ?? "admin")}
+              realRole={session.profile.role}
+              currentRole={effectiveRole ?? "admin"}
             />
           </div>
         </div>

@@ -28,6 +28,8 @@ export default async function SharedLayout({
               name={session.profile.full_name}
               email={session.user.email ?? ""}
               homePath={homePathFor(role)}
+              realRole={session.profile.role}
+              currentRole={role}
               dashboardLabel={dashboardLabelFor(role)}
             />
           ) : null}

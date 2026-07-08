@@ -3,7 +3,6 @@ import Image from "next/image";
 
 import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
-import { ViewAsSwitcher } from "@/components/view-as-switcher";
 import {
   dashboardLabelFor,
   getEffectiveRole,
@@ -29,22 +28,30 @@ export function Wordmark({ tone = "light" }: { tone?: "light" | "dark" }) {
   const onDark = tone === "dark";
   return (
     <Link href="/" className="flex items-center gap-2.5">
-      <span
-        className={cn(
-          "flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl p-1.5",
-          onDark ? "bg-shell" : "bg-shell ring-1 ring-stone",
-        )}
-        aria-hidden
-      >
+      {onDark ? (
         <Image
-          src="/college-crew-mark.png"
+          src="/college-crew-mark-white.png"
           alt=""
           width={40}
           height={37}
-          className="h-full w-full object-contain"
+          className="h-12 w-12 object-contain"
           priority
         />
-      </span>
+      ) : (
+        <span
+          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-shell p-1.5 ring-1 ring-stone"
+          aria-hidden
+        >
+          <Image
+            src="/college-crew-mark.png"
+            alt=""
+            width={40}
+            height={37}
+            className="h-full w-full object-contain"
+            priority
+          />
+        </span>
+      )}
       <span
         className={cn(
           "text-lg font-semibold tracking-tight",
@@ -62,7 +69,6 @@ export function Wordmark({ tone = "light" }: { tone?: "light" | "dark" }) {
 export async function SiteHeader() {
   const session = await getSession();
   const effectiveRole = session ? await getEffectiveRole() : null;
-  const isAdmin = session?.profile.role === "admin";
 
   return (
     <header className="sticky top-0 z-40 border-b border-viridian/10 bg-viridian text-shell">
@@ -88,19 +94,16 @@ export async function SiteHeader() {
 
         <div className="flex items-center gap-1.5">
           {session ? (
-            <>
-              {isAdmin ? (
-                <ViewAsSwitcher current={effectiveRole ?? "admin"} />
-              ) : null}
-              <UserMenu
-                name={session.profile.full_name}
-                email={session.user.email ?? ""}
-                homePath={homePathFor(effectiveRole ?? session.profile.role)}
-                dashboardLabel={dashboardLabelFor(
-                  effectiveRole ?? session.profile.role,
-                )}
-              />
-            </>
+            <UserMenu
+              name={session.profile.full_name}
+              email={session.user.email ?? ""}
+              homePath={homePathFor(effectiveRole ?? session.profile.role)}
+              realRole={session.profile.role}
+              currentRole={effectiveRole ?? session.profile.role}
+              dashboardLabel={dashboardLabelFor(
+                effectiveRole ?? session.profile.role,
+              )}
+            />
           ) : (
             // On mobile these live inside the hamburger panel instead.
             <div className="hidden items-center gap-1.5 sm:flex">

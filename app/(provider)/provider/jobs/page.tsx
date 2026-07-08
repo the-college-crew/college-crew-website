@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { openConversationForBooking } from "@/app/actions/messaging";
+import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { StatusPill } from "@/components/status-pill";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  demoBookings,
+  demoOfferings,
+  demoProviderProfile,
+  getDemoPreview,
+} from "@/lib/demo/sample-preview";
 import type { BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney, formatOfferedPrice } from "@/lib/utils";
@@ -32,6 +39,20 @@ type JobRow = {
 /** Upcoming jobs + read-only pricing (editing lives in Profile & settings). */
 export default async function ProviderJobsPage() {
   await requireRole("provider", "/provider/jobs");
+  const demoPreview = await getDemoPreview("provider");
+  if (demoPreview) {
+    return (
+      <ProviderJobsView
+        profile={demoProviderProfile}
+        jobs={demoBookings.filter((booking) =>
+          ["accepted", "paid"].includes(booking.status),
+        ) as JobRow[]}
+        offerings={demoOfferings}
+        demo
+      />
+    );
+  }
+
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -57,16 +78,45 @@ export default async function ProviderJobsPage() {
   );
 
   return (
+    <ProviderJobsView
+      profile={profile}
+      jobs={jobs}
+      offerings={liveOfferings}
+    />
+  );
+}
+
+function ProviderJobsView({
+  profile,
+  jobs,
+  offerings,
+  demo = false,
+}: {
+  profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
+  jobs: JobRow[];
+  offerings: {
+    id?: string;
+    price_cents: number;
+    price_type: "fixed" | "quote";
+    unit: "per_job" | "per_hour";
+    service: { name: string; is_live?: boolean };
+  }[];
+  demo?: boolean;
+}) {
+  return (
     <div className="space-y-8">
-      <RealtimeRefresh
-        channel={`provider-jobs:${profile.id}`}
-        table="bookings"
-        filter={`provider_id=eq.${profile.id}`}
-      />
+      {demo ? null : (
+        <RealtimeRefresh
+          channel={`provider-jobs:${profile.id}`}
+          table="bookings"
+          filter={`provider_id=eq.${profile.id}`}
+        />
+      )}
       <PageHeader
         title="Jobs & pricing"
         description="Your upcoming jobs, and the pricing customers currently see."
       />
+      {demo ? <SamplePreviewBanner role="provider" /> : null}
 
       <section aria-labelledby="upcoming-jobs">
         <h2
@@ -103,29 +153,53 @@ export default async function ProviderJobsPage() {
                   </span>
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <form action={openConversationForBooking}>
-                    <input type="hidden" name="bookingId" value={job.id} />
-                    <button
-                      type="submit"
-                      className={buttonClasses({
-                        variant: "secondary",
-                        size: "sm",
-                      })}
-                    >
-                      Message customer
-                    </button>
-                  </form>
-                  {job.status === "paid" ? (
-                    <form action={completeBooking}>
-                      <input type="hidden" name="bookingId" value={job.id} />
-                      <Button type="submit" variant="success" size="sm">
+                  {demo ? (
+                    <>
+                      <Link
+                        href="/messages/demo"
+                        className={buttonClasses({
+                          variant: "secondary",
+                          size: "sm",
+                        })}
+                      >
+                        Message customer
+                      </Link>
+                      <Button
+                        type="button"
+                        variant="success"
+                        size="sm"
+                        disabled
+                      >
                         Mark completed
                       </Button>
-                    </form>
+                    </>
                   ) : (
-                    <span className="self-center text-xs text-mist">
-                      Waiting on customer payment
-                    </span>
+                    <>
+                      <form action={openConversationForBooking}>
+                        <input type="hidden" name="bookingId" value={job.id} />
+                        <button
+                          type="submit"
+                          className={buttonClasses({
+                            variant: "secondary",
+                            size: "sm",
+                          })}
+                        >
+                          Message customer
+                        </button>
+                      </form>
+                      {job.status === "paid" ? (
+                        <form action={completeBooking}>
+                          <input type="hidden" name="bookingId" value={job.id} />
+                          <Button type="submit" variant="success" size="sm">
+                            Mark completed
+                          </Button>
+                        </form>
+                      ) : (
+                        <span className="self-center text-xs text-mist">
+                          Waiting on customer payment
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               </Card>
@@ -150,15 +224,15 @@ export default async function ProviderJobsPage() {
           </Link>
         </div>
         <Card className="mt-3 p-4">
-          {liveOfferings.length === 0 ? (
+          {offerings.length === 0 ? (
             <p className="text-sm text-mist">
               No live services yet — set them up in Profile & settings.
             </p>
           ) : (
             <ul className="divide-y divide-line text-sm">
-              {liveOfferings.map((offered) => (
+              {offerings.map((offered, index) => (
                 <li
-                  key={offered.id}
+                  key={offered.id ?? `${offered.service.name}-${index}`}
                   className="flex justify-between gap-4 py-2.5"
                 >
                   <span className="font-medium">{offered.service.name}</span>

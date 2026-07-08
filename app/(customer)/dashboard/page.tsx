@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { openConversationForBooking } from "@/app/actions/messaging";
+import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { StatusPill } from "@/components/status-pill";
-import { buttonClasses } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
+import { demoBookings, getDemoPreview } from "@/lib/demo/sample-preview";
 import type { BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDateTime, formatMoney } from "@/lib/utils";
@@ -41,6 +43,25 @@ export default async function CustomerDashboardPage({
     requireRole("customer", "/dashboard"),
   ]);
   const showPast = tab === "past";
+  const demoPreview = await getDemoPreview("customer");
+
+  if (demoPreview) {
+    const bookings = demoBookings.filter((booking) =>
+      showPast
+        ? !UPCOMING.includes(booking.status)
+        : UPCOMING.includes(booking.status),
+    ) as BookingRow[];
+
+    return (
+      <CustomerDashboardView
+        bookings={bookings}
+        showPast={showPast}
+        requested={requested}
+        paid={paid}
+        demo
+      />
+    );
+  }
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -57,6 +78,32 @@ export default async function CustomerDashboardPage({
       : UPCOMING.includes(booking.status),
   );
 
+  return (
+    <CustomerDashboardView
+      bookings={bookings}
+      showPast={showPast}
+      requested={requested}
+      paid={paid}
+      customerId={session.user.id}
+    />
+  );
+}
+
+function CustomerDashboardView({
+  bookings,
+  showPast,
+  requested,
+  paid,
+  customerId,
+  demo = false,
+}: {
+  bookings: BookingRow[];
+  showPast: boolean;
+  requested?: string;
+  paid?: string;
+  customerId?: string;
+  demo?: boolean;
+}) {
   const tabClass = (active: boolean) =>
     cn(
       "rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
@@ -65,29 +112,38 @@ export default async function CustomerDashboardPage({
 
   return (
     <div className="space-y-6">
-      <RealtimeRefresh
-        channel={`customer-bookings:${session.user.id}`}
-        table="bookings"
-        filter={`customer_id=eq.${session.user.id}`}
-      />
+      {demo ? null : (
+        <RealtimeRefresh
+          channel={`customer-bookings:${customerId}`}
+          table="bookings"
+          filter={`customer_id=eq.${customerId}`}
+        />
+      )}
       <PageHeader
         title="My bookings"
         actions={
-          <Link href="/browse" className={buttonClasses({ size: "sm" })}>
+          <Link
+            href={demo ? "/book/demo" : "/browse"}
+            className={buttonClasses({ size: "sm" })}
+          >
             Book something new
           </Link>
         }
       />
+      {demo ? <SamplePreviewBanner role="customer" /> : null}
 
       {requested ? (
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-          Request sent. The provider will accept or decline — once they
-          accept, you&apos;ll confirm and pay here.
+          {demo
+            ? "Sample request sent. No booking was created, but this is where the confirmation appears."
+            : "Request sent. The provider will accept or decline — once they accept, you'll confirm and pay here."}
         </div>
       ) : null}
       {paid ? (
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-          Booking confirmed — you&apos;re on the schedule.
+          {demo
+            ? "Sample payment confirmed. No payment was created."
+            : "Booking confirmed — you're on the schedule."}
         </div>
       ) : null}
 
@@ -114,7 +170,7 @@ export default async function CustomerDashboardPage({
           title={showPast ? "No past bookings" : "Nothing booked yet"}
           action={
             <Link
-              href="/browse"
+              href={demo ? "/book/demo" : "/browse"}
               className={buttonClasses({ variant: "secondary", size: "sm" })}
             >
               Browse the crew
@@ -149,14 +205,28 @@ export default async function CustomerDashboardPage({
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   {booking.status === "accepted" ? (
                     <Link
-                      href={`/bookings/${booking.id}/confirm`}
+                      href={
+                        demo
+                          ? "/bookings/demo/confirm"
+                          : `/bookings/${booking.id}/confirm`
+                      }
                       className={buttonClasses({ size: "sm" })}
                     >
                       Confirm & pay
                     </Link>
                   ) : null}
 
-                  {(UPCOMING as string[]).includes(booking.status) ? (
+                  {demo && (UPCOMING as string[]).includes(booking.status) ? (
+                    <Link
+                      href="/messages/demo"
+                      className={buttonClasses({
+                        variant: "secondary",
+                        size: "sm",
+                      })}
+                    >
+                      Message
+                    </Link>
+                  ) : (UPCOMING as string[]).includes(booking.status) ? (
                     <form action={openConversationForBooking}>
                       <input type="hidden" name="bookingId" value={booking.id} />
                       <button
@@ -171,7 +241,13 @@ export default async function CustomerDashboardPage({
                     </form>
                   ) : null}
 
-                  {booking.status === "requested" ||
+                  {demo &&
+                  (booking.status === "requested" ||
+                    booking.status === "accepted") ? (
+                    <Button type="button" variant="danger" size="sm" disabled>
+                      Cancel request
+                    </Button>
+                  ) : booking.status === "requested" ||
                   booking.status === "accepted" ? (
                     <form action={cancelBooking}>
                       <input type="hidden" name="bookingId" value={booking.id} />
@@ -190,7 +266,11 @@ export default async function CustomerDashboardPage({
 
                 {booking.status === "completed" ? (
                   <div className="mt-4 border-t border-line pt-4">
-                    {booking.review ? (
+                    {demo ? (
+                      <Button type="button" variant="secondary" size="sm" disabled>
+                        Leave review
+                      </Button>
+                    ) : booking.review ? (
                       <p className="text-sm font-medium text-quad-700">
                         Reviewed ✓
                       </p>
