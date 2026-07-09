@@ -19,7 +19,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDateTime, formatMoney } from "@/lib/utils";
 
-import { cancelBooking } from "./actions";
+import { cancelBooking, dismissDeclinedBooking } from "./actions";
 import { ReviewForm } from "./review-form";
 
 export const metadata: Metadata = { title: "My bookings" };
@@ -33,6 +33,7 @@ type BookingRow = {
   address: string;
   price_cents: number;
   provider_id: string;
+  dismissed_at: string | null;
   service: { name: string };
   provider: { display_name: string };
   review: { id: string } | null;
@@ -56,6 +57,7 @@ function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
   const upcoming: BookingRow[] = [];
   const past: BookingRow[] = [];
   for (const booking of bookings) {
+    if (booking.status === "declined" && booking.dismissed_at) continue;
     if (
       booking.status === "declined" &&
       new Date(booking.scheduled_at) >= now
@@ -106,7 +108,7 @@ export default async function CustomerDashboardPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, status, scheduled_at, address, price_cents, provider_id, service:services(name), provider:provider_profiles(display_name), review:reviews(id)",
+      "id, status, scheduled_at, address, price_cents, provider_id, dismissed_at, service:services(name), provider:provider_profiles(display_name), review:reviews(id)",
     )
     .eq("customer_id", session.user.id)
     .order("scheduled_at", { ascending: showPast ? false : true });
@@ -354,6 +356,18 @@ function BookingCard({
               })}
             >
               {hasProviderMessage ? "Read message" : "Message"}
+            </button>
+          </form>
+        ) : null}
+
+        {isDeclined && !demo ? (
+          <form action={dismissDeclinedBooking}>
+            <input type="hidden" name="bookingId" value={booking.id} />
+            <button
+              type="submit"
+              className={buttonClasses({ variant: "secondary", size: "sm" })}
+            >
+              Dismiss
             </button>
           </form>
         ) : null}

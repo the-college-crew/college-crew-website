@@ -219,6 +219,7 @@ export type Database = {
           price_cents: number;
           platform_fee_cents: number;
           stripe_payment_intent_id: string | null;
+          dismissed_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -233,6 +234,7 @@ export type Database = {
           price_cents: number;
           platform_fee_cents: number;
           stripe_payment_intent_id?: string | null;
+          dismissed_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -247,6 +249,7 @@ export type Database = {
           price_cents?: number;
           platform_fee_cents?: number;
           stripe_payment_intent_id?: string | null;
+          dismissed_at?: string | null;
           created_at?: string;
         };
         Relationships: [
