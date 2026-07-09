@@ -19,8 +19,9 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDateTime, formatMoney } from "@/lib/utils";
 
-import { cancelBooking, dismissDeclinedBooking } from "./actions";
+import { cancelBooking } from "./actions";
 import { ReviewForm } from "./review-form";
+import { DismissDeclinedBookingButton } from "./dismiss-declined-booking-button";
 
 export const metadata: Metadata = { title: "My bookings" };
 
@@ -291,7 +292,13 @@ function BookingCard({
   const hasProviderMessage = Boolean(note);
 
   return (
-    <Card className={cn("p-5", attention && "border-red-200")}>
+    <Card
+      data-declined-booking={isDeclined || undefined}
+      className={cn(
+        "p-5 transition-[opacity,transform] duration-200 ease-out",
+        attention && "border-red-200",
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-display text-lg font-semibold">
@@ -361,15 +368,7 @@ function BookingCard({
         ) : null}
 
         {isDeclined && !demo ? (
-          <form action={dismissDeclinedBooking}>
-            <input type="hidden" name="bookingId" value={booking.id} />
-            <button
-              type="submit"
-              className={buttonClasses({ variant: "secondary", size: "sm" })}
-            >
-              Dismiss
-            </button>
-          </form>
+          <DismissDeclinedBookingButton bookingId={booking.id} />
         ) : null}
 
         {isDeclined ? (
