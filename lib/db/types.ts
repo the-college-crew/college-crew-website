@@ -117,6 +117,7 @@ export type Database = {
           neighborhood: string;
           verification_status: VerificationStatus;
           id_document_url: string | null;
+          id_document_back_url: string | null;
           background_check_status: BackgroundCheckStatus;
           stripe_account_id: string | null;
           availability: Json;
@@ -131,6 +132,7 @@ export type Database = {
           neighborhood?: string;
           verification_status?: VerificationStatus;
           id_document_url?: string | null;
+          id_document_back_url?: string | null;
           background_check_status?: BackgroundCheckStatus;
           stripe_account_id?: string | null;
           availability?: Json;
@@ -145,6 +147,7 @@ export type Database = {
           neighborhood?: string;
           verification_status?: VerificationStatus;
           id_document_url?: string | null;
+          id_document_back_url?: string | null;
           background_check_status?: BackgroundCheckStatus;
           stripe_account_id?: string | null;
           availability?: Json;

@@ -5,29 +5,37 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireRole } from "@/lib/auth/session";
+import {
+  getAdminProviderProfile,
+  type AdminProviderProfile,
+} from "@/lib/db/queries";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Founder actions. Verification status and the service catalog are
- * server-written only (column grants / no client policies), so these use
- * the service-role client — always AFTER the requireRole("admin") check.
+ * Founder actions. Verification status, the service catalog, and admin
+ * overrides of provider copy are server-written only (column grants / no
+ * client policies), so these use the service-role client — always AFTER the
+ * requireRole("admin") check.
  */
 
-async function setVerification(
-  formData: FormData,
-  status: "approved" | "rejected",
-) {
+const statusSchema = z.enum(["pending", "approved", "rejected"]);
+
+/**
+ * Set a provider's verification status to any state. Approving still requires
+ * a verified school (.edu) email (a student proof alongside the manual ID
+ * review); re-opening or rejecting has no such gate.
+ */
+export async function setProviderStatus(formData: FormData) {
   await requireRole("admin");
   if (!hasServiceRoleEnv()) {
     redirect("/admin/providers?err=env");
   }
 
   const providerId = z.string().uuid().parse(formData.get("providerId"));
+  const status = statusSchema.parse(formData.get("status"));
   const admin = createAdminClient();
 
-  // Don't let a provider go live without a verified school (.edu) email —
-  // it's a required student proof alongside the manual ID review.
   if (status === "approved") {
     const { data: prof } = await admin
       .from("provider_profiles")
@@ -58,15 +66,6 @@ async function setVerification(
   revalidatePath("/browse");
 }
 
-/** Flips the provider live in Browse and unlocks Stripe connection. */
-export async function approveProvider(formData: FormData) {
-  await setVerification(formData, "approved");
-}
-
-export async function rejectProvider(formData: FormData) {
-  await setVerification(formData, "rejected");
-}
-
 /** Service curation: toggle what's offered platform-wide (SPEC §8). */
 export async function toggleServiceLive(formData: FormData) {
   await requireRole("admin");
@@ -89,4 +88,111 @@ export async function toggleServiceLive(formData: FormData) {
   revalidatePath("/admin/services");
   revalidatePath("/browse");
   revalidatePath("/");
+}
+
+const providerTextFieldSchema = z.enum(["display_name", "bio"]);
+const providerTextValueSchema = z.string().trim().max(2000);
+
+export type ProviderTextResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Admin override of a provider's free-text profile fields (display_name, bio)
+ * so inappropriate content can be removed. Field is allowlisted; errors come
+ * back as values (not throws) because the caller is an inline editor that
+ * shows them next to the text.
+ */
+export async function updateProviderText(
+  formData: FormData,
+): Promise<ProviderTextResult> {
+  await requireRole("admin");
+  if (!hasServiceRoleEnv()) {
+    return { ok: false, error: "Server key missing — check .env.local" };
+  }
+
+  const parsedId = z.string().uuid().safeParse(formData.get("providerId"));
+  const parsedField = providerTextFieldSchema.safeParse(formData.get("field"));
+  const parsedValue = providerTextValueSchema.safeParse(formData.get("value"));
+  if (!parsedId.success) return { ok: false, error: "Unknown provider" };
+  if (!parsedField.success) return { ok: false, error: "Unknown field" };
+  if (!parsedValue.success) {
+    return { ok: false, error: "Text must be 2000 characters or fewer" };
+  }
+
+  // Build a typed update so the column is a known key, not a string index.
+  const update =
+    parsedField.data === "display_name"
+      ? { display_name: parsedValue.data }
+      : { bio: parsedValue.data };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("provider_profiles")
+    .update(update)
+    .eq("id", parsedId.data);
+  if (error) return { ok: false, error: "Could not save — try again" };
+
+  revalidatePath("/admin/providers");
+  revalidatePath("/browse");
+  return { ok: true };
+}
+
+export type AdminProviderDetail = {
+  profile: AdminProviderProfile;
+  schoolEmail: string | null;
+  idDocumentUrl: string | null;
+  idDocumentBackUrl: string | null;
+};
+
+/**
+ * Full detail for the admin profile popup, fetched lazily when a provider is
+ * opened. Bundles the profile with the verified school email and a fresh
+ * short-lived signed URL to the private ID document (both service-role reads),
+ * so the list payload stays light and the ID link never goes stale.
+ */
+export async function loadAdminProviderProfile(
+  providerId: string,
+): Promise<AdminProviderDetail | null> {
+  await requireRole("admin");
+
+  const parsedId = z.string().uuid().safeParse(providerId);
+  if (!parsedId.success) return null;
+
+  const profile = await getAdminProviderProfile(parsedId.data);
+  if (!profile) return null;
+
+  let schoolEmail: string | null = null;
+  let idDocumentUrl: string | null = null;
+  let idDocumentBackUrl: string | null = null;
+
+  if (hasServiceRoleEnv()) {
+    const admin = createAdminClient();
+
+    const { data: prof } = await admin
+      .from("provider_profiles")
+      .select("user_id")
+      .eq("id", parsedId.data)
+      .maybeSingle();
+    if (prof) {
+      const { data: school } = await admin
+        .from("provider_school_emails")
+        .select("email")
+        .eq("user_id", prof.user_id)
+        .maybeSingle();
+      schoolEmail = school?.email ?? null;
+    }
+
+    const signIdDoc = async (path: string | null) => {
+      if (!path) return null;
+      const { data } = await admin.storage
+        .from("id-documents")
+        .createSignedUrl(path, 60 * 60);
+      return data?.signedUrl ?? null;
+    };
+    [idDocumentUrl, idDocumentBackUrl] = await Promise.all([
+      signIdDoc(profile.id_document_url),
+      signIdDoc(profile.id_document_back_url),
+    ]);
+  }
+
+  return { profile, schoolEmail, idDocumentUrl, idDocumentBackUrl };
 }

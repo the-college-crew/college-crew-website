@@ -3,6 +3,7 @@ import type {
   PriceUnit,
   ProviderType,
   Service,
+  VerificationStatus,
 } from "@/lib/db/types";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -161,6 +162,86 @@ export async function getPublicProviderProfile(
       ? { avg: Number(rating.avg_rating), count: rating.review_count }
       : null,
     availability,
+    reviews: (reviews ?? []).map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      text: r.text,
+      created_at: r.created_at,
+      service_name: serviceNameById.get(r.service_id) ?? null,
+    })),
+  };
+}
+
+export type AdminProviderProfile = PublicProviderProfile & {
+  verification_status: VerificationStatus;
+  id_document_url: string | null;
+  id_document_back_url: string | null;
+  created_at: string;
+  full_name: string | null;
+};
+
+/**
+ * Admin-only variant of getPublicProviderProfile. Unlike the public query it
+ * does NOT filter by verification_status or require live services — admins
+ * review providers in any state (pending, rejected, or with services the
+ * catalog has since retired). Reads run as the signed-in admin (RLS admin
+ * policies grant full visibility). Returns null only if the id doesn't exist.
+ */
+export async function getAdminProviderProfile(
+  providerId: string,
+): Promise<AdminProviderProfile | null> {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await createClient();
+
+  const [{ data: provider }, { data: rating }, { data: reviews }, { data: services }] =
+    await Promise.all([
+      supabase
+        .from("provider_profiles")
+        .select(
+          `availability, verification_status, id_document_url, id_document_back_url, created_at,
+           user:profiles ( full_name ), ${PROVIDER_CARD_SELECT}`,
+        )
+        .eq("id", providerId)
+        .maybeSingle(),
+      supabase
+        .from("provider_ratings")
+        .select("*")
+        .eq("provider_id", providerId)
+        .maybeSingle(),
+      supabase
+        .from("provider_reviews")
+        .select("*")
+        .eq("provider_id", providerId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase.from("services").select("id, name"),
+    ]);
+
+  if (!provider) return null;
+
+  const serviceNameById = new Map((services ?? []).map((s) => [s.id, s.name]));
+  const availability = (provider.availability ?? {}) as {
+    days?: string[];
+    note?: string;
+  };
+
+  return {
+    id: provider.id,
+    display_name: provider.display_name,
+    bio: provider.bio,
+    provider_type: provider.provider_type,
+    neighborhood: provider.neighborhood,
+    // Show every service the provider offers, even ones no longer live.
+    services: provider.provider_services,
+    rating: rating
+      ? { avg: Number(rating.avg_rating), count: rating.review_count }
+      : null,
+    availability,
+    verification_status: provider.verification_status,
+    id_document_url: provider.id_document_url,
+    id_document_back_url: provider.id_document_back_url,
+    created_at: provider.created_at,
+    full_name: provider.user?.full_name ?? null,
     reviews: (reviews ?? []).map((r) => ({
       id: r.id,
       rating: r.rating,
