@@ -7,6 +7,10 @@ import { z } from "zod";
 import { homePathFor } from "@/lib/auth/session";
 import type { UserRole } from "@/lib/db/types";
 import { hasSupabaseEnv } from "@/lib/env";
+import {
+  hasAcceptedCurrentMasterAgreement,
+  masterAgreementPath,
+} from "@/lib/legal/acceptance";
 import { createClient } from "@/lib/supabase/server";
 import {
   customerSignUpSchema,
@@ -86,11 +90,21 @@ export async function logIn(
     .eq("id", data.user.id)
     .single();
 
+  const role = (profile?.role ?? "customer") as UserRole;
   const next = formData.get("next");
-  redirect(
+  const destination =
     typeof next === "string" && next.startsWith("/")
       ? next
-      : homePathFor((profile?.role ?? "customer") as UserRole),
+      : homePathFor(role);
+  const accepted = await hasAcceptedCurrentMasterAgreement(supabase, {
+    userId: data.user.id,
+    role,
+  });
+
+  redirect(
+    accepted || destination.startsWith("/legal/master")
+      ? destination
+      : masterAgreementPath(destination),
   );
 }
 

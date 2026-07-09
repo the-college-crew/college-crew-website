@@ -1,6 +1,11 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+import type { UserRole } from "@/lib/db/types";
+import {
+  hasAcceptedCurrentMasterAgreement,
+  masterAgreementPath,
+} from "@/lib/legal/acceptance";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -21,16 +26,37 @@ export async function GET(request: Request) {
   const next = nextParam?.startsWith("/") ? nextParam : "/";
 
   const supabase = await createClient();
+  const redirectAfterAuth = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.redirect(`${origin}${next}`);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    const role = (profile?.role ?? "customer") as UserRole;
+    const accepted = await hasAcceptedCurrentMasterAgreement(supabase, {
+      userId: user.id,
+      role,
+    });
+
+    return NextResponse.redirect(
+      `${origin}${accepted ? next : masterAgreementPath(next)}`,
+    );
+  };
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (!error) return redirectAfterAuth();
   } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({
       type,
       token_hash: tokenHash,
     });
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (!error) return redirectAfterAuth();
   }
 
   // Failed / expired link. Route to a recovery surface, not a dead end.

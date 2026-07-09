@@ -40,6 +40,7 @@ export type SupportTicketCategory =
   | "other";
 export type SupportTicketSentiment = "positive" | "neutral" | "frustrated";
 export type SupportTicketStatus = "new" | "reviewing" | "resolved";
+export type LegalAcceptanceKind = "master_agreement" | "booking_addendum";
 
 export type Database = {
   public: {
@@ -551,6 +552,72 @@ export type Database = {
           },
         ];
       };
+      legal_acceptances: {
+        Row: {
+          id: string;
+          user_id: string;
+          booking_id: string | null;
+          kind: LegalAcceptanceKind;
+          role: UserRole;
+          version: string;
+          content_hash: string;
+          signer_name: string;
+          service_slug: string | null;
+          service_name: string | null;
+          snapshot: Json;
+          ip_address: string | null;
+          user_agent: string | null;
+          accepted_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          booking_id?: string | null;
+          kind: LegalAcceptanceKind;
+          role: UserRole;
+          version: string;
+          content_hash: string;
+          signer_name: string;
+          service_slug?: string | null;
+          service_name?: string | null;
+          snapshot?: Json;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          accepted_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          booking_id?: string | null;
+          kind?: LegalAcceptanceKind;
+          role?: UserRole;
+          version?: string;
+          content_hash?: string;
+          signer_name?: string;
+          service_slug?: string | null;
+          service_name?: string | null;
+          snapshot?: Json;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          accepted_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "legal_acceptances_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "legal_acceptances_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       moderation_events: {
         Row: {
           id: string;
@@ -626,6 +693,7 @@ export type Database = {
       price_unit: PriceUnit;
       booking_status: BookingStatus;
       moderation_status: ModerationStatus;
+      legal_acceptance_kind: LegalAcceptanceKind;
     };
     CompositeTypes: Record<string, never>;
   };
@@ -651,6 +719,8 @@ export type ProviderSchoolEmail =
 export type SiteContent = Database["public"]["Tables"]["site_content"]["Row"];
 export type SupportTicket =
   Database["public"]["Tables"]["support_tickets"]["Row"];
+export type LegalAcceptance =
+  Database["public"]["Tables"]["legal_acceptances"]["Row"];
 export type ProviderRating =
   Database["public"]["Views"]["provider_ratings"]["Row"];
 export type ProviderReview =
