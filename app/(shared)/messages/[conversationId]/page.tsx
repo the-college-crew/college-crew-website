@@ -66,6 +66,8 @@ export default async function ConversationPage({
   }
 
   if (conversationId === "demo") notFound();
+  // Garbage ids would fail the uuid cast below and read as a server error.
+  if (!/^[0-9a-f-]{36}$/i.test(conversationId)) notFound();
 
   const supabase = await createClient();
   // conversation_reads also links conversations↔profiles, so the customer
