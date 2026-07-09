@@ -1,10 +1,17 @@
 import Link from "next/link";
 
 import { MobileNav } from "@/components/mobile-nav";
+import { ProviderVerifyBanner } from "@/components/provider-verify-banner";
 import { Wordmark } from "@/components/site-header";
 import { buttonClasses } from "@/components/ui/button";
 import { UserMenu } from "@/components/user-menu";
-import { getEffectiveRole, getSession, homePathFor } from "@/lib/auth/session";
+import {
+  getEffectiveRole,
+  getOwnProviderProfile,
+  getSession,
+  homePathFor,
+} from "@/lib/auth/session";
+import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 
 const PROVIDER_NAV = [
   { href: "/provider/dashboard", label: "Dashboard" },
@@ -12,6 +19,39 @@ const PROVIDER_NAV = [
   { href: "/messages", label: "Messages" },
   { href: "/provider/settings", label: "Profile & settings" },
 ];
+
+/**
+ * Compute the "finish verifying" nudge for a real provider whose onboarding
+ * is incomplete. Returns null when there's nothing to prompt (no profile-less
+ * account, already approved/rejected, or both proofs are in). The banner
+ * itself self-hides inside the onboarding wizard.
+ */
+async function providerVerifyNudge(
+  userId: string,
+): Promise<{ href: string; message: string } | null> {
+  const profile = await getOwnProviderProfile();
+  if (!profile) {
+    return {
+      href: "/provider/onboarding/account",
+      message: "Finish creating your provider account to get verified.",
+    };
+  }
+  // Approved providers are done; rejected ones get their own dashboard banner.
+  if (profile.verification_status !== "pending") return null;
+
+  const schoolEmail = await getVerifiedSchoolEmail(userId);
+  const missing: string[] = [];
+  if (!schoolEmail) missing.push("verify your school (.edu) email");
+  if (!profile.id_document_url || !profile.id_document_back_url) {
+    missing.push("upload your driver's license");
+  }
+  if (missing.length === 0) return null;
+
+  return {
+    href: "/provider/onboarding/verify",
+    message: `Almost there — ${missing.join(" and ")} to finish setting up and go live.`,
+  };
+}
 
 /**
  * Provider shell. Deliberately lighter than the customer chrome — this is a
@@ -28,6 +68,12 @@ export default async function ProviderLayout({
   // provider nav too (their pages show the no-profile/onboarding states).
   const effectiveRole = session ? await getEffectiveRole() : null;
   const isProvider = effectiveRole === "provider";
+
+  // Only nudge a *real* provider (not an admin previewing via view-as).
+  const verifyNudge =
+    session && session.profile.role === "provider"
+      ? await providerVerifyNudge(session.user.id)
+      : null;
 
   return (
     <>
@@ -85,6 +131,7 @@ export default async function ProviderLayout({
           </nav>
         ) : null}
       </header>
+      {verifyNudge ? <ProviderVerifyBanner {...verifyNudge} /> : null}
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         {children}
       </main>

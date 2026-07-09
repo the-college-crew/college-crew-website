@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import {
   demoBookings,
   demoProviderProfile,
@@ -45,7 +46,7 @@ export default async function ProviderDashboardPage({
 }: {
   searchParams: Promise<{ submitted?: string; stripe?: string }>;
 }) {
-  const [{ submitted, stripe }] = await Promise.all([
+  const [{ submitted, stripe }, session] = await Promise.all([
     searchParams,
     requireRole("provider", "/provider/dashboard"),
   ]);
@@ -57,6 +58,7 @@ export default async function ProviderDashboardPage({
         bookings={demoBookings as ProviderBookingRow[]}
         submitted={submitted}
         stripe={stripe}
+        onboardingComplete
         demo
       />
     );
@@ -64,6 +66,15 @@ export default async function ProviderDashboardPage({
 
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
+
+  // Onboarding is complete only once the .edu is verified and both license
+  // images are on record — otherwise the "under review" banner is misleading
+  // and the layout's verify banner points them back to finish.
+  const schoolEmail = await getVerifiedSchoolEmail(session.user.id);
+  const onboardingComplete =
+    Boolean(schoolEmail) &&
+    Boolean(profile.id_document_url) &&
+    Boolean(profile.id_document_back_url);
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -82,6 +93,7 @@ export default async function ProviderDashboardPage({
       bookings={bookings}
       submitted={submitted}
       stripe={stripe}
+      onboardingComplete={onboardingComplete}
     />
   );
 }
@@ -91,12 +103,14 @@ function ProviderDashboardView({
   bookings,
   submitted,
   stripe,
+  onboardingComplete,
   demo = false,
 }: {
   profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
   bookings: ProviderBookingRow[];
   submitted?: string;
   stripe?: string;
+  onboardingComplete: boolean;
   demo?: boolean;
 }) {
   const requests = bookings.filter((b) => b.status === "requested");
@@ -140,7 +154,10 @@ function ProviderDashboardView({
           go live in Browse once approved.
         </div>
       ) : null}
-      {profile.verification_status === "pending" && !submitted && !demo ? (
+      {profile.verification_status === "pending" &&
+      onboardingComplete &&
+      !submitted &&
+      !demo ? (
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
           Verification under review. You can fine-tune your profile and
           pricing while you wait.
@@ -148,8 +165,8 @@ function ProviderDashboardView({
       ) : null}
       {profile.verification_status === "rejected" && !demo ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          Your verification was rejected. Re-upload a clearer student ID from
-          the onboarding wizard, or contact the founders.
+          Your verification was rejected. Re-upload a clearer driver&apos;s
+          license from the onboarding wizard, or contact the founders.
         </div>
       ) : null}
       {profile.verification_status === "approved" &&

@@ -31,10 +31,10 @@ export default async function OnboardingReviewPage() {
 
   const schoolEmail = await getVerifiedSchoolEmail(session.user.id);
 
+  const licenseComplete =
+    Boolean(profile.id_document_url) && Boolean(profile.id_document_back_url);
   const ready =
-    Boolean(schoolEmail) &&
-    Boolean(profile.id_document_url) &&
-    liveOfferings.length > 0;
+    Boolean(schoolEmail) && licenseComplete && liveOfferings.length > 0;
 
   return (
     <div>
@@ -70,16 +70,18 @@ export default async function OnboardingReviewPage() {
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-mist">Student ID</dt>
+            <dt className="text-mist">Driver&apos;s license</dt>
             <dd className="font-medium">
-              {profile.id_document_url ? (
-                "Uploaded ✓"
+              {licenseComplete ? (
+                "Front & back uploaded ✓"
               ) : (
                 <Link
                   href="/provider/onboarding/verify"
                   className="text-crew-700 underline"
                 >
-                  Missing — upload it
+                  {profile.id_document_url || profile.id_document_back_url
+                    ? "One side missing — finish it"
+                    : "Missing — upload it"}
                 </Link>
               )}
             </dd>
@@ -120,7 +122,7 @@ export default async function OnboardingReviewPage() {
         </dl>
 
         <div className="mt-5 rounded-lg border border-line bg-court p-3 text-xs text-ink-soft">
-          What happens next: a founder reviews your ID. Once approved,
+          What happens next: a founder reviews your license. Once approved,
           you&apos;ll connect a bank account through Stripe from your
           dashboard and appear in Browse.
         </div>

@@ -16,7 +16,7 @@ import { SchoolEmailForm } from "./school-email-form";
 
 export const metadata: Metadata = { title: "Provider onboarding — verify" };
 
-/** Wizard step 2: verify school email (.edu OTP) + upload student ID. */
+/** Wizard step 2: verify school email (.edu OTP) + upload driver's license. */
 export default async function OnboardingVerifyPage() {
   const session = await requireRole("provider", "/provider/onboarding/verify");
   const profile = await getOwnProviderProfile();
@@ -35,7 +35,9 @@ export default async function OnboardingVerifyPage() {
       : null;
 
   const schoolVerified = Boolean(schoolEmail);
-  const idUploaded = Boolean(profile.id_document_url);
+  const hasFront = Boolean(profile.id_document_url);
+  const hasBack = Boolean(profile.id_document_back_url);
+  const idUploaded = hasFront && hasBack;
   const readyForNext = schoolVerified && idUploaded;
 
   return (
@@ -62,21 +64,23 @@ export default async function OnboardingVerifyPage() {
 
       <Card pennant className="mt-4 p-6">
         <h2 className="font-display text-xl font-semibold">
-          Upload your student ID
+          Upload your driver&apos;s license
         </h2>
         <p className="mt-1 text-sm text-ink-soft">
-          A founder reviews it by hand — usually within a day — and you&apos;ll
-          go live once approved.
+          Take a photo of the front and the back (barcode side). A founder
+          reviews them by hand — usually within a day — and you&apos;ll go live
+          once approved.
         </p>
 
         {idUploaded ? (
           <div className="mt-4 rounded-lg border border-quad-200 bg-quad-50 p-3 text-sm text-quad-800">
-            ID uploaded ✓ — you can replace it below if it wasn&apos;t clear.
+            License uploaded ✓ — you can replace either side below if it
+            wasn&apos;t clear.
           </div>
         ) : null}
 
         <div className="mt-5">
-          <IdUploadForm hasDocument={idUploaded} />
+          <IdUploadForm hasFront={hasFront} hasBack={hasBack} />
         </div>
       </Card>
 

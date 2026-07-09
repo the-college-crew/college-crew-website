@@ -64,7 +64,10 @@ export default async function SignupPage({
             </p>
             <ul className="list-inside list-disc space-y-1">
               <li>Your school (.edu) email — providers are students, 18+</li>
-              <li>A photo of your student ID for manual review</li>
+              <li>
+                Photos of your driver&apos;s license — front and back — for
+                manual review
+              </li>
               <li>The services you want to offer, with your prices</li>
             </ul>
             <p>

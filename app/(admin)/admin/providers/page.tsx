@@ -60,11 +60,13 @@ export default async function AdminProvidersPage({
   );
 
   const providers = (data ?? []) as Row[];
-  // Ready for review only once BOTH student proofs are in: verified .edu + ID.
+  // Ready for review only once BOTH student proofs are in: verified .edu +
+  // driver's license (front and back).
   const queue = providers.filter(
     (p) =>
       p.verification_status === "pending" &&
       p.id_document_url &&
+      p.id_document_back_url &&
       schoolByUser.has(p.user_id),
   );
   const rest = providers.filter((p) => !queue.includes(p));
@@ -72,7 +74,8 @@ export default async function AdminProvidersPage({
   const queueWithDocs = await Promise.all(
     queue.map(async (provider) => ({
       provider,
-      docUrl: await idDocumentUrl(provider.id_document_url),
+      frontUrl: await idDocumentUrl(provider.id_document_url),
+      backUrl: await idDocumentUrl(provider.id_document_back_url),
     })),
   );
 
@@ -87,7 +90,7 @@ export default async function AdminProvidersPage({
       />
       <PageHeader
         title="Provider approvals"
-        description="Review student IDs by hand. Approving flips the provider live in Browse and unlocks their Stripe connection."
+        description="Review driver's licenses by hand. Approving flips the provider live in Browse and unlocks their Stripe connection."
       />
 
       {err === "env" ? (
@@ -114,10 +117,11 @@ export default async function AdminProvidersPage({
         <div className="mt-3 space-y-3">
           {queueWithDocs.length === 0 ? (
             <EmptyState title="Queue is clear">
-              New providers appear here once they upload a student ID.
+              New providers appear here once they upload their driver&apos;s
+              license.
             </EmptyState>
           ) : (
-            queueWithDocs.map(({ provider, docUrl }) => (
+            queueWithDocs.map(({ provider, frontUrl, backUrl }) => (
               <Card key={provider.id} pennant className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -137,19 +141,33 @@ export default async function AdminProvidersPage({
                   <Badge tone="gold">Pending review</Badge>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {docUrl ? (
-                    <a
-                      href={docUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm font-semibold text-crew-700 underline"
-                    >
-                      View student ID ↗
-                    </a>
+                <div className="mt-3 flex flex-wrap items-center gap-4">
+                  {frontUrl || backUrl ? (
+                    <>
+                      {frontUrl ? (
+                        <a
+                          href={frontUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-semibold text-crew-700 underline"
+                        >
+                          View license front ↗
+                        </a>
+                      ) : null}
+                      {backUrl ? (
+                        <a
+                          href={backUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-semibold text-crew-700 underline"
+                        >
+                          View license back ↗
+                        </a>
+                      ) : null}
+                    </>
                   ) : (
                     <span className="text-sm text-mist">
-                      ID uploaded (add the service-role key to view it)
+                      License uploaded (add the service-role key to view it)
                     </span>
                   )}
                 </div>
@@ -192,9 +210,11 @@ export default async function AdminProvidersPage({
               >
                 <span className="font-medium">
                   {provider.display_name || provider.user?.full_name || "—"}
-                  {!provider.id_document_url ? (
+                  {!provider.id_document_url || !provider.id_document_back_url ? (
                     <span className="ml-2 text-xs text-mist">
-                      (no ID uploaded yet)
+                      {!provider.id_document_url && !provider.id_document_back_url
+                        ? "(no license uploaded yet)"
+                        : "(license incomplete — one side missing)"}
                     </span>
                   ) : null}
                   {provider.verification_status === "pending" &&
