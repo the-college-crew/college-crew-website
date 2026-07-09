@@ -6,6 +6,8 @@ import {
   getSession,
   homePathFor,
 } from "@/lib/auth/session";
+import { getUnreadSummary } from "@/lib/messaging/unread";
+import { createClient } from "@/lib/supabase/server";
 
 /** Minimal chrome for shared surfaces (account, messaging) used by every role. */
 export default async function SharedLayout({
@@ -17,6 +19,9 @@ export default async function SharedLayout({
   const role = session
     ? ((await getEffectiveRole()) ?? session.profile.role)
     : null;
+  const unreadCount = session
+    ? (await getUnreadSummary(await createClient())).total
+    : 0;
 
   return (
     <>
@@ -31,6 +36,7 @@ export default async function SharedLayout({
               realRole={session.profile.role}
               currentRole={role}
               dashboardLabel={dashboardLabelFor(role)}
+              unreadCount={unreadCount}
             />
           ) : null}
         </div>
