@@ -14,6 +14,7 @@ import {
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
 import { getLiveServices } from "@/lib/db/queries";
+import { getProviderPayoutStatus } from "@/lib/stripe/connect";
 import { createClient } from "@/lib/supabase/server";
 import { formatOfferedPrice } from "@/lib/utils";
 
@@ -72,6 +73,14 @@ export default async function ProviderSettingsPage({
       .eq("provider_id", profile.id),
   ]);
 
+  // Stripe's return_url carries no completion state, so confirm payout
+  // readiness from the account's live capability status rather than assuming
+  // a non-null stripe_account_id means onboarding finished.
+  const payout = profile.stripe_account_id
+    ? await getProviderPayoutStatus(profile.stripe_account_id)
+    : null;
+  const payoutsActive = payout?.configured === true && payout.transfersActive;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -127,11 +136,23 @@ export default async function ProviderSettingsPage({
           <p className="text-sm text-ink-soft">
             Stripe unlocks after your ID is approved — hang tight.
           </p>
-        ) : profile.stripe_account_id ? (
+        ) : profile.stripe_account_id && payoutsActive ? (
           <div className="flex items-center gap-3">
-            <Badge tone="green">✓ Stripe connected</Badge>
+            <Badge tone="green">✓ Payouts active</Badge>
             <span className="text-xs text-mist">
               Account {profile.stripe_account_id.slice(0, 8)}…
+            </span>
+          </div>
+        ) : profile.stripe_account_id ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge tone="gold">Finish Stripe setup</Badge>
+            <form action={connectStripe}>
+              <Button type="submit" size="sm" variant="secondary">
+                Resume onboarding
+              </Button>
+            </form>
+            <span className="text-xs text-mist">
+              A few details are still needed before payouts turn on.
             </span>
           </div>
         ) : (

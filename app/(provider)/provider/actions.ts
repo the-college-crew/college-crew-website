@@ -146,10 +146,15 @@ export async function completeBooking(formData: FormData) {
  * dashboard with a pending notice.
  */
 export async function connectStripe() {
-  await requireRole("provider");
+  const session = await requireRole("provider");
   const profile = await getOwnProviderProfile();
   if (!profile || profile.verification_status !== "approved") {
     redirect("/provider/dashboard");
+  }
+  // v2 requires a contact email to create the recipient account.
+  const contactEmail = session.user.email;
+  if (!contactEmail) {
+    redirect("/provider/dashboard?stripe=pending");
   }
 
   const headerList = await headers();
@@ -159,6 +164,7 @@ export async function connectStripe() {
 
   const result = await createConnectOnboardingLink({
     stripeAccountId: profile.stripe_account_id,
+    contactEmail,
     refreshUrl: `${origin}/provider/dashboard?stripe=refresh`,
     returnUrl: `${origin}/provider/settings?stripe=connected`,
   });

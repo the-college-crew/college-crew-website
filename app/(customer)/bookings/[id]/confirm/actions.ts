@@ -10,17 +10,18 @@ import { createClient } from "@/lib/supabase/server";
 
 export type ConfirmPayState = {
   error?: string;
-  /** Stripe isn't provisioned yet — show the pending-payments notice. */
+  /** Stripe isn't configured in this environment — show the pending notice. */
   unconfigured?: boolean;
+  /** Set on success: mounts the Payment Element for this intent. */
+  clientSecret?: string;
 };
 
 /**
  * Confirm & pay (SPEC §3/§6): runs when the customer confirms an accepted
- * booking. With Stripe unprovisioned this surfaces the stub notice; once
- * keys exist it creates the destination-charge PaymentIntent.
- *
- * TODO(stripe): render Stripe Elements with the returned client secret and
- * flip the booking to `paid` from the webhook, not from the client.
+ * booking. Creates the destination-charge PaymentIntent (platform fee comes
+ * out of the provider's payout) and returns its client secret; the panel
+ * mounts Stripe Elements with it. The booking flips to `paid` from the
+ * webhook (app/api/webhooks/stripe/route.ts), never from the client.
  */
 export async function confirmAndPay(
   _prev: ConfirmPayState,
@@ -56,10 +57,7 @@ export async function confirmAndPay(
     return { unconfigured: true };
   }
 
-  return {
-    error:
-      "Stripe is configured, but the payment form isn't wired yet — finish the Elements integration in this route before demoing payments.",
-  };
+  return { clientSecret: result.clientSecret };
 }
 
 /**
