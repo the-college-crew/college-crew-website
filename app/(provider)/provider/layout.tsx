@@ -12,6 +12,8 @@ import {
   homePathFor,
 } from "@/lib/auth/session";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
+import { getUnreadSummary } from "@/lib/messaging/unread";
+import { createClient } from "@/lib/supabase/server";
 
 const PROVIDER_NAV = [
   { href: "/provider/dashboard", label: "Dashboard" },
@@ -75,6 +77,10 @@ export default async function ProviderLayout({
       ? await providerVerifyNudge(session.user.id)
       : null;
 
+  const unreadCount = session
+    ? (await getUnreadSummary(await createClient())).total
+    : 0;
+
   return (
     <>
       <header className="relative border-b border-viridian/10 bg-viridian text-shell">
@@ -96,6 +102,7 @@ export default async function ProviderLayout({
                 homePath={homePathFor(effectiveRole ?? session.profile.role)}
                 realRole={session.profile.role}
                 currentRole={effectiveRole ?? session.profile.role}
+                unreadCount={unreadCount}
               />
             </div>
           ) : (

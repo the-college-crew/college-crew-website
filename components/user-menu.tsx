@@ -54,6 +54,7 @@ export function UserMenu({
   messagesHref = "/messages",
   supportHref = "/support",
   dashboardLabel = "Dashboard",
+  unreadCount = 0,
 }: {
   name: string;
   email: string;
@@ -64,6 +65,7 @@ export function UserMenu({
   messagesHref?: string;
   supportHref?: string;
   dashboardLabel?: string;
+  unreadCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -102,7 +104,7 @@ export function UserMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
-        className="flex items-center gap-1.5 rounded-full p-0.5 transition-opacity hover:opacity-90"
+        className="relative flex items-center gap-1.5 rounded-full p-0.5 transition-opacity hover:opacity-90"
       >
         <span
           className={cn(
@@ -112,7 +114,17 @@ export function UserMenu({
         >
           {initials}
         </span>
-        <span className="sr-only">Open account menu</span>
+        {unreadCount > 0 ? (
+          <span
+            aria-hidden
+            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-viridian"
+          >
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        ) : null}
+        <span className="sr-only">
+          Open account menu{unreadCount > 0 ? ` (${unreadCount} unread messages)` : ""}
+        </span>
         <svg
           aria-hidden="true"
           viewBox="0 0 20 20"
@@ -187,10 +199,15 @@ export function UserMenu({
             <Link
               href={messagesHref}
               role="menuitem"
-              className={itemClass}
+              className={cn(itemClass, "flex items-center justify-between")}
               onClick={() => setOpen(false)}
             >
-              Messages
+              <span>Messages</span>
+              {unreadCount > 0 ? (
+                <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold leading-none text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              ) : null}
             </Link>
             <Link
               href={supportHref}

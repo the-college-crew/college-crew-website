@@ -9,7 +9,9 @@ import {
   getSession,
   homePathFor,
 } from "@/lib/auth/session";
+import { getUnreadSummary } from "@/lib/messaging/unread";
 import { SITE } from "@/lib/site";
+import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 const serif = "font-[family-name:var(--font-newsreader)]";
@@ -69,6 +71,9 @@ export function Wordmark({ tone = "light" }: { tone?: "light" | "dark" }) {
 export async function SiteHeader() {
   const session = await getSession();
   const effectiveRole = session ? await getEffectiveRole() : null;
+  const unreadCount = session
+    ? (await getUnreadSummary(await createClient())).total
+    : 0;
 
   return (
     <header className="sticky top-0 z-40 border-b border-viridian/10 bg-viridian text-shell">
@@ -103,6 +108,7 @@ export async function SiteHeader() {
               dashboardLabel={dashboardLabelFor(
                 effectiveRole ?? session.profile.role,
               )}
+              unreadCount={unreadCount}
             />
           ) : (
             // On mobile these live inside the hamburger panel instead.
