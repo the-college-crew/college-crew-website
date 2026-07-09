@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { FormLoader } from "@/components/form-loader";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
 
@@ -96,6 +97,7 @@ function ConfirmPanel({
         ))}
       </dl>
       <form action={acceptBooking} className="mt-3 flex gap-2">
+        <FormLoader />
         <input type="hidden" name="bookingId" value={job.id} />
         <SubmitButton variant="success" pendingLabel="Accepting…">
           Yes, I&apos;m in
@@ -123,6 +125,7 @@ function DeclinePanel({
 
   return (
     <form action={declineBooking} className="mt-3 space-y-2">
+      <FormLoader />
       <input type="hidden" name="bookingId" value={job.id} />
       <label
         htmlFor={`decline-${job.id}`}

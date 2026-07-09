@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { FormLoader } from "@/components/form-loader";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -35,6 +36,7 @@ export default async function DemoBookingPage() {
 
       <Card pennant className="p-6">
         <form action={submitDemoBookingRequest} className="space-y-4">
+          <FormLoader />
           <div>
             <Label htmlFor="providerServiceId">Service</Label>
             <Select id="providerServiceId" name="providerServiceId" required>

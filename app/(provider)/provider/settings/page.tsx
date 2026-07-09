@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { FormLoader } from "@/components/form-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -135,6 +136,7 @@ export default async function ProviderSettingsPage({
           <div className="flex flex-wrap items-center gap-3">
             <Badge tone="gold">Finish Stripe setup</Badge>
             <form action={connectStripe}>
+              <FormLoader />
               <Button type="submit" size="sm" variant="secondary">
                 Resume onboarding
               </Button>
@@ -146,6 +148,7 @@ export default async function ProviderSettingsPage({
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <form action={connectStripe}>
+              <FormLoader />
               <Button type="submit" size="sm">
                 Connect Stripe
               </Button>

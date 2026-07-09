@@ -1,4 +1,5 @@
 import { setViewAs } from "@/app/actions/view-as";
+import { FormLoader } from "@/components/form-loader";
 import type { UserRole } from "@/lib/db/types";
 
 const VIEWS: { role: UserRole; label: string }[] = [
@@ -17,6 +18,7 @@ export function ViewAsSwitcher({ current }: { current: UserRole }) {
       action={setViewAs}
       className="flex items-center gap-1 rounded-full border border-line bg-court p-1 text-xs font-medium"
     >
+      <FormLoader />
       <span className="hidden pl-2 pr-1 text-mist md:inline">Viewing as</span>
       {VIEWS.map((view) => (
         <button

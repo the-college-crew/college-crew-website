@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { FormLoader } from "@/components/form-loader";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
@@ -135,6 +136,7 @@ export default async function OnboardingReviewPage() {
             ← Back
           </Link>
           <form action={submitForReview}>
+            <FormLoader />
             <Button type="submit" size="lg" disabled={!ready}>
               Submit for review
             </Button>

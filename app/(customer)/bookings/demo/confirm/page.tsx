@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { FormLoader } from "@/components/form-loader";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { StatusPill } from "@/components/status-pill";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -54,6 +55,7 @@ export default async function DemoConfirmPayPage() {
         </p>
 
         <form action={confirmDemoPayment} className="mt-6">
+          <FormLoader />
           <Button type="submit" size="lg" className="w-full">
             Confirm sample payment
           </Button>

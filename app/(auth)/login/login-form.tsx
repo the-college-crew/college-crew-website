@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useTopLoader } from "nextjs-toploader";
-import { useActionState, useEffect } from "react";
+import { useActionState } from "react";
 
 import { logIn, type AuthFormState } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
+import { FormLoader } from "@/components/form-loader";
 import { FieldError, Input, Label } from "@/components/ui/field";
 
 export function LoginForm({
@@ -20,19 +20,12 @@ export function LoginForm({
     initialError ? { error: initialError } : {},
   );
 
-  // logIn submits a form action that ends in a server-side redirect, which
-  // nextjs-toploader's automatic hooks don't cover (only <Link> and
-  // push/replace are). Drive the site-wide loader off `pending` by hand: it
-  // runs while the action is in flight and clears on a failed login, which
-  // returns an error instead of navigating.
-  const loader = useTopLoader();
-  useEffect(() => {
-    if (pending) loader.start();
-    else loader.done();
-  }, [pending, loader]);
-
   return (
     <form action={formAction} className="space-y-4">
+      {/* logIn ends in a server-side redirect, which nextjs-toploader's auto
+          hooks don't start; FormLoader drives the bar off the form's pending
+          state and clears it on a failed login that returns an error. */}
+      <FormLoader />
       {next ? <input type="hidden" name="next" value={next} /> : null}
 
       <div>

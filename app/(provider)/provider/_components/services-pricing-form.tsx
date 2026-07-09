@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Select } from "@/components/ui/field";
 import type { PriceType, PriceUnit, Service } from "@/lib/db/types";
@@ -63,11 +64,18 @@ export function ServicesPricingForm({
   offerings,
   action,
   submitLabel,
+  navigates = false,
 }: {
   services: Service[];
   offerings: Offering[];
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   submitLabel: string;
+  /**
+   * True when the action redirects on success (onboarding step 3 → review), so
+   * the site-wide top-loader should run. The settings usage returns a success
+   * message and stays put, so it leaves this off to avoid a stray flash.
+   */
+  navigates?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
@@ -85,6 +93,7 @@ export function ServicesPricingForm({
 
   return (
     <form action={formAction} className="space-y-4">
+      {navigates ? <FormLoader /> : null}
       <ul className="space-y-3">
         {services.map((service) => {
           const row = rows[service.id];

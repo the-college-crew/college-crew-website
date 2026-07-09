@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { FormLoader } from "@/components/form-loader";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getSession } from "@/lib/auth/session";
@@ -66,6 +67,7 @@ export default async function OnboardingAccountPage() {
             </div>
           </dl>
           <form action={startProviderProfile} className="mt-6">
+            <FormLoader />
             <Button type="submit" size="lg" className="w-full">
               Continue to verification →
             </Button>
