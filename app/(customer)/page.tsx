@@ -15,8 +15,8 @@ const MARK_SRC = "/college-crew-mark.png";
 
 const TRUST_ITEMS = [
   {
-    title: "ID & background-checked",
-    body: "Every student is screened before booking.",
+    title: "ID & school verified",
+    body: "Every student is 18+ and founder-reviewed before booking.",
     icon: CheckIcon,
   },
   {
@@ -80,7 +80,7 @@ const SERVICE_DISPLAY: Record<string, ServiceDisplay> = {
   },
   babysitting: {
     cadence: "Coming soon",
-    blurb: "Highest demand, highest trust bar: added once vetting is fully in place.",
+    blurb: "Highest demand, highest trust bar: added after the pilot once the right safeguards are in place.",
     icon: "BS",
   },
 };
@@ -106,8 +106,8 @@ function serviceDisplay(service: Service): ServiceDisplay {
 
 const FEATURES = [
   {
-    title: "Verified & background-checked",
-    body: "ID verification and background checks on every student before they're bookable.",
+    title: "ID & school verified",
+    body: "Every student completes an 18+ check, .edu verification, and student-ID review before they're bookable.",
     tone: "bg-honeydew",
     icon: CheckIcon,
   },
@@ -266,7 +266,7 @@ function Hero({
         </div>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
           {[
-            "Verified & background-checked",
+            "ID & school verified",
             "Matched by proximity & school",
             "Secure in-app payment",
           ].map((item, index) => (
@@ -339,7 +339,7 @@ function PhoneFloat({ services }: { services: Service[] }) {
               <CheckIcon className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-sm font-bold">Verified & background-checked</p>
+              <p className="text-sm font-bold">ID & school verified</p>
               <p className="text-xs text-viridian/60">
                 ID verified - 2 miles away
               </p>
@@ -413,7 +413,7 @@ function Comparison() {
             items={[
               "One profile, one reputation, home and campus",
               "Matched by proximity and school, not a random zip code",
-              "Every student is ID and background-checked",
+              "Every student is ID and school verified",
               "Reviews and ratings travel with you, always",
             ].map((item, index) => (
               <Editable key={index} k={`home.compare.us.items.${index}`}>
@@ -561,7 +561,7 @@ function FeaturesSection() {
         </div>
         <div className="mt-5 grid gap-4 rounded-3xl bg-shell/60 p-5 md:grid-cols-3">
           {[
-            ["ID & background checks", "Every student is verified before their first booking."],
+            ["ID & school checks", "Every student completes 18+, .edu, and student-ID review before their first booking."],
             ["Guarantee & support", "If a job isn't done right, we make it right."],
             ["What the fee funds", "A small Trust & Safety fee on each booking covers all of the above."],
           ].map(([title, body], index) => (

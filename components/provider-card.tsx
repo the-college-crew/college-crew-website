@@ -3,7 +3,7 @@ import {
   ProviderCardViewTransition,
 } from "@/components/provider-card-link";
 import { ServiceBanner } from "@/components/service-banner";
-import { Badge, BackgroundCheck, VerifiedCheck } from "@/components/ui/badge";
+import { Badge, VerifiedCheck } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { ProviderCard as ProviderCardData } from "@/lib/db/queries";
 import { formatOfferedPrice } from "@/lib/utils";
@@ -52,9 +52,6 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                 {provider.display_name || "Student provider"}
               </h3>
               <VerifiedCheck />
-              {provider.background_check_status === "passed" ? (
-                <BackgroundCheck />
-              ) : null}
             </div>
 
             <div className="flex items-center gap-3">

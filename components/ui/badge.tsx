@@ -32,10 +32,6 @@ export function VerifiedBadge() {
   return <Badge tone="gold">✓ Verified student</Badge>;
 }
 
-export function BackgroundCheckBadge() {
-  return <Badge tone="green">✓ Background checked</Badge>;
-}
-
 /**
  * Compact checkmark circle used on dense surfaces (Browse cards); the full
  * label lives in a hover tooltip + sr-only text. Profile and booking pages
@@ -78,8 +74,4 @@ export function CheckCircle({
 
 export function VerifiedCheck() {
   return <CheckCircle tone="gold" label="Verified student" />;
-}
-
-export function BackgroundCheck() {
-  return <CheckCircle tone="green" label="Background checked" />;
 }

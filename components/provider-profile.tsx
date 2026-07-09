@@ -2,11 +2,7 @@ import Link from "next/link";
 import { ViewTransition } from "react";
 
 import { Rating } from "@/components/provider-card";
-import {
-  Badge,
-  BackgroundCheckBadge,
-  VerifiedBadge,
-} from "@/components/ui/badge";
+import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import type { PublicProviderProfile } from "@/lib/db/queries";
 import { formatDate, formatOfferedPrice } from "@/lib/utils";
@@ -39,9 +35,6 @@ export function ProviderProfile({
               {provider.display_name || "Student provider"}
             </h1>
             <VerifiedBadge />
-            {provider.background_check_status === "passed" ? (
-              <BackgroundCheckBadge />
-            ) : null}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <Badge tone={provider.provider_type === "business" ? "blue" : "gray"}>

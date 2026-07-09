@@ -1,5 +1,4 @@
 import type {
-  BackgroundCheckStatus,
   PriceType,
   PriceUnit,
   ProviderType,
@@ -28,7 +27,6 @@ export type ProviderCard = {
   bio: string;
   provider_type: ProviderType;
   neighborhood: string;
-  background_check_status: BackgroundCheckStatus;
   services: OfferedService[];
   rating: { avg: number; count: number } | null;
 };
@@ -47,7 +45,7 @@ export async function getLiveServices(): Promise<Service[]> {
 }
 
 const PROVIDER_CARD_SELECT = `
-  id, display_name, bio, provider_type, neighborhood, background_check_status,
+  id, display_name, bio, provider_type, neighborhood,
   provider_services (
     id, price_cents, price_type, unit,
     service:services ( id, name, slug, category, is_live )
@@ -86,7 +84,6 @@ export async function getApprovedProviders(
     bio: p.bio,
     provider_type: p.provider_type,
     neighborhood: p.neighborhood,
-    background_check_status: p.background_check_status,
     services: p.provider_services.filter((ps) => ps.service.is_live),
     rating: ratingByProvider.get(p.id) ?? null,
   }));
@@ -159,7 +156,6 @@ export async function getPublicProviderProfile(
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
-    background_check_status: provider.background_check_status,
     services: liveServices,
     rating: rating
       ? { avg: Number(rating.avg_rating), count: rating.review_count }

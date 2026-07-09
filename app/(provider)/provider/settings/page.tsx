@@ -17,7 +17,7 @@ import { getLiveServices } from "@/lib/db/queries";
 import { createClient } from "@/lib/supabase/server";
 import { formatOfferedPrice } from "@/lib/utils";
 
-import { connectStripe, requestBackgroundCheck } from "../actions";
+import { connectStripe } from "../actions";
 import { ServicesPricingForm } from "../_components/services-pricing-form";
 import { saveSettingsPricing } from "./actions";
 import { AvailabilityForm, PasswordForm, ProfileForm } from "./settings-forms";
@@ -49,9 +49,9 @@ function Section({
 export default async function ProviderSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stripe?: string; bgc?: string }>;
+  searchParams: Promise<{ stripe?: string }>;
 }) {
-  const [{ stripe, bgc }, session] = await Promise.all([
+  const [{ stripe }, session] = await Promise.all([
     searchParams,
     requireRole("provider", "/provider/settings"),
   ]);
@@ -84,18 +84,6 @@ export default async function ProviderSettingsPage({
           Stripe onboarding finished — payouts will land in your bank account.
         </div>
       ) : null}
-      {bgc === "requested" ? (
-        <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-          Background check requested — a founder will follow up with next
-          steps.
-        </div>
-      ) : null}
-      {bgc === "unavailable" ? (
-        <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
-          Background checks aren&apos;t available yet in this environment.
-        </div>
-      ) : null}
-
       <Section
         title="Public profile"
         description="What neighbors see on Browse and your profile page."
@@ -145,23 +133,6 @@ export default async function ProviderSettingsPage({
               Hosted by Stripe — we never see your bank details.
             </span>
           </div>
-        )}
-      </Section>
-
-      <Section
-        title="Background check"
-        description="Optional — adds a trust badge customers see everywhere your name appears."
-      >
-        {profile.background_check_status === "passed" ? (
-          <Badge tone="green">✓ Background checked</Badge>
-        ) : profile.background_check_status === "pending" ? (
-          <Badge tone="gold">Background check pending</Badge>
-        ) : (
-          <form action={requestBackgroundCheck}>
-            <Button type="submit" variant="secondary" size="sm">
-              Request a background check
-            </Button>
-          </form>
         )}
       </Section>
 
@@ -269,13 +240,6 @@ function ProviderSettingsDemo() {
             Disabled in sample mode — real providers connect after approval.
           </span>
         </div>
-      </Section>
-
-      <Section
-        title="Background check"
-        description="Optional — adds a trust badge customers see everywhere your name appears."
-      >
-        <Badge tone="green">✓ Background checked</Badge>
       </Section>
 
       <Section title="Account">

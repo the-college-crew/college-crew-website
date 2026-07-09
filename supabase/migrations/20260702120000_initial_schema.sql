@@ -313,7 +313,7 @@ create trigger booking_status_transition
 revoke update on table public.profiles from anon, authenticated;
 grant update (full_name) on table public.profiles to authenticated;
 
--- Providers edit their own storefront fields; verification, background-check
+-- Providers edit their own storefront fields; verification
 -- and Stripe columns are written by server code only.
 revoke update on table public.provider_profiles from anon, authenticated;
 grant update (display_name, bio, provider_type, neighborhood, availability, id_document_url)

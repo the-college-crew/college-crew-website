@@ -7,7 +7,6 @@ import { z } from "zod";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import type { BookingStatus } from "@/lib/db/types";
-import { hasServiceRoleEnv } from "@/lib/env";
 import {
   getOrCreateConversationId,
   sendModeratedMessage,
@@ -178,29 +177,4 @@ export async function connectStripe() {
   }
 
   redirect(result.url);
-}
-
-/**
- * Optional paid background check (SPEC §3) — trust badge + small margin.
- * The actual check flow is out of pilot scope; this just marks it requested
- * for founder follow-up.
- */
-export async function requestBackgroundCheck() {
-  await requireRole("provider");
-  const profile = await getOwnProviderProfile();
-  if (!profile || profile.background_check_status !== "none") {
-    redirect("/provider/settings");
-  }
-  if (!hasServiceRoleEnv()) {
-    redirect("/provider/settings?bgc=unavailable");
-  }
-
-  const admin = createAdminClient();
-  await admin
-    .from("provider_profiles")
-    .update({ background_check_status: "pending" })
-    .eq("id", profile.id);
-
-  revalidatePath("/provider/settings");
-  redirect("/provider/settings?bgc=requested");
 }

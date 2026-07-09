@@ -31,7 +31,7 @@ export const STUDENT_STEPS = [
   {
     n: "1",
     title: "Get verified",
-    body: "Complete ID and background verification, and link your school to start taking jobs.",
+    body: "Complete ID verification, student-ID review, and link your school to start taking jobs.",
   },
   {
     n: "2",
@@ -56,7 +56,7 @@ export const FAQS = [
   },
   {
     q: "What does the Trust & Safety fee cover?",
-    a: "A small per-booking fee funds ID verification, background checks, and support if something goes wrong.",
+    a: "A small per-booking fee funds ID verification, student review, and support if something goes wrong.",
   },
   {
     q: "Can I book the same student again next season?",
