@@ -17,7 +17,7 @@ const PROVIDER_NAV = [
   { href: "/provider/dashboard", label: "Dashboard" },
   { href: "/provider/jobs", label: "Jobs & pricing" },
   { href: "/messages", label: "Messages" },
-  { href: "/provider/settings", label: "Profile & settings" },
+  { href: "/account", label: "Profile & settings" },
 ];
 
 /**
@@ -125,7 +125,7 @@ export default async function ProviderLayout({
             <Link href="/messages" className="hover:text-shell">
               Messages
             </Link>
-            <Link href="/provider/settings" className="hover:text-shell">
+            <Link href="/account" className="hover:text-shell">
               Profile & settings
             </Link>
           </nav>

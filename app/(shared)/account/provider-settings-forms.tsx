@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 
-import { PasswordField } from "@/components/auth/password-field";
 import { Button } from "@/components/ui/button";
 import {
   FieldError,
@@ -16,17 +15,16 @@ import type { ProviderProfile } from "@/lib/db/types";
 
 import {
   updateAvailability,
-  updatePassword,
   updateProviderProfile,
-  type SettingsFormState,
-} from "./actions";
+  type ProviderSettingsFormState,
+} from "./provider-actions";
 
 function SaveRow({
   state,
   pending,
   label = "Save",
 }: {
-  state: SettingsFormState;
+  state: ProviderSettingsFormState;
   pending: boolean;
   label?: string;
 }) {
@@ -45,9 +43,9 @@ function SaveRow({
   );
 }
 
-export function ProfileForm({ profile }: { profile: ProviderProfile }) {
+export function ProviderProfileForm({ profile }: { profile: ProviderProfile }) {
   const [state, formAction, pending] = useActionState<
-    SettingsFormState,
+    ProviderSettingsFormState,
     FormData
   >(updateProviderProfile, {});
 
@@ -112,7 +110,7 @@ const DAYS = [
 
 export function AvailabilityForm({ profile }: { profile: ProviderProfile }) {
   const [state, formAction, pending] = useActionState<
-    SettingsFormState,
+    ProviderSettingsFormState,
     FormData
   >(updateAvailability, {});
 
@@ -157,22 +155,6 @@ export function AvailabilityForm({ profile }: { profile: ProviderProfile }) {
         />
       </div>
       <SaveRow state={state} pending={pending} label="Save availability" />
-    </form>
-  );
-}
-
-export function PasswordForm() {
-  const [state, formAction, pending] = useActionState<
-    SettingsFormState,
-    FormData
-  >(updatePassword, {});
-
-  return (
-    <form action={formAction} className="space-y-4">
-      <div className="max-w-xs">
-        <PasswordField label="New password" confirm confirmLabel="Confirm new password" />
-      </div>
-      <SaveRow state={state} pending={pending} label="Update password" />
     </form>
   );
 }
