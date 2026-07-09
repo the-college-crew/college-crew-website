@@ -227,7 +227,7 @@ export function ProviderDetailModal({
                     </dd>
                   </div>
                   <div className="flex justify-between gap-3 sm:block">
-                    <dt className="text-mist">Student ID</dt>
+                    <dt className="text-mist">Driver&apos;s license</dt>
                     <dd className="font-medium">
                       {!profile.id_document_url &&
                       !profile.id_document_back_url ? (

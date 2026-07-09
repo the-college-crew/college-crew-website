@@ -58,7 +58,8 @@ export default async function AdminProvidersPage({
     fullName: p.user?.full_name ?? null,
     status: p.verification_status,
     createdAt: p.created_at,
-    hasId: Boolean(p.id_document_url),
+    // A complete license means both sides — that's what unlocks review.
+    hasLicense: Boolean(p.id_document_url && p.id_document_back_url),
     hasSchoolEmail: schoolByUser.has(p.user_id),
     serviceCount: p.provider_services.length,
     serviceSlugs: Array.from(
@@ -81,7 +82,7 @@ export default async function AdminProvidersPage({
       />
       <PageHeader
         title="Provider approvals"
-        description="Review student IDs by hand, filter by service, and clean up profiles. Approving flips the provider live in Browse and unlocks their Stripe connection."
+        description="Review driver's licenses by hand, filter by service, and clean up profiles. Approving flips the provider live in Browse and unlocks their Stripe connection."
       />
 
       {err === "env" ? (

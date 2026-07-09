@@ -20,7 +20,7 @@ export type ProviderRow = {
   fullName: string | null;
   status: VerificationStatus;
   createdAt: string;
-  hasId: boolean;
+  hasLicense: boolean;
   hasSchoolEmail: boolean;
   serviceCount: number;
   serviceSlugs: string[];
@@ -43,20 +43,32 @@ const statusTone = {
 type Stage = "ready" | "needs_id" | "needs_email" | "needs_both";
 
 const STAGE_ORDER: Array<{ key: Stage; label: string; hint: string }> = [
-  { key: "ready", label: "Ready for review", hint: "Verified .edu + ID uploaded" },
-  { key: "needs_id", label: "Needs student ID", hint: "Has .edu, no ID yet" },
+  {
+    key: "ready",
+    label: "Ready for review",
+    hint: "Verified .edu + license (front & back)",
+  },
+  {
+    key: "needs_id",
+    label: "Needs driver's license",
+    hint: "Has .edu, license not complete",
+  },
   {
     key: "needs_email",
     label: "Needs .edu email",
-    hint: "Has ID, no verified school email",
+    hint: "Has license, no verified school email",
   },
-  { key: "needs_both", label: "Needs .edu + ID", hint: "Just getting started" },
+  {
+    key: "needs_both",
+    label: "Needs .edu + license",
+    hint: "Just getting started",
+  },
 ];
 
 function stageOf(row: ProviderRow): Stage {
-  if (row.hasId && row.hasSchoolEmail) return "ready";
+  if (row.hasLicense && row.hasSchoolEmail) return "ready";
   if (row.hasSchoolEmail) return "needs_id";
-  if (row.hasId) return "needs_email";
+  if (row.hasLicense) return "needs_email";
   return "needs_both";
 }
 

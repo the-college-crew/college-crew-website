@@ -20,10 +20,15 @@ export const metadata: Metadata = { title: "Confirm & pay" };
  */
 export default async function ConfirmPayPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ redirect_status?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { redirect_status: redirectStatus }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const user = await requireUser(`/bookings/${id}/confirm`);
 
   const supabase = await createClient();
@@ -70,7 +75,13 @@ export default async function ConfirmPayPage({
         </p>
 
         <div className="mt-6">
-          {booking.status === "accepted" ? (
+          {booking.status === "accepted" && redirectStatus === "succeeded" ? (
+            // Stripe already took the payment; the webhook flips the status
+            // moments later. Don't re-show the pay button in the gap.
+            <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
+              Payment received — finalizing your booking. Refresh in a moment.
+            </div>
+          ) : booking.status === "accepted" ? (
             <ConfirmPayPanel
               bookingId={booking.id}
               simulateAllowed={process.env.NODE_ENV !== "production"}
