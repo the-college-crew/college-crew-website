@@ -131,27 +131,6 @@ const FEATURES = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    quote:
-      "I like that I know who's showing up. It's not a stranger off an app, it's a verified student from a few streets over.",
-    name: "Dana R.",
-    detail: "Parent, Northbrook",
-  },
-  {
-    quote:
-      "My reviews from helping families at home actually count for something near campus now. That never used to be true.",
-    name: "Ethan M.",
-    detail: "Student, Northwestern '27",
-  },
-  {
-    quote:
-      "Booking a recurring job instead of texting back and forth every week has been the easiest part.",
-    name: "The Alvarez family",
-    detail: "Parents, Glenview",
-  },
-];
-
 export default async function LandingPage() {
   const [session, services] = await Promise.all([
     getSession(),
@@ -215,7 +194,6 @@ export default async function LandingPage() {
       />
       <ServicesSection services={services} />
       <FeaturesSection />
-      <TestimonialsSection />
       <FAQList
         eyebrow={<Editable k="home.faq.eyebrow">FAQ</Editable>}
         heading={<Editable k="home.faq.heading">Good to know.</Editable>}
@@ -599,48 +577,6 @@ function FeaturesSection() {
                 </Editable>
               </p>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function TestimonialsSection() {
-  return (
-    <section className="brand-section">
-      <div className="mx-auto max-w-6xl px-4">
-        <span className="brand-eyebrow">
-          <Editable k="home.testimonials.eyebrow">Early feedback</Editable>
-        </span>
-        <h2 className="mt-4 font-display text-4xl font-semibold text-viridian">
-          <Editable k="home.testimonials.heading">
-            What families and students are saying.
-          </Editable>
-        </h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {TESTIMONIALS.map((item, index) => (
-            <figure key={item.name} className="rounded-3xl bg-stone p-7">
-              <blockquote className="text-sm leading-relaxed text-viridian/85">
-                &quot;
-                <Editable k={`home.testimonials.${index}.quote`}>
-                  {item.quote}
-                </Editable>
-                &quot;
-              </blockquote>
-              <figcaption className="mt-5">
-                <p className="text-sm font-bold text-viridian">
-                  <Editable k={`home.testimonials.${index}.name`}>
-                    {item.name}
-                  </Editable>
-                </p>
-                <p className="mt-1 text-xs text-viridian/55">
-                  <Editable k={`home.testimonials.${index}.detail`}>
-                    {item.detail}
-                  </Editable>
-                </p>
-              </figcaption>
-            </figure>
           ))}
         </div>
       </div>
