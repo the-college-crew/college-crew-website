@@ -45,7 +45,26 @@ export async function startProviderProfile() {
 
 const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
-/** Verify step: uploads the student ID to the private id-documents bucket. */
+/** Label a driver's-license side for error copy. */
+const SIDE_LABEL = { front: "front", back: "back (barcode side)" } as const;
+
+/** Validate one uploaded license image; null when it passes. */
+function validateLicenseFile(file: File, side: "front" | "back"): string | null {
+  if (file.size > MAX_DOCUMENT_BYTES) {
+    return `The ${SIDE_LABEL[side]} image is over 10 MB — use a smaller photo.`;
+  }
+  if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
+    return `Upload a photo or PDF for the ${SIDE_LABEL[side]} of your license.`;
+  }
+  return null;
+}
+
+/**
+ * Verify step: uploads the two driver's-license images (front + back barcode)
+ * to the private id-documents bucket. Each side is optional per submit so a
+ * provider can re-upload just one — but the step only counts as complete once
+ * BOTH columns are set (enforced by the page-level Next gate).
+ */
 export async function saveIdDocument(
   _prev: OnboardingFormState,
   formData: FormData,
@@ -54,38 +73,58 @@ export async function saveIdDocument(
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
-  const file = formData.get("document");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Choose a photo or scan of your student ID." };
-  }
-  if (file.size > MAX_DOCUMENT_BYTES) {
-    return { error: "That file is over 10 MB — use a smaller photo." };
-  }
-  if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
-    return { error: "Upload an image or a PDF." };
-  }
+  const front = formData.get("front");
+  const back = formData.get("back");
+  const hasFront = front instanceof File && front.size > 0;
+  const hasBack = back instanceof File && back.size > 0;
 
-  const extension = file.name.split(".").pop() ?? "jpg";
-  const path = `${session.user.id}/student-id-${Date.now()}.${extension}`;
+  // Require a file only for a side that isn't already on record.
+  if (!hasFront && !profile.id_document_url) {
+    return { error: "Upload a photo of the front of your driver's license." };
+  }
+  if (!hasBack && !profile.id_document_back_url) {
+    return {
+      error: "Upload a photo of the back (barcode side) of your license.",
+    };
+  }
+  if (!hasFront && !hasBack) {
+    return { error: "Choose a photo to upload." };
+  }
 
   const supabase = await createClient();
-  const { error: uploadError } = await supabase.storage
-    .from("id-documents")
-    .upload(path, file);
-  if (uploadError) {
-    return { error: `Upload failed: ${uploadError.message}` };
+  const update: { id_document_url?: string; id_document_back_url?: string } = {};
+
+  for (const [side, file, provided] of [
+    ["front", front, hasFront],
+    ["back", back, hasBack],
+  ] as const) {
+    if (!provided) continue;
+    const image = file as File;
+    const error = validateLicenseFile(image, side);
+    if (error) return { error };
+
+    const extension = image.name.split(".").pop() ?? "jpg";
+    const path = `${session.user.id}/license-${side}-${Date.now()}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from("id-documents")
+      .upload(path, image);
+    if (uploadError) {
+      return { error: `Upload failed: ${uploadError.message}` };
+    }
+    if (side === "front") update.id_document_url = path;
+    else update.id_document_back_url = path;
   }
 
   const { error: saveError } = await supabase
     .from("provider_profiles")
-    .update({ id_document_url: path })
+    .update(update)
     .eq("id", profile.id);
   if (saveError) {
-    return { error: "Could not save the document — try again." };
+    return { error: "Could not save the images — try again." };
   }
 
-  // Stay on the Verify step: progression to services is gated on BOTH the ID
-  // and a verified school email, controlled by the page-level Next button.
+  // Stay on the Verify step: progression to services is gated on BOTH license
+  // images and a verified school email, controlled by the page-level Next button.
   revalidatePath("/provider/onboarding/verify");
   redirect("/provider/onboarding/verify");
 }

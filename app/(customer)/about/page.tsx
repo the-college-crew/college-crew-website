@@ -27,7 +27,7 @@ export default function AboutPage() {
         </p>
         <p>
           <Editable k="about.intro.p2">
-            {`So we built the connection ourselves. Every provider on ${SITE.name} is a college student, 18 or older, verified by us personally — school email, student ID, the works. We curate which services are offered instead of running an open listing site, and every booking and payment happens on the platform, so both sides are covered.`}
+            {`So we built the connection ourselves. Every provider on ${SITE.name} is a college student, 18 or older, verified by us personally — school email, driver's license, the works. We curate which services are offered instead of running an open listing site, and every booking and payment happens on the platform, so both sides are covered.`}
           </Editable>
         </p>
         <p>
