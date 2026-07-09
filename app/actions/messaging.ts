@@ -37,3 +37,33 @@ export async function openConversationForBooking(formData: FormData) {
 
   redirect(`/messages/${conversationId}`);
 }
+
+/**
+ * Pre-booking chat: open (or return to) the thread with a provider straight
+ * from their public profile — no booking required. The schema already allows
+ * booking-less conversations, and every message still flows through the
+ * moderate-message function.
+ */
+export async function openConversationWithProvider(formData: FormData) {
+  const providerId = z.string().uuid().parse(formData.get("providerId"));
+  const user = await requireUser(`/providers/${providerId}`);
+  const supabase = await createClient();
+
+  // Only approved providers are messageable — same bar as booking them.
+  const { data: provider } = await supabase
+    .from("provider_profiles")
+    .select("id, verification_status")
+    .eq("id", providerId)
+    .eq("verification_status", "approved")
+    .maybeSingle();
+  if (!provider) {
+    throw new Error("Provider not found.");
+  }
+
+  const conversationId = await getOrCreateConversationId(supabase, {
+    customerId: user.id,
+    providerId: provider.id,
+  });
+
+  redirect(`/messages/${conversationId}`);
+}
