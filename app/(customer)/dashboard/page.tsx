@@ -12,6 +12,10 @@ import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
 import { demoBookings, getDemoPreview } from "@/lib/demo/sample-preview";
 import type { BookingStatus } from "@/lib/db/types";
+import {
+  getCustomerConversationIndex,
+  type ConversationEntry,
+} from "@/lib/messaging/summaries";
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDateTime, formatMoney } from "@/lib/utils";
 
@@ -28,10 +32,43 @@ type BookingRow = {
   scheduled_at: string;
   address: string;
   price_cents: number;
+  provider_id: string;
   service: { name: string };
   provider: { display_name: string };
   review: { id: string } | null;
 };
+
+type BookingGroups = {
+  attention: BookingRow[];
+  upcoming: BookingRow[];
+  past: BookingRow[];
+};
+
+/**
+ * Split bookings three ways. A provider-declined request whose date is still in
+ * the future is pulled into "Needs attention" so it stays visible on the
+ * default (Upcoming) view instead of silently dropping into Past — otherwise a
+ * decline just looks like the request vanished. Once its date passes it falls
+ * into Past like any other closed booking.
+ */
+function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
+  const attention: BookingRow[] = [];
+  const upcoming: BookingRow[] = [];
+  const past: BookingRow[] = [];
+  for (const booking of bookings) {
+    if (
+      booking.status === "declined" &&
+      new Date(booking.scheduled_at) >= now
+    ) {
+      attention.push(booking);
+    } else if (UPCOMING.includes(booking.status)) {
+      upcoming.push(booking);
+    } else {
+      past.push(booking);
+    }
+  }
+  return { attention, upcoming, past };
+}
 
 export default async function CustomerDashboardPage({
   searchParams,
@@ -43,21 +80,23 @@ export default async function CustomerDashboardPage({
     requireRole("customer", "/dashboard"),
   ]);
   const showPast = tab === "past";
+  const now = new Date();
   const demoPreview = await getDemoPreview("customer");
 
   if (demoPreview) {
-    const bookings = demoBookings.filter((booking) =>
-      showPast
-        ? !UPCOMING.includes(booking.status)
-        : UPCOMING.includes(booking.status),
-    ) as BookingRow[];
-
+    // Demo rows carry no provider_id; the demo path never resolves a real
+    // conversation from it, so the shape difference is safe here.
+    const groups = partitionBookings(
+      demoBookings as unknown as BookingRow[],
+      now,
+    );
     return (
       <CustomerDashboardView
-        bookings={bookings}
+        groups={groups}
         showPast={showPast}
         requested={requested}
         paid={paid}
+        convoIndex={new Map()}
         demo
       />
     );
@@ -67,43 +106,50 @@ export default async function CustomerDashboardPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, status, scheduled_at, address, price_cents, service:services(name), provider:provider_profiles(display_name), review:reviews(id)",
+      "id, status, scheduled_at, address, price_cents, provider_id, service:services(name), provider:provider_profiles(display_name), review:reviews(id)",
     )
     .eq("customer_id", session.user.id)
     .order("scheduled_at", { ascending: showPast ? false : true });
 
-  const bookings = ((data ?? []) as BookingRow[]).filter((booking) =>
-    showPast
-      ? !UPCOMING.includes(booking.status)
-      : UPCOMING.includes(booking.status),
+  const groups = partitionBookings((data ?? []) as BookingRow[], now);
+  const convoIndex = await getCustomerConversationIndex(
+    supabase,
+    session.user.id,
   );
 
   return (
     <CustomerDashboardView
-      bookings={bookings}
+      groups={groups}
       showPast={showPast}
       requested={requested}
       paid={paid}
+      convoIndex={convoIndex}
       customerId={session.user.id}
     />
   );
 }
 
 function CustomerDashboardView({
-  bookings,
+  groups,
   showPast,
   requested,
   paid,
+  convoIndex,
   customerId,
   demo = false,
 }: {
-  bookings: BookingRow[];
+  groups: BookingGroups;
   showPast: boolean;
   requested?: string;
   paid?: string;
+  convoIndex: Map<string, ConversationEntry>;
   customerId?: string;
   demo?: boolean;
 }) {
+  const { attention, upcoming, past } = groups;
+  const list = showPast ? past : upcoming;
+  const showAttention = !showPast && attention.length > 0;
+
   const tabClass = (active: boolean) =>
     cn(
       "rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
@@ -165,7 +211,39 @@ function CustomerDashboardView({
         </Link>
       </div>
 
-      {bookings.length === 0 ? (
+      {showAttention ? (
+        <section aria-label="Needs attention" className="space-y-3">
+          <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-red-800">
+            <span aria-hidden>⚠</span> Needs attention
+          </h2>
+          <ul className="space-y-4">
+            {attention.map((booking) => (
+              <li key={booking.id}>
+                <BookingCard
+                  booking={booking}
+                  demo={demo}
+                  convo={demo ? undefined : convoIndex.get(booking.provider_id)}
+                  attention
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {list.length > 0 ? (
+        <ul className="space-y-4">
+          {list.map((booking) => (
+            <li key={booking.id}>
+              <BookingCard
+                booking={booking}
+                demo={demo}
+                convo={demo ? undefined : convoIndex.get(booking.provider_id)}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : showPast || !showAttention ? (
         <EmptyState
           title={showPast ? "No past bookings" : "Nothing booked yet"}
           action={
@@ -181,109 +259,146 @@ function CustomerDashboardView({
             ? "Completed and closed bookings will show up here."
             : "Find a verified student and send your first request."}
         </EmptyState>
-      ) : (
-        <ul className="space-y-4">
-          {bookings.map((booking) => (
-            <li key={booking.id}>
-              <Card className="p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-display text-lg font-semibold">
-                      {booking.service.name}
-                    </p>
-                    <p className="mt-0.5 text-sm text-ink-soft">
-                      with {booking.provider.display_name} ·{" "}
-                      {formatDateTime(booking.scheduled_at)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-mist">
-                      {booking.address} · {formatMoney(booking.price_cents)}
-                    </p>
-                  </div>
-                  <StatusPill status={booking.status} />
-                </div>
-
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  {booking.status === "accepted" ? (
-                    <Link
-                      href={
-                        demo
-                          ? "/bookings/demo/confirm"
-                          : `/bookings/${booking.id}/confirm`
-                      }
-                      className={buttonClasses({ size: "sm" })}
-                    >
-                      Confirm & pay
-                    </Link>
-                  ) : null}
-
-                  {demo && (UPCOMING as string[]).includes(booking.status) ? (
-                    <Link
-                      href="/messages/demo"
-                      className={buttonClasses({
-                        variant: "secondary",
-                        size: "sm",
-                      })}
-                    >
-                      Message
-                    </Link>
-                  ) : (UPCOMING as string[]).includes(booking.status) ? (
-                    <form action={openConversationForBooking}>
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <button
-                        type="submit"
-                        className={buttonClasses({
-                          variant: "secondary",
-                          size: "sm",
-                        })}
-                      >
-                        Message
-                      </button>
-                    </form>
-                  ) : null}
-
-                  {demo &&
-                  (booking.status === "requested" ||
-                    booking.status === "accepted") ? (
-                    <Button type="button" variant="danger" size="sm" disabled>
-                      Cancel request
-                    </Button>
-                  ) : booking.status === "requested" ||
-                  booking.status === "accepted" ? (
-                    <form action={cancelBooking}>
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <button
-                        type="submit"
-                        className={buttonClasses({
-                          variant: "danger",
-                          size: "sm",
-                        })}
-                      >
-                        Cancel request
-                      </button>
-                    </form>
-                  ) : null}
-                </div>
-
-                {booking.status === "completed" ? (
-                  <div className="mt-4 border-t border-line pt-4">
-                    {demo ? (
-                      <Button type="button" variant="secondary" size="sm" disabled>
-                        Leave review
-                      </Button>
-                    ) : booking.review ? (
-                      <p className="text-sm font-medium text-quad-700">
-                        Reviewed ✓
-                      </p>
-                    ) : (
-                      <ReviewForm bookingId={booking.id} />
-                    )}
-                  </div>
-                ) : null}
-              </Card>
-            </li>
-          ))}
-        </ul>
-      )}
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * One booking card, shared by the attention, upcoming, and past lists. A
+ * declined booking gets a red alert with the provider's message preview, a
+ * "Read message" button into the chat, and a re-book CTA — so a decline reads
+ * as "here's what happened and what to do next," not a dead end. Any booking
+ * with an existing conversation keeps a "Message" button, past ones included.
+ */
+function BookingCard({
+  booking,
+  demo,
+  convo,
+  attention = false,
+}: {
+  booking: BookingRow;
+  demo: boolean;
+  convo?: ConversationEntry;
+  attention?: boolean;
+}) {
+  const providerName = booking.provider.display_name;
+  const isDeclined = booking.status === "declined";
+  const isUpcoming = (UPCOMING as string[]).includes(booking.status);
+  const note = convo?.latest?.fromOther ? convo.latest : null;
+  const chatHref = demo
+    ? "/messages/demo"
+    : convo?.conversationId
+      ? `/messages/${convo.conversationId}`
+      : null;
+
+  return (
+    <Card className={cn("p-5", attention && "border-red-200")}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-display text-lg font-semibold">
+            {booking.service.name}
+          </p>
+          <p className="mt-0.5 text-sm text-ink-soft">
+            with {providerName} · {formatDateTime(booking.scheduled_at)}
+          </p>
+          <p className="mt-0.5 text-xs text-mist">
+            {booking.address} · {formatMoney(booking.price_cents)}
+          </p>
+        </div>
+        <StatusPill status={booking.status} />
+      </div>
+
+      {isDeclined ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          <p className="font-semibold">{providerName} declined this request.</p>
+          {note ? (
+            <p className="mt-1 line-clamp-2 text-red-700">
+              “{note.body}” — {providerName}
+            </p>
+          ) : (
+            <p className="mt-1 text-red-700">
+              Message them for details, or find another provider below.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {booking.status === "accepted" ? (
+          <Link
+            href={demo ? "/bookings/demo/confirm" : `/bookings/${booking.id}/confirm`}
+            className={buttonClasses({ size: "sm" })}
+          >
+            Confirm & pay
+          </Link>
+        ) : null}
+
+        {chatHref ? (
+          <Link
+            href={chatHref}
+            className={buttonClasses({
+              variant: isDeclined ? "primary" : "secondary",
+              size: "sm",
+            })}
+          >
+            {isDeclined ? "Read message" : "Message"}
+          </Link>
+        ) : !demo && isUpcoming ? (
+          <form action={openConversationForBooking}>
+            <input type="hidden" name="bookingId" value={booking.id} />
+            <button
+              type="submit"
+              className={buttonClasses({ variant: "secondary", size: "sm" })}
+            >
+              Message
+            </button>
+          </form>
+        ) : null}
+
+        {isDeclined ? (
+          <Link
+            href={demo ? "/book/demo" : "/browse"}
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            Find another provider
+          </Link>
+        ) : null}
+
+        {demo &&
+        (booking.status === "requested" || booking.status === "accepted") ? (
+          <Button type="button" variant="danger" size="sm" disabled>
+            Cancel request
+          </Button>
+        ) : booking.status === "requested" || booking.status === "accepted" ? (
+          <form action={cancelBooking}>
+            <input type="hidden" name="bookingId" value={booking.id} />
+            <button
+              type="submit"
+              className={buttonClasses({ variant: "danger", size: "sm" })}
+            >
+              Cancel request
+            </button>
+          </form>
+        ) : null}
+      </div>
+
+      {booking.status === "completed" ? (
+        <div className="mt-4 border-t border-line pt-4">
+          {demo ? (
+            <Button type="button" variant="secondary" size="sm" disabled>
+              Leave review
+            </Button>
+          ) : booking.review ? (
+            <p className="text-sm font-medium text-quad-700">Reviewed ✓</p>
+          ) : (
+            <ReviewForm bookingId={booking.id} />
+          )}
+        </div>
+      ) : null}
+    </Card>
   );
 }

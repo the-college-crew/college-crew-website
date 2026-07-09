@@ -351,6 +351,39 @@ export type Database = {
           },
         ];
       };
+      conversation_reads: {
+        Row: {
+          conversation_id: string;
+          user_id: string;
+          last_read_at: string;
+        };
+        Insert: {
+          conversation_id: string;
+          user_id: string;
+          last_read_at?: string;
+        };
+        Update: {
+          conversation_id?: string;
+          user_id?: string;
+          last_read_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "conversation_reads_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "conversations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "conversation_reads_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       messages: {
         Row: {
           id: string;
@@ -683,6 +716,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      unread_message_summary: {
+        Args: Record<string, never>;
+        Returns: { conversation_id: string; unread_count: number }[];
+      };
     };
     Enums: {
       user_role: UserRole;
@@ -709,6 +746,8 @@ export type ProviderService =
 export type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 export type Review = Database["public"]["Tables"]["reviews"]["Row"];
 export type Conversation = Database["public"]["Tables"]["conversations"]["Row"];
+export type ConversationRead =
+  Database["public"]["Tables"]["conversation_reads"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type ModerationEvent =
   Database["public"]["Tables"]["moderation_events"]["Row"];

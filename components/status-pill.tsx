@@ -24,7 +24,7 @@ const config: Record<BookingStatus, { label: string; classes: string }> = {
   },
   declined: {
     label: "Declined",
-    classes: "border-stone bg-stone text-ink-soft",
+    classes: "border-red-200 bg-red-50 text-red-800",
   },
   cancelled: {
     label: "Cancelled",

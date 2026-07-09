@@ -13,6 +13,7 @@ import {
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
 import type { Message } from "@/lib/db/types";
+import { markConversationRead } from "@/lib/messaging/unread";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Messages" };
@@ -75,6 +76,9 @@ export default async function ConversationPage({
     .eq("id", conversationId)
     .maybeSingle();
   if (!conversation) notFound();
+
+  // Opening the thread clears its unread badge. Best-effort; never blocks render.
+  await markConversationRead(supabase, conversation.id);
 
   const { data: messages } = await supabase
     .from("messages")
