@@ -286,6 +286,7 @@ function BookingCard({
   const isDeclined = booking.status === "declined";
   const isUpcoming = (UPCOMING as string[]).includes(booking.status);
   const note = convo?.latest?.fromOther ? convo.latest : null;
+  const hasProviderMessage = Boolean(note);
 
   return (
     <Card className={cn("p-5", attention && "border-red-200")}>
@@ -336,11 +337,11 @@ function BookingCard({
           <Link
             href="/messages/demo"
             className={buttonClasses({
-              variant: isDeclined ? "primary" : "secondary",
+              variant: hasProviderMessage ? "primary" : "secondary",
               size: "sm",
             })}
           >
-            {isDeclined ? "Read message" : "Message"}
+            {hasProviderMessage ? "Read message" : "Message"}
           </Link>
         ) : !demo && (isDeclined || isUpcoming) ? (
           <form action={openConversationForBooking}>
@@ -348,11 +349,11 @@ function BookingCard({
             <button
               type="submit"
               className={buttonClasses({
-                variant: isDeclined ? "primary" : "secondary",
+                variant: hasProviderMessage ? "primary" : "secondary",
                 size: "sm",
               })}
             >
-              {isDeclined ? "Read message" : "Message"}
+              {hasProviderMessage ? "Read message" : "Message"}
             </button>
           </form>
         ) : null}
