@@ -5,8 +5,18 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
+import type { Json } from "@/lib/db/types";
+import {
+  requestAuditFields,
+  stableContentHash,
+} from "@/lib/legal/acceptance";
+import {
+  getBookingAddendumSnapshot,
+  LEGAL_CONTENT_VERSION,
+} from "@/lib/legal/waivers";
 import { createBookingPaymentIntent } from "@/lib/stripe/connect";
 import { createClient } from "@/lib/supabase/server";
+import { formatDateTime } from "@/lib/utils";
 
 export type ConfirmPayState = {
   error?: string;
@@ -29,12 +39,19 @@ export async function confirmAndPay(
 ): Promise<ConfirmPayState> {
   const user = await requireUser();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  if (formData.get("acceptAddendum") !== "on") {
+    return { error: "Review and accept the booking risk addendum first." };
+  }
 
   const supabase = await createClient();
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, customer_id, status, price_cents, platform_fee_cents, provider:provider_profiles(stripe_account_id)",
+      `id, customer_id, status, scheduled_at, address, price_cents,
+       platform_fee_cents,
+       service:services(name, slug),
+       provider:provider_profiles(display_name, stripe_account_id),
+       customer:profiles!bookings_customer_id_fkey(full_name)`,
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -45,13 +62,61 @@ export async function confirmAndPay(
   if (booking.status !== "accepted") {
     return { error: "This booking isn't awaiting payment." };
   }
-  if (!booking.provider.stripe_account_id) {
+
+  const service = Array.isArray(booking.service)
+    ? booking.service[0]
+    : booking.service;
+  const provider = Array.isArray(booking.provider)
+    ? booking.provider[0]
+    : booking.provider;
+  const customer = Array.isArray(booking.customer)
+    ? booking.customer[0]
+    : booking.customer;
+
+  const snapshot = service
+    ? getBookingAddendumSnapshot({
+        serviceSlug: service.slug,
+        serviceName: service.name,
+        scheduledAt: formatDateTime(booking.scheduled_at),
+        address: booking.address,
+        providerName: provider?.display_name ?? "Provider",
+        customerName: customer?.full_name ?? "Customer",
+      })
+    : null;
+  if (!service || !snapshot) {
+    return {
+      error:
+        "This service does not have a booking risk addendum yet. Contact College Crew before confirming.",
+    };
+  }
+
+  const audit = await requestAuditFields();
+  const { error: acceptanceError } = await supabase
+    .from("legal_acceptances")
+    .insert({
+      user_id: user.id,
+      booking_id: booking.id,
+      kind: "booking_addendum",
+      role: "customer",
+      version: LEGAL_CONTENT_VERSION,
+      content_hash: stableContentHash(snapshot),
+      signer_name: customer?.full_name ?? "Customer",
+      service_slug: service.slug,
+      service_name: service.name,
+      snapshot: snapshot as Json,
+      ...audit,
+    });
+  if (acceptanceError && acceptanceError.code !== "23505") {
+    return { error: "Could not save the booking risk acceptance. Try again." };
+  }
+
+  if (!provider?.stripe_account_id) {
     return { unconfigured: true };
   }
 
   const result = await createBookingPaymentIntent({
     booking,
-    providerStripeAccountId: booking.provider.stripe_account_id,
+    providerStripeAccountId: provider.stripe_account_id,
   });
   if (!result.configured) {
     return { unconfigured: true };
@@ -69,10 +134,23 @@ export async function simulatePayment(formData: FormData) {
   if (process.env.NODE_ENV === "production") {
     throw new Error("Payment simulation is disabled in production.");
   }
-  await requireUser();
+  const user = await requireUser();
 
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const supabase = await createClient();
+  const { data: acceptance } = await supabase
+    .from("legal_acceptances")
+    .select("id")
+    .eq("booking_id", bookingId)
+    .eq("user_id", user.id)
+    .eq("kind", "booking_addendum")
+    .maybeSingle();
+  if (!acceptance) {
+    throw new Error(
+      "Accept the booking risk addendum before simulating payment.",
+    );
+  }
+
   const { error } = await supabase
     .from("bookings")
     .update({ status: "paid" })

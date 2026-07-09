@@ -11,6 +11,7 @@ import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
+import { BOOKING_CONSENT_LABEL } from "@/lib/legal/waivers";
 
 import { confirmAndPay, simulatePayment, type ConfirmPayState } from "./actions";
 
@@ -46,7 +47,8 @@ export function ConfirmPayPanel({
     FormData
   >(confirmAndPay, {});
 
-  const unconfigured = state.unconfigured || !stripePromise;
+  const unconfigured =
+    state.unconfigured || Boolean(state.clientSecret && !stripePromise);
 
   // Step 2: the intent exists — collect payment details.
   if (state.clientSecret && stripePromise) {
@@ -64,8 +66,16 @@ export function ConfirmPayPanel({
   return (
     <div className="space-y-3">
       {!unconfigured ? (
-        <form action={formAction}>
+        <form action={formAction} className="space-y-3">
           <input type="hidden" name="bookingId" value={bookingId} />
+          <label className="flex gap-3 rounded-xl border border-line bg-court p-4 text-sm text-ink-soft">
+            <input
+              type="checkbox"
+              name="acceptAddendum"
+              className="mt-1 h-4 w-4 rounded border-line"
+            />
+            <span>{BOOKING_CONSENT_LABEL}</span>
+          </label>
           <Button type="submit" size="lg" className="w-full" disabled={pending}>
             {pending ? "Preparing payment…" : "Confirm & pay"}
           </Button>
