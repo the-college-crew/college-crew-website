@@ -23,6 +23,7 @@ async function sendEmail(opts: {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 }): Promise<SendResult> {
   if (!hasResendEnv()) {
     // Dev/stub path: no provider configured. Surface the content in logs so a
@@ -30,6 +31,9 @@ async function sendEmail(opts: {
     console.info(
       `[email:stub] To: ${opts.to}\nSubject: ${opts.subject}\n${opts.text}`,
     );
+    if (opts.html) {
+      console.info(`[email:stub:html]\n${opts.html}`);
+    }
     return { ok: true };
   }
 
@@ -41,11 +45,116 @@ async function sendEmail(opts: {
     to: opts.to,
     subject: opts.subject,
     text: opts.text,
+    ...(opts.html ? { html: opts.html } : {}),
   });
   if (error) {
     return { ok: false, error: error.message };
   }
   return { ok: true };
+}
+
+function getPublicSiteUrl() {
+  const raw =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
+    process.env.VERCEL_URL?.trim() ||
+    "http://127.0.0.1:3000";
+
+  const normalized = raw.replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+  return `https://${normalized}`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function schoolOtpHtml(code: string) {
+  const logoUrl = `${getPublicSiteUrl()}/college-crew-mark.png`;
+  const escapedCode = escapeHtml(code);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Your College Crew verification code</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f7f5f1; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  <div style="display:none; max-height:0; overflow:hidden; font-size:1px; line-height:1px; color:#f7f5f1; opacity:0;">
+    Use this code to verify your student email for College Crew.
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f7f5f1;">
+    <tr>
+      <td align="center" style="padding:34px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background-color:#fffdf8; border:1px solid #d7d1c3; border-radius:12px; overflow:hidden;">
+          <tr>
+            <td style="padding:0; font-size:0; line-height:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="50%" height="6" style="background-color:#344945; font-size:0; line-height:0;">&nbsp;</td>
+                  <td width="25%" height="6" style="background-color:#e4e3bc; font-size:0; line-height:0;">&nbsp;</td>
+                  <td width="25%" height="6" style="background-color:#d5e3e8; font-size:0; line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:34px 40px 8px 40px;">
+              <img src="${logoUrl}" width="72" height="66" alt="College Crew" style="display:block; width:72px; height:auto; margin:0 auto 14px auto; border:0; outline:none; text-decoration:none;">
+              <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-size:24px; font-weight:bold; line-height:1.15; color:#344945; text-align:center;">College Crew</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 40px 0 40px;">
+              <h1 style="margin:0 0 14px 0; font-family:Georgia,'Times New Roman',serif; font-size:28px; line-height:1.2; font-weight:bold; color:#2a3a37; text-align:center;">Verify your student email</h1>
+              <p style="margin:0 0 22px 0; font-family:-apple-system,'Segoe UI',Arial,sans-serif; font-size:16px; line-height:1.6; color:#344945; text-align:center;">
+                Enter this code on the verification step to confirm your school email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:0 40px;">
+              <div style="display:inline-block; border:1px solid #d7d1c3; border-radius:10px; background-color:#f7f5f1; padding:16px 24px; font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace; font-size:30px; font-weight:bold; letter-spacing:8px; color:#2a3a37;">
+                ${escapedCode}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 40px 0 40px;">
+              <p style="margin:0; font-family:-apple-system,'Segoe UI',Arial,sans-serif; font-size:13px; line-height:1.6; color:#66736f; text-align:center;">
+                This code expires in 15 minutes. If you did not request it, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 40px 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" style="background-color:#d7d1c3; font-size:0; line-height:0;">&nbsp;</td></tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 40px 36px 40px;">
+              <p style="margin:0 0 4px 0; font-family:Georgia,'Times New Roman',serif; font-size:14px; font-weight:bold; color:#2a3a37; text-align:center;">College Crew</p>
+              <p style="margin:0; font-family:-apple-system,'Segoe UI',Arial,sans-serif; font-size:12px; line-height:1.5; color:#66736f; text-align:center;">
+                Neighbors hiring verified college students, right down the street.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 /** Email a provider their 6-digit school-email verification code. */
@@ -59,5 +168,6 @@ export function sendSchoolOtpEmail(to: string, code: string): Promise<SendResult
       "Enter it on the verification step to confirm your student email.",
       "This code expires in 15 minutes. If you didn't request it, ignore this email.",
     ].join("\n"),
+    html: schoolOtpHtml(code),
   });
 }
