@@ -286,11 +286,6 @@ function BookingCard({
   const isDeclined = booking.status === "declined";
   const isUpcoming = (UPCOMING as string[]).includes(booking.status);
   const note = convo?.latest?.fromOther ? convo.latest : null;
-  const chatHref = demo
-    ? "/messages/demo"
-    : convo?.conversationId
-      ? `/messages/${convo.conversationId}`
-      : null;
 
   return (
     <Card className={cn("p-5", attention && "border-red-200")}>
@@ -337,9 +332,9 @@ function BookingCard({
           </Link>
         ) : null}
 
-        {chatHref ? (
+        {demo && (isDeclined || isUpcoming) ? (
           <Link
-            href={chatHref}
+            href="/messages/demo"
             className={buttonClasses({
               variant: isDeclined ? "primary" : "secondary",
               size: "sm",
@@ -347,14 +342,17 @@ function BookingCard({
           >
             {isDeclined ? "Read message" : "Message"}
           </Link>
-        ) : !demo && isUpcoming ? (
+        ) : !demo && (isDeclined || isUpcoming) ? (
           <form action={openConversationForBooking}>
             <input type="hidden" name="bookingId" value={booking.id} />
             <button
               type="submit"
-              className={buttonClasses({ variant: "secondary", size: "sm" })}
+              className={buttonClasses({
+                variant: isDeclined ? "primary" : "secondary",
+                size: "sm",
+              })}
             >
-              Message
+              {isDeclined ? "Read message" : "Message"}
             </button>
           </form>
         ) : null}
