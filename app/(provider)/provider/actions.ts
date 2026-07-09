@@ -165,7 +165,7 @@ export async function connectStripe() {
     stripeAccountId: profile.stripe_account_id,
     contactEmail,
     refreshUrl: `${origin}/provider/dashboard?stripe=refresh`,
-    returnUrl: `${origin}/provider/settings?stripe=connected`,
+    returnUrl: `${origin}/account?stripe=connected`,
   });
 
   if (!result.configured) {

@@ -49,6 +49,7 @@ export default async function OnboardingServicesPage() {
             offerings={offerings ?? []}
             action={saveOnboardingPricing}
             submitLabel="Save & continue →"
+            navigates
           />
         </div>
 

@@ -217,7 +217,7 @@ function ProviderJobsView({
             Your pricing
           </h2>
           <Link
-            href="/provider/settings"
+            href="/account"
             className={buttonClasses({ variant: "ghost", size: "sm" })}
           >
             Edit in Profile & settings →

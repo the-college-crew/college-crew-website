@@ -9,6 +9,7 @@ import {
 import { loadStripe } from "@stripe/stripe-js";
 import { useActionState, useState } from "react";
 
+import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { BOOKING_CONSENT_LABEL } from "@/lib/legal/waivers";
@@ -89,6 +90,7 @@ export function ConfirmPayPanel({
           </p>
           {simulateAllowed ? (
             <form action={simulatePayment} className="mt-3">
+              <FormLoader />
               <input type="hidden" name="bookingId" value={bookingId} />
               <Button type="submit" variant="secondary" size="sm">
                 Simulate payment (dev only)

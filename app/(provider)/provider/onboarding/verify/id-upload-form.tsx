@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
 
@@ -78,6 +79,7 @@ export function IdUploadForm({
 
   return (
     <form action={formAction} onSubmit={handleSubmit} className="space-y-4">
+      <FormLoader />
       <div>
         <Label htmlFor="front">
           {hasFront ? "Replace the front of your license" : "Front of license"}

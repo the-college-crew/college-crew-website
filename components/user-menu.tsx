@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { signOut } from "@/app/(auth)/actions";
 import { setViewAs } from "@/app/actions/view-as";
+import { FormLoader } from "@/components/form-loader";
 import type { UserRole } from "@/lib/db/types";
 import { cn } from "@/lib/utils";
 
@@ -159,6 +160,7 @@ export function UserMenu({
                 Viewing as
               </p>
               <form action={setViewAs} className="grid grid-cols-3 gap-1">
+                <FormLoader />
                 {VIEWS.map((view) => (
                   <button
                     key={view.role}
@@ -221,6 +223,7 @@ export function UserMenu({
 
           <div className="mt-1.5 border-t border-line pt-1.5">
             <form action={signOut}>
+              <FormLoader />
               <button
                 type="submit"
                 role="menuitem"

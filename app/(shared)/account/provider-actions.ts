@@ -6,11 +6,17 @@ import { z } from "zod";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { passwordSchema } from "@/lib/validation/auth";
 
-import { savePricingRows } from "../_lib/pricing";
+import { savePricingRows } from "@/app/(provider)/provider/_lib/pricing";
 
-export type SettingsFormState = {
+/**
+ * Provider storefront actions for the unified /account page. These mutate the
+ * caller's own provider_profiles row (RLS-scoped) and revalidate /account,
+ * where the provider now manages their storefront. Password/profile/delete live
+ * in ./actions — shared across all roles.
+ */
+
+export type ProviderSettingsFormState = {
   error?: string;
   success?: string;
   fieldErrors?: Record<string, string>;
@@ -25,9 +31,9 @@ const profileSchema = z.object({
 
 /** Storefront fields — these render directly on the public profile. */
 export async function updateProviderProfile(
-  _prev: SettingsFormState,
+  _prev: ProviderSettingsFormState,
   formData: FormData,
-): Promise<SettingsFormState> {
+): Promise<ProviderSettingsFormState> {
   await requireRole("provider");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
@@ -56,7 +62,7 @@ export async function updateProviderProfile(
     return { error: "Could not save your profile — try again." };
   }
 
-  revalidatePath("/provider/settings");
+  revalidatePath("/account");
   return { success: "Profile saved." };
 }
 
@@ -64,9 +70,9 @@ const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 /** Simple pilot availability: weekday toggles + a free-text note (jsonb). */
 export async function updateAvailability(
-  _prev: SettingsFormState,
+  _prev: ProviderSettingsFormState,
   formData: FormData,
-): Promise<SettingsFormState> {
+): Promise<ProviderSettingsFormState> {
   await requireRole("provider");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
@@ -85,15 +91,15 @@ export async function updateAvailability(
     return { error: "Could not save availability — try again." };
   }
 
-  revalidatePath("/provider/settings");
+  revalidatePath("/account");
   return { success: "Availability saved." };
 }
 
 /** Pricing source of truth (SPEC §3) — Jobs & pricing shows it read-only. */
 export async function saveSettingsPricing(
-  _prev: SettingsFormState,
+  _prev: ProviderSettingsFormState,
   formData: FormData,
-): Promise<SettingsFormState> {
+): Promise<ProviderSettingsFormState> {
   await requireRole("provider");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
@@ -103,27 +109,7 @@ export async function saveSettingsPricing(
     return { error: result.error, fieldErrors: result.fieldErrors };
   }
 
-  revalidatePath("/provider/settings");
+  revalidatePath("/account");
   revalidatePath("/provider/jobs");
   return { success: "Pricing saved — your public profile is updated." };
-}
-
-export async function updatePassword(
-  _prev: SettingsFormState,
-  formData: FormData,
-): Promise<SettingsFormState> {
-  await requireRole("provider");
-
-  const parsed = passwordSchema.safeParse(formData.get("password"));
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password: parsed.data });
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { success: "Password updated." };
 }

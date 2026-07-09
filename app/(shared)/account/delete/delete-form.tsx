@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
+import { FormLoader } from "@/components/form-loader";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 
@@ -18,6 +19,7 @@ export function DeleteAccountForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      <FormLoader />
       <div>
         <Label htmlFor="confirm">
           Type <span className="font-semibold">DELETE</span> to confirm

@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
 import {
   FieldError,
@@ -39,6 +40,7 @@ export function BookingRequestForm({
 
   return (
     <form action={formAction} className="space-y-4">
+      <FormLoader />
       <input type="hidden" name="providerId" value={providerId} />
 
       <div>
