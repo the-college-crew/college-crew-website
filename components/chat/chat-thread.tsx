@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Message } from "@/lib/db/types";
+import {
+  announceUnreadChanged,
+  markConversationReadClient,
+} from "@/lib/messaging/unread-client";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatTime } from "@/lib/utils";
 
@@ -65,6 +69,11 @@ export function ChatThread({
                 ? current
                 : [...current, incoming],
             );
+            // The user is looking at this thread, so the message is read the
+            // moment it lands — keep the header badge from counting it.
+            if (incoming.sender_id !== currentUserId) {
+              void markConversationReadClient(conversationId);
+            }
           },
         )
         .subscribe();
@@ -74,6 +83,12 @@ export function ChatThread({
       active = false;
       if (channel) client.removeChannel(channel);
     };
+  }, [conversationId, currentUserId]);
+
+  // The server marked this thread read while rendering the page, but the
+  // header badge may have been computed before that write — resync it.
+  useEffect(() => {
+    announceUnreadChanged();
   }, [conversationId]);
 
   useEffect(() => {

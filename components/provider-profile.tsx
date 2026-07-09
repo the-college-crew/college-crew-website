@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { ViewTransition } from "react";
 
+import { openConversationWithProvider } from "@/app/actions/messaging";
+import { FormLoader } from "@/components/form-loader";
 import { Rating } from "@/components/provider-card";
 import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
+import { getEffectiveRole, getSession } from "@/lib/auth/session";
 import type { PublicProviderProfile } from "@/lib/db/queries";
 import { formatDate, formatOfferedPrice } from "@/lib/utils";
 
@@ -18,12 +21,18 @@ const DAY_LABELS: Record<string, string> = {
 };
 
 /** Public provider profile content shown inside the browse overlay. */
-export function ProviderProfile({
+export async function ProviderProfile({
   provider,
 }: {
   provider: PublicProviderProfile;
 }) {
   const days = provider.availability.days ?? [];
+
+  // Pre-booking chat entry point: customers (or visitors, via login) can
+  // message the provider directly; providers and admins browsing don't.
+  const session = await getSession();
+  const viewerRole = session ? await getEffectiveRole() : null;
+  const canMessage = !session || viewerRole === "customer";
 
   return (
     <article className="pennant overflow-hidden rounded-3xl border border-stone bg-paper shadow-xl shadow-viridian/10">
@@ -53,12 +62,42 @@ export function ProviderProfile({
             </p>
           ) : null}
           <div className="mt-5">
-            <Link
-              href={`/book/${provider.id}`}
-              className={buttonClasses({ size: "lg" })}
-            >
-              Request booking
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={`/book/${provider.id}`}
+                className={buttonClasses({ size: "lg" })}
+              >
+                Request booking
+              </Link>
+              {canMessage ? (
+                session ? (
+                  <form action={openConversationWithProvider}>
+                    <FormLoader />
+                    <input
+                      type="hidden"
+                      name="providerId"
+                      value={provider.id}
+                    />
+                    <button
+                      type="submit"
+                      className={buttonClasses({
+                        variant: "secondary",
+                        size: "lg",
+                      })}
+                    >
+                      Message
+                    </button>
+                  </form>
+                ) : (
+                  <Link
+                    href={`/login?next=${encodeURIComponent(`/providers/${provider.id}`)}`}
+                    className={buttonClasses({ variant: "secondary", size: "lg" })}
+                  >
+                    Message
+                  </Link>
+                )
+              ) : null}
+            </div>
             <p className="mt-2 text-xs text-mist">
               No charge until they accept — you confirm and pay afterward.
             </p>

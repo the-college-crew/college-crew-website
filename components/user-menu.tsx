@@ -7,6 +7,7 @@ import { signOut } from "@/app/(auth)/actions";
 import { setViewAs } from "@/app/actions/view-as";
 import { FormLoader } from "@/components/form-loader";
 import type { UserRole } from "@/lib/db/types";
+import { useLiveUnreadCount } from "@/lib/messaging/unread-client";
 import { cn } from "@/lib/utils";
 
 /**
@@ -71,6 +72,7 @@ export function UserMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const liveUnread = useLiveUnreadCount(unreadCount);
 
   const initials = initialsFrom(name, email);
   const color = colorFor(email || name);
@@ -115,16 +117,16 @@ export function UserMenu({
         >
           {initials}
         </span>
-        {unreadCount > 0 ? (
+        {liveUnread > 0 ? (
           <span
             aria-hidden
             className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-viridian"
           >
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {liveUnread > 9 ? "9+" : liveUnread}
           </span>
         ) : null}
         <span className="sr-only">
-          Open account menu{unreadCount > 0 ? ` (${unreadCount} unread messages)` : ""}
+          Open account menu{liveUnread > 0 ? ` (${liveUnread} unread messages)` : ""}
         </span>
         <svg
           aria-hidden="true"
@@ -205,9 +207,9 @@ export function UserMenu({
               onClick={() => setOpen(false)}
             >
               <span>Messages</span>
-              {unreadCount > 0 ? (
+              {liveUnread > 0 ? (
                 <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold leading-none text-white">
-                  {unreadCount > 99 ? "99+" : unreadCount}
+                  {liveUnread > 99 ? "99+" : liveUnread}
                 </span>
               ) : null}
             </Link>
