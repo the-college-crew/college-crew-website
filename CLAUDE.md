@@ -93,9 +93,11 @@ Supporting directories:
 required vars — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 `SUPABASE_SERVICE_ROLE_KEY`, plus Stripe (`STRIPE_SECRET_KEY`,
 `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`). Real values live
-in `.env.local` only. **Supabase project is provisioned; the Stripe test
-account is not set up yet** — Stripe wiring stays placeholder/deferred until it
-exists (test mode only regardless).
+in `.env.local` only. **Both the Supabase project and the Stripe test sandbox
+are provisioned** (sandbox "College Crew sandbox", Connect enabled with a test
+connected account onboarded; keys in `.env.local`). The `lib/stripe/` code
+(server client, Connect onboarding, checkout, webhook route) is **not built
+yet** — build it plan-first when ready, test mode only regardless.
 
 ## Conventions
 
