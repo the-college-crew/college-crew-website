@@ -68,13 +68,16 @@ export default async function ConversationPage({
   if (conversationId === "demo") notFound();
 
   const supabase = await createClient();
-  const { data: conversation } = await supabase
+  // conversation_reads also links conversations↔profiles, so the customer
+  // embed must name its FK or PostgREST rejects the query as ambiguous.
+  const { data: conversation, error } = await supabase
     .from("conversations")
     .select(
-      "id, customer_id, booking_id, customer:profiles(full_name), provider:provider_profiles(display_name)",
+      "id, customer_id, booking_id, customer:profiles!conversations_customer_id_fkey(full_name), provider:provider_profiles(display_name)",
     )
     .eq("id", conversationId)
     .maybeSingle();
+  if (error) throw new Error(`Could not load the conversation: ${error.message}`);
   if (!conversation) notFound();
 
   // Opening the thread clears its unread badge. Best-effort; never blocks render.

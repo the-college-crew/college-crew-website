@@ -76,11 +76,14 @@ export default async function MessagesPage() {
 
   const supabase = await createClient();
 
-  const { data: conversationData } = await supabase
+  // conversation_reads also links conversations↔profiles, so the customer
+  // embed must name its FK or PostgREST rejects the query as ambiguous.
+  const { data: conversationData, error } = await supabase
     .from("conversations")
     .select(
-      "id, customer_id, created_at, customer:profiles(full_name), provider:provider_profiles(display_name)",
+      "id, customer_id, created_at, customer:profiles!conversations_customer_id_fkey(full_name), provider:provider_profiles(display_name)",
     );
+  if (error) throw new Error(`Could not load conversations: ${error.message}`);
   const conversations = (conversationData ?? []) as ConversationRow[];
 
   // Latest message per thread, in one query, for the preview + sort order.
