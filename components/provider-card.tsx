@@ -70,8 +70,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                 const hasMore = paragraphs.length > 1;
                 return (
                   <p className="whitespace-pre-line text-sm text-ink-soft">
-                    {firstParagraph}
-                    {hasMore && "…"}
+                    {hasMore ? `${firstParagraph}…` : firstParagraph}
                   </p>
                 );
               })()
