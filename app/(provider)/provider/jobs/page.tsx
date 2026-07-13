@@ -68,7 +68,7 @@ export default async function ProviderJobsPage() {
       .order("scheduled_at", { ascending: true }),
     supabase
       .from("provider_services")
-      .select("id, price_cents, price_type, unit, service:services(name, is_live)")
+      .select("id, hourly_rate_cents, service:services(name, is_live)")
       .eq("provider_id", profile.id),
   ]);
 
@@ -96,9 +96,7 @@ function ProviderJobsView({
   jobs: JobRow[];
   offerings: {
     id?: string;
-    price_cents: number;
-    price_type: "fixed" | "quote";
-    unit: "per_job" | "per_hour";
+    hourly_rate_cents: number | null;
     service: { name: string; is_live?: boolean };
   }[];
   demo?: boolean;
@@ -214,7 +212,7 @@ function ProviderJobsView({
             id="pricing"
             className="font-display text-xl font-semibold"
           >
-            Your pricing
+            Your hourly rates
           </h2>
           <Link
             href="/account"
@@ -244,7 +242,7 @@ function ProviderJobsView({
             </ul>
           )}
           <p className="mt-3 border-t border-line pt-3 text-xs text-mist">
-            Read-only here on purpose — pricing is edited in one place
+            Read-only here on purpose — hourly rates are edited in one place
             (Profile & settings) so your public profile always matches.
             Hidden service offerings are preserved and reappear if a founder
             makes that service live again.

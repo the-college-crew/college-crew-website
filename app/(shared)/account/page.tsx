@@ -2,9 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { connectStripe } from "@/app/(provider)/provider/actions";
+import {
+  connectStripe,
+  refreshStripeReadiness,
+} from "@/app/(provider)/provider/actions";
 import { ServicesPricingForm } from "@/app/(provider)/provider/_components/services-pricing-form";
+import { ProviderAvailabilityForm } from "@/app/(provider)/provider/_components/provider-availability-form";
 import { FormLoader } from "@/components/form-loader";
+import { ProviderReadinessChecklist } from "@/components/provider-readiness-checklist";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -22,15 +27,21 @@ import {
   demoServices,
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
-import { getProviderPayoutStatus } from "@/lib/stripe/connect";
 import { createClient } from "@/lib/supabase/server";
 import { formatOfferedPrice } from "@/lib/utils";
 
 import { AccountPasswordForm, AccountProfileForm } from "./account-forms";
-import { saveSettingsPricing } from "./provider-actions";
+import {
+  saveSettingsPricing,
+  updateAvailability,
+} from "./provider-actions";
 import { ProviderServicePreviewForm } from "./provider-service-preview-form";
-import { AvailabilityForm, ProviderProfileForm } from "./provider-settings-forms";
+import { ProviderProfileForm } from "./provider-settings-forms";
 import { providerServiceImageUrl } from "@/lib/media/provider-service-images";
+import {
+  formatAvailabilityDays,
+  formatAvailabilityWindow,
+} from "@/lib/provider/setup";
 
 export const metadata: Metadata = { title: "Account settings" };
 
@@ -94,6 +105,7 @@ export default async function AccountPage({
         <ProviderStorefront
           providerProfile={providerProfile}
           stripeConnected={stripe === "connected"}
+          stripeIncomplete={stripe === "incomplete"}
         />
       ) : null}
 
@@ -136,16 +148,20 @@ export default async function AccountPage({
 async function ProviderStorefront({
   providerProfile,
   stripeConnected,
+  stripeIncomplete,
 }: {
   providerProfile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
   stripeConnected: boolean;
+  stripeIncomplete: boolean;
 }) {
   const supabase = await createClient();
   const [services, { data: offerings }] = await Promise.all([
     getLiveServices(),
     supabase
       .from("provider_services")
-      .select("id, service_id, price_cents, price_type, unit, preview_image_path")
+      .select(
+        "id, service_id, price_cents, price_type, unit, preview_image_path, hourly_rate_cents, service:services(name, is_live)",
+      )
       .eq("provider_id", providerProfile.id),
   ]);
   const liveServiceNameById = new Map(services.map((service) => [service.id, service.name]));
@@ -160,14 +176,14 @@ async function ProviderStorefront({
       };
     })
     .filter((preview): preview is NonNullable<typeof preview> => preview !== null);
+  const readinessOfferings = (offerings ?? []).map((offering) => ({
+    id: offering.id,
+    name: offering.service?.name ?? "Retired service",
+    hourly_rate_cents: offering.hourly_rate_cents,
+    service_is_live: offering.service?.is_live === true,
+  }));
 
-  // Stripe's return_url carries no completion state, so confirm payout
-  // readiness from the account's live capability status rather than assuming
-  // a non-null stripe_account_id means onboarding finished.
-  const payout = providerProfile.stripe_account_id
-    ? await getProviderPayoutStatus(providerProfile.stripe_account_id)
-    : null;
-  const payoutsActive = payout?.configured === true && payout.transfersActive;
+  const payoutsActive = providerProfile.stripe_transfers_active;
 
   return (
     <>
@@ -176,6 +192,17 @@ async function ProviderStorefront({
           Stripe onboarding finished — payouts will land in your bank account.
         </div>
       ) : null}
+      {stripeIncomplete ? (
+        <div className="rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
+          Stripe still needs information before payouts can turn on. Resume
+          onboarding below after reviewing any Stripe requirements.
+        </div>
+      ) : null}
+
+      <ProviderReadinessChecklist
+        profile={providerProfile}
+        offerings={readinessOfferings}
+      />
 
       <Section
         title="Public profile"
@@ -186,9 +213,13 @@ async function ProviderStorefront({
 
       <Section
         title="Availability"
-        description="Shown on your public profile so customers request times that work."
+        description="Set one Central Time window for your selected weekdays, plus private matching details."
       >
-        <AvailabilityForm profile={providerProfile} />
+        <ProviderAvailabilityForm
+          values={providerProfile}
+          action={updateAvailability}
+          submitLabel="Save availability"
+        />
       </Section>
 
       <Section
@@ -231,6 +262,11 @@ async function ProviderStorefront({
                 Resume onboarding
               </Button>
             </form>
+            <form action={refreshStripeReadiness}>
+              <Button type="submit" size="sm" variant="ghost">
+                Refresh status
+              </Button>
+            </form>
             <span className="text-xs text-mist">
               A few details are still needed before payouts turn on.
             </span>
@@ -254,10 +290,10 @@ async function ProviderStorefront({
 }
 
 function ProviderAccountDemo() {
-  const availability = demoProviderProfile.availability as {
-    days?: string[];
-    note?: string;
-  };
+  const availabilityWindow = formatAvailabilityWindow(
+    demoProviderProfile.availability_start_local,
+    demoProviderProfile.availability_end_local,
+  );
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
@@ -266,6 +302,16 @@ function ProviderAccountDemo() {
         description="Your storefront, availability, pricing (the source of truth), and account."
       />
       <SamplePreviewBanner role="provider" />
+
+      <ProviderReadinessChecklist
+        profile={demoProviderProfile}
+        offerings={demoOfferings.map((offering) => ({
+          id: offering.id,
+          name: offering.service.name,
+          hourly_rate_cents: offering.hourly_rate_cents,
+          service_is_live: offering.service.is_live,
+        }))}
+      />
 
       <Section
         title="Public profile"
@@ -295,17 +341,17 @@ function ProviderAccountDemo() {
         title="Availability"
         description="Shown on your public profile so customers request times that work."
       >
-        <div className="flex flex-wrap gap-2">
-          {(availability.days ?? []).map((day) => (
-            <span
-              key={day}
-              className="rounded-full border border-quad-200 bg-quad-50 px-3 py-1 text-xs font-semibold uppercase text-quad-800"
-            >
-              {day}
-            </span>
-          ))}
-        </div>
-        <p className="mt-3 text-sm text-ink-soft">{availability.note}</p>
+        <p className="font-medium">
+          {formatAvailabilityDays(demoProviderProfile.availability_weekdays)} ·{" "}
+          {availabilityWindow}
+        </p>
+        <p className="mt-3 text-sm text-ink-soft">
+          {demoProviderProfile.availability_note}
+        </p>
+        <p className="mt-2 text-xs text-mist">
+          {demoProviderProfile.minimum_notice_hours} hours minimum notice ·
+          service ZIP stays private
+        </p>
       </Section>
 
       <Section

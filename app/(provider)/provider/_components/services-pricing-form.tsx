@@ -4,14 +4,13 @@ import { useActionState, useState } from "react";
 
 import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
-import { FieldError, Input, Select } from "@/components/ui/field";
-import type { PriceType, PriceUnit, Service } from "@/lib/db/types";
+import { FieldError, FieldHint, Input } from "@/components/ui/field";
+import type { Service } from "@/lib/db/types";
+import { HOURLY_RATE_INPUT_CONSTRAINTS } from "@/lib/provider/setup";
 
 export type Offering = {
   service_id: string;
-  price_cents: number;
-  price_type: PriceType;
-  unit: PriceUnit;
+  hourly_rate_cents: number | null;
 };
 
 type FormState = {
@@ -23,9 +22,7 @@ type FormState = {
 /** One editable row's state — the single source of truth for that service. */
 type Row = {
   offered: boolean;
-  priceType: PriceType;
-  price: string; // dollars, as typed
-  unit: PriceUnit;
+  rate: string; // dollars per hour, as typed
 };
 
 function initialRows(services: Service[], offerings: Offering[]): Record<string, Row> {
@@ -35,12 +32,12 @@ function initialRows(services: Service[], offerings: Offering[]): Record<string,
       const existing = byServiceId.get(service.id);
       const row: Row = {
         offered: Boolean(existing),
-        priceType: existing?.price_type ?? "fixed",
-        price:
-          existing && existing.price_cents > 0
-            ? String(existing.price_cents / 100)
+        // Never infer or prefill an hourly rate from legacy fixed/quote data.
+        rate:
+          existing?.hourly_rate_cents !== null &&
+          existing?.hourly_rate_cents !== undefined
+            ? String(existing.hourly_rate_cents / 100)
             : "",
-        unit: existing?.unit ?? "per_job",
       };
       return [service.id, row];
     }),
@@ -48,16 +45,12 @@ function initialRows(services: Service[], offerings: Offering[]): Record<string,
 }
 
 /**
- * One row per live service: offer it or not, at what price, per what unit.
+ * One row per live service: offer it or not, at what hourly rate.
  * Used in onboarding (step 3) and in Profile & settings, which is the
  * pricing source of truth after onboarding (SPEC §3).
  *
- * Every field is CONTROLLED. React 19 resets *uncontrolled* form fields once a
- * Server Action returns, so mixing `defaultValue` fields with React state (as
- * an earlier version did) wiped the provider's typed prices on a validation
- * error and desynced the quote toggle from the greyed-out price/unit inputs.
- * Keeping all state in `rows` means a failed submit re-renders untouched and
- * `disabled` always matches the visible dropdown.
+ * Every field is controlled so a React 19 Server Action validation response
+ * cannot wipe the provider's typed rates.
  */
 export function ServicesPricingForm({
   services,
@@ -94,10 +87,13 @@ export function ServicesPricingForm({
   return (
     <form action={formAction} className="space-y-4">
       {navigates ? <FormLoader /> : null}
+      <div className="rounded-lg border border-quad-200 bg-quad-50 p-3 text-sm text-quad-800">
+        Customers pay for at least one hour. After that, billing uses 15-minute
+        increments based on the completed job time.
+      </div>
       <ul className="space-y-3">
         {services.map((service) => {
           const row = rows[service.id];
-          const isQuote = row.priceType === "quote";
           const rowError = row.offered
             ? state.fieldErrors?.[service.id]
             : undefined;
@@ -121,55 +117,33 @@ export function ServicesPricingForm({
               </label>
 
               {row.offered ? (
-                <>
-                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <Select
-                      name={`type_${service.id}`}
-                      value={row.priceType}
-                      aria-label={`${service.name} pricing type`}
-                      onChange={(event) =>
-                        update(service.id, {
-                          priceType:
-                            event.target.value === "quote" ? "quote" : "fixed",
-                        })
-                      }
-                    >
-                      <option value="fixed">Fixed price</option>
-                      <option value="quote">Request a quote</option>
-                    </Select>
+                <div className="mt-3 max-w-xs">
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden className="font-semibold text-ink-soft">
+                      $
+                    </span>
                     <Input
                       type="number"
-                      name={`price_${service.id}`}
-                      aria-label={`${service.name} price in dollars`}
+                      name={`rate_${service.id}`}
+                      aria-label={`${service.name} hourly rate in dollars`}
                       placeholder="45"
-                      min="1"
-                      step="0.01"
-                      disabled={isQuote}
-                      value={isQuote ? "" : row.price}
+                      min={HOURLY_RATE_INPUT_CONSTRAINTS.min}
+                      step={HOURLY_RATE_INPUT_CONSTRAINTS.step}
+                      inputMode="decimal"
+                      value={row.rate}
                       onChange={(event) =>
-                        update(service.id, { price: event.target.value })
+                        update(service.id, { rate: event.target.value })
                       }
                       aria-invalid={rowError ? true : undefined}
                       aria-describedby={rowError ? errorId : undefined}
                     />
-                    <Select
-                      name={`unit_${service.id}`}
-                      value={row.unit}
-                      aria-label={`${service.name} price unit`}
-                      disabled={isQuote}
-                      onChange={(event) =>
-                        update(service.id, {
-                          unit:
-                            event.target.value === "per_hour"
-                              ? "per_hour"
-                              : "per_job",
-                        })
-                      }
-                    >
-                      <option value="per_job">per job</option>
-                      <option value="per_hour">per hour</option>
-                    </Select>
+                    <span className="shrink-0 text-sm font-semibold text-ink-soft">
+                      / hr
+                    </span>
                   </div>
+                  <FieldHint>
+                    Your rate before College Crew&apos;s provider fee.
+                  </FieldHint>
                   {rowError ? (
                     <p
                       id={errorId}
@@ -178,7 +152,7 @@ export function ServicesPricingForm({
                       {rowError}
                     </p>
                   ) : null}
-                </>
+                </div>
               ) : null}
             </li>
           );

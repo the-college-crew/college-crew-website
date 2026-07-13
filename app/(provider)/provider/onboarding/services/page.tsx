@@ -6,7 +6,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { getLiveServices } from "@/lib/db/queries";
-import { PLATFORM_FEE_RATE } from "@/lib/site";
+import { PROVIDER_FEE_PERCENT } from "@/lib/provider/setup";
 import { createClient } from "@/lib/supabase/server";
 
 import { ServicesPricingForm } from "../../_components/services-pricing-form";
@@ -15,9 +15,8 @@ import { saveOnboardingPricing } from "../actions";
 
 export const metadata: Metadata = { title: "Provider onboarding — services" };
 
-/** Wizard step 3: pick services + set pricing (editable later in settings). */
+/** Wizard step 3: pick services + explicit hourly rates. */
 export default async function OnboardingServicesPage() {
-  const platformFeePercent = Math.round(PLATFORM_FEE_RATE * 100);
   await requireRole("provider", "/provider/onboarding/services");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
@@ -27,7 +26,7 @@ export default async function OnboardingServicesPage() {
     getLiveServices(),
     supabase
       .from("provider_services")
-      .select("service_id, price_cents, price_type, unit")
+      .select("service_id, hourly_rate_cents")
       .eq("provider_id", profile.id),
   ]);
 
@@ -40,9 +39,9 @@ export default async function OnboardingServicesPage() {
           What do you offer?
         </h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Pick from the curated service list and set your prices. College
-          Crew&apos;s {platformFeePercent}% comes out of your earnings on each
-          booking — price accordingly.
+          Pick from the curated service list and set a rate per hour. College
+          Crew&apos;s {PROVIDER_FEE_PERCENT}% provider fee comes out of your
+          earnings; customers never pay an added platform fee.
         </p>
 
         <div className="mt-5">

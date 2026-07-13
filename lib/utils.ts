@@ -13,15 +13,14 @@ export function formatMoney(cents: number) {
   return usd.format(cents / 100);
 }
 
-/** "$45", "$25/hr", or "Quote" — one rule everywhere prices render. */
+/** Hourly pilot display. Legacy fixed/quote values are deliberately ignored. */
 export function formatOfferedPrice(offered: {
-  price_cents: number;
-  price_type: "fixed" | "quote";
-  unit: "per_job" | "per_hour";
+  hourly_rate_cents?: number | null;
 }) {
-  if (offered.price_type === "quote") return "Quote";
-  const base = formatMoney(offered.price_cents);
-  return offered.unit === "per_hour" ? `${base}/hr` : base;
+  if (offered.hourly_rate_cents === null || offered.hourly_rate_cents === undefined) {
+    return "Hourly rate needed";
+  }
+  return `${formatMoney(offered.hourly_rate_cents)}/hr`;
 }
 
 export function formatDate(iso: string) {

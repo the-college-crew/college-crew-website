@@ -6,16 +6,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { sendSchoolOtpEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { otpCodeSchema, schoolEmailSchema } from "@/lib/validation/auth";
+import {
+  isStructuredAvailabilityComplete,
+  parseProviderAvailabilityForm,
+} from "@/lib/provider/setup";
+import { isHourlyRateValid } from "@/lib/booking/policy";
 
 import { savePricingRows } from "../_lib/pricing";
 
 /**
- * Onboarding wizard actions (SPEC §8: account → verify → services → review).
+ * Onboarding wizard actions (account → verify → services → availability →
+ * review).
  * Stripe is deliberately NOT here — it connects after admin approval.
  */
 
@@ -140,6 +147,28 @@ export async function saveOnboardingPricing(
 
   const result = await savePricingRows(profile.id, formData);
   if (result.error || result.fieldErrors) return result;
+
+  redirect("/provider/onboarding/availability");
+}
+
+/** Availability step: provider-wide schedule, notice, and private service ZIP. */
+export async function saveOnboardingAvailability(
+  _prev: OnboardingFormState,
+  formData: FormData,
+): Promise<OnboardingFormState> {
+  await requireRole("provider");
+  const profile = await getOwnProviderProfile();
+  if (!profile) redirect("/provider/onboarding/account");
+
+  const parsed = parseProviderAvailabilityForm(formData);
+  if (!parsed.success) return { fieldErrors: parsed.fieldErrors };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("provider_profiles")
+    .update(parsed.data)
+    .eq("id", profile.id);
+  if (error) return { error: "Could not save availability — try again." };
 
   redirect("/provider/onboarding/review");
 }
@@ -344,9 +373,33 @@ export async function useAccountEmailAsSchool(
 
 /** Review step: onboarding complete; verification is already pending. */
 export async function submitForReview() {
-  await requireRole("provider");
+  const session = await requireRole("provider");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
+
+  const [schoolEmail, supabase] = await Promise.all([
+    getVerifiedSchoolEmail(session.user.id),
+    createClient(),
+  ]);
+  if (!schoolEmail || !profile.id_document_url || !profile.id_document_back_url) {
+    redirect("/provider/onboarding/verify");
+  }
+
+  const { data: offerings } = await supabase
+    .from("provider_services")
+    .select("hourly_rate_cents, service:services(is_live)")
+    .eq("provider_id", profile.id);
+  const hasReadyRate = (offerings ?? []).some(
+    (offering) =>
+      offering.service?.is_live &&
+      offering.hourly_rate_cents !== null &&
+      isHourlyRateValid(offering.hourly_rate_cents),
+  );
+  if (!hasReadyRate) redirect("/provider/onboarding/services");
+
+  if (!isStructuredAvailabilityComplete(profile) || !profile.service_zip) {
+    redirect("/provider/onboarding/availability");
+  }
 
   redirect("/provider/dashboard?submitted=1");
 }

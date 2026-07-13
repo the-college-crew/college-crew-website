@@ -7,6 +7,13 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
+import { isHourlyRateValid } from "@/lib/booking/policy";
+import {
+  formatAvailabilityDays,
+  formatAvailabilityWindow,
+  isStructuredAvailabilityComplete,
+  verificationLabel,
+} from "@/lib/provider/setup";
 import { createClient } from "@/lib/supabase/server";
 import { formatOfferedPrice } from "@/lib/utils";
 
@@ -15,7 +22,7 @@ import { submitForReview } from "../actions";
 
 export const metadata: Metadata = { title: "Provider onboarding — review" };
 
-/** Wizard step 4: review & submit. Stripe connects later, after approval. */
+/** Wizard step 5: review & submit. Stripe connects later, after approval. */
 export default async function OnboardingReviewPage() {
   const session = await requireRole("provider", "/provider/onboarding/review");
   const profile = await getOwnProviderProfile();
@@ -24,10 +31,15 @@ export default async function OnboardingReviewPage() {
   const supabase = await createClient();
   const { data: offerings } = await supabase
     .from("provider_services")
-    .select("id, price_cents, price_type, unit, service:services(name, is_live)")
+    .select(
+      "id, price_cents, price_type, unit, hourly_rate_cents, service:services(name, is_live)",
+    )
     .eq("provider_id", profile.id);
   const liveOfferings = (offerings ?? []).filter(
-    (offered) => offered.service?.is_live,
+    (offered) =>
+      offered.service?.is_live &&
+      offered.hourly_rate_cents !== null &&
+      isHourlyRateValid(offered.hourly_rate_cents),
   );
 
   const schoolEmail = await getVerifiedSchoolEmail(session.user.id);
@@ -35,7 +47,15 @@ export default async function OnboardingReviewPage() {
   const licenseComplete =
     Boolean(profile.id_document_url) && Boolean(profile.id_document_back_url);
   const ready =
-    Boolean(schoolEmail) && licenseComplete && liveOfferings.length > 0;
+    Boolean(schoolEmail) &&
+    licenseComplete &&
+    liveOfferings.length > 0 &&
+    isStructuredAvailabilityComplete(profile) &&
+    Boolean(profile.service_zip);
+  const availabilityWindow = formatAvailabilityWindow(
+    profile.availability_start_local,
+    profile.availability_end_local,
+  );
 
   return (
     <div>
@@ -120,6 +140,68 @@ export default async function OnboardingReviewPage() {
               ) : null}
             </dd>
           </div>
+          <div>
+            <dt className="text-mist">General availability</dt>
+            <dd className="mt-1.5 rounded-lg bg-court px-3 py-2">
+              {isStructuredAvailabilityComplete(profile) && availabilityWindow ? (
+                <>
+                  <p className="font-medium">
+                    {formatAvailabilityDays(profile.availability_weekdays)} ·{" "}
+                    {availabilityWindow}
+                  </p>
+                  {profile.availability_note ? (
+                    <p className="mt-1 text-xs text-ink-soft">
+                      {profile.availability_note}
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-xs text-mist">
+                    {profile.minimum_notice_hours} hours minimum notice
+                  </p>
+                </>
+              ) : (
+                <Link
+                  href="/provider/onboarding/availability"
+                  className="text-crew-700 underline"
+                >
+                  Missing — set availability
+                </Link>
+              )}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-mist">Service ZIP</dt>
+            <dd className="text-right font-medium">
+              {profile.service_zip ? (
+                <>
+                  {profile.service_zip}
+                  <span className="block text-xs font-normal text-mist">
+                    Private; never shown publicly
+                  </span>
+                </>
+              ) : (
+                <Link
+                  href="/provider/onboarding/availability"
+                  className="text-crew-700 underline"
+                >
+                  Missing
+                </Link>
+              )}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-mist">Approval</dt>
+            <dd className="font-medium">
+              {verificationLabel(profile.verification_status)}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-mist">Stripe payouts</dt>
+            <dd className="text-right font-medium">
+              {profile.stripe_transfers_active
+                ? "Active"
+                : "Connect after founder approval"}
+            </dd>
+          </div>
         </dl>
 
         <div className="mt-5 rounded-lg border border-line bg-court p-3 text-xs text-ink-soft">
@@ -130,7 +212,7 @@ export default async function OnboardingReviewPage() {
 
         <div className="mt-6 flex items-center justify-between border-t border-line pt-4">
           <Link
-            href="/provider/onboarding/services"
+            href="/provider/onboarding/availability"
             className={buttonClasses({ variant: "ghost", size: "sm" })}
           >
             ← Back

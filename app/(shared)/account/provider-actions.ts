@@ -10,6 +10,7 @@ import { z } from "zod";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { PROVIDER_SERVICE_IMAGES_BUCKET } from "@/lib/media/provider-service-images";
 import { screenProfileText } from "@/lib/moderation/profile-text";
+import { parseProviderAvailabilityForm } from "@/lib/provider/setup";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -116,9 +117,7 @@ export async function updateProviderProfile(
   return { success: "Profile saved." };
 }
 
-const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-
-/** Simple pilot availability: weekday toggles + a free-text note (jsonb). */
+/** Structured provider-wide pilot availability and private service area. */
 export async function updateAvailability(
   _prev: ProviderSettingsFormState,
   formData: FormData,
@@ -127,21 +126,20 @@ export async function updateAvailability(
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
-  const days = DAYS.filter((day) => formData.get(`day_${day}`) === "on");
-  const note = String(formData.get("note") ?? "")
-    .trim()
-    .slice(0, 500);
+  const parsed = parseProviderAvailabilityForm(formData);
+  if (!parsed.success) return { fieldErrors: parsed.fieldErrors };
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("provider_profiles")
-    .update({ availability: { days, note } })
+    .update(parsed.data)
     .eq("id", profile.id);
   if (error) {
     return { error: "Could not save availability — try again." };
   }
 
-  revalidatePath("/account");
+  revalidateProviderStorefront(profile.id);
+  revalidatePath("/provider/dashboard");
   return { success: "Availability saved." };
 }
 
@@ -159,9 +157,10 @@ export async function saveSettingsPricing(
     return { error: result.error, fieldErrors: result.fieldErrors };
   }
 
-  revalidatePath("/account");
+  revalidateProviderStorefront(profile.id);
   revalidatePath("/provider/jobs");
-  return { success: "Pricing saved — your public profile is updated." };
+  revalidatePath("/provider/dashboard");
+  return { success: "Hourly rates saved — your public profile is updated." };
 }
 
 /**

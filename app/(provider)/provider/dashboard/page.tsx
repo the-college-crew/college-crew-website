@@ -11,10 +11,15 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
+import {
+  ProviderReadinessChecklist,
+  type ReadinessOffering,
+} from "@/components/provider-readiness-checklist";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import {
   demoBookings,
+  demoOfferings,
   demoProviderProfile,
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
@@ -22,7 +27,7 @@ import type { BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
-import { connectStripe } from "../actions";
+import { connectStripe, refreshStripeReadiness } from "../actions";
 import { RequestActions } from "./request-actions";
 
 export const metadata: Metadata = { title: "Provider dashboard" };
@@ -56,6 +61,12 @@ export default async function ProviderDashboardPage({
       <ProviderDashboardView
         profile={demoProviderProfile}
         bookings={demoBookings as ProviderBookingRow[]}
+        offerings={demoOfferings.map((offering) => ({
+          id: offering.id,
+          name: offering.service.name,
+          hourly_rate_cents: offering.hourly_rate_cents,
+          service_is_live: offering.service.is_live,
+        }))}
         submitted={submitted}
         stripe={stripe}
         onboardingComplete
@@ -77,20 +88,35 @@ export default async function ProviderDashboardPage({
     Boolean(profile.id_document_back_url);
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("bookings")
-    .select(
-      "id, status, scheduled_at, address, details, price_cents, platform_fee_cents, service:services(name), customer:profiles!bookings_customer_id_fkey(full_name)",
-    )
-    .eq("provider_id", profile.id)
-    .order("scheduled_at", { ascending: true });
+  const [{ data }, { data: offeringRows }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select(
+        "id, status, scheduled_at, address, details, price_cents, platform_fee_cents, service:services(name), customer:profiles!bookings_customer_id_fkey(full_name)",
+      )
+      .eq("provider_id", profile.id)
+      .order("scheduled_at", { ascending: true }),
+    supabase
+      .from("provider_services")
+      .select("id, hourly_rate_cents, service:services(name, is_live)")
+      .eq("provider_id", profile.id),
+  ]);
 
   const bookings = (data ?? []) as ProviderBookingRow[];
+  const offerings: ReadinessOffering[] = (offeringRows ?? []).map(
+    (offering) => ({
+      id: offering.id,
+      name: offering.service?.name ?? "Retired service",
+      hourly_rate_cents: offering.hourly_rate_cents,
+      service_is_live: offering.service?.is_live === true,
+    }),
+  );
 
   return (
     <ProviderDashboardView
       profile={profile}
       bookings={bookings}
+      offerings={offerings}
       submitted={submitted}
       stripe={stripe}
       onboardingComplete={onboardingComplete}
@@ -101,6 +127,7 @@ export default async function ProviderDashboardPage({
 function ProviderDashboardView({
   profile,
   bookings,
+  offerings,
   submitted,
   stripe,
   onboardingComplete,
@@ -108,6 +135,7 @@ function ProviderDashboardView({
 }: {
   profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
   bookings: ProviderBookingRow[];
+  offerings: ReadinessOffering[];
   submitted?: string;
   stripe?: string;
   onboardingComplete: boolean;
@@ -160,7 +188,7 @@ function ProviderDashboardView({
       !demo ? (
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
           Verification under review. You can fine-tune your profile and
-          pricing while you wait.
+          hourly rates while you wait.
         </div>
       ) : null}
       {profile.verification_status === "rejected" && !demo ? (
@@ -184,12 +212,37 @@ function ProviderDashboardView({
           </form>
         </div>
       ) : null}
+      {profile.verification_status === "approved" &&
+      profile.stripe_account_id &&
+      !profile.stripe_transfers_active &&
+      !demo ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
+          <p>
+            Stripe still needs information before your services can accept
+            hourly bookings.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <form action={connectStripe}>
+              <Button type="submit" size="sm" variant="secondary">
+                Resume Stripe setup
+              </Button>
+            </form>
+            <form action={refreshStripeReadiness}>
+              <Button type="submit" size="sm" variant="ghost">
+                Refresh status
+              </Button>
+            </form>
+          </div>
+        </div>
+      ) : null}
       {stripe === "pending" && !demo ? (
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
           Stripe isn&apos;t live yet — the platform&apos;s test account is
           still being set up. You&apos;ll be able to connect soon.
         </div>
       ) : null}
+
+      <ProviderReadinessChecklist profile={profile} offerings={offerings} />
 
       {/* Earnings summary */}
       <div className="grid grid-cols-3 gap-4">

@@ -1,5 +1,8 @@
-import type { PriceType, PriceUnit } from "@/lib/db/types";
 import { PROVIDER_SERVICE_IMAGES_BUCKET } from "@/lib/media/provider-service-images";
+import {
+  buildHourlyOfferingPersistenceRow,
+  parseHourlyRateInput,
+} from "@/lib/provider/setup";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -7,8 +10,9 @@ import { createClient } from "@/lib/supabase/server";
  * the provider's offerings. Shared by the onboarding wizard and Profile &
  * settings — settings is the pricing source of truth after onboarding.
  *
- * Field convention per service id: offer_<id> (checkbox), price_<id>
- * (dollars), type_<id> (fixed|quote), unit_<id> (per_job|per_hour).
+ * Field convention per service id: offer_<id> (checkbox) and rate_<id>
+ * (dollars per hour). Legacy price/type/unit columns are retained only for
+ * expand/contract compatibility and are never populated from the hourly UI.
  */
 export async function savePricingRows(
   providerId: string,
@@ -24,46 +28,44 @@ export async function savePricingRows(
     return { error: "No live services to offer right now." };
   }
 
-  const selected: Array<{
-    provider_id: string;
-    service_id: string;
-    price_cents: number;
-    price_type: PriceType;
-    unit: PriceUnit;
-  }> = [];
+  const selected: Array<
+    ReturnType<typeof buildHourlyOfferingPersistenceRow>
+  > = [];
   // Collect EVERY offending row so the provider fixes them in one pass,
   // rather than resubmitting once per bad service. Keyed by service id so
   // the form can flag the exact row.
   const fieldErrors: Record<string, string> = {};
 
+  const serviceIds = services.map((service) => service.id);
+  const { data: existingRows } = await supabase
+    .from("provider_services")
+    .select("service_id, price_cents, price_type, unit")
+    .eq("provider_id", providerId)
+    .in("service_id", serviceIds);
+  const existingByServiceId = new Map(
+    (existingRows ?? []).map((row) => [row.service_id, row]),
+  );
+
   for (const service of services) {
     if (formData.get(`offer_${service.id}`) !== "on") continue;
 
-    const priceType: PriceType =
-      formData.get(`type_${service.id}`) === "quote" ? "quote" : "fixed";
-    const unit: PriceUnit =
-      formData.get(`unit_${service.id}`) === "per_hour"
-        ? "per_hour"
-        : "per_job";
-
-    const dollars = Number.parseFloat(
-      String(formData.get(`price_${service.id}`) ?? ""),
-    );
-    const priceCents =
-      priceType === "quote" ? 0 : Math.round((dollars || 0) * 100);
-
-    if (priceType === "fixed" && (!Number.isFinite(dollars) || dollars <= 0)) {
-      fieldErrors[service.id] = "Enter a price above $0.";
+    const parsedRate = parseHourlyRateInput(formData.get(`rate_${service.id}`));
+    if (!parsedRate.success) {
+      fieldErrors[service.id] = parsedRate.error;
       continue;
     }
 
-    selected.push({
-      provider_id: providerId,
-      service_id: service.id,
-      price_cents: priceCents,
-      price_type: priceType,
-      unit,
-    });
+    const existing = existingByServiceId.get(service.id);
+
+    selected.push(buildHourlyOfferingPersistenceRow({
+      providerId,
+      serviceId: service.id,
+      hourlyRateCents: parsedRate.cents,
+      existing,
+      // Preserve an existing legacy value byte-for-byte. A new hourly-only
+      // offering needs neutral placeholders until Phase 8 drops the legacy
+      // non-null columns and their fixed/quote invariant.
+    }));
   }
 
   if (Object.keys(fieldErrors).length > 0) {

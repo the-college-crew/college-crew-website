@@ -14,6 +14,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createConnectOnboardingLink } from "@/lib/stripe/connect";
+import { syncProviderPayoutSnapshot } from "@/lib/provider/payout-readiness";
 
 /**
  * Provider-side booking + Stripe actions. Booking updates run as the
@@ -165,7 +166,7 @@ export async function connectStripe() {
     stripeAccountId: profile.stripe_account_id,
     contactEmail,
     refreshUrl: `${origin}/provider/dashboard?stripe=refresh`,
-    returnUrl: `${origin}/account?stripe=connected`,
+    returnUrl: `${origin}/provider/stripe/return`,
   });
 
   if (!result.configured) {
@@ -183,4 +184,17 @@ export async function connectStripe() {
   }
 
   redirect(result.url);
+}
+
+/** Provider-triggered capability refresh for delayed Stripe requirements. */
+export async function refreshStripeReadiness() {
+  await requireRole("provider");
+  const profile = await getOwnProviderProfile();
+  if (!profile?.stripe_account_id) return;
+
+  await syncProviderPayoutSnapshot(profile);
+  revalidatePath("/account");
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/browse");
+  revalidatePath(`/providers/${profile.id}`);
 }

@@ -14,7 +14,6 @@ import {
 import type { ProviderProfile } from "@/lib/db/types";
 
 import {
-  updateAvailability,
   updateProviderProfile,
   type ProviderSettingsFormState,
 } from "./provider-actions";
@@ -94,67 +93,6 @@ export function ProviderProfileForm({ profile }: { profile: ProviderProfile }) {
         />
       </div>
       <SaveRow state={state} pending={pending} label="Save profile" />
-    </form>
-  );
-}
-
-const DAYS = [
-  ["mon", "Mon"],
-  ["tue", "Tue"],
-  ["wed", "Wed"],
-  ["thu", "Thu"],
-  ["fri", "Fri"],
-  ["sat", "Sat"],
-  ["sun", "Sun"],
-] as const;
-
-export function AvailabilityForm({ profile }: { profile: ProviderProfile }) {
-  const [state, formAction, pending] = useActionState<
-    ProviderSettingsFormState,
-    FormData
-  >(updateAvailability, {});
-
-  const availability = (profile.availability ?? {}) as {
-    days?: string[];
-    note?: string;
-  };
-
-  return (
-    <form action={formAction} className="space-y-4">
-      <fieldset>
-        <legend className="mb-1.5 block text-sm font-medium">
-          Days you generally work
-        </legend>
-        <div className="flex flex-wrap gap-2">
-          {DAYS.map(([key, label]) => (
-            <label
-              key={key}
-              className="flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm has-checked:border-quad-500 has-checked:bg-quad-50 has-checked:font-semibold has-checked:text-quad-800"
-            >
-              <input
-                type="checkbox"
-                name={`day_${key}`}
-                defaultChecked={availability.days?.includes(key)}
-                className="sr-only"
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <FieldHint>
-          Kept simple for the pilot — per-service schedules come later.
-        </FieldHint>
-      </fieldset>
-      <div>
-        <Label htmlFor="note">Availability note</Label>
-        <Input
-          id="note"
-          name="note"
-          defaultValue={availability.note ?? ""}
-          placeholder="e.g. Weekday afternoons after 3pm, weekends anytime"
-        />
-      </div>
-      <SaveRow state={state} pending={pending} label="Save availability" />
     </form>
   );
 }
