@@ -81,14 +81,15 @@ export default async function DemoBookingPage() {
 
           <div className="rounded-lg border border-line bg-court p-4 text-sm">
             <div className="flex items-center justify-between font-semibold">
-              <span>Job price</span>
+              <span>Hourly rate</span>
               <span className="text-quad-700">
                 {formatOfferedPrice(demoOfferings[0])}
               </span>
             </div>
             <p className="mt-2 text-xs text-mist">
-              No charge until the provider accepts. This sample submit only
-              returns to the dashboard with a request-sent notice.
+              One-hour minimum, then 15-minute increments. Duration and
+              response controls arrive with the guarded hourly request flow in
+              Phase 3; this sample submit only returns to the dashboard.
             </p>
           </div>
 

@@ -8,18 +8,16 @@ import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { getEffectiveRole, getSession } from "@/lib/auth/session";
 import type { PublicProviderProfile } from "@/lib/db/queries";
+import {
+  PROVIDER_WEEKDAYS,
+  formatAvailabilityWindow,
+} from "@/lib/provider/setup";
 import { formatDate, formatOfferedPrice } from "@/lib/utils";
+import {
+  areBookingRequestsEnabled,
+  isHourlyBookingEnabled,
+} from "@/lib/env";
 import { ServiceBanner } from "./service-banner";
-
-const DAY_LABELS: Record<string, string> = {
-  mon: "Mon",
-  tue: "Tue",
-  wed: "Wed",
-  thu: "Thu",
-  fri: "Fri",
-  sat: "Sat",
-  sun: "Sun",
-};
 
 /** Public provider profile content shown inside the browse overlay. */
 export async function ProviderProfile({
@@ -27,7 +25,18 @@ export async function ProviderProfile({
 }: {
   provider: PublicProviderProfile;
 }) {
-  const days = provider.availability.days ?? [];
+  const days = provider.availability_weekdays;
+  const availabilityWindow = formatAvailabilityWindow(
+    provider.availability_start_local,
+    provider.availability_end_local,
+  );
+  const hasBookableOffering = provider.services.some(
+    (offering) => offering.is_hourly_bookable,
+  );
+  const canRequest =
+    hasBookableOffering &&
+    isHourlyBookingEnabled() &&
+    areBookingRequestsEnabled();
 
   // Pre-booking chat entry point: customers (or visitors, via login) can
   // message the provider directly; providers and admins browsing don't.
@@ -65,12 +74,26 @@ export async function ProviderProfile({
           ) : null}
           <div className="mt-5">
             <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href={`/book/${provider.id}`}
-                className={buttonClasses({ size: "lg" })}
-              >
-                Request booking
-              </Link>
+              {canRequest ? (
+                <Link
+                  href={`/book/${provider.id}`}
+                  className={buttonClasses({ size: "lg" })}
+                >
+                  Request booking
+                </Link>
+              ) : (
+                <span
+                  aria-disabled="true"
+                  className={buttonClasses({
+                    size: "lg",
+                    className: "cursor-not-allowed opacity-55",
+                  })}
+                >
+                  {hasBookableOffering
+                    ? "Hourly booking opens soon"
+                    : "Booking setup in progress"}
+                </span>
+              )}
               {canMessage ? (
                 session ? (
                   <form action={openConversationWithProvider}>
@@ -101,7 +124,11 @@ export async function ProviderProfile({
               ) : null}
             </div>
             <p className="mt-2 text-xs text-mist">
-              No charge until they accept — you confirm and pay afterward.
+              {canRequest
+                ? "One-hour minimum, then billed in 15-minute increments."
+                : hasBookableOffering
+                  ? "Customer hourly requests remain disabled during setup."
+                  : "This provider is still finishing hourly booking setup."}
             </p>
           </div>
         </section>
@@ -121,6 +148,9 @@ export async function ProviderProfile({
               <span className="shrink-0 font-semibold text-quad-700">
                 {formatOfferedPrice(offered)}
               </span>
+              {!offered.is_hourly_bookable ? (
+                <span className="text-xs text-mist">Not yet bookable</span>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -128,7 +158,7 @@ export async function ProviderProfile({
 
       <section className="border-t border-line px-6 py-7 sm:px-8">
         <h2 className="font-display text-2xl font-semibold">Availability</h2>
-        {days.length === 0 && !provider.availability.note ? (
+        {days.length === 0 && !provider.availability_note ? (
           <p className="mt-3 text-sm text-mist">
             Ask about availability when you request a booking.
           </p>
@@ -141,16 +171,25 @@ export async function ProviderProfile({
                     key={day}
                     className="rounded-full border border-quad-200 bg-quad-50 px-3 py-1 text-xs font-semibold text-quad-800"
                   >
-                    {DAY_LABELS[day] ?? day}
+                    {PROVIDER_WEEKDAYS.find(({ value }) => value === day)?.short ??
+                      day}
                   </li>
                 ))}
               </ul>
             ) : null}
-            {provider.availability.note ? (
-              <p className="mt-3 text-sm text-ink-soft">
-                {provider.availability.note}
+            {availabilityWindow ? (
+              <p className="mt-3 text-sm font-medium text-ink-soft">
+                {availabilityWindow}
               </p>
             ) : null}
+            {provider.availability_note ? (
+              <p className="mt-3 text-sm text-ink-soft">
+                {provider.availability_note}
+              </p>
+            ) : null}
+            <p className="mt-2 text-xs text-mist">
+              Request at least {provider.minimum_notice_hours} hours ahead.
+            </p>
           </>
         )}
       </section>

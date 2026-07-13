@@ -6,20 +6,15 @@ import { setProviderStatus } from "@/app/(admin)/admin/actions";
 import type { AdminProviderDetail } from "@/app/(admin)/admin/actions";
 import { EditableProviderField } from "@/components/admin/editable-provider-field";
 import { Rating } from "@/components/provider-card";
+import { ProviderReadinessChecklist } from "@/components/provider-readiness-checklist";
 import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import type { VerificationStatus } from "@/lib/db/types";
 import { cn, formatDate, formatOfferedPrice } from "@/lib/utils";
-
-const DAY_LABELS: Record<string, string> = {
-  mon: "Mon",
-  tue: "Tue",
-  wed: "Wed",
-  thu: "Thu",
-  fri: "Fri",
-  sat: "Sat",
-  sun: "Sun",
-};
+import {
+  PROVIDER_WEEKDAYS,
+  formatAvailabilityWindow,
+} from "@/lib/provider/setup";
 
 const statusTone = {
   pending: "gold",
@@ -92,7 +87,13 @@ export function ProviderDetailModal({
   }
 
   const profile = detail?.profile;
-  const days = profile?.availability.days ?? [];
+  const days = profile?.availability_weekdays ?? [];
+  const availabilityWindow = profile
+    ? formatAvailabilityWindow(
+        profile.availability_start_local,
+        profile.availability_end_local,
+      )
+    : null;
 
   return (
     <div
@@ -248,7 +249,33 @@ export function ProviderDetailModal({
                       )}
                     </dd>
                   </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-mist">Service ZIP (private)</dt>
+                    <dd className="font-medium">{profile.service_zip ?? "Not set"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-mist">Stripe recipient</dt>
+                    <dd className="font-medium">
+                      {profile.stripe_transfers_active
+                        ? "Transfers active"
+                        : profile.stripe_account_id
+                          ? "Setup incomplete"
+                          : "Not connected"}
+                    </dd>
+                  </div>
                 </dl>
+              </section>
+
+              <section className="border-t border-line px-6 py-5 sm:px-8">
+                <ProviderReadinessChecklist
+                  profile={profile}
+                  offerings={profile.services.map((offering) => ({
+                    id: offering.id,
+                    name: offering.service.name,
+                    hourly_rate_cents: offering.hourly_rate_cents,
+                    service_is_live: offering.service.is_live,
+                  }))}
+                />
               </section>
 
               {/* Status actions */}
@@ -311,7 +338,7 @@ export function ProviderDetailModal({
                 <h2 className="font-display text-2xl font-semibold">
                   Availability
                 </h2>
-                {days.length === 0 && !profile.availability.note ? (
+                {days.length === 0 && !profile.availability_note ? (
                   <p className="mt-3 text-sm text-mist">
                     No availability set.
                   </p>
@@ -324,16 +351,25 @@ export function ProviderDetailModal({
                             key={day}
                             className="rounded-full border border-quad-200 bg-quad-50 px-3 py-1 text-xs font-semibold text-quad-800"
                           >
-                            {DAY_LABELS[day] ?? day}
+                            {PROVIDER_WEEKDAYS.find(({ value }) => value === day)
+                              ?.short ?? day}
                           </li>
                         ))}
                       </ul>
                     ) : null}
-                    {profile.availability.note ? (
-                      <p className="mt-3 text-sm text-ink-soft">
-                        {profile.availability.note}
+                    {availabilityWindow ? (
+                      <p className="mt-3 text-sm font-medium text-ink-soft">
+                        {availabilityWindow}
                       </p>
                     ) : null}
+                    {profile.availability_note ? (
+                      <p className="mt-3 text-sm text-ink-soft">
+                        {profile.availability_note}
+                      </p>
+                    ) : null}
+                    <p className="mt-2 text-xs text-mist">
+                      {profile.minimum_notice_hours} hours minimum notice
+                    </p>
                   </>
                 )}
               </section>

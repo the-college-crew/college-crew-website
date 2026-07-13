@@ -86,6 +86,9 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                   <span className="ml-1.5 font-semibold text-quad-700">
                     {formatOfferedPrice(offered)}
                   </span>
+                  {!offered.is_hourly_bookable ? (
+                    <span className="ml-1 text-mist">· setup pending</span>
+                  ) : null}
                 </li>
               ))}
             </ul>

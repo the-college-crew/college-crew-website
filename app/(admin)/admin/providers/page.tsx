@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
 import type { ProviderProfile } from "@/lib/db/types";
+import { getOfferingReadiness } from "@/lib/provider/setup";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import {
@@ -16,7 +17,10 @@ export const metadata: Metadata = { title: "Provider approvals" };
 
 type Row = ProviderProfile & {
   user: { full_name: string } | null;
-  provider_services: Array<{ service: { slug: string } | null }>;
+  provider_services: Array<{
+    hourly_rate_cents: number | null;
+    service: { slug: string; is_live: boolean } | null;
+  }>;
 };
 
 export default async function AdminProvidersPage({
@@ -32,7 +36,9 @@ export default async function AdminProvidersPage({
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("provider_profiles")
-    .select("*, user:profiles(full_name), provider_services(service:services(slug))")
+    .select(
+      "*, user:profiles(full_name), provider_services(hourly_rate_cents, service:services(slug, is_live))",
+    )
     .order("created_at", { ascending: true });
 
   // Verified school (.edu) emails, keyed by user (no direct FK to join on).
@@ -65,6 +71,14 @@ export default async function AdminProvidersPage({
     hasLicense: Boolean(p.id_document_url && p.id_document_back_url),
     hasSchoolEmail: schoolByUser.has(p.user_id),
     serviceCount: p.provider_services.length,
+    bookingReady: p.provider_services.some(
+      (offering) =>
+        offering.service &&
+        getOfferingReadiness(p, {
+          hourly_rate_cents: offering.hourly_rate_cents,
+          service_is_live: offering.service.is_live,
+        }).bookable,
+    ),
     serviceSlugs: Array.from(
       new Set(
         p.provider_services

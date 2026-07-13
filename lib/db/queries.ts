@@ -1,6 +1,7 @@
 import type {
   PriceType,
   PriceUnit,
+  ProviderProfile,
   ProviderRating,
   ProviderReview,
   ProviderType,
@@ -12,6 +13,7 @@ import type {
 import { hasSupabaseEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getOfferingReadiness } from "@/lib/provider/setup";
 
 /**
  * Shared read models used across route groups. All helpers degrade to empty
@@ -26,6 +28,7 @@ export type OfferedService = {
   unit: PriceUnit;
   preview_image_path: string | null;
   hourly_rate_cents: number | null;
+  is_hourly_bookable: boolean;
   service: Pick<Service, "id" | "name" | "slug" | "category" | "is_live">;
 };
 
@@ -81,6 +84,7 @@ type SafePublicOfferingRow = PublicProviderOfferingRow & {
   service_slug: string;
   service_category: string;
   service_is_live: boolean;
+  is_hourly_bookable: boolean;
 };
 
 function isSafePublicProviderRow(
@@ -108,7 +112,8 @@ function isSafePublicOfferingRow(
       row.service_name !== null &&
       row.service_slug !== null &&
       row.service_category !== null &&
-      row.service_is_live !== null,
+      row.service_is_live !== null &&
+      row.is_hourly_bookable !== null,
   );
 }
 
@@ -120,6 +125,7 @@ function mapPublicOffering(row: SafePublicOfferingRow): OfferedService {
     unit: row.unit,
     preview_image_path: row.preview_image_path,
     hourly_rate_cents: row.hourly_rate_cents,
+    is_hourly_bookable: row.is_hourly_bookable,
     service: {
       id: row.service_id,
       name: row.service_name,
@@ -228,7 +234,11 @@ export type PublicReview = {
 };
 
 export type PublicProviderProfile = ProviderCard & {
-  availability: { days?: string[]; note?: string };
+  availability_weekdays: number[];
+  availability_start_local: string | null;
+  availability_end_local: string | null;
+  availability_note: string;
+  minimum_notice_hours: number;
   reviews: PublicReview[];
 };
 
@@ -272,10 +282,6 @@ export async function getPublicProviderProfile(
   if (!provider || !isSafePublicProviderRow(provider)) return null;
 
   const serviceNameById = new Map((services ?? []).map((s) => [s.id, s.name]));
-  const availability = (provider.availability ?? {}) as {
-    days?: string[];
-    note?: string;
-  };
   const liveServices = (offeringRows ?? [])
     .filter(isSafePublicOfferingRow)
     .map(mapPublicOffering);
@@ -290,18 +296,29 @@ export async function getPublicProviderProfile(
     neighborhood: provider.neighborhood,
     services: liveServices,
     rating: mapRating(rating),
-    availability,
+    availability_weekdays: provider.availability_weekdays ?? [],
+    availability_start_local: provider.availability_start_local,
+    availability_end_local: provider.availability_end_local,
+    availability_note: provider.availability_note ?? "",
+    minimum_notice_hours: provider.minimum_notice_hours ?? 24,
     reviews: mapReviews(reviews ?? [], serviceNameById),
   };
 }
 
-export type AdminProviderProfile = PublicProviderProfile & {
+export type AdminProviderProfile = PublicProviderProfile &
+  Pick<
+    ProviderProfile,
+    | "service_zip"
+    | "stripe_account_id"
+    | "stripe_transfers_active"
+    | "stripe_transfers_checked_at"
+  > & {
   verification_status: VerificationStatus;
   id_document_url: string | null;
   id_document_back_url: string | null;
   created_at: string;
   full_name: string | null;
-};
+  };
 
 /**
  * Admin-only variant of getPublicProviderProfile. Unlike the public query it
@@ -322,7 +339,11 @@ export async function getAdminProviderProfile(
       supabase
         .from("provider_profiles")
         .select(
-          `availability, verification_status, id_document_url, id_document_back_url, created_at,
+          `availability, availability_weekdays, availability_start_local,
+           availability_end_local, availability_note, minimum_notice_hours,
+           service_zip, stripe_account_id, stripe_transfers_active,
+           stripe_transfers_checked_at, verification_status, id_document_url,
+           id_document_back_url, created_at,
            user:profiles ( full_name ), ${PROVIDER_CARD_SELECT}`,
         )
         .eq("id", providerId)
@@ -344,10 +365,15 @@ export async function getAdminProviderProfile(
   if (!provider) return null;
 
   const serviceNameById = new Map((services ?? []).map((s) => [s.id, s.name]));
-  const availability = (provider.availability ?? {}) as {
-    days?: string[];
-    note?: string;
-  };
+  const adminOfferings: OfferedService[] = provider.provider_services.map(
+    (offering) => ({
+      ...offering,
+      is_hourly_bookable: getOfferingReadiness(provider, {
+        hourly_rate_cents: offering.hourly_rate_cents,
+        service_is_live: offering.service.is_live,
+      }).bookable,
+    }),
+  );
 
   return {
     id: provider.id,
@@ -356,9 +382,17 @@ export async function getAdminProviderProfile(
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
     // Show every service the provider offers, even ones no longer live.
-    services: provider.provider_services,
+    services: adminOfferings,
     rating: mapRating(rating),
-    availability,
+    availability_weekdays: provider.availability_weekdays,
+    availability_start_local: provider.availability_start_local,
+    availability_end_local: provider.availability_end_local,
+    availability_note: provider.availability_note,
+    minimum_notice_hours: provider.minimum_notice_hours,
+    service_zip: provider.service_zip,
+    stripe_account_id: provider.stripe_account_id,
+    stripe_transfers_active: provider.stripe_transfers_active,
+    stripe_transfers_checked_at: provider.stripe_transfers_checked_at,
     verification_status: provider.verification_status,
     id_document_url: provider.id_document_url,
     id_document_back_url: provider.id_document_back_url,

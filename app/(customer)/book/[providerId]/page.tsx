@@ -8,6 +8,10 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSession } from "@/lib/auth/session";
 import { getPublicProviderProfile } from "@/lib/db/queries";
+import {
+  areBookingRequestsEnabled,
+  isHourlyBookingEnabled,
+} from "@/lib/env";
 
 import { BookingRequestForm } from "./booking-form";
 
@@ -24,6 +28,11 @@ export default async function BookingPage({
     getSession(),
   ]);
   if (!provider) notFound();
+  const requestsEnabled =
+    isHourlyBookingEnabled() && areBookingRequestsEnabled();
+  const bookableServices = provider.services.filter(
+    (offering) => offering.is_hourly_bookable,
+  );
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -36,7 +45,15 @@ export default async function BookingPage({
         }
       />
 
-      {session && session.profile.role !== "customer" ? (
+      {!requestsEnabled ? (
+        <Card className="p-6 text-sm text-ink-soft">
+          <p className="font-semibold text-ink">Hourly booking opens soon.</p>
+          <p className="mt-1">
+            Provider setup is underway, but customer requests remain disabled
+            until the guarded hourly request flow is ready.
+          </p>
+        </Card>
+      ) : session && session.profile.role !== "customer" ? (
         <Card className="p-6 text-sm text-ink-soft">
           <p>
             You&apos;re signed in as a{" "}
@@ -44,12 +61,16 @@ export default async function BookingPage({
             booking requests come from customer accounts.
           </p>
         </Card>
-      ) : (
+      ) : bookableServices.length > 0 ? (
         <Card pennant className="p-6">
           <BookingRequestForm
             providerId={provider.id}
-            services={provider.services}
+            services={bookableServices}
           />
+        </Card>
+      ) : (
+        <Card className="p-6 text-sm text-ink-soft">
+          This provider is still completing hourly booking setup.
         </Card>
       )}
 

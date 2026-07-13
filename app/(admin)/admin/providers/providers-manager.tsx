@@ -23,6 +23,7 @@ export type ProviderRow = {
   hasLicense: boolean;
   hasSchoolEmail: boolean;
   serviceCount: number;
+  bookingReady: boolean;
   serviceSlugs: string[];
 };
 
@@ -347,7 +348,14 @@ function ProviderListRow({
           {row.serviceCount === 1 ? "" : "s"}
         </p>
       </div>
-      <Badge tone={statusTone[row.status]}>{row.status}</Badge>
+      <div className="flex items-center gap-2">
+        {row.status === "approved" ? (
+          <Badge tone={row.bookingReady ? "green" : "gold"}>
+            {row.bookingReady ? "Booking ready" : "Setup needed"}
+          </Badge>
+        ) : null}
+        <Badge tone={statusTone[row.status]}>{row.status}</Badge>
+      </div>
     </div>
   );
 }
