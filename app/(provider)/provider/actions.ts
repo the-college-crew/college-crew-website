@@ -8,7 +8,7 @@ import { z } from "zod";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import type { BookingStatus } from "@/lib/db/types";
 import {
-  getOrCreateConversationId,
+  getConversationIdForBooking,
   sendModeratedMessage,
 } from "@/lib/messaging/conversation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -55,12 +55,12 @@ async function loadBookingParties(
   return booking as BookingParties;
 }
 
-/** Find (or open) the conversation for a booking's customer+provider pair. */
+/** Find (or open) this booking's own conversation. */
 function conversationIdFor(supabase: ServerClient, booking: BookingParties) {
-  return getOrCreateConversationId(supabase, {
+  return getConversationIdForBooking(supabase, {
+    bookingId: booking.id,
     customerId: booking.customer_id,
     providerId: booking.provider_id,
-    bookingId: booking.id,
   });
 }
 
