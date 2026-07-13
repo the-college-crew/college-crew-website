@@ -33,7 +33,6 @@ type BookingRow = {
   scheduled_at: string;
   address: string;
   price_cents: number;
-  provider_id: string;
   dismissed_at: string | null;
   service: { name: string };
   provider: { display_name: string };
@@ -87,8 +86,8 @@ export default async function CustomerDashboardPage({
   const demoPreview = await getDemoPreview("customer");
 
   if (demoPreview) {
-    // Demo rows carry no provider_id; the demo path never resolves a real
-    // conversation from it, so the shape difference is safe here.
+    // The demo path never resolves a real conversation, so it passes an empty
+    // index and the sample rows' shape difference is safe here.
     const groups = partitionBookings(
       demoBookings as unknown as BookingRow[],
       now,
@@ -109,7 +108,7 @@ export default async function CustomerDashboardPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, status, scheduled_at, address, price_cents, provider_id, dismissed_at, service:services(name), provider:provider_profiles(display_name), review:reviews(id)",
+      "id, status, scheduled_at, address, price_cents, dismissed_at, service:services(name), provider:provider_profiles(display_name), review:reviews(id)",
     )
     .eq("customer_id", session.user.id)
     .order("scheduled_at", { ascending: showPast ? false : true });
@@ -225,7 +224,7 @@ function CustomerDashboardView({
                 <BookingCard
                   booking={booking}
                   demo={demo}
-                  convo={demo ? undefined : convoIndex.get(booking.provider_id)}
+                  convo={demo ? undefined : convoIndex.get(booking.id)}
                   attention
                 />
               </li>
@@ -241,7 +240,7 @@ function CustomerDashboardView({
               <BookingCard
                 booking={booking}
                 demo={demo}
-                convo={demo ? undefined : convoIndex.get(booking.provider_id)}
+                convo={demo ? undefined : convoIndex.get(booking.id)}
               />
             </li>
           ))}

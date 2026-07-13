@@ -4,14 +4,15 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
-import { getOrCreateConversationId } from "@/lib/messaging/conversation";
+import {
+  getConversationIdForBooking,
+  getInquiryConversationId,
+} from "@/lib/messaging/conversation";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Shared messaging entry point (used from both dashboards). Pilot decision:
- * chat opens only from an existing booking. One conversation per
- * customer+provider pair — the booking that opened it is recorded on the
- * thread.
+ * Shared messaging entry point (used from both dashboards). One conversation per
+ * booking, so a second job with the same person is a second thread.
  */
 export async function openConversationForBooking(formData: FormData) {
   await requireUser();
@@ -29,20 +30,21 @@ export async function openConversationForBooking(formData: FormData) {
     throw new Error("Booking not found.");
   }
 
-  const conversationId = await getOrCreateConversationId(supabase, {
+  const conversationId = await getConversationIdForBooking(supabase, {
+    bookingId: booking.id,
     customerId: booking.customer_id,
     providerId: booking.provider_id,
-    bookingId: booking.id,
   });
 
   redirect(`/messages/${conversationId}`);
 }
 
 /**
- * Pre-booking chat: open (or return to) the thread with a provider straight
- * from their public profile — no booking required. The schema already allows
- * booking-less conversations, and every message still flows through the
- * moderate-message function.
+ * Pre-booking chat: open (or return to) the inquiry thread with a provider
+ * straight from their public profile — no booking required. There's at most one
+ * of these per pair, and the customer's next booking request with this provider
+ * claims it, so the chat and the job it led to stay together. Every message
+ * still flows through the moderate-message function.
  */
 export async function openConversationWithProvider(formData: FormData) {
   const providerId = z.string().uuid().parse(formData.get("providerId"));
@@ -60,7 +62,7 @@ export async function openConversationWithProvider(formData: FormData) {
     throw new Error("Provider not found.");
   }
 
-  const conversationId = await getOrCreateConversationId(supabase, {
+  const conversationId = await getInquiryConversationId(supabase, {
     customerId: user.id,
     providerId: provider.id,
   });

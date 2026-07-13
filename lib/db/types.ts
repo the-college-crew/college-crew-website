@@ -779,6 +779,13 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { conversation_id: string; unread_count: number }[];
       };
+      // Attaches the caller's booking-less inquiry thread to one of their
+      // bookings. Returns the claimed conversation id, or null if there was
+      // nothing to claim.
+      claim_conversation_for_booking: {
+        Args: { target_booking_id: string };
+        Returns: string | null;
+      };
     };
     Enums: {
       user_role: UserRole;

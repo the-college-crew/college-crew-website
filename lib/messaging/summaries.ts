@@ -1,11 +1,11 @@
 import type { createClient } from "@/lib/supabase/server";
 
 /**
- * Dashboard conversation lookups. There's one thread per customer+provider pair
- * (schema unique constraint), so a customer's bookings can be matched to their
- * chat by the provider id. Used to resolve a booking's conversation and preview
- * the provider's latest message on a declined card. Mirrors the latest-message
- * pattern in the messages inbox (app/(shared)/messages/page.tsx).
+ * Dashboard conversation lookups. There's one thread per booking (schema: unique
+ * booking_id), so a booking's chat is found by its own id — which is what keeps a
+ * declined card quoting the note from *that* booking's thread instead of
+ * whatever the provider last said about some other job. Mirrors the
+ * latest-message pattern in the messages inbox (app/(shared)/messages/page.tsx).
  */
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -15,18 +15,19 @@ export type ConversationEntry = {
   latest: { body: string; created_at: string; fromOther: boolean } | null;
 };
 
-/** Index the customer's conversations by provider id, with a message preview. */
+/** Index the customer's booking threads by booking id, with a message preview. */
 export async function getCustomerConversationIndex(
   supabase: ServerClient,
   customerId: string,
 ): Promise<Map<string, ConversationEntry>> {
-  const byProvider = new Map<string, ConversationEntry>();
+  const byBooking = new Map<string, ConversationEntry>();
 
   const { data: conversations } = await supabase
     .from("conversations")
-    .select("id, provider_id")
-    .eq("customer_id", customerId);
-  if (!conversations || conversations.length === 0) return byProvider;
+    .select("id, booking_id")
+    .eq("customer_id", customerId)
+    .not("booking_id", "is", null);
+  if (!conversations || conversations.length === 0) return byBooking;
 
   const ids = conversations.map((c) => c.id);
   const latest = new Map<
@@ -48,10 +49,11 @@ export async function getCustomerConversationIndex(
   }
 
   for (const c of conversations) {
-    byProvider.set(c.provider_id, {
+    if (!c.booking_id) continue;
+    byBooking.set(c.booking_id, {
       conversationId: c.id,
       latest: latest.get(c.id) ?? null,
     });
   }
-  return byProvider;
+  return byBooking;
 }
