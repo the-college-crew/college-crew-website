@@ -43,3 +43,31 @@ export async function resolveConversationFlags(formData: FormData) {
 
   revalidatePath("/admin/flagged");
 }
+
+/**
+ * Resolve one flagged profile field (admin only).
+ *
+ * Profile moderation is flag-only, so the flagged bio or display name is LIVE on
+ * the public profile. Resolving means "I looked at it" — it does NOT change the
+ * text. To actually remove bad content, edit the field on /admin/providers, which
+ * writes through updateProviderText; then resolve the flag here.
+ *
+ * Resolving is a snapshot, not a mute: if the provider edits the field again and
+ * it trips the scan again, a new unresolved event appears.
+ */
+export async function resolveProfileFlag(formData: FormData) {
+  const session = await requireRole("admin");
+  const eventId = z.string().uuid().parse(formData.get("eventId"));
+
+  const admin = createAdminClient();
+  await admin
+    .from("profile_moderation_events")
+    .update({
+      resolved_at: new Date().toISOString(),
+      resolved_by: session.user.id,
+    })
+    .eq("id", eventId)
+    .is("resolved_at", null);
+
+  revalidatePath("/admin/flagged");
+}

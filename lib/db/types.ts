@@ -18,6 +18,8 @@ export type Json =
   | Json[];
 
 export type UserRole = "customer" | "provider" | "admin";
+/** Provider free-text fields the profile scan covers (profile_moderation_events.field). */
+export type ProfileTextField = "display_name" | "bio";
 export type ProviderType = "business" | "individual";
 export type VerificationStatus = "pending" | "approved" | "rejected";
 export type BackgroundCheckStatus = "none" | "pending" | "passed";
@@ -691,6 +693,57 @@ export type Database = {
             columns: ["message_id"];
             isOneToOne: false;
             referencedRelation: "messages";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      profile_moderation_events: {
+        Row: {
+          id: string;
+          provider_id: string;
+          user_id: string;
+          field: ProfileTextField;
+          flagged_text: string;
+          matched_patterns: string[];
+          resolved_at: string | null;
+          resolved_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          provider_id: string;
+          user_id: string;
+          field: ProfileTextField;
+          flagged_text: string;
+          matched_patterns?: string[];
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          provider_id?: string;
+          user_id?: string;
+          field?: ProfileTextField;
+          flagged_text?: string;
+          matched_patterns?: string[];
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_moderation_events_provider_id_fkey";
+            columns: ["provider_id"];
+            isOneToOne: false;
+            referencedRelation: "provider_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_moderation_events_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];

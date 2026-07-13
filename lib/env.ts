@@ -27,3 +27,17 @@ export function hasStripeEnv() {
 export function hasResendEnv() {
   return Boolean(process.env.RESEND_API_KEY);
 }
+
+/**
+ * OpenAI is optional too: it powers the gpt-5.4-nano backstop in profile-text
+ * moderation (lib/moderation/profile-text.ts). Without a key that layer no-ops
+ * and the regex layer stands alone — moderation is flag-only, so a missing key
+ * can never interfere with a provider saving their profile.
+ *
+ * Note this is the APP's key (.env.local / Vercel). The moderate-message Edge
+ * Function reads its own OPENAI_API_KEY from the Supabase secret store; the two
+ * are configured separately.
+ */
+export function hasOpenAiEnv() {
+  return Boolean(process.env.OPENAI_API_KEY);
+}

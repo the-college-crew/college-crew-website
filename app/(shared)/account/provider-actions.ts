@@ -4,10 +4,13 @@ import { randomUUID } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { PROVIDER_SERVICE_IMAGES_BUCKET } from "@/lib/media/provider-service-images";
+import { screenProfileText } from "@/lib/moderation/profile-text";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 import { savePricingRows } from "@/app/(provider)/provider/_lib/pricing";
@@ -65,8 +68,14 @@ export async function updateProviderProfile(
     return { error: parsed.error.issues[0].message };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  // display_name and bio are no longer client-writable (see migration
+  // 20260713120000_profile_text_moderation.sql) — the column grant was revoked so
+  // that no bio can be written from the browser without passing the scan below.
+  // That makes this action the only write path, so it needs the service-role
+  // client. .eq("id", profile.id) keeps it scoped to the caller's own row:
+  // profile came from getOwnProviderProfile(), which is RLS-scoped to them.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("provider_profiles")
     .update({
       display_name: parsed.data.displayName,
@@ -78,6 +87,30 @@ export async function updateProviderProfile(
   if (error) {
     return { error: "Could not save your profile — try again." };
   }
+
+  // Moderation is FLAG-ONLY (SPEC §7): the text is saved and live either way.
+  // Nothing here depends on the result, so it runs after the response — the
+  // provider never waits on gpt-5.4-nano to see "Profile saved."
+  //
+  // Only CHANGED fields are scanned. Re-scanning unchanged text would file a
+  // fresh flag every time the provider saved an unrelated field, burying the
+  // real ones on the admin dashboard.
+  const changed = [
+    { field: "display_name", text: parsed.data.displayName, before: profile.display_name },
+    { field: "bio", text: parsed.data.bio, before: profile.bio },
+  ] as const;
+
+  after(async () => {
+    for (const { field, text, before } of changed) {
+      if (text === before) continue;
+      await screenProfileText({
+        providerId: profile.id,
+        userId: profile.user_id,
+        field,
+        text,
+      });
+    }
+  });
 
   revalidatePath("/account");
   return { success: "Profile saved." };

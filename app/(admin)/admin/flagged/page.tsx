@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
-import { resolveConversationFlags } from "./actions";
+import { resolveConversationFlags, resolveProfileFlag } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
+import type { ProfileTextField } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDate, formatTime } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Flagged messages" };
+export const metadata: Metadata = { title: "Flagged" };
 
 type FlagEvent = {
   id: string;
@@ -21,6 +23,21 @@ type FlagEvent = {
     conversation_id: string;
     sender: { full_name: string } | null;
   } | null;
+};
+
+type ProfileFlagEvent = {
+  id: string;
+  field: ProfileTextField;
+  flagged_text: string;
+  matched_patterns: string[];
+  created_at: string;
+  provider: { id: string; display_name: string } | null;
+  user: { full_name: string } | null;
+};
+
+const PROFILE_FIELD_LABEL: Record<ProfileTextField, string> = {
+  display_name: "Display name",
+  bio: "Bio",
 };
 
 type ThreadMessage = {
@@ -64,6 +81,19 @@ export default async function AdminFlaggedPage() {
     .order("created_at", { ascending: false });
 
   const events = (eventData ?? []) as unknown as FlagEvent[];
+
+  // Profile-text flags: a bio or display name that tripped the scan. Flag-only,
+  // like chat — the text below is LIVE on the provider's public profile until an
+  // admin edits it on /admin/providers.
+  const { data: profileEventData } = await supabase
+    .from("profile_moderation_events")
+    .select(
+      "id, field, flagged_text, matched_patterns, created_at, provider:provider_profiles(id, display_name), user:profiles(full_name)",
+    )
+    .is("resolved_at", null)
+    .order("created_at", { ascending: false });
+
+  const profileEvents = (profileEventData ?? []) as unknown as ProfileFlagEvent[];
 
   // Group flags by conversation: which messages tripped the scan (+ why), how
   // many flags, and the most recent flag time (for ordering).
@@ -132,11 +162,15 @@ export default async function AdminFlaggedPage() {
 
   return (
     <div className="space-y-8">
-      {/* New flags land here live as chat moderation logs them. */}
+      {/* New flags land here live as chat and profile moderation log them. */}
       <RealtimeRefresh channel="admin-flagged" table="moderation_events" />
+      <RealtimeRefresh
+        channel="admin-flagged-profiles"
+        table="profile_moderation_events"
+      />
       <PageHeader
-        title="Flagged messages"
-        description="Conversations where the regex scan or gpt-5.4-nano flagged possible off-platform contact info. Each card shows the whole chat — flagged messages are highlighted — so you can spot contact info split across several messages. Nothing is redacted or hidden from users; messages are always delivered in full. Resolving a chat clears all of its flags."
+        title="Flagged"
+        description="Chat messages and provider profile text that the regex scan or gpt-5.4-nano flagged. Moderation is flag-only everywhere: nothing is redacted, blocked, or hidden from users — messages are always delivered in full, and a flagged bio is live on the provider's public profile until you change it. Resolving marks a flag reviewed; it does not alter any text."
       />
 
       <section aria-labelledby="events">
@@ -259,6 +293,82 @@ export default async function AdminFlaggedPage() {
                     )}
                     </div>
                   </details>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      </section>
+
+      <section aria-labelledby="profile-events">
+        <h2 id="profile-events" className="font-display text-xl font-semibold">
+          Flagged profiles ({profileEvents.length})
+        </h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Bios and display names that tripped the scan for inappropriate content,
+          slander, or off-platform contact info. This text is{" "}
+          <strong>live on the public profile</strong> — to remove it, edit the
+          provider on Providers, then resolve the flag here.
+        </p>
+        <div className="mt-3 space-y-3">
+          {profileEvents.length === 0 ? (
+            <EmptyState title="No flagged profiles">
+              When a provider saves a bio or display name that trips the scan, it
+              shows up here for review.
+            </EmptyState>
+          ) : (
+            profileEvents.map((event) => {
+              const providerName =
+                event.provider?.display_name ||
+                event.user?.full_name ||
+                "Provider";
+
+              return (
+                <Card key={event.id} pennant className="relative p-4">
+                  <form
+                    action={resolveProfileFlag}
+                    className="absolute right-4 top-4 z-10"
+                  >
+                    <input type="hidden" name="eventId" value={event.id} />
+                    <Button type="submit" variant="success" size="sm">
+                      Resolve
+                    </Button>
+                  </form>
+
+                  <div className="pr-24">
+                    <p className="font-display text-lg font-semibold">
+                      {providerName}
+                    </p>
+                    <p className="mt-0.5 text-sm text-ink-soft">
+                      {PROFILE_FIELD_LABEL[event.field]} ·{" "}
+                      {formatDate(event.created_at)}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3">
+                    <p className="whitespace-pre-wrap text-sm">
+                      {event.flagged_text}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {event.matched_patterns.map((tag) => (
+                        <Badge
+                          key={tag}
+                          tone={tag.startsWith("model:") ? "red" : "gold"}
+                        >
+                          {patternLabel(tag)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {event.provider ? (
+                    <Link
+                      href="/admin/providers"
+                      className="mt-3 inline-block text-sm font-semibold text-viridian underline underline-offset-2"
+                    >
+                      Edit this provider →
+                    </Link>
+                  ) : null}
                 </Card>
               );
             })
