@@ -56,6 +56,7 @@ export function UserMenu({
   supportHref = "/support",
   dashboardLabel = "Dashboard",
   unreadCount = 0,
+  badgeRing = "ring-viridian",
 }: {
   name: string;
   email: string;
@@ -67,6 +68,8 @@ export function UserMenu({
   supportHref?: string;
   dashboardLabel?: string;
   unreadCount?: number;
+  /** Ring color around the unread badge — match the header background. */
+  badgeRing?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -118,7 +121,10 @@ export function UserMenu({
         {unreadCount > 0 ? (
           <span
             aria-hidden
-            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-viridian"
+            className={cn(
+              "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2",
+              badgeRing,
+            )}
           >
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
