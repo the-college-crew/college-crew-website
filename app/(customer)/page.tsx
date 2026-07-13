@@ -271,8 +271,8 @@ function Hero({
           <p className={LEAD}>
             <Editable k="home.hero.subtitle">
               College Crew connects families with verified college students for
-              practical neighborhood help, matched by proximity and school, and
-              paid securely in the app.
+              practical neighborhood help. Browse students near you, see where
+              they go to school, and pay securely in the app.
             </Editable>
           </p>
           <div className="mt-[34px] flex flex-wrap gap-3.5">
@@ -288,7 +288,7 @@ function Hero({
           <div className="mt-[30px] flex flex-wrap gap-2.5">
             {[
               "Verified college students",
-              "Matched by proximity & school",
+              "Students near you, first",
               "Secure in-app payment",
             ].map((item, index) => (
               <span
@@ -470,7 +470,7 @@ function Comparison() {
             title={<Editable k="home.compare.us.title">College Crew</Editable>}
             items={[
               "One profile, one reputation, home and campus",
-              "Matched by proximity and school, not a random zip code",
+              "Students near you, recommended first, not a random zip code",
               "Every student is ID and school verified",
               "Reviews and ratings travel with you, always",
             ].map((item, index) => (

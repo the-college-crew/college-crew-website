@@ -17,7 +17,7 @@ export const PARENT_STEPS = [
   },
   {
     n: "2",
-    title: "Get matched by proximity & school",
+    title: "Browse students near you",
     body: 'See verified students nearby, like "2 miles away, verified Northwestern sophomore," and pick one.',
   },
   {
