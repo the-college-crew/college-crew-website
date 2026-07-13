@@ -203,16 +203,16 @@ export function ChatThread({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-line bg-court px-4 py-3 text-[11px] leading-relaxed text-mist">
-        College Crew monitors chats to help stop off-platform contact info.
-        Please don&apos;t send phone numbers, email addresses, social handles, or
-        payment details. Job details and addresses are okay.
-      </div>
-
       <div
         ref={messagesViewportRef}
         className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4"
       >
+        <div className="mx-auto max-w-md border-b border-line px-2 pb-3 text-center text-[11px] leading-relaxed text-mist">
+          College Crew monitors chats to help stop off-platform contact info.
+          Please don&apos;t send phone numbers, email addresses, social handles,
+          or payment details. Job details and addresses are okay.
+        </div>
+
         {messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-mist">
             No messages yet. Say hello — job details, photos, and scheduling
