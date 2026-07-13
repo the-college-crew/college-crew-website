@@ -26,10 +26,12 @@ import {
   deriveInvoiceAutochargeAt,
   deriveLateDisputeDueAt,
   deriveResponseAlertAt,
+  doesSlotFitPilotAvailability,
   eligibleResponseWindowHours,
   getPilotLocalParts,
   isDurationValid,
   isHourlyRateValid,
+  pilotLocalDateTimeToUtc,
   roundPositiveRatio,
 } from "./policy";
 
@@ -226,5 +228,42 @@ describe("America/Chicago DST boundaries", () => {
       hour: 1,
       offset: "GMT-06:00",
     });
+  });
+
+  it("converts only unambiguous Chicago wall-clock values", () => {
+    const ordinary = pilotLocalDateTimeToUtc("2026-07-15T14:30");
+    expect(ordinary.ok && ordinary.date.toISOString()).toBe(
+      "2026-07-15T19:30:00.000Z",
+    );
+    expect(pilotLocalDateTimeToUtc("2026-03-08T02:30")).toEqual({
+      ok: false,
+      reason: "nonexistent",
+    });
+    expect(pilotLocalDateTimeToUtc("2026-11-01T01:30")).toEqual({
+      ok: false,
+      reason: "ambiguous",
+    });
+  });
+
+  it("requires the full elapsed slot to remain in one availability window", () => {
+    const base = {
+      weekdays: [2],
+      startLocal: "09:00",
+      endLocal: "17:00",
+    };
+    expect(
+      doesSlotFitPilotAvailability({
+        ...base,
+        scheduledAt: "2026-07-15T14:00:00.000Z",
+        estimatedMinutes: 120,
+      }),
+    ).toBe(true);
+    expect(
+      doesSlotFitPilotAvailability({
+        ...base,
+        scheduledAt: "2026-07-15T21:30:00.000Z",
+        estimatedMinutes: 60,
+      }),
+    ).toBe(false);
   });
 });
