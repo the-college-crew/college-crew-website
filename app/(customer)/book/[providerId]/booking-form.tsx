@@ -12,6 +12,7 @@ import {
   Textarea,
 } from "@/components/ui/field";
 import type { OfferedService } from "@/lib/db/queries";
+import { PLATFORM_FEE_RATE } from "@/lib/site";
 import { formatOfferedPrice } from "@/lib/utils";
 
 import { createBookingRequest, type BookingFormState } from "./actions";
@@ -23,6 +24,7 @@ export function BookingRequestForm({
   providerId: string;
   services: OfferedService[];
 }) {
+  const platformFeePercent = Math.round(PLATFORM_FEE_RATE * 100);
   const [state, formAction, pending] = useActionState<
     BookingFormState,
     FormData
@@ -105,9 +107,9 @@ export function BookingRequestForm({
           </span>
         </div>
         <p className="mt-2 text-xs text-mist">
-          You pay exactly the price shown. College Crew&apos;s 15% comes out of
-          the provider&apos;s earnings — never added to your bill. Nothing is
-          charged until the provider accepts and you confirm.
+          You pay exactly the price shown. College Crew&apos;s {platformFeePercent}%
+          comes out of the provider&apos;s earnings — never added to your bill.
+          Nothing is charged until the provider accepts and you confirm.
         </p>
       </div>
 

@@ -61,7 +61,7 @@ export default async function ProviderJobsPage() {
     supabase
       .from("bookings")
       .select(
-        "id, status, scheduled_at, address, price_cents, platform_fee_cents, service:services(name), customer:profiles(full_name)",
+        "id, status, scheduled_at, address, price_cents, platform_fee_cents, service:services(name), customer:profiles!bookings_customer_id_fkey(full_name)",
       )
       .eq("provider_id", profile.id)
       .in("status", ["accepted", "paid"])

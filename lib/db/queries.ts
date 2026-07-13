@@ -1,11 +1,16 @@
 import type {
   PriceType,
   PriceUnit,
+  ProviderRating,
+  ProviderReview,
   ProviderType,
+  PublicProviderDirectoryRow,
+  PublicProviderOfferingRow,
   Service,
   VerificationStatus,
 } from "@/lib/db/types";
 import { hasSupabaseEnv } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -20,6 +25,7 @@ export type OfferedService = {
   price_type: PriceType;
   unit: PriceUnit;
   preview_image_path: string | null;
+  hourly_rate_cents: number | null;
   service: Pick<Service, "id" | "name" | "slug" | "category" | "is_live">;
 };
 
@@ -49,10 +55,112 @@ export async function getLiveServices(): Promise<Service[]> {
 const PROVIDER_CARD_SELECT = `
   id, display_name, bio, provider_type, neighborhood,
   provider_services (
-    id, price_cents, price_type, unit, preview_image_path,
+    id, price_cents, price_type, unit, preview_image_path, hourly_rate_cents,
     service:services ( id, name, slug, category, is_live )
   )
 ` as const;
+
+type SafePublicProviderRow = PublicProviderDirectoryRow & {
+  provider_id: string;
+  display_name: string;
+  bio: string;
+  provider_type: ProviderType;
+  neighborhood: string;
+};
+
+type SafePublicOfferingRow = PublicProviderOfferingRow & {
+  provider_service_id: string;
+  provider_id: string;
+  service_id: string;
+  price_cents: number;
+  price_type: PriceType;
+  unit: PriceUnit;
+  preview_image_path: string | null;
+  hourly_rate_cents: number | null;
+  service_name: string;
+  service_slug: string;
+  service_category: string;
+  service_is_live: boolean;
+};
+
+function isSafePublicProviderRow(
+  row: PublicProviderDirectoryRow,
+): row is SafePublicProviderRow {
+  return Boolean(
+    row.provider_id &&
+      row.display_name !== null &&
+      row.bio !== null &&
+      row.provider_type &&
+      row.neighborhood !== null,
+  );
+}
+
+function isSafePublicOfferingRow(
+  row: PublicProviderOfferingRow,
+): row is SafePublicOfferingRow {
+  return Boolean(
+    row.provider_service_id &&
+      row.provider_id &&
+      row.service_id &&
+      row.price_cents !== null &&
+      row.price_type &&
+      row.unit &&
+      row.service_name !== null &&
+      row.service_slug !== null &&
+      row.service_category !== null &&
+      row.service_is_live !== null,
+  );
+}
+
+function mapPublicOffering(row: SafePublicOfferingRow): OfferedService {
+  return {
+    id: row.provider_service_id,
+    price_cents: row.price_cents,
+    price_type: row.price_type,
+    unit: row.unit,
+    preview_image_path: row.preview_image_path,
+    hourly_rate_cents: row.hourly_rate_cents,
+    service: {
+      id: row.service_id,
+      name: row.service_name,
+      slug: row.service_slug,
+      category: row.service_category,
+      is_live: row.service_is_live,
+    },
+  };
+}
+
+function mapRating(row: ProviderRating | null) {
+  if (!row || row.avg_rating === null || row.review_count === null) return null;
+  return { avg: Number(row.avg_rating), count: row.review_count };
+}
+
+function mapReviews(
+  rows: ProviderReview[],
+  serviceNameById: Map<string, string>,
+): PublicReview[] {
+  return rows.flatMap((row) => {
+    if (
+      row.id === null ||
+      row.rating === null ||
+      row.text === null ||
+      row.created_at === null ||
+      row.service_id === null
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        id: row.id,
+        rating: row.rating,
+        text: row.text,
+        created_at: row.created_at,
+        service_name: serviceNameById.get(row.service_id) ?? null,
+      },
+    ];
+  });
+}
 
 /**
  * Approved providers for Browse and the landing page. RLS already hides
@@ -64,30 +172,44 @@ export async function getApprovedProviders(
   if (!hasSupabaseEnv()) return [];
   const supabase = await createClient();
 
-  const [{ data: providers }, { data: ratings }] = await Promise.all([
+  const { data: providers } = await supabase
+    .from("public_provider_directory")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  const safeProviders = (providers ?? []).filter(isSafePublicProviderRow);
+  if (!safeProviders.length) return [];
+
+  const providerIds = safeProviders.map((provider) => provider.provider_id);
+  const [{ data: offeringRows }, { data: ratings }] = await Promise.all([
     supabase
-      .from("provider_profiles")
-      .select(PROVIDER_CARD_SELECT)
-      .eq("verification_status", "approved")
-      .order("created_at", { ascending: true }),
+      .from("public_provider_offerings")
+      .select("*")
+      .in("provider_id", providerIds),
     supabase.from("provider_ratings").select("*"),
   ]);
 
-  const ratingByProvider = new Map(
-    (ratings ?? []).map((r) => [
-      r.provider_id,
-      { avg: Number(r.avg_rating), count: r.review_count },
-    ]),
-  );
+  const offeringsByProvider = new Map<string, OfferedService[]>();
+  for (const row of (offeringRows ?? []).filter(isSafePublicOfferingRow)) {
+    const offerings = offeringsByProvider.get(row.provider_id) ?? [];
+    offerings.push(mapPublicOffering(row));
+    offeringsByProvider.set(row.provider_id, offerings);
+  }
 
-  const cards: ProviderCard[] = (providers ?? []).map((p) => ({
-    id: p.id,
+  const ratingByProvider = new Map<string, NonNullable<ProviderCard["rating"]>>();
+  for (const rating of ratings ?? []) {
+    const mapped = mapRating(rating);
+    if (rating.provider_id && mapped) ratingByProvider.set(rating.provider_id, mapped);
+  }
+
+  const cards: ProviderCard[] = safeProviders.map((p) => ({
+    id: p.provider_id,
     display_name: p.display_name,
     bio: p.bio,
     provider_type: p.provider_type,
     neighborhood: p.neighborhood,
-    services: p.provider_services.filter((ps) => ps.service.is_live),
-    rating: ratingByProvider.get(p.id) ?? null,
+    services: offeringsByProvider.get(p.provider_id) ?? [],
+    rating: ratingByProvider.get(p.provider_id) ?? null,
   }));
 
   return cards.filter(
@@ -117,14 +239,22 @@ export async function getPublicProviderProfile(
   if (!hasSupabaseEnv()) return null;
   const supabase = await createClient();
 
-  const [{ data: provider }, { data: rating }, { data: reviews }, { data: services }] =
-    await Promise.all([
+  const [
+    { data: provider },
+    { data: offeringRows },
+    { data: rating },
+    { data: reviews },
+    { data: services },
+  ] = await Promise.all([
       supabase
-        .from("provider_profiles")
-        .select(`availability, verification_status, ${PROVIDER_CARD_SELECT}`)
-        .eq("id", providerId)
-        .eq("verification_status", "approved")
+        .from("public_provider_directory")
+        .select("*")
+        .eq("provider_id", providerId)
         .maybeSingle(),
+      supabase
+        .from("public_provider_offerings")
+        .select("*")
+        .eq("provider_id", providerId),
       supabase
         .from("provider_ratings")
         .select("*")
@@ -139,37 +269,29 @@ export async function getPublicProviderProfile(
       supabase.from("services").select("id, name"),
     ]);
 
-  if (!provider) return null;
+  if (!provider || !isSafePublicProviderRow(provider)) return null;
 
   const serviceNameById = new Map((services ?? []).map((s) => [s.id, s.name]));
   const availability = (provider.availability ?? {}) as {
     days?: string[];
     note?: string;
   };
-  const liveServices = provider.provider_services.filter(
-    (ps) => ps.service.is_live,
-  );
+  const liveServices = (offeringRows ?? [])
+    .filter(isSafePublicOfferingRow)
+    .map(mapPublicOffering);
 
   if (liveServices.length === 0) return null;
 
   return {
-    id: provider.id,
+    id: provider.provider_id,
     display_name: provider.display_name,
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
     services: liveServices,
-    rating: rating
-      ? { avg: Number(rating.avg_rating), count: rating.review_count }
-      : null,
+    rating: mapRating(rating),
     availability,
-    reviews: (reviews ?? []).map((r) => ({
-      id: r.id,
-      rating: r.rating,
-      text: r.text,
-      created_at: r.created_at,
-      service_name: serviceNameById.get(r.service_id) ?? null,
-    })),
+    reviews: mapReviews(reviews ?? [], serviceNameById),
   };
 }
 
@@ -185,14 +307,15 @@ export type AdminProviderProfile = PublicProviderProfile & {
  * Admin-only variant of getPublicProviderProfile. Unlike the public query it
  * does NOT filter by verification_status or require live services — admins
  * review providers in any state (pending, rejected, or with services the
- * catalog has since retired). Reads run as the signed-in admin (RLS admin
- * policies grant full visibility). Returns null only if the id doesn't exist.
+ * catalog has since retired). The caller is responsible for an admin role
+ * gate before this server-only service-role read. Returns null only if the id
+ * doesn't exist.
  */
 export async function getAdminProviderProfile(
   providerId: string,
 ): Promise<AdminProviderProfile | null> {
   if (!hasSupabaseEnv()) return null;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const [{ data: provider }, { data: rating }, { data: reviews }, { data: services }] =
     await Promise.all([
@@ -234,21 +357,13 @@ export async function getAdminProviderProfile(
     neighborhood: provider.neighborhood,
     // Show every service the provider offers, even ones no longer live.
     services: provider.provider_services,
-    rating: rating
-      ? { avg: Number(rating.avg_rating), count: rating.review_count }
-      : null,
+    rating: mapRating(rating),
     availability,
     verification_status: provider.verification_status,
     id_document_url: provider.id_document_url,
     id_document_back_url: provider.id_document_back_url,
     created_at: provider.created_at,
     full_name: provider.user?.full_name ?? null,
-    reviews: (reviews ?? []).map((r) => ({
-      id: r.id,
-      rating: r.rating,
-      text: r.text,
-      created_at: r.created_at,
-      service_name: serviceNameById.get(r.service_id) ?? null,
-    })),
+    reviews: mapReviews(reviews ?? [], serviceNameById),
   };
 }

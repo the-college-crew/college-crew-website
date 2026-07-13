@@ -69,7 +69,7 @@ export async function updateProviderProfile(
   }
 
   // display_name and bio are no longer client-writable (see migration
-  // 20260713120000_profile_text_moderation.sql) — the column grant was revoked so
+  // 20260713165821_profile_text_moderation.sql) — the column grant was revoked so
   // that no bio can be written from the browser without passing the scan below.
   // That makes this action the only write path, so it needs the service-role
   // client. .eq("id", profile.id) keeps it scoped to the caller's own row:

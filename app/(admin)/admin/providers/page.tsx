@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
+import { requireRole } from "@/lib/auth/session";
 import type { ProviderProfile } from "@/lib/db/types";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 import {
   ProvidersManager,
@@ -23,10 +24,12 @@ export default async function AdminProvidersPage({
 }: {
   searchParams: Promise<{ err?: string }>;
 }) {
+  await requireRole("admin");
   const { err } = await searchParams;
 
-  // Reads run as the signed-in admin — RLS admin policies grant visibility.
-  const supabase = await createClient();
+  // Private provider fields are never browser-role readable. This page performs
+  // an explicit role check before using the server-only administrative client.
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from("provider_profiles")
     .select("*, user:profiles(full_name), provider_services(service:services(slug))")

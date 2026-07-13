@@ -41,3 +41,20 @@ export function hasResendEnv() {
 export function hasOpenAiEnv() {
   return Boolean(process.env.OPENAI_API_KEY);
 }
+
+function isEnabled(value: string | undefined) {
+  return value?.trim().toLowerCase() === "true";
+}
+
+/** Hourly routes and controls stay hidden until the Phase 8 rollout. */
+export function isHourlyBookingEnabled() {
+  return isEnabled(process.env.HOURLY_BOOKING_ENABLED);
+}
+
+/**
+ * Emergency/request-rollout switch. Existing booking operations never consult
+ * this flag, so disabling creation cannot strand requested or accepted jobs.
+ */
+export function areBookingRequestsEnabled() {
+  return isEnabled(process.env.BOOKING_REQUESTS_ENABLED);
+}

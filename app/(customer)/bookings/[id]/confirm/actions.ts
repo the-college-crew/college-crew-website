@@ -15,6 +15,7 @@ import {
   LEGAL_CONTENT_VERSION,
 } from "@/lib/legal/waivers";
 import { createBookingPaymentIntent } from "@/lib/stripe/connect";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
 
@@ -47,10 +48,10 @@ export async function confirmAndPay(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      `id, customer_id, status, scheduled_at, address, price_cents,
+      `id, customer_id, provider_id, status, scheduled_at, address, price_cents,
        platform_fee_cents,
        service:services(name, slug),
-       provider:provider_profiles(display_name, stripe_account_id),
+       provider:provider_profiles(display_name),
        customer:profiles!bookings_customer_id_fkey(full_name)`,
     )
     .eq("id", bookingId)
@@ -110,13 +111,22 @@ export async function confirmAndPay(
     return { error: "Could not save the booking risk acceptance. Try again." };
   }
 
-  if (!provider?.stripe_account_id) {
+  // Connected-account identifiers are private provider data. Read one only
+  // after the customer-owned booking above has authorized this operation.
+  const admin = createAdminClient();
+  const { data: providerPayout } = await admin
+    .from("provider_profiles")
+    .select("stripe_account_id")
+    .eq("id", booking.provider_id)
+    .maybeSingle();
+
+  if (!providerPayout?.stripe_account_id) {
     return { unconfigured: true };
   }
 
   const result = await createBookingPaymentIntent({
     booking,
-    providerStripeAccountId: provider.stripe_account_id,
+    providerStripeAccountId: providerPayout.stripe_account_id,
   });
   if (!result.configured) {
     return { unconfigured: true };

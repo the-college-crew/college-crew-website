@@ -112,8 +112,8 @@ export async function getProviderPayoutStatus(
 
 /**
  * Charge-after-accept (SPEC §3/§6): the customer confirms an accepted
- * booking, we create a destination charge for the full price with our 15%
- * as the application fee; the remainder is the provider's payout.
+ * booking, we create a destination charge for the full price with the
+ * booking's immutable fee snapshot; the remainder is the provider's payout.
  */
 export async function createBookingPaymentIntent(input: {
   booking: Pick<Booking, "id" | "price_cents" | "platform_fee_cents">;

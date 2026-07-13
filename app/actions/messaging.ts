@@ -53,18 +53,17 @@ export async function openConversationWithProvider(formData: FormData) {
 
   // Only approved providers are messageable — same bar as booking them.
   const { data: provider } = await supabase
-    .from("provider_profiles")
-    .select("id, verification_status")
-    .eq("id", providerId)
-    .eq("verification_status", "approved")
+    .from("public_provider_directory")
+    .select("provider_id")
+    .eq("provider_id", providerId)
     .maybeSingle();
-  if (!provider) {
+  if (!provider?.provider_id) {
     throw new Error("Provider not found.");
   }
 
   const conversationId = await getInquiryConversationId(supabase, {
     customerId: user.id,
-    providerId: provider.id,
+    providerId: provider.provider_id,
   });
 
   redirect(`/messages/${conversationId}`);

@@ -80,7 +80,7 @@ export default async function ProviderDashboardPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, status, scheduled_at, address, details, price_cents, platform_fee_cents, service:services(name), customer:profiles(full_name)",
+      "id, status, scheduled_at, address, details, price_cents, platform_fee_cents, service:services(name), customer:profiles!bookings_customer_id_fkey(full_name)",
     )
     .eq("provider_id", profile.id)
     .order("scheduled_at", { ascending: true });
@@ -247,7 +247,7 @@ function ProviderDashboardView({
                     </span>{" "}
                     <span className="text-xs text-mist">
                       your cut of {formatMoney(booking.price_cents)} (after the
-                      15% platform fee)
+                      snapshotted platform fee)
                     </span>
                   </p>
                   {demo ? (

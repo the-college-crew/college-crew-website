@@ -14,6 +14,22 @@ const config: Record<BookingStatus, { label: string; classes: string }> = {
     label: "Accepted — awaiting payment",
     classes: "border-sky bg-sky text-viridian",
   },
+  booked: {
+    label: "Booked",
+    classes: "border-honeydew bg-honeydew text-viridian",
+  },
+  in_progress: {
+    label: "In progress",
+    classes: "border-sky bg-sky text-viridian",
+  },
+  invoice_review: {
+    label: "Invoice review",
+    classes: "border-amber-200 bg-amber-50 text-amber-900",
+  },
+  disputed: {
+    label: "Under review",
+    classes: "border-red-200 bg-red-50 text-red-800",
+  },
   paid: {
     label: "Confirmed",
     classes: "border-honeydew bg-honeydew text-viridian",
@@ -25,6 +41,14 @@ const config: Record<BookingStatus, { label: string; classes: string }> = {
   declined: {
     label: "Declined",
     classes: "border-red-200 bg-red-50 text-red-800",
+  },
+  withdrawn: {
+    label: "Withdrawn",
+    classes: "border-stone bg-stone text-ink-soft",
+  },
+  expired: {
+    label: "Expired",
+    classes: "border-stone bg-stone text-ink-soft",
   },
   cancelled: {
     label: "Cancelled",

@@ -5,6 +5,7 @@ import { cache } from "react";
 
 import type { Profile, ProviderProfile, UserRole } from "@/lib/db/types";
 import { hasSupabaseEnv } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -48,8 +49,10 @@ export const getOwnProviderProfile = cache(
     const user = await getUser();
     if (!user) return null;
 
-    const supabase = await createClient();
-    const { data } = await supabase
+    // Private provider columns (service ZIP, Stripe state, ID paths) are not
+    // browser-readable. The authenticated user id scopes this server-only read.
+    const admin = createAdminClient();
+    const { data } = await admin
       .from("provider_profiles")
       .select("*")
       .eq("user_id", user.id)

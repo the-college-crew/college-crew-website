@@ -8,6 +8,7 @@
     "email:supabase-payload": "node scripts/supabase-auth-email-templates.mjs --print",
     "email:sync-supabase": "node scripts/supabase-auth-email-templates.mjs",
     "start": "next start",
+    "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
@@ -34,7 +35,8 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.9",
     "tailwindcss": "^4.3.2",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
   },
   "overrides": {
     "postcss": "^8.5.10"

@@ -95,8 +95,8 @@ export default async function ConfirmPayPage({
           ))}
         </dl>
         <p className="mt-2 text-xs text-mist">
-          You pay the price shown — College Crew&apos;s 15% comes out of the
-          provider&apos;s earnings.
+          You pay the price shown — College Crew&apos;s platform fee comes out of
+          the provider&apos;s earnings.
         </p>
 
         {booking.status === "accepted" ? (

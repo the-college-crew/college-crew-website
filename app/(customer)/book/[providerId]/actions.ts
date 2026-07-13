@@ -8,6 +8,7 @@ import {
   getConversationIdForBooking,
   sendModeratedMessage,
 } from "@/lib/messaging/conversation";
+import { areBookingRequestsEnabled } from "@/lib/env";
 import { PLATFORM_FEE_RATE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
@@ -37,6 +38,13 @@ export async function createBookingRequest(
   _prev: BookingFormState,
   formData: FormData,
 ): Promise<BookingFormState> {
+  if (!areBookingRequestsEnabled()) {
+    return {
+      error:
+        "New booking requests are temporarily paused while we update scheduling.",
+    };
+  }
+
   const session = await getSession();
   if (!session) {
     return { error: "Log in to request a booking." };

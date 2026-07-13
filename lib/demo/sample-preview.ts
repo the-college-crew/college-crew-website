@@ -85,6 +85,14 @@ export const demoProviderProfile: ProviderProfile = {
     days: ["mon", "wed", "fri", "sat"],
     note: "Weekday afternoons after class, Saturdays 9am-4pm.",
   },
+  availability_weekdays: [0, 2, 4, 5],
+  availability_start_local: "15:00:00",
+  availability_end_local: "20:00:00",
+  availability_note: "Weekday afternoons after class, Saturdays 9am-4pm.",
+  service_zip: null,
+  minimum_notice_hours: 24,
+  stripe_transfers_active: false,
+  stripe_transfers_checked_at: null,
   created_at: isoAgoDays(45, 12),
 };
 
