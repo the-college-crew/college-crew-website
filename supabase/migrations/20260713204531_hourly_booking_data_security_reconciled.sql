@@ -795,7 +795,15 @@ alter default privileges in schema public
 alter default privileges in schema public
   revoke all on sequences from anon, authenticated;
 alter default privileges in schema public
-  revoke execute on routines from anon, authenticated;
+  revoke execute on routines from public, anon, authenticated;
+
+-- Ari's per-booking conversation RPC remains the authoritative implementation,
+-- but SECURITY DEFINER functions receive PUBLIC execute by default. Preserve
+-- its intended authenticated-only API surface explicitly.
+revoke execute on function public.claim_conversation_for_booking(uuid)
+  from public, anon;
+grant execute on function public.claim_conversation_for_booking(uuid)
+  to authenticated;
 
 revoke all on table
   public.booking_invoices,

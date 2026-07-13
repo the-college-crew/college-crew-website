@@ -132,6 +132,24 @@ select is(
   true,
   'providers can configure hourly rates in Phase 2'
 );
+select is(
+  has_function_privilege(
+    'anon',
+    'public.claim_conversation_for_booking(uuid)',
+    'execute'
+  ),
+  false,
+  'anon cannot execute the per-booking SECURITY DEFINER claim function'
+);
+select is(
+  has_function_privilege(
+    'authenticated',
+    'public.claim_conversation_for_booking(uuid)',
+    'execute'
+  ),
+  true,
+  'authenticated booking participants retain Ari''s conversation claim RPC'
+);
 
 select is(
   (
