@@ -19,6 +19,7 @@ export type OfferedService = {
   price_cents: number;
   price_type: PriceType;
   unit: PriceUnit;
+  preview_image_path: string | null;
   service: Pick<Service, "id" | "name" | "slug" | "category" | "is_live">;
 };
 
@@ -48,7 +49,7 @@ export async function getLiveServices(): Promise<Service[]> {
 const PROVIDER_CARD_SELECT = `
   id, display_name, bio, provider_type, neighborhood,
   provider_services (
-    id, price_cents, price_type, unit,
+    id, price_cents, price_type, unit, preview_image_path,
     service:services ( id, name, slug, category, is_live )
   )
 ` as const;

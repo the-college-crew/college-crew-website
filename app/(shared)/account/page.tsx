@@ -28,7 +28,9 @@ import { formatOfferedPrice } from "@/lib/utils";
 
 import { AccountPasswordForm, AccountProfileForm } from "./account-forms";
 import { saveSettingsPricing } from "./provider-actions";
+import { ProviderServicePreviewForm } from "./provider-service-preview-form";
 import { AvailabilityForm, ProviderProfileForm } from "./provider-settings-forms";
+import { providerServiceImageUrl } from "@/lib/media/provider-service-images";
 
 export const metadata: Metadata = { title: "Account settings" };
 
@@ -143,9 +145,21 @@ async function ProviderStorefront({
     getLiveServices(),
     supabase
       .from("provider_services")
-      .select("service_id, price_cents, price_type, unit")
+      .select("id, service_id, price_cents, price_type, unit, preview_image_path")
       .eq("provider_id", providerProfile.id),
   ]);
+  const liveServiceNameById = new Map(services.map((service) => [service.id, service.name]));
+  const previews = (offerings ?? [])
+    .map((offering) => {
+      const serviceName = liveServiceNameById.get(offering.service_id);
+      if (!serviceName) return null;
+      return {
+        id: offering.id,
+        serviceName,
+        imageUrl: providerServiceImageUrl(offering.preview_image_path),
+      };
+    })
+    .filter((preview): preview is NonNullable<typeof preview> => preview !== null);
 
   // Stripe's return_url carries no completion state, so confirm payout
   // readiness from the account's live capability status rather than assuming
@@ -187,6 +201,13 @@ async function ProviderStorefront({
           action={saveSettingsPricing}
           submitLabel="Save pricing"
         />
+      </Section>
+
+      <Section
+        title="Service preview photos"
+        description="Add one photo for each service you offer. These replace the illustrated segments in your Browse and profile banner."
+      >
+        <ProviderServicePreviewForm previews={previews} />
       </Section>
 
       <Section title="Payouts">

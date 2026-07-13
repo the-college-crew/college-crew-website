@@ -11,8 +11,9 @@ import {
   demoMessagesFor,
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
+import { getUnreadSummary } from "@/lib/messaging/unread";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Messages" };
 
@@ -76,11 +77,14 @@ export default async function MessagesPage() {
 
   const supabase = await createClient();
 
-  const { data: conversationData } = await supabase
+  // conversation_reads also links conversations↔profiles, so the customer
+  // embed must name its FK or PostgREST rejects the query as ambiguous.
+  const { data: conversationData, error } = await supabase
     .from("conversations")
     .select(
-      "id, customer_id, created_at, customer:profiles(full_name), provider:provider_profiles(display_name)",
+      "id, customer_id, created_at, customer:profiles!conversations_customer_id_fkey(full_name), provider:provider_profiles(display_name)",
     );
+  if (error) throw new Error(`Could not load conversations: ${error.message}`);
   const conversations = (conversationData ?? []) as ConversationRow[];
 
   // Latest message per thread, in one query, for the preview + sort order.
@@ -100,6 +104,9 @@ export default async function MessagesPage() {
       });
     }
   }
+
+  const { byConversation: unreadByConversation } =
+    await getUnreadSummary(supabase);
 
   const activityAt = (c: ConversationRow) =>
     latest.get(c.id)?.created_at ?? c.created_at;
@@ -127,14 +134,20 @@ export default async function MessagesPage() {
               ? conversation.provider.display_name
               : conversation.customer.full_name;
             const preview = latest.get(conversation.id);
+            const unread = unreadByConversation.get(conversation.id) ?? 0;
 
             return (
               <li key={conversation.id}>
                 <Link href={`/messages/${conversation.id}`} className="block">
                   <Card className="p-4 transition-colors hover:bg-crew-50">
                     <div className="flex items-baseline justify-between gap-3">
-                      <p className="font-display font-semibold text-ink">
+                      <p className="flex items-center gap-2 font-display font-semibold text-ink">
                         {otherName || "Conversation"}
+                        {unread > 0 ? (
+                          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold leading-none text-white">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        ) : null}
                       </p>
                       {preview ? (
                         <span className="shrink-0 text-xs text-mist">
@@ -142,7 +155,14 @@ export default async function MessagesPage() {
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 truncate text-sm text-ink-soft">
+                    <p
+                      className={cn(
+                        "mt-1 truncate text-sm",
+                        unread > 0
+                          ? "font-semibold text-ink"
+                          : "text-ink-soft",
+                      )}
+                    >
                       {preview?.body || "No messages yet"}
                     </p>
                   </Card>

@@ -103,8 +103,10 @@ export default async function AdminFlaggedPage() {
             .order("created_at", { ascending: true }),
           supabase
             .from("conversations")
+            // conversation_reads also links conversations↔profiles; the FK
+            // hint keeps the customer embed unambiguous for PostgREST.
             .select(
-              "id, customer:profiles(full_name), provider:provider_profiles(display_name)",
+              "id, customer:profiles!conversations_customer_id_fkey(full_name), provider:provider_profiles(display_name)",
             )
             .in("id", conversationIds),
         ])

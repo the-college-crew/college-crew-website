@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireUser } from "@/lib/auth/session";
+import { requireRole, requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -28,6 +28,26 @@ export async function cancelBooking(formData: FormData) {
     .in("status", ["requested", "accepted"]);
   if (error) {
     throw new Error(`Could not cancel: ${error.message}`);
+  }
+
+  revalidatePath("/dashboard");
+}
+
+/** Hide a declined request from this customer's dashboard without deleting it. */
+export async function dismissDeclinedBooking(formData: FormData) {
+  const session = await requireRole("customer", "/dashboard");
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("bookings")
+    .update({ dismissed_at: new Date().toISOString() })
+    .eq("id", bookingId)
+    .eq("customer_id", session.user.id)
+    .eq("status", "declined")
+    .is("dismissed_at", null);
+  if (error) {
+    throw new Error(`Could not dismiss booking: ${error.message}`);
   }
 
   revalidatePath("/dashboard");

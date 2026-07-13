@@ -21,6 +21,7 @@ import { cn, formatDateTime, formatMoney } from "@/lib/utils";
 
 import { cancelBooking } from "./actions";
 import { ReviewForm } from "./review-form";
+import { DismissDeclinedBookingButton } from "./dismiss-declined-booking-button";
 
 export const metadata: Metadata = { title: "My bookings" };
 
@@ -33,6 +34,7 @@ type BookingRow = {
   address: string;
   price_cents: number;
   provider_id: string;
+  dismissed_at: string | null;
   service: { name: string };
   provider: { display_name: string };
   review: { id: string } | null;
@@ -56,6 +58,7 @@ function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
   const upcoming: BookingRow[] = [];
   const past: BookingRow[] = [];
   for (const booking of bookings) {
+    if (booking.status === "declined" && booking.dismissed_at) continue;
     if (
       booking.status === "declined" &&
       new Date(booking.scheduled_at) >= now
@@ -106,7 +109,7 @@ export default async function CustomerDashboardPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, status, scheduled_at, address, price_cents, provider_id, service:services(name), provider:provider_profiles(display_name), review:reviews(id)",
+      "id, status, scheduled_at, address, price_cents, provider_id, dismissed_at, service:services(name), provider:provider_profiles(display_name), review:reviews(id)",
     )
     .eq("customer_id", session.user.id)
     .order("scheduled_at", { ascending: showPast ? false : true });
@@ -286,9 +289,16 @@ function BookingCard({
   const isDeclined = booking.status === "declined";
   const isUpcoming = (UPCOMING as string[]).includes(booking.status);
   const note = convo?.latest?.fromOther ? convo.latest : null;
+  const hasProviderMessage = Boolean(note);
 
   return (
-    <Card className={cn("p-5", attention && "border-red-200")}>
+    <Card
+      data-declined-booking={isDeclined || undefined}
+      className={cn(
+        "p-5 transition-[opacity,transform] duration-200 ease-out",
+        attention && "border-red-200",
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-display text-lg font-semibold">
@@ -336,11 +346,11 @@ function BookingCard({
           <Link
             href="/messages/demo"
             className={buttonClasses({
-              variant: isDeclined ? "primary" : "secondary",
+              variant: hasProviderMessage ? "primary" : "secondary",
               size: "sm",
             })}
           >
-            {isDeclined ? "Read message" : "Message"}
+            {hasProviderMessage ? "Read message" : "Message"}
           </Link>
         ) : !demo && (isDeclined || isUpcoming) ? (
           <form action={openConversationForBooking}>
@@ -348,13 +358,17 @@ function BookingCard({
             <button
               type="submit"
               className={buttonClasses({
-                variant: isDeclined ? "primary" : "secondary",
+                variant: hasProviderMessage ? "primary" : "secondary",
                 size: "sm",
               })}
             >
-              {isDeclined ? "Read message" : "Message"}
+              {hasProviderMessage ? "Read message" : "Message"}
             </button>
           </form>
+        ) : null}
+
+        {isDeclined && !demo ? (
+          <DismissDeclinedBookingButton bookingId={booking.id} />
         ) : null}
 
         {isDeclined ? (

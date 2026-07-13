@@ -172,6 +172,7 @@ export type Database = {
           price_cents: number;
           price_type: PriceType;
           unit: PriceUnit;
+          preview_image_path: string | null;
         };
         Insert: {
           id?: string;
@@ -180,6 +181,7 @@ export type Database = {
           price_cents: number;
           price_type?: PriceType;
           unit?: PriceUnit;
+          preview_image_path?: string | null;
         };
         Update: {
           id?: string;
@@ -188,6 +190,7 @@ export type Database = {
           price_cents?: number;
           price_type?: PriceType;
           unit?: PriceUnit;
+          preview_image_path?: string | null;
         };
         Relationships: [
           {
@@ -219,6 +222,7 @@ export type Database = {
           price_cents: number;
           platform_fee_cents: number;
           stripe_payment_intent_id: string | null;
+          dismissed_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -233,6 +237,7 @@ export type Database = {
           price_cents: number;
           platform_fee_cents: number;
           stripe_payment_intent_id?: string | null;
+          dismissed_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -247,6 +252,7 @@ export type Database = {
           price_cents?: number;
           platform_fee_cents?: number;
           stripe_payment_intent_id?: string | null;
+          dismissed_at?: string | null;
           created_at?: string;
         };
         Relationships: [

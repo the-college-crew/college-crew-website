@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 
 import type { OfferedService } from "@/lib/db/queries";
+import { providerServiceImageUrl } from "@/lib/media/provider-service-images";
 import { cn } from "@/lib/utils";
 
 /**
- * Default banner art for provider cards: one colored segment per offered
- * service (capped at 3), each with a hand-drawn icon. Providers have no
- * uploaded imagery in the pilot, so every card gets this generated banner.
- * Purely decorative — the services are listed as text pills on the card.
+ * Provider-card banner: one segment per offered service (capped at three).
+ * A provider's uploaded service photo takes over its segment; the hand-drawn
+ * service art remains a polished fallback until they add one. The banner is
+ * decorative because the service names are always rendered as text nearby.
  */
 
 function ArtIcon({ children }: { children: ReactNode }) {
@@ -120,25 +121,55 @@ const SERVICE_ART: Record<string, BannerArt> = {
 
 const MAX_SEGMENTS = 3;
 
-export function ServiceBanner({ services }: { services: OfferedService[] }) {
-  const slugs = [...new Set(services.map((offered) => offered.service.slug))];
+export function ServiceBanner({
+  services,
+  className,
+}: {
+  services: OfferedService[];
+  className?: string;
+}) {
+  // A provider can never have duplicate service rows, but key by slug anyway
+  // so the visual stays stable if a legacy record slips through.
+  const distinct = [
+    ...new Map(services.map((offered) => [offered.service.slug, offered])).values(),
+  ];
   // Browse never lists service-less providers, but don't render a bare strip.
-  const shown = slugs.length > 0 ? slugs.slice(0, MAX_SEGMENTS) : ["_fallback"];
-  const extra = slugs.length - shown.length;
+  const shown = distinct.length > 0 ? distinct.slice(0, MAX_SEGMENTS) : [null];
+  const extra = distinct.length - shown.length;
 
   return (
-    <div aria-hidden className="relative flex h-24 w-full divide-x divide-paper/60">
-      {shown.map((slug) => {
+    <div
+      aria-hidden
+      className={cn(
+        "relative flex h-24 w-full divide-x divide-paper/60 overflow-hidden",
+        className,
+      )}
+    >
+      {shown.map((offered, index) => {
+        const slug = offered?.service.slug ?? "_fallback";
         const art = SERVICE_ART[slug] ?? FALLBACK_ART;
+        const imageUrl = providerServiceImageUrl(offered?.preview_image_path);
         return (
           <div
-            key={slug}
+            key={offered?.id ?? `fallback-${index}`}
             className={cn(
-              "flex flex-1 items-center justify-center text-viridian",
+              "relative flex flex-1 items-center justify-center overflow-hidden text-viridian",
               art.bg,
             )}
           >
-            {art.icon}
+            {imageUrl ? (
+              // User-uploaded service photos come from our public Storage
+              // bucket. `img` avoids Next's remote optimizer caching a stale
+              // replacement image at its old CDN URL.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imageUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              art.icon
+            )}
           </div>
         );
       })}

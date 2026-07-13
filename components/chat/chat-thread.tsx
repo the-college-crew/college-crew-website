@@ -4,8 +4,17 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Message } from "@/lib/db/types";
+import {
+  announceUnreadChanged,
+  markConversationReadClient,
+} from "@/lib/messaging/unread-client";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatTime } from "@/lib/utils";
+
+type DisplayMessage = Message & {
+  optimistic?: boolean;
+  failed?: boolean;
+};
 
 /**
  * Live conversation thread (SPEC §7/§8). Sending goes through the
@@ -22,12 +31,12 @@ export function ChatThread({
   currentUserId: string;
   initialMessages: Message[];
 }) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<DisplayMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
 
   function supabase() {
@@ -60,11 +69,32 @@ export function ChatThread({
           },
           (payload) => {
             const incoming = payload.new as Message;
-            setMessages((current) =>
-              current.some((m) => m.id === incoming.id)
-                ? current
-                : [...current, incoming],
-            );
+            setMessages((current) => {
+              if (current.some((message) => message.id === incoming.id)) {
+                return current;
+              }
+
+              // Only one outgoing message can be in flight at a time. Match
+              // its content to replace the instant local bubble if Realtime
+              // beats the Edge Function response back to this client.
+              const pendingIndex = current.findIndex(
+                (message) =>
+                  message.optimistic &&
+                  message.sender_id === incoming.sender_id &&
+                  message.body === incoming.body &&
+                  message.image_path === incoming.image_path,
+              );
+              if (pendingIndex < 0) return [...current, incoming];
+
+              const next = [...current];
+              next[pendingIndex] = incoming;
+              return next;
+            });
+            // The user is looking at this thread, so the message is read the
+            // moment it lands — keep the header badge from counting it.
+            if (incoming.sender_id !== currentUserId) {
+              void markConversationReadClient(conversationId);
+            }
           },
         )
         .subscribe();
@@ -74,28 +104,60 @@ export function ChatThread({
       active = false;
       if (channel) client.removeChannel(channel);
     };
+  }, [conversationId, currentUserId]);
+
+  // The server marked this thread read while rendering the page, but the
+  // header badge may have been computed before that write — resync it.
+  useEffect(() => {
+    announceUnreadChanged();
   }, [conversationId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
 
   async function send() {
     const body = draft.trim();
     if ((!body && !imageFile) || sending) return;
 
+    const file = imageFile;
+    const localId = `local-${crypto.randomUUID()}`;
+    const localMessage: DisplayMessage = {
+      id: localId,
+      conversation_id: conversationId,
+      sender_id: currentUserId,
+      body,
+      image_path: null,
+      moderation_status: "clean",
+      created_at: new Date().toISOString(),
+      optimistic: true,
+    };
+
+    // The sender sees their message immediately. It does not become visible
+    // to the provider until the existing Edge Function finishes moderation.
+    setMessages((current) => [...current, localMessage]);
+    setDraft("");
+    setImageFile(null);
     setSending(true);
     setError(null);
     try {
       let imagePath: string | null = null;
 
-      if (imageFile) {
-        const extension = imageFile.name.split(".").pop() ?? "jpg";
+      if (file) {
+        const extension = file.name.split(".").pop() ?? "jpg";
         imagePath = `${conversationId}/${crypto.randomUUID()}.${extension}`;
         const { error: uploadError } = await supabase()
           .storage.from("chat-images")
-          .upload(imagePath, imageFile);
+          .upload(imagePath, file);
         if (uploadError) throw new Error(uploadError.message);
+
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === localId ? { ...message, image_path: imagePath } : message,
+          ),
+        );
       }
 
       const { data, error: invokeError } = await supabase().functions.invoke(
@@ -112,15 +174,23 @@ export function ChatThread({
 
       const message = (data as { message?: Message })?.message;
       if (message) {
-        setMessages((current) =>
-          current.some((m) => m.id === message.id)
-            ? current
-            : [...current, message],
-        );
+        setMessages((current) => {
+          const withoutLocal = current.filter((item) => item.id !== localId);
+          return withoutLocal.some((item) => item.id === message.id)
+            ? withoutLocal
+            : [...withoutLocal, message];
+        });
       }
-      setDraft("");
-      setImageFile(null);
     } catch (cause) {
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === localId
+            ? { ...message, optimistic: false, failed: true }
+            : message,
+        ),
+      );
+      setDraft((current) => current || body);
+      setImageFile(file);
       setError(
         cause instanceof Error
           ? `Message not sent: ${cause.message}`
@@ -132,8 +202,17 @@ export function ChatThread({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div
+        ref={messagesViewportRef}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4"
+      >
+        <div className="mx-auto max-w-md border-b border-line px-2 pb-3 text-center text-[11px] leading-relaxed text-mist">
+          College Crew monitors chats to help stop off-platform contact info.
+          Please don&apos;t send phone numbers, email addresses, social handles,
+          or payment details. Job details and addresses are okay.
+        </div>
+
         {messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-mist">
             No messages yet. Say hello — job details, photos, and scheduling
@@ -154,6 +233,8 @@ export function ChatThread({
                       mine
                         ? "rounded-br-sm bg-crew-600 text-white"
                         : "rounded-bl-sm border border-line bg-paper text-ink",
+                      message.optimistic && "message-swoop opacity-90",
+                      message.failed && "bg-red-700 text-white",
                     )}
                   >
                     {message.image_path ? (
@@ -169,7 +250,11 @@ export function ChatThread({
                       mine && "text-right",
                     )}
                   >
-                    {formatTime(message.created_at)}
+                    {message.failed
+                      ? "Not sent"
+                      : message.optimistic
+                        ? "Sending…"
+                        : formatTime(message.created_at)}
                     {/* Moderation is flag-only and SILENT: a flagged message is
                         delivered in full with no signal to either participant.
                         Flags surface only to admins on /admin/flagged. */}
@@ -179,10 +264,9 @@ export function ChatThread({
             );
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-line bg-paper p-3">
+      <div className="shrink-0 border-t border-line bg-paper p-3">
         {error ? (
           <p className="mb-2 text-xs font-medium text-red-700">{error}</p>
         ) : null}
@@ -228,16 +312,12 @@ export function ChatThread({
             }}
             rows={1}
             placeholder="Write a message…"
-            className="block max-h-32 w-full resize-y rounded-lg border border-line bg-paper px-3 py-2 text-sm placeholder:text-mist"
+            className="block w-full resize-none rounded-lg border border-line bg-paper px-3 py-2 text-sm placeholder:text-mist"
           />
           <Button type="submit" disabled={sending}>
             {sending ? "Sending…" : "Send"}
           </Button>
         </form>
-        <p className="mt-2 text-[11px] text-mist">
-          Messages are scanned automatically to keep bookings and payments on
-          College Crew. Addresses and job details are always fine to share.
-        </p>
       </div>
     </div>
   );

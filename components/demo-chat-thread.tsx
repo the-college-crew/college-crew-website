@@ -10,8 +10,13 @@ export function DemoChatThread({
   messages: Message[];
 }) {
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+        <div className="mx-auto max-w-md border-b border-line px-2 pb-3 text-center text-[11px] leading-relaxed text-mist">
+          College Crew monitors chats to help stop off-platform contact info.
+          Please don&apos;t send phone numbers, email addresses, social handles,
+          or payment details. Job details and addresses are okay.
+        </div>
         {messages.map((message) => {
           const mine = message.sender_id === currentUserId;
           return (
@@ -44,7 +49,7 @@ export function DemoChatThread({
         })}
       </div>
 
-      <div className="border-t border-line bg-paper p-3">
+      <div className="shrink-0 border-t border-line bg-paper p-3">
         <form className="flex items-end gap-2">
           <label className="cursor-not-allowed rounded-lg border border-line bg-paper px-3 py-2 text-sm text-mist">
             Photo
@@ -60,10 +65,6 @@ export function DemoChatThread({
             Send
           </Button>
         </form>
-        <p className="mt-2 text-[11px] text-mist">
-          Real messages are scanned automatically to keep bookings and payments
-          on College Crew. This sample thread is static.
-        </p>
       </div>
     </div>
   );
