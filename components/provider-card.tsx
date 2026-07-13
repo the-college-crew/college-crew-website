@@ -64,12 +64,17 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
             </div>
 
             {provider.bio ? (
-              // Line breaks are kept (the profile shows the bio as written), but
-              // blank lines between paragraphs are collapsed here so a 4-line
-              // preview spends all 4 lines on text rather than on gaps.
-              <p className="line-clamp-4 whitespace-pre-line text-sm text-ink-soft">
-                {provider.bio.replace(/\n\s*\n/g, "\n").trim()}
-              </p>
+              (() => {
+                const paragraphs = provider.bio.split(/\n\s*\n/);
+                const firstParagraph = paragraphs[0];
+                const hasMore = paragraphs.length > 1;
+                return (
+                  <p className="whitespace-pre-line text-sm text-ink-soft">
+                    {firstParagraph}
+                    {hasMore && "…"}
+                  </p>
+                );
+              })()
             ) : null}
 
             <ul className="flex flex-wrap gap-2">
