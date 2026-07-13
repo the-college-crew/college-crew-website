@@ -1,10 +1,13 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { PROVIDER_SERVICE_IMAGES_BUCKET } from "@/lib/media/provider-service-images";
 import { createClient } from "@/lib/supabase/server";
 
 import { savePricingRows } from "@/app/(provider)/provider/_lib/pricing";
@@ -21,6 +24,20 @@ export type ProviderSettingsFormState = {
   success?: string;
   fieldErrors?: Record<string, string>;
 };
+
+const MAX_SERVICE_PREVIEW_BYTES = 5 * 1024 * 1024;
+const SERVICE_PREVIEW_EXTENSION: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function revalidateProviderStorefront(providerId: string) {
+  revalidatePath("/");
+  revalidatePath("/browse");
+  revalidatePath(`/providers/${providerId}`);
+  revalidatePath("/account");
+}
 
 const profileSchema = z.object({
   displayName: z.string().trim().min(1, "Enter a display name."),
@@ -112,4 +129,114 @@ export async function saveSettingsPricing(
   revalidatePath("/account");
   revalidatePath("/provider/jobs");
   return { success: "Pricing saved — your public profile is updated." };
+}
+
+/**
+ * Save one public photo for an offered service. The server action both proves
+ * the offering belongs to the signed-in provider and uses a new object path on
+ * every replacement, avoiding stale CDN copies of the old photo.
+ */
+export async function uploadProviderServicePreview(
+  _prev: ProviderSettingsFormState,
+  formData: FormData,
+): Promise<ProviderSettingsFormState> {
+  await requireRole("provider");
+  const profile = await getOwnProviderProfile();
+  if (!profile) redirect("/provider/onboarding/account");
+
+  const parsedId = z.string().uuid().safeParse(formData.get("providerServiceId"));
+  if (!parsedId.success) return { error: "Unknown service." };
+
+  const image = formData.get("image");
+  if (!(image instanceof File) || image.size === 0) {
+    return { error: "Choose a photo to upload." };
+  }
+  if (image.size > MAX_SERVICE_PREVIEW_BYTES) {
+    return { error: "Choose an image smaller than 5 MB." };
+  }
+  const extension = SERVICE_PREVIEW_EXTENSION[image.type];
+  if (!extension) {
+    return { error: "Use a JPG, PNG, or WebP image." };
+  }
+
+  const supabase = await createClient();
+  const { data: offering, error: offeringError } = await supabase
+    .from("provider_services")
+    .select("id, preview_image_path")
+    .eq("id", parsedId.data)
+    .eq("provider_id", profile.id)
+    .maybeSingle();
+
+  if (offeringError || !offering) {
+    return { error: "That service is no longer available to edit." };
+  }
+
+  const path = `${profile.user_id}/${offering.id}/${randomUUID()}.${extension}`;
+  const { error: uploadError } = await supabase.storage
+    .from(PROVIDER_SERVICE_IMAGES_BUCKET)
+    .upload(path, image, {
+      cacheControl: "31536000",
+      contentType: image.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    return { error: `Photo upload failed: ${uploadError.message}` };
+  }
+
+  const { error: updateError } = await supabase
+    .from("provider_services")
+    .update({ preview_image_path: path })
+    .eq("id", offering.id)
+    .eq("provider_id", profile.id);
+
+  if (updateError) {
+    await supabase.storage.from(PROVIDER_SERVICE_IMAGES_BUCKET).remove([path]);
+    return { error: "Could not save that photo — please try again." };
+  }
+
+  if (offering.preview_image_path) {
+    await supabase.storage
+      .from(PROVIDER_SERVICE_IMAGES_BUCKET)
+      .remove([offering.preview_image_path]);
+  }
+
+  revalidateProviderStorefront(profile.id);
+  return { success: "Service preview photo saved." };
+}
+
+/** Remove an existing public storefront photo without touching its offering. */
+export async function removeProviderServicePreview(
+  _prev: ProviderSettingsFormState,
+  formData: FormData,
+): Promise<ProviderSettingsFormState> {
+  await requireRole("provider");
+  const profile = await getOwnProviderProfile();
+  if (!profile) redirect("/provider/onboarding/account");
+
+  const parsedId = z.string().uuid().safeParse(formData.get("providerServiceId"));
+  if (!parsedId.success) return { error: "Unknown service." };
+
+  const supabase = await createClient();
+  const { data: offering, error: offeringError } = await supabase
+    .from("provider_services")
+    .select("id, preview_image_path")
+    .eq("id", parsedId.data)
+    .eq("provider_id", profile.id)
+    .maybeSingle();
+  if (offeringError || !offering?.preview_image_path) {
+    return { error: "There is no preview photo to remove." };
+  }
+
+  const path = offering.preview_image_path;
+  const { error: updateError } = await supabase
+    .from("provider_services")
+    .update({ preview_image_path: null })
+    .eq("id", offering.id)
+    .eq("provider_id", profile.id);
+  if (updateError) return { error: "Could not remove that photo — try again." };
+
+  await supabase.storage.from(PROVIDER_SERVICE_IMAGES_BUCKET).remove([path]);
+  revalidateProviderStorefront(profile.id);
+  return { success: "Service preview photo removed." };
 }

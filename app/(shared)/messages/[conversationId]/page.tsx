@@ -39,8 +39,8 @@ export default async function ConversationPage({
         : demoConversation.customerName;
 
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6">
-        <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="mx-auto flex w-full max-w-2xl flex-col px-4 py-4 sm:py-6">
+        <div className="mb-3 shrink-0 flex items-start justify-between gap-4">
           <div>
             <p className="font-display text-xs font-semibold text-mist">
               Sample conversation
@@ -55,7 +55,7 @@ export default async function ConversationPage({
           <SamplePreviewBanner role={demoPreview.role} />
         </div>
 
-        <Card pennant className="flex min-h-[60vh] flex-1 flex-col p-0">
+        <Card pennant className="flex h-[min(34rem,calc(100dvh-10rem))] min-h-0 flex-col p-0">
           <DemoChatThread
             currentUserId="demo-current-user"
             messages={demoMessagesFor(demoPreview.role)}
@@ -98,8 +98,8 @@ export default async function ConversationPage({
     : conversation.customer.full_name;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6">
-      <div className="mb-4 flex items-start justify-between gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col px-4 py-4 sm:py-6">
+      <div className="mb-3 shrink-0 flex items-start justify-between gap-4">
         <div>
           <p className="font-display text-xs font-semibold text-mist">
             Conversation
@@ -111,7 +111,7 @@ export default async function ConversationPage({
         <BackButton />
       </div>
 
-      <Card pennant className="flex min-h-[60vh] flex-1 flex-col p-0">
+      <Card pennant className="flex h-[min(34rem,calc(100dvh-10rem))] min-h-0 flex-col p-0">
         <ChatThread
           conversationId={conversation.id}
           currentUserId={user.id}

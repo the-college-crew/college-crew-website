@@ -172,6 +172,7 @@ export type Database = {
           price_cents: number;
           price_type: PriceType;
           unit: PriceUnit;
+          preview_image_path: string | null;
         };
         Insert: {
           id?: string;
@@ -180,6 +181,7 @@ export type Database = {
           price_cents: number;
           price_type?: PriceType;
           unit?: PriceUnit;
+          preview_image_path?: string | null;
         };
         Update: {
           id?: string;
@@ -188,6 +190,7 @@ export type Database = {
           price_cents?: number;
           price_type?: PriceType;
           unit?: PriceUnit;
+          preview_image_path?: string | null;
         };
         Relationships: [
           {

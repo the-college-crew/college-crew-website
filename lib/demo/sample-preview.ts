@@ -95,6 +95,7 @@ export const demoOfferings = [
     price_cents: 5500,
     price_type: "fixed" as const,
     unit: "per_job" as const,
+    preview_image_path: null,
     service: demoServices[0],
   },
   {
@@ -103,6 +104,7 @@ export const demoOfferings = [
     price_cents: 8500,
     price_type: "fixed" as const,
     unit: "per_job" as const,
+    preview_image_path: null,
     service: demoServices[1],
   },
   {
@@ -111,6 +113,7 @@ export const demoOfferings = [
     price_cents: 0,
     price_type: "quote" as const,
     unit: "per_job" as const,
+    preview_image_path: null,
     service: demoServices[2],
   },
 ];

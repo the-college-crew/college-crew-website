@@ -1,4 +1,5 @@
 import type { PriceType, PriceUnit } from "@/lib/db/types";
+import { PROVIDER_SERVICE_IMAGES_BUCKET } from "@/lib/media/provider-service-images";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -81,6 +82,15 @@ export async function savePricingRows(
     .filter((serviceId) => !keepIds.includes(serviceId));
 
   if (liveIdsToRemove.length > 0) {
+    // Remember preview paths while the offerings still exist. The Storage path
+    // itself remains owner-scoped after deletion, so cleanup can safely happen
+    // after the database operation succeeds.
+    const { data: retiredOfferings } = await supabase
+      .from("provider_services")
+      .select("preview_image_path")
+      .eq("provider_id", providerId)
+      .in("service_id", liveIdsToRemove);
+
     const { error: deleteError } = await supabase
       .from("provider_services")
       .delete()
@@ -88,6 +98,15 @@ export async function savePricingRows(
       .in("service_id", liveIdsToRemove);
     if (deleteError) {
       return { error: "Could not save services — try again." };
+    }
+
+    const retiredPaths = (retiredOfferings ?? [])
+      .map((offering) => offering.preview_image_path)
+      .filter((path): path is string => Boolean(path));
+    if (retiredPaths.length > 0) {
+      await supabase.storage
+        .from(PROVIDER_SERVICE_IMAGES_BUCKET)
+        .remove(retiredPaths);
     }
   }
 

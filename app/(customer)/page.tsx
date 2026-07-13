@@ -104,33 +104,6 @@ function serviceDisplay(service: Service): ServiceDisplay {
   );
 }
 
-const FEATURES = [
-  {
-    title: "ID & school verified",
-    body: "Every student completes an 18+ check, .edu verification, and student-ID review before they're bookable.",
-    tone: "bg-honeydew",
-    icon: CheckIcon,
-  },
-  {
-    title: "Secure in-app payments",
-    body: "No cash, no Venmo requests: payment is held and released once the job's done.",
-    tone: "bg-sky",
-    icon: DollarIcon,
-  },
-  {
-    title: "A reputation that travels",
-    body: "Reviews and track record move with a student between home and campus. Nothing resets.",
-    tone: "bg-honeydew",
-    icon: StarIcon,
-  },
-  {
-    title: "Bundled & recurring",
-    body: "Repeat jobs can be booked as season passes and packages, not just one-off requests.",
-    tone: "bg-sky",
-    icon: CircleIcon,
-  },
-];
-
 export default async function LandingPage() {
   const [session, services] = await Promise.all([
     getSession(),
@@ -149,7 +122,7 @@ export default async function LandingPage() {
   return (
     <div className="home-canvas mx-[calc(50%-50vw)] -mt-8 -mb-24 w-screen max-w-[100vw] overflow-x-clip text-viridian">
       <Hero showProviderCta={showProviderCtas} primaryCta={primaryCta} />
-      <PhoneFloat services={services} />
+      <PhoneFloat />
 
       <section className="pb-2 text-center">
         <div className="mx-auto max-w-6xl px-4">
@@ -181,7 +154,6 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <Comparison />
       <HowItWorksTabs
         eyebrow={<Editable k="home.how.eyebrow">How it works</Editable>}
         heading={
@@ -193,7 +165,6 @@ export default async function LandingPage() {
         studentSteps={editableSteps("home.how.students", STUDENT_STEPS)}
       />
       <ServicesSection services={services} />
-      <FeaturesSection />
       <FAQList
         eyebrow={<Editable k="home.faq.eyebrow">FAQ</Editable>}
         heading={<Editable k="home.faq.heading">Good to know.</Editable>}
@@ -264,59 +235,26 @@ function Hero({
             </Link>
           ) : null}
         </div>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-          {[
-            "ID & school verified",
-            "Matched by proximity & school",
-            "Secure in-app payment",
-          ].map((item, index) => (
-            <span
-              key={item}
-              className="flex items-center gap-2 text-sm font-semibold text-viridian/70"
-            >
-              <span className="h-2 w-2 rounded-full bg-viridian" />
-              <Editable k={`home.hero.points.${index}`}>{item}</Editable>
-            </span>
-          ))}
-        </div>
       </div>
     </section>
   );
 }
 
-function PhoneFloat({ services }: { services: Service[] }) {
-  const shownServices = services.slice(0, 3);
-
+function PhoneFloat() {
   return (
     <div className="relative z-20 -mt-24 flex justify-center px-4 pb-16 sm:-mt-36">
       <div className="absolute bottom-10 left-[calc(50%-260px)] hidden h-72 w-72 rounded-full bg-sky opacity-60 blur-md sm:block" />
       <div className="relative w-full max-w-[326px] rounded-[2rem] bg-viridian p-2 shadow-[0_28px_80px_rgba(52,73,69,0.25)]">
         <div className="rounded-[1.6rem] bg-shell p-4">
           <h2 className="font-display text-2xl font-semibold">Book a job</h2>
-          <div className="mt-4 flex gap-2 overflow-hidden">
-            {shownServices.length > 0 ? (
-              shownServices.map((service, index) => (
-                <span
-                  key={service.id}
-                  className={
-                    index === 0
-                      ? "rounded-full bg-viridian px-4 py-2 text-xs font-bold text-shell"
-                      : "rounded-full bg-stone px-4 py-2 text-xs font-semibold"
-                  }
-                >
-                  {service.name}
-                </span>
-              ))
-            ) : (
-              <span className="rounded-full bg-viridian px-4 py-2 text-xs font-bold text-shell">
-                Browse
+          <div className="mt-4 overflow-hidden rounded-2xl border border-sky/80 bg-sky">
+            <div className="flex h-28 flex-col items-center justify-center gap-2 bg-sky px-5 text-center text-viridian">
+              <span className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-viridian/55">
+                Service request
               </span>
-            )}
-          </div>
-
-          <div className="mt-4 overflow-hidden rounded-2xl bg-stone">
-            <div className="flex h-28 items-center justify-center bg-[repeating-linear-gradient(135deg,var(--color-sky)_0_12px,var(--color-honeydew)_12px_24px)] text-xs font-bold uppercase tracking-[0.12em] text-viridian/45">
-              job details
+              <span className="font-display text-xl font-semibold">
+                A little help around the house
+              </span>
             </div>
             <div className="p-4">
               <div className="flex items-start justify-between gap-4">
@@ -364,100 +302,6 @@ function PhoneFloat({ services }: { services: Service[] }) {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Comparison() {
-  return (
-    <section className="brand-section">
-      <div className="relative mx-auto max-w-6xl px-4">
-        <DecorativeMark className="absolute -top-6 right-4 hidden w-28 opacity-20 md:block" />
-        <span className="brand-eyebrow">
-          <Editable k="home.compare.eyebrow">Why College Crew</Editable>
-        </span>
-        <h2 className="mt-4 max-w-3xl font-display text-4xl font-semibold leading-tight text-viridian">
-          <Editable k="home.compare.heading">
-            A good name in this town should count for something.
-          </Editable>
-        </h2>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-viridian/70">
-          <Editable k="home.compare.body">
-            Every student starts from zero in a new town twice a year.
-            Care.com, Thumbtack, and Nextdoor were never built around student
-            identity or the kind of trust neighbors build over time. College
-            Crew was.
-          </Editable>
-        </p>
-        <div className="mt-9 grid gap-5 md:grid-cols-2">
-          <CompareColumn
-            title={
-              <Editable k="home.compare.them.title">
-                Care.com, Thumbtack, Nextdoor
-              </Editable>
-            }
-            items={[
-              "Reputation is tied to the platform, not the person",
-              "No sense of who's actually nearby or in school",
-              "Anonymous listings, not a known, verified student",
-              "Reviews don't travel if you move or switch apps",
-            ].map((item, index) => (
-              <Editable key={index} k={`home.compare.them.items.${index}`}>
-                {item}
-              </Editable>
-            ))}
-          />
-          <CompareColumn
-            dark
-            title={<Editable k="home.compare.us.title">College Crew</Editable>}
-            items={[
-              "One profile, one reputation, home and campus",
-              "Matched by proximity and school, not a random zip code",
-              "Every student is ID and school verified",
-              "Reviews and ratings travel with you, always",
-            ].map((item, index) => (
-              <Editable key={index} k={`home.compare.us.items.${index}`}>
-                {item}
-              </Editable>
-            ))}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function CompareColumn({
-  title,
-  items,
-  dark = false,
-}: {
-  title: React.ReactNode;
-  items: React.ReactNode[];
-  dark?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-3xl p-7 ${
-        dark ? "bg-viridian text-shell" : "bg-stone text-viridian"
-      }`}
-    >
-      <h3
-        className={`text-base font-bold ${
-          dark ? "text-honeydew" : "text-viridian/60"
-        }`}
-      >
-        {title}
-      </h3>
-      <ul
-        className={`mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed ${
-          dark ? "text-shell/85" : "text-viridian/75"
-        }`}
-      >
-        {items.map((item, index) => (
-          <li key={index}>{item}</li>
-        ))}
-      </ul>
     </div>
   );
 }
@@ -527,60 +371,6 @@ function ServicesSection({ services }: { services: Service[] }) {
         </div>
       </section>
     </>
-  );
-}
-
-function FeaturesSection() {
-  return (
-    <section id="features" className="brand-section bg-stone">
-      <div className="mx-auto max-w-6xl px-4">
-        <span className="brand-eyebrow">
-          <Editable k="home.features.eyebrow">Why families choose us</Editable>
-        </span>
-        <h2 className="mt-4 font-display text-4xl font-semibold text-viridian">
-          <Editable k="home.features.heading">
-            Built for trust, front to back.
-          </Editable>
-        </h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-2">
-          {FEATURES.map(({ title, body, tone, icon: Icon }, index) => (
-            <div key={title} className="rounded-3xl bg-shell p-8">
-              <div
-                className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl ${tone}`}
-              >
-                <Icon className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-bold text-viridian">
-                <Editable k={`home.features.${index}.title`}>{title}</Editable>
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-viridian/70">
-                <Editable k={`home.features.${index}.body`}>{body}</Editable>
-              </p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 grid gap-4 rounded-3xl bg-shell/60 p-5 md:grid-cols-3">
-          {[
-            ["ID & school checks", "Every student completes 18+, .edu, and student-ID review before their first booking."],
-            ["Guarantee & support", "If a job isn't done right, we make it right."],
-            ["What the fee funds", "A small Trust & Safety fee on each booking covers all of the above."],
-          ].map(([title, body], index) => (
-            <div key={title}>
-              <h3 className="text-sm font-bold text-viridian">
-                <Editable k={`home.feature-notes.${index}.title`}>
-                  {title}
-                </Editable>
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-viridian/65">
-                <Editable k={`home.feature-notes.${index}.body`}>
-                  {body}
-                </Editable>
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -681,23 +471,6 @@ function DollarIcon({ className }: IconProps) {
         strokeWidth="1.8"
         strokeLinecap="round"
       />
-    </svg>
-  );
-}
-
-function StarIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden className={className}>
-      <path d="M10 2.8 12.1 7l4.6.7-3.3 3.2.8 4.6-4.2-2.2-4.2 2.2.8-4.6-3.3-3.2 4.6-.7L10 2.8Z" />
-    </svg>
-  );
-}
-
-function CircleIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className}>
-      <circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="10" cy="10" r="2" fill="currentColor" />
     </svg>
   );
 }

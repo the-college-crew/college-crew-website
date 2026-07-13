@@ -9,6 +9,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { getEffectiveRole, getSession } from "@/lib/auth/session";
 import type { PublicProviderProfile } from "@/lib/db/queries";
 import { formatDate, formatOfferedPrice } from "@/lib/utils";
+import { ServiceBanner } from "./service-banner";
 
 const DAY_LABELS: Record<string, string> = {
   mon: "Mon",
@@ -36,6 +37,7 @@ export async function ProviderProfile({
 
   return (
     <article className="pennant overflow-hidden rounded-3xl border border-stone bg-paper shadow-xl shadow-viridian/10">
+      <ServiceBanner services={provider.services} className="h-52 border-b border-line" />
       {/* Identity — morph target for the Browse card's ViewTransition. */}
       <ViewTransition name={`provider-${provider.id}`} share="morph">
         <section className="px-6 pb-7 pt-14 sm:px-8">
