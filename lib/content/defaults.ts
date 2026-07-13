@@ -23,7 +23,7 @@ export const PARENT_STEPS = [
   {
     n: "3",
     title: "Book, pay, rebook",
-    body: "Pay securely in-app, rate the job, and set up recurring visits as a season pass.",
+    body: "Pay securely in-app, rate the job, and book the same student again whenever you need them.",
   },
 ];
 

@@ -40,54 +40,44 @@ const BTN_PRIMARY_ON_DARK = `${BTN} border-shell bg-shell text-viridian hover:bg
 const BTN_GHOST_ON_DARK = `${BTN} border-shell/45 text-shell hover:bg-shell/10`;
 
 type ServiceDisplay = {
-  cadence: string;
   blurb: string;
   icon: string;
 };
 
 const SERVICE_DISPLAY: Record<string, ServiceDisplay> = {
   "lawn-yard-care": {
-    cadence: "Weekly",
-    blurb: "The demand anchor: sell it as a full-season package, not a one-off mow.",
+    blurb: "Mowing, edging, and yard tidy-ups handled by students nearby.",
     icon: "LC",
   },
   "pet-care": {
-    cadence: "Daily / weekly",
-    blurb: "High-frequency help: bundle walks and drop-ins into a simple weekly plan.",
+    blurb: "Walks, drop-ins, and sitting while you're out or away.",
     icon: "DW",
   },
   "house-management": {
-    cadence: "Flexible",
     blurb: "Errands and home tasks: package returns, grocery pickup, and check-ins.",
     icon: "HM",
   },
   tutoring: {
-    cadence: "Seasonal",
-    blurb: "Where students have the biggest edge: sells well as session packages.",
+    blurb: "Where students have the biggest edge: real help with the subjects they just took.",
     icon: "TT",
   },
   "youth-sports-coaching": {
-    cadence: "Weekly",
     blurb: "Student athletes coach kids on fundamentals, confidence, and skills.",
     icon: "SC",
   },
   hauling: {
-    cadence: "One-off",
-    blurb: "High-ticket, low-trust-barrier: a great first booking for new families.",
+    blurb: "Heavy lifting and junk removal, with the muscle to actually move it.",
     icon: "HJ",
   },
   "pressure-washing": {
-    cadence: "Seasonal",
     blurb: "Driveways, patios, and outdoor surfaces handled by equipped student crews.",
     icon: "PW",
   },
   "window-washing": {
-    cadence: "Seasonal",
     blurb: "Interior and exterior windows from student-run crews with the right gear.",
     icon: "WW",
   },
   babysitting: {
-    cadence: "Coming soon",
     blurb: "Highest demand, highest trust bar: added after the pilot once the right safeguards are in place.",
     icon: "BS",
   },
@@ -105,7 +95,6 @@ function initials(name: string) {
 function serviceDisplay(service: Service): ServiceDisplay {
   return (
     SERVICE_DISPLAY[service.slug] ?? {
-      cadence: service.category,
       blurb: "Verified student help for practical jobs around the neighborhood.",
       icon: initials(service.name) || "CC",
     }
@@ -126,8 +115,8 @@ const FEATURES = [
     body: "Reviews and track record move with a student between home and campus.",
   },
   {
-    title: "Bundled & recurring",
-    body: "Repeat jobs can be booked as season passes and packages, not one-offs.",
+    title: "Neighbors, not strangers",
+    body: "Students close to you are recommended first, so help usually comes from a few streets over.",
   },
   {
     title: "ID & school checks",
@@ -567,16 +556,9 @@ function ServicesSection({ services }: { services: Service[] }) {
                 href={`/browse?service=${service.slug}`}
                 className="flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] transition hover:-translate-y-[3px] hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-viridian font-display text-[17px] font-bold text-shell">
-                    {display.icon}
-                  </span>
-                  <span className="whitespace-nowrap rounded-full border-[1.3px] border-viridian/20 px-3 py-1 text-xs font-bold tracking-[0.04em] text-viridian/70">
-                    <Editable k={`home.services.${service.slug}.cadence`}>
-                      {display.cadence}
-                    </Editable>
-                  </span>
-                </div>
+                <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-viridian font-display text-[17px] font-bold text-shell">
+                  {display.icon}
+                </span>
                 <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
                   {service.name}
                 </h3>

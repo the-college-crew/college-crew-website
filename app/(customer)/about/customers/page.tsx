@@ -48,7 +48,7 @@ export default function CustomerMissionPage() {
       <section className="space-y-4 text-sm leading-relaxed text-ink-soft">
         <p>
           <Editable k="about-customers.intro.p1">
-            {`Home projects, errands, and recurring chores often need a person you can trust more than a giant marketplace. ${SITE.name} is designed for neighbors who want reliable help and like the idea that their money backs young people in their own community.`}
+            {`Home projects, errands, and everyday chores often need a person you can trust more than a giant marketplace. ${SITE.name} is designed for neighbors who want reliable help and like the idea that their money backs young people in their own community.`}
           </Editable>
         </p>
         <p>
