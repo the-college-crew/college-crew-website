@@ -64,7 +64,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
             </div>
 
             {provider.bio ? (
-              <p className="line-clamp-1 text-sm text-ink-soft">{provider.bio}</p>
+              <p className="line-clamp-4 text-sm text-ink-soft">{provider.bio}</p>
             ) : null}
 
             <ul className="flex flex-wrap gap-2">
