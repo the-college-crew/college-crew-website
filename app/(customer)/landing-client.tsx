@@ -5,8 +5,16 @@ import { useState } from "react";
 /**
  * Interactive landing sections. All copy arrives pre-rendered from the server
  * page (wrapped in <Editable> so admins can edit it inline); only the
- * tab/accordion state lives here.
+ * tab/accordion state lives here. Section shells match the ant-mascot design:
+ * full-bleed color bands with a 1140px inner wrap.
  */
+
+const BAND =
+  "relative overflow-hidden border-t-[1.5px] border-viridian/15 py-[72px] md:py-[104px]";
+const EYEBROW =
+  "flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.16em] text-viridian/55";
+const H2 =
+  "mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] text-viridian md:text-[42px]";
 
 export type Step = {
   n: string;
@@ -28,31 +36,32 @@ export function HowItWorksTabs({
   const [tab, setTab] = useState<"families" | "students">("families");
   const steps = tab === "families" ? parentSteps : studentSteps;
 
+  const pill = (active: boolean) =>
+    `rounded-full border-[1.3px] px-[13px] py-2 text-[13px] font-semibold transition ${
+      active
+        ? "border-viridian bg-viridian text-shell"
+        : "border-viridian/20 text-viridian hover:bg-viridian/5"
+    }`;
+
   return (
-    <section id="how" className="brand-section bg-stone">
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="flex flex-wrap items-end justify-between gap-5">
+    <section id="how" className={`${BAND} bg-shell`}>
+      <div className="mx-auto w-full max-w-[1140px] px-5 sm:px-8">
+        <div className="mb-[52px] flex flex-wrap items-start justify-between gap-5">
           <div>
-            <span className="brand-eyebrow">{eyebrow}</span>
-            <h2 className="mt-4 max-w-2xl font-display text-4xl font-semibold leading-tight text-viridian">
-              {heading}
-            </h2>
+            <div className={EYEBROW}>{eyebrow}</div>
+            <h2 className={H2}>{heading}</h2>
           </div>
-          <div className="flex rounded-xl bg-shell p-1.5">
+          <div className="flex gap-2">
             <button
               type="button"
-              className={`rounded-lg px-4 py-2 text-sm font-bold text-viridian transition ${
-                tab === "families" ? "bg-paper opacity-100" : "opacity-55"
-              }`}
+              className={pill(tab === "families")}
               onClick={() => setTab("families")}
             >
               For families
             </button>
             <button
               type="button"
-              className={`rounded-lg px-4 py-2 text-sm font-bold text-viridian transition ${
-                tab === "students" ? "bg-paper opacity-100" : "opacity-55"
-              }`}
+              className={pill(tab === "students")}
               onClick={() => setTab("students")}
             >
               For students
@@ -60,20 +69,21 @@ export function HowItWorksTabs({
           </div>
         </div>
 
-        <div className="mt-12 grid gap-8 md:grid-cols-3">
+        <div className="grid gap-[22px] md:grid-cols-3">
           {steps.map((step) => (
-            <div key={step.n} className="flex items-start gap-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-viridian text-sm font-bold text-shell">
+            <div
+              key={step.n}
+              className="rounded-[22px] border-[1.4px] border-viridian/15 bg-card p-[30px]"
+            >
+              <div className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-viridian font-display text-xl font-bold text-shell">
                 {step.n}
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-viridian">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-viridian/70">
-                  {step.body}
-                </p>
-              </div>
+              <h3 className="mt-5 font-display text-[21px] font-semibold leading-tight text-viridian">
+                {step.title}
+              </h3>
+              <p className="mt-2.5 leading-normal text-viridian/65">
+                {step.body}
+              </p>
             </div>
           ))}
         </div>
@@ -88,10 +98,13 @@ export type FaqItem = {
 };
 
 export function FAQList({
+  rule,
   eyebrow,
   heading,
   items,
 }: {
+  /** Decorative ant-rule divider node, rendered above the section heading. */
+  rule?: React.ReactNode;
   eyebrow: React.ReactNode;
   heading: React.ReactNode;
   items: FaqItem[];
@@ -99,38 +112,39 @@ export function FAQList({
   const [open, setOpen] = useState(0);
 
   return (
-    <section className="brand-section relative overflow-hidden bg-stone">
-      <div className="mx-auto max-w-[792px] px-4">
-        <span className="brand-eyebrow">{eyebrow}</span>
-        <h2 className="mt-4 font-display text-4xl font-semibold text-viridian">
-          {heading}
-        </h2>
-        <div className="mt-7 space-y-3">
+    <section className={`${BAND} bg-stone`}>
+      <div className="mx-auto w-full max-w-[820px] px-5 sm:px-8">
+        {rule}
+        <div className="mb-[52px]">
+          <div className={EYEBROW}>{eyebrow}</div>
+          <h2 className={H2}>{heading}</h2>
+        </div>
+        <div>
           {items.map((faq, index) => {
             const isOpen = open === index;
 
             return (
               <div
                 key={index}
-                className="rounded-2xl bg-shell px-5 py-2 shadow-sm shadow-viridian/5"
+                className="mb-3.5 overflow-hidden rounded-[18px] border-[1.4px] border-viridian/15 bg-card"
               >
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-4 py-4 text-left text-base font-bold text-viridian"
+                  className="flex w-full items-center justify-between gap-5 px-7 py-6 text-left font-display text-xl font-semibold text-viridian"
                   onClick={() => setOpen(isOpen ? -1 : index)}
                 >
                   <span>{faq.q}</span>
                   <span
-                    className={`text-sm transition-transform ${
-                      isOpen ? "rotate-180" : ""
+                    className={`shrink-0 text-3xl font-light leading-none text-viridian transition-transform ${
+                      isOpen ? "rotate-45" : ""
                     }`}
                     aria-hidden
                   >
-                    v
+                    +
                   </span>
                 </button>
                 {isOpen ? (
-                  <p className="-mt-1 pb-4 text-sm leading-relaxed text-viridian/70">
+                  <p className="max-w-[70ch] px-7 pb-[26px] text-[17px] leading-[1.55] text-viridian/75">
                     {faq.a}
                   </p>
                 ) : null}

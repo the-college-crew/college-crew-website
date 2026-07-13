@@ -12,24 +12,32 @@ type Cta = { href: string; label: string };
 import { FAQList, HowItWorksTabs, type FaqItem, type Step } from "./landing-client";
 
 const MARK_SRC = "/college-crew-mark.png";
+const MARK_STONE_SRC = "/college-crew-mark-stone.png";
+const MARK_WHITE_SRC = "/college-crew-mark-white.png";
 
-const TRUST_ITEMS = [
-  {
-    title: "ID & school verified",
-    body: "Every student is 18+ and founder-reviewed before booking.",
-    icon: CheckIcon,
-  },
-  {
-    title: "Matched by proximity & school",
-    body: '"2 miles away - verified Northwestern sophomore"',
-    icon: DiamondIcon,
-  },
-  {
-    title: "Paid securely",
-    body: "Every job settles in-app, no cash or Venmo.",
-    icon: DollarIcon,
-  },
-];
+/*
+ * Shared section shells for the ant-mascot homepage design: full-bleed color
+ * bands separated by hairline rules, with a 1140px inner wrap. Kept as class
+ * strings (mirrored in landing-client.tsx) rather than components so server
+ * and client sections can share them without a module boundary dance.
+ */
+const WRAP = "mx-auto w-full max-w-[1140px] px-5 sm:px-8";
+const BAND =
+  "relative overflow-hidden border-t-[1.5px] border-viridian/15 py-[72px] md:py-[104px]";
+const EYEBROW =
+  "flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.16em] text-viridian/55";
+const H2 =
+  "mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] text-viridian md:text-[42px]";
+const LEAD =
+  "mt-5 max-w-[52ch] text-[17px] leading-[1.55] text-viridian/75 md:text-[19px]";
+
+const BTN =
+  "inline-flex items-center justify-center gap-2 rounded-full border-[1.6px] px-[26px] py-[15px] text-base font-semibold transition hover:-translate-y-px";
+const BTN_PRIMARY = `${BTN} border-viridian bg-viridian text-shell hover:bg-viridian-ink`;
+const BTN_GHOST = `${BTN} border-viridian text-viridian hover:bg-viridian/5`;
+// Inverted variants for the dark CTA band.
+const BTN_PRIMARY_ON_DARK = `${BTN} border-shell bg-shell text-viridian hover:bg-[#e7e4dc]`;
+const BTN_GHOST_ON_DARK = `${BTN} border-shell/45 text-shell hover:bg-shell/10`;
 
 type ServiceDisplay = {
   cadence: string;
@@ -40,17 +48,17 @@ type ServiceDisplay = {
 const SERVICE_DISPLAY: Record<string, ServiceDisplay> = {
   "lawn-yard-care": {
     cadence: "Weekly",
-    blurb: "The demand anchor: sell as a full-season package, not a one-off mow.",
+    blurb: "The demand anchor: sell it as a full-season package, not a one-off mow.",
     icon: "LC",
   },
   "pet-care": {
-    cadence: "Daily/weekly",
-    blurb: "High-frequency, low trust barrier: bundle walks into weekly charges.",
+    cadence: "Daily / weekly",
+    blurb: "High-frequency help: bundle walks and drop-ins into a simple weekly plan.",
     icon: "DW",
   },
   "house-management": {
     cadence: "Flexible",
-    blurb: "Errands and home tasks like package returns, grocery pickup, and check-ins.",
+    blurb: "Errands and home tasks: package returns, grocery pickup, and check-ins.",
     icon: "HM",
   },
   tutoring: {
@@ -60,12 +68,12 @@ const SERVICE_DISPLAY: Record<string, ServiceDisplay> = {
   },
   "youth-sports-coaching": {
     cadence: "Weekly",
-    blurb: "Student athletes coach kids on fundamentals, confidence, and sport-specific skills.",
+    blurb: "Student athletes coach kids on fundamentals, confidence, and skills.",
     icon: "SC",
   },
   hauling: {
     cadence: "One-off",
-    blurb: "High ticket, low trust barrier: a great first booking for new families.",
+    blurb: "High-ticket, low-trust-barrier: a great first booking for new families.",
     icon: "HJ",
   },
   "pressure-washing": {
@@ -106,28 +114,28 @@ function serviceDisplay(service: Service): ServiceDisplay {
 
 const FEATURES = [
   {
-    title: "ID & school verified",
-    body: "Every student completes an 18+ check, .edu verification, and student-ID review before they're bookable.",
-    tone: "bg-honeydew",
-    icon: CheckIcon,
+    title: "Verified college students",
+    body: "ID verification on every student before they're bookable.",
   },
   {
     title: "Secure in-app payments",
-    body: "No cash, no Venmo requests: payment is held and released once the job's done.",
-    tone: "bg-sky",
-    icon: DollarIcon,
+    body: "No cash, no Venmo: payment is held and released once the job's done.",
   },
   {
     title: "A reputation that travels",
-    body: "Reviews and track record move with a student between home and campus. Nothing resets.",
-    tone: "bg-honeydew",
-    icon: StarIcon,
+    body: "Reviews and track record move with a student between home and campus.",
   },
   {
     title: "Bundled & recurring",
-    body: "Repeat jobs can be booked as season passes and packages, not just one-off requests.",
-    tone: "bg-sky",
-    icon: CircleIcon,
+    body: "Repeat jobs can be booked as season passes and packages, not one-offs.",
+  },
+  {
+    title: "ID & school checks",
+    body: "Every student completes 18+, .edu, and student-ID review first.",
+  },
+  {
+    title: "Guarantee & support",
+    body: "If a job isn't done right, we make it right. That's what the fee funds.",
   },
 ];
 
@@ -147,43 +155,20 @@ export default async function LandingPage() {
       : { href: "/browse", label: "Book a student" };
 
   return (
-    <div className="home-canvas mx-[calc(50%-50vw)] -mt-8 -mb-24 w-screen max-w-[100vw] overflow-x-clip text-viridian">
-      <Hero showProviderCta={showProviderCtas} primaryCta={primaryCta} />
-      <PhoneFloat services={services} />
-
-      <section className="pb-2 text-center">
-        <div className="mx-auto max-w-6xl px-4">
-          <span className="text-sm font-bold tracking-[0.02em] text-viridian/55">
-            <Editable k="home.banner.note">
-              Now booking in Highland Park and Lincoln Park
-            </Editable>
-          </span>
-        </div>
-      </section>
-
-      <section id="safety" className="mt-10 bg-stone py-14">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-3">
-          {TRUST_ITEMS.map(({ title, body, icon: Icon }, index) => (
-            <div key={title} className="flex items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-shell text-viridian">
-                <Icon className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold">
-                  <Editable k={`home.trust.${index}.title`}>{title}</Editable>
-                </h2>
-                <p className="mt-1 text-sm text-viridian/65">
-                  <Editable k={`home.trust.${index}.body`}>{body}</Editable>
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
+    <div className="mx-[calc(50%-50vw)] -mt-8 -mb-8 w-screen max-w-[100vw] overflow-x-clip bg-shell text-viridian">
+      <Hero
+        showProviderCta={showProviderCtas}
+        primaryCta={primaryCta}
+        services={services}
+      />
       <Comparison />
       <HowItWorksTabs
-        eyebrow={<Editable k="home.how.eyebrow">How it works</Editable>}
+        eyebrow={
+          <>
+            <AntMark />
+            <Editable k="home.how.eyebrow">How it works</Editable>
+          </>
+        }
         heading={
           <Editable k="home.how.heading">
             Simple for families. Rewarding for students.
@@ -195,7 +180,13 @@ export default async function LandingPage() {
       <ServicesSection services={services} />
       <FeaturesSection />
       <FAQList
-        eyebrow={<Editable k="home.faq.eyebrow">FAQ</Editable>}
+        rule={<AntRule />}
+        eyebrow={
+          <>
+            <AntMark />
+            <Editable k="home.faq.eyebrow">FAQ</Editable>
+          </>
+        }
         heading={<Editable k="home.faq.heading">Good to know.</Editable>}
         items={FAQS.map(
           (faq, index): FaqItem => ({
@@ -222,147 +213,223 @@ function editableSteps(
   }));
 }
 
+/** Small grad-cap-ant icon used in eyebrows and feature tiles. */
+function AntMark({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <Image
+      src={MARK_SRC}
+      alt=""
+      width={36}
+      height={33}
+      className={`${className} object-contain`}
+      aria-hidden
+    />
+  );
+}
+
+/** Hairline rule with the ant marching along it — the section divider. */
+function AntRule() {
+  return (
+    <div className="mb-2 flex items-center gap-[22px]" aria-hidden>
+      <span className="h-[1.5px] flex-1 bg-viridian/20" />
+      <Image
+        src={MARK_SRC}
+        alt=""
+        width={36}
+        height={33}
+        className="h-9 w-9 object-contain"
+      />
+      <span className="h-[1.5px] flex-1 bg-viridian/20" />
+    </div>
+  );
+}
+
 function Hero({
   showProviderCta,
   primaryCta,
+  services,
 }: {
   showProviderCta: boolean;
   primaryCta: Cta;
+  services: Service[];
 }) {
   return (
-    <section className="relative overflow-hidden bg-stone px-4 py-16 text-center sm:py-20 lg:pb-48">
-      <DecorativeMark className="absolute top-6 right-6 hidden w-44 opacity-20 sm:block" />
-      <div className="relative z-10 mx-auto max-w-[760px]">
-        <span className="brand-eyebrow">
-          <Editable k="home.hero.eyebrow">Your neighbors, your students</Editable>
-        </span>
-        <h1 className="mt-6 font-display text-[2.3rem] font-semibold leading-[1.06] text-viridian sm:text-[3.75rem]">
-          <Editable k="home.hero.title">
-            Hometown help, from someone your block already trusts.
-          </Editable>
-        </h1>
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-viridian/75 sm:text-lg">
-          <Editable k="home.hero.subtitle">
-            College Crew connects families with verified college students for
-            practical neighborhood help - matched by proximity and school, and
-            paid securely in the app.
-          </Editable>
-        </p>
-        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link
-            href={primaryCta.href}
-            className="inline-flex items-center justify-center rounded-xl bg-viridian px-7 py-4 text-sm font-bold text-shell transition hover:bg-viridian-ink"
-          >
-            {primaryCta.label}
-          </Link>
-          {showProviderCta ? (
-            <Link
-              href="/provider/onboarding/account"
-              className="inline-flex items-center justify-center rounded-xl border-2 border-viridian/35 px-7 py-4 text-sm font-bold text-viridian transition hover:bg-shell/40"
-            >
-              Join as a student
+    <section className="relative overflow-hidden bg-stone py-16 md:py-[104px]">
+      <Image
+        src={MARK_STONE_SRC}
+        alt=""
+        width={600}
+        height={551}
+        priority
+        aria-hidden
+        className="pointer-events-none absolute -right-[90px] top-5 z-0 hidden w-[600px] max-w-none -rotate-6 opacity-50 lg:block"
+      />
+      <div
+        className={`${WRAP} relative z-10 grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]`}
+      >
+        <div>
+          <div className={EYEBROW}>
+            <AntMark />
+            <Editable k="home.hero.eyebrow">
+              Your neighbors, your students
+            </Editable>
+          </div>
+          <h1 className="mt-[18px] font-display text-[44px] font-bold leading-[1.02] tracking-[-0.025em] text-viridian md:text-[62px] md:leading-none">
+            <Editable k="home.hero.title">
+              Hometown help, from someone your block already trusts.
+            </Editable>
+          </h1>
+          <p className={LEAD}>
+            <Editable k="home.hero.subtitle">
+              College Crew connects families with verified college students for
+              practical neighborhood help, matched by proximity and school, and
+              paid securely in the app.
+            </Editable>
+          </p>
+          <div className="mt-[34px] flex flex-wrap gap-3.5">
+            <Link href={primaryCta.href} className={BTN_PRIMARY}>
+              {primaryCta.label}
             </Link>
-          ) : null}
+            {showProviderCta ? (
+              <Link href="/provider/onboarding/account" className={BTN_GHOST}>
+                Join as a student
+              </Link>
+            ) : null}
+          </div>
+          <div className="mt-[30px] flex flex-wrap gap-2.5">
+            {[
+              "Verified college students",
+              "Matched by proximity & school",
+              "Secure in-app payment",
+            ].map((item, index) => (
+              <span
+                key={item}
+                className="flex items-center gap-2 rounded-full border-[1.4px] border-viridian/20 bg-white/50 px-4 py-[9px] text-sm font-semibold"
+              >
+                <span className="h-[7px] w-[7px] rounded-full bg-viridian" />
+                <Editable k={`home.hero.points.${index}`}>{item}</Editable>
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-          {[
-            "ID & school verified",
-            "Matched by proximity & school",
-            "Secure in-app payment",
-          ].map((item, index) => (
-            <span
-              key={item}
-              className="flex items-center gap-2 text-sm font-semibold text-viridian/70"
-            >
-              <span className="h-2 w-2 rounded-full bg-viridian" />
-              <Editable k={`home.hero.points.${index}`}>{item}</Editable>
-            </span>
-          ))}
-        </div>
+        <PhoneMock services={services} />
       </div>
     </section>
   );
 }
 
-function PhoneFloat({ services }: { services: Service[] }) {
-  const shownServices = services.slice(0, 3);
+/** The iPhone "Book a job" mock from the reference design — pure decoration. */
+function PhoneMock({ services }: { services: Service[] }) {
+  const tabs = services.slice(0, 6);
 
   return (
-    <div className="relative z-20 -mt-24 flex justify-center px-4 pb-16 sm:-mt-36">
-      <div className="absolute bottom-10 left-[calc(50%-260px)] hidden h-72 w-72 rounded-full bg-sky opacity-60 blur-md sm:block" />
-      <div className="relative w-full max-w-[326px] rounded-[2rem] bg-viridian p-2 shadow-[0_28px_80px_rgba(52,73,69,0.25)]">
-        <div className="rounded-[1.6rem] bg-shell p-4">
-          <h2 className="font-display text-2xl font-semibold">Book a job</h2>
-          <div className="mt-4 flex gap-2 overflow-hidden">
-            {shownServices.length > 0 ? (
-              shownServices.map((service, index) => (
+    <div className="relative mx-auto w-full max-w-[346px] rounded-[54px] bg-[#1b2523] p-[13px] shadow-[0_36px_72px_-26px_rgba(27,37,35,0.6),0_6px_18px_rgba(27,37,35,0.28)]">
+      {/* Notch */}
+      <div className="absolute left-1/2 top-[13px] z-10 h-7 w-[132px] -translate-x-1/2 rounded-b-[18px] bg-[#1b2523]" />
+      <div className="overflow-hidden rounded-[42px] bg-card">
+        <div className="flex items-center justify-between px-7 pb-1.5 pt-[15px] text-sm font-bold text-viridian">
+          <span>9:41</span>
+          <span className="flex items-center gap-[7px]">
+            <span className="flex h-[11px] items-end gap-[2px]" aria-hidden>
+              <i className="block h-1 w-[3px] rounded-[1px] bg-viridian" />
+              <i className="block h-1.5 w-[3px] rounded-[1px] bg-viridian" />
+              <i className="block h-2 w-[3px] rounded-[1px] bg-viridian" />
+              <i className="block h-[11px] w-[3px] rounded-[1px] bg-viridian" />
+            </span>
+            <span
+              className="relative h-3 w-6 rounded-[3px] border-[1.6px] border-viridian"
+              aria-hidden
+            >
+              <span className="absolute inset-[1.5px] w-[74%] rounded-[1px] bg-viridian" />
+              <span className="absolute -right-[3px] top-1/2 h-[5px] w-[2px] -translate-y-1/2 rounded-r-[1px] bg-viridian" />
+            </span>
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between border-b border-viridian/10 px-[22px] pb-3.5 pt-2">
+          <span className="font-display text-[21px] font-semibold text-viridian">
+            Book a job
+          </span>
+          <AntMark className="h-6 w-6" />
+        </div>
+
+        <div className="px-[18px] pb-1 pt-4">
+          <div className="mb-5 flex flex-wrap gap-2">
+            {tabs.length > 0 ? (
+              tabs.map((service, index) => (
                 <span
                   key={service.id}
                   className={
                     index === 0
-                      ? "rounded-full bg-viridian px-4 py-2 text-xs font-bold text-shell"
-                      : "rounded-full bg-stone px-4 py-2 text-xs font-semibold"
+                      ? "rounded-full border-[1.3px] border-viridian bg-viridian px-[13px] py-2 text-[13px] font-semibold text-shell"
+                      : "rounded-full border-[1.3px] border-viridian/20 px-[13px] py-2 text-[13px] font-semibold text-viridian"
                   }
                 >
                   {service.name}
                 </span>
               ))
             ) : (
-              <span className="rounded-full bg-viridian px-4 py-2 text-xs font-bold text-shell">
+              <span className="rounded-full border-[1.3px] border-viridian bg-viridian px-[13px] py-2 text-[13px] font-semibold text-shell">
                 Browse
               </span>
             )}
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-2xl bg-stone">
-            <div className="flex h-28 items-center justify-center bg-[repeating-linear-gradient(135deg,var(--color-sky)_0_12px,var(--color-honeydew)_12px_24px)] text-xs font-bold uppercase tracking-[0.12em] text-viridian/45">
-              job details
-            </div>
-            <div className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-bold">Neighborhood help</p>
-                  <p className="mt-1 text-xs text-viridian/65">
-                    123 Maple Street
-                  </p>
-                </div>
-                <p className="font-display text-lg font-bold">$45</p>
-              </div>
-              <p className="mt-3 text-xs text-viridian/55">
-                Sat, May 10 - 9:00 AM - 45 min
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-honeydew px-4 py-3">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-viridian text-sm text-shell">
-              <CheckIcon className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-bold">ID & school verified</p>
-              <p className="text-xs text-viridian/60">
-                ID verified - 2 miles away
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl bg-stone p-4">
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-viridian/55">
-              Matched student
+          <div className="rounded-2xl border border-viridian/10 bg-shell p-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-viridian/50">
+              Job details
             </p>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-full bg-sky" />
-                <p className="text-sm font-bold">Ethan - Northwestern &apos;27</p>
+            <div className="mb-3.5 mt-2 flex items-start justify-between gap-4">
+              <div>
+                <p className="font-display text-[21px] font-semibold leading-tight text-viridian">
+                  Neighborhood help
+                </p>
+                <p className="mt-[3px] text-sm text-viridian/65">
+                  123 Maple Street
+                </p>
               </div>
-              <p className="text-xs font-bold">4.9</p>
+              <p className="font-display text-[34px] font-bold leading-none text-viridian">
+                $45
+              </p>
             </div>
+            <p className="text-sm text-viridian/65">
+              Sat, May 10 · 9:00 AM · 45 min
+            </p>
+            <p className="mt-3">
+              <span className="inline-flex items-center gap-[7px] rounded-full bg-honeydew px-[11px] py-[5px] text-[13px] font-semibold text-viridian">
+                ✓ ID &amp; school verified
+              </span>
+            </p>
           </div>
 
-          <div className="mt-4 flex w-full items-center justify-center rounded-xl bg-viridian py-4 text-sm font-bold text-shell">
-            Book job - $45
+          <div className="my-[18px] flex items-center gap-3.5 rounded-2xl border border-viridian/10 bg-white p-3.5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky font-display text-xl font-bold text-viridian">
+              E
+            </span>
+            <div>
+              <p className="text-[15px] font-bold text-viridian">
+                Ethan · Northwestern &apos;27
+              </p>
+              <p className="text-[13px] text-viridian/65">
+                ID verified · 2 miles away
+              </p>
+            </div>
+            <p className="ml-auto text-right text-[13px] font-bold text-viridian">
+              ★ 4.9
+            </p>
           </div>
+
+          <Link href="/browse" className={`${BTN_PRIMARY} w-full`}>
+            Book job · $45
+          </Link>
+          <p className="mt-3 text-center text-[13px] text-viridian/65">
+            <Editable k="home.banner.note">
+              Now booking in Highland Park &amp; Lincoln Park
+            </Editable>
+          </p>
         </div>
+
+        <div className="mx-auto mb-3 mt-2 h-[5px] w-[132px] rounded-full bg-viridian/30" />
       </div>
     </div>
   );
@@ -370,26 +437,28 @@ function PhoneFloat({ services }: { services: Service[] }) {
 
 function Comparison() {
   return (
-    <section className="brand-section">
-      <div className="relative mx-auto max-w-6xl px-4">
-        <DecorativeMark className="absolute -top-6 right-4 hidden w-28 opacity-20 md:block" />
-        <span className="brand-eyebrow">
-          <Editable k="home.compare.eyebrow">Why College Crew</Editable>
-        </span>
-        <h2 className="mt-4 max-w-3xl font-display text-4xl font-semibold leading-tight text-viridian">
-          <Editable k="home.compare.heading">
-            A good name in this town should count for something.
-          </Editable>
-        </h2>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-viridian/70">
-          <Editable k="home.compare.body">
-            Every student starts from zero in a new town twice a year.
-            Care.com, Thumbtack, and Nextdoor were never built around student
-            identity or the kind of trust neighbors build over time. College
-            Crew was.
-          </Editable>
-        </p>
-        <div className="mt-9 grid gap-5 md:grid-cols-2">
+    <section className={`${BAND} bg-sky`}>
+      <div className={WRAP}>
+        <AntRule />
+        <div className="mb-[52px]">
+          <div className={EYEBROW}>
+            <AntMark />
+            <Editable k="home.compare.eyebrow">Why College Crew</Editable>
+          </div>
+          <h2 className={H2}>
+            <Editable k="home.compare.heading">
+              A good name in this town should count for something.
+            </Editable>
+          </h2>
+          <p className={LEAD}>
+            <Editable k="home.compare.body">
+              Every student starts from zero in a new town twice a year.
+              Generic marketplaces were never built around student identity or
+              the trust neighbors build over time. College Crew was.
+            </Editable>
+          </p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
           <CompareColumn
             title={
               <Editable k="home.compare.them.title">
@@ -438,24 +507,30 @@ function CompareColumn({
 }) {
   return (
     <div
-      className={`rounded-3xl p-7 ${
-        dark ? "bg-viridian text-shell" : "bg-stone text-viridian"
-      }`}
+      className={
+        dark
+          ? "rounded-[22px] bg-viridian p-8 text-shell"
+          : "rounded-[22px] border-[1.4px] border-viridian/15 bg-stone/55 p-8 text-viridian"
+      }
     >
-      <h3
-        className={`text-base font-bold ${
-          dark ? "text-honeydew" : "text-viridian/60"
-        }`}
-      >
-        {title}
-      </h3>
-      <ul
-        className={`mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed ${
-          dark ? "text-shell/85" : "text-viridian/75"
-        }`}
-      >
+      <h3 className="font-display text-[22px] font-bold">{title}</h3>
+      <ul className="mt-[22px] space-y-3.5">
         {items.map((item, index) => (
-          <li key={index}>{item}</li>
+          <li key={index} className="flex gap-3 leading-snug">
+            <span
+              className={
+                dark
+                  ? "mt-px flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-honeydew text-[13px] font-bold text-viridian"
+                  : "mt-px flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-viridian/10 text-[13px] font-bold text-viridian/55"
+              }
+              aria-hidden
+            >
+              {dark ? "✓" : "✕"}
+            </span>
+            <span className={dark ? "text-shell/90" : "text-viridian/80"}>
+              {item}
+            </span>
+          </li>
         ))}
       </ul>
     </div>
@@ -464,33 +539,22 @@ function CompareColumn({
 
 function ServicesSection({ services }: { services: Service[] }) {
   return (
-    <>
-      <section className="brand-section pb-10">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <span className="brand-eyebrow">
-                <Editable k="home.services.eyebrow">What you can book</Editable>
-              </span>
-              <h2 className="mt-4 max-w-2xl font-display text-4xl font-semibold leading-tight text-viridian">
-                <Editable k="home.services.heading">
-                  Services matched to what students do best.
-                </Editable>
-              </h2>
-            </div>
-            <div
-              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone text-lg font-semibold text-viridian sm:flex"
-              aria-hidden
-            >
-              +
-            </div>
+    <section className={`${BAND} bg-honeydew`}>
+      <div className={WRAP}>
+        <div className="mb-[52px]">
+          <div className={EYEBROW}>
+            <AntMark />
+            <Editable k="home.services.eyebrow">What you can book</Editable>
           </div>
+          <h2 className={H2}>
+            <Editable k="home.services.heading">
+              Services matched to what students do best.
+            </Editable>
+          </h2>
         </div>
-      </section>
-      <section className="pb-20">
-        <div className="mx-auto grid max-w-6xl gap-5 px-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
           {services.length === 0 ? (
-            <div className="rounded-3xl border border-stone bg-shell p-7 text-sm text-viridian/70 sm:col-span-2 lg:col-span-3">
+            <div className="rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] text-sm text-viridian/70 sm:col-span-2 lg:col-span-3">
               Live services will appear here once the catalog is available.
             </div>
           ) : null}
@@ -501,22 +565,22 @@ function ServicesSection({ services }: { services: Service[] }) {
               <Link
                 key={service.id}
                 href={`/browse?service=${service.slug}`}
-                className="group rounded-3xl border border-stone bg-shell p-7 transition hover:-translate-y-0.5 hover:border-viridian"
+                className="flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] transition hover:-translate-y-[3px] hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]"
               >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-sky text-xs font-black text-viridian">
-                  {display.icon}
-                </div>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-base font-bold text-viridian">
-                    {service.name}
-                  </h3>
-                  <span className="whitespace-nowrap rounded-full bg-stone px-3 py-1 text-[0.68rem] font-bold text-viridian/55">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-viridian font-display text-[17px] font-bold text-shell">
+                    {display.icon}
+                  </span>
+                  <span className="whitespace-nowrap rounded-full border-[1.3px] border-viridian/20 px-3 py-1 text-xs font-bold tracking-[0.04em] text-viridian/70">
                     <Editable k={`home.services.${service.slug}.cadence`}>
                       {display.cadence}
                     </Editable>
                   </span>
                 </div>
-                <p className="text-sm leading-relaxed text-viridian/70">
+                <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
+                  {service.name}
+                </h3>
+                <p className="leading-normal text-viridian/65">
                   <Editable k={`home.services.${service.slug}.blurb`}>
                     {display.blurb}
                   </Editable>
@@ -525,56 +589,50 @@ function ServicesSection({ services }: { services: Service[] }) {
             );
           })}
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }
 
 function FeaturesSection() {
   return (
-    <section id="features" className="brand-section bg-stone">
-      <div className="mx-auto max-w-6xl px-4">
-        <span className="brand-eyebrow">
-          <Editable k="home.features.eyebrow">Why families choose us</Editable>
-        </span>
-        <h2 className="mt-4 font-display text-4xl font-semibold text-viridian">
-          <Editable k="home.features.heading">
-            Built for trust, front to back.
-          </Editable>
-        </h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-2">
-          {FEATURES.map(({ title, body, tone, icon: Icon }, index) => (
-            <div key={title} className="rounded-3xl bg-shell p-8">
-              <div
-                className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl ${tone}`}
-              >
-                <Icon className="h-5 w-5" />
+    <section id="features" className={`${BAND} bg-shell`}>
+      <Image
+        src={MARK_STONE_SRC}
+        alt=""
+        width={300}
+        height={276}
+        aria-hidden
+        className="pointer-events-none absolute right-10 top-16 z-0 w-[300px] rotate-[10deg] opacity-50"
+      />
+      <div className={`${WRAP} relative z-10`}>
+        <div className="mb-[52px]">
+          <div className={EYEBROW}>
+            <AntMark />
+            <Editable k="home.features.eyebrow">
+              Why families choose us
+            </Editable>
+          </div>
+          <h2 className={H2}>
+            <Editable k="home.features.heading">
+              Built for trust, front to back.
+            </Editable>
+          </h2>
+        </div>
+        <div className="grid gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map(({ title, body }, index) => (
+            <div
+              key={title}
+              className="rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px]"
+            >
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-honeydew">
+                <AntMark className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-bold text-viridian">
+              <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
                 <Editable k={`home.features.${index}.title`}>{title}</Editable>
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-viridian/70">
+              <p className="mt-2 leading-normal text-viridian/65">
                 <Editable k={`home.features.${index}.body`}>{body}</Editable>
-              </p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 grid gap-4 rounded-3xl bg-shell/60 p-5 md:grid-cols-3">
-          {[
-            ["ID & school checks", "Every student completes 18+, .edu, and student-ID review before their first booking."],
-            ["Guarantee & support", "If a job isn't done right, we make it right."],
-            ["What the fee funds", "A small Trust & Safety fee on each booking covers all of the above."],
-          ].map(([title, body], index) => (
-            <div key={title}>
-              <h3 className="text-sm font-bold text-viridian">
-                <Editable k={`home.feature-notes.${index}.title`}>
-                  {title}
-                </Editable>
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-viridian/65">
-                <Editable k={`home.feature-notes.${index}.body`}>
-                  {body}
-                </Editable>
               </p>
             </div>
           ))}
@@ -592,28 +650,36 @@ function CTASection({
   primaryCta: Cta;
 }) {
   return (
-    <section className="brand-section text-center">
-      <div className="mx-auto max-w-2xl px-4">
-        <h2 className="font-display text-4xl font-semibold text-viridian">
+    <section className={`${BAND} bg-viridian text-shell`}>
+      <Image
+        src={MARK_WHITE_SRC}
+        alt=""
+        width={520}
+        height={478}
+        aria-hidden
+        className="pointer-events-none absolute -bottom-[120px] -left-[120px] z-0 w-[520px] max-w-none rotate-[14deg] opacity-15"
+      />
+      <div className="relative z-10 mx-auto w-full max-w-[760px] px-5 text-center sm:px-8">
+        <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-shell/60">
+          <Editable k="home.cta.eyebrow">Ready when you are</Editable>
+        </p>
+        <h2 className="mx-auto mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[42px]">
           <Editable k="home.cta.heading">Ready to join College Crew?</Editable>
         </h2>
-        <p className="mt-4 text-base leading-relaxed text-viridian/70">
+        <p className="mx-auto mt-5 max-w-[52ch] text-[17px] leading-[1.55] text-shell/80 md:text-[19px]">
           <Editable k="home.cta.body">
             Book trusted help nearby, or sign up to start earning and building
             a reputation that follows you. It takes two minutes.
           </Editable>
         </p>
-        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link
-            href={primaryCta.href}
-            className="inline-flex items-center justify-center rounded-xl bg-viridian px-7 py-4 text-sm font-bold text-shell transition hover:bg-viridian-ink"
-          >
+        <div className="mt-[34px] flex flex-wrap items-center justify-center gap-3.5">
+          <Link href={primaryCta.href} className={BTN_PRIMARY_ON_DARK}>
             {primaryCta.label}
           </Link>
           {showProviderCta ? (
             <Link
               href="/provider/onboarding/account"
-              className="inline-flex items-center justify-center rounded-xl border-2 border-viridian px-7 py-4 text-sm font-bold text-viridian transition hover:bg-stone/45"
+              className={BTN_GHOST_ON_DARK}
             >
               Join as a student
             </Link>
@@ -621,83 +687,5 @@ function CTASection({
         </div>
       </div>
     </section>
-  );
-}
-
-function DecorativeMark({ className }: { className?: string }) {
-  return (
-    <Image
-      src={MARK_SRC}
-      alt=""
-      width={180}
-      height={165}
-      className={className}
-      aria-hidden
-    />
-  );
-}
-
-type IconProps = { className?: string };
-
-function CheckIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className}>
-      <path
-        d="M4 10.5 8 14.5 16 6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function DiamondIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className}>
-      <path
-        d="M10 2.5 17.5 10 10 17.5 2.5 10 10 2.5Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7.5 10h5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function DollarIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className}>
-      <path
-        d="M10 3v14M14 6.5c-.8-1-2-1.5-3.7-1.5-2.1 0-3.6 1-3.6 2.6 0 4 7.2 1.5 7.2 5.2 0 1.5-1.4 2.5-3.7 2.5-1.8 0-3.2-.6-4.1-1.8"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function StarIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden className={className}>
-      <path d="M10 2.8 12.1 7l4.6.7-3.3 3.2.8 4.6-4.2-2.2-4.2 2.2.8-4.6-3.3-3.2 4.6-.7L10 2.8Z" />
-    </svg>
-  );
-}
-
-function CircleIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className}>
-      <circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="10" cy="10" r="2" fill="currentColor" />
-    </svg>
   );
 }

@@ -18,7 +18,7 @@ export const PARENT_STEPS = [
   {
     n: "2",
     title: "Get matched by proximity & school",
-    body: 'See verified students nearby, like "2 miles away - verified Northwestern sophomore," and pick one.',
+    body: 'See verified students nearby, like "2 miles away, verified Northwestern sophomore," and pick one.',
   },
   {
     n: "3",
@@ -48,7 +48,7 @@ export const STUDENT_STEPS = [
 export const FAQS = [
   {
     q: "Is this only for teenagers?",
-    a: "No. Students on College Crew are enrolled college students, 18 and up, not minors.",
+    a: "No. Students on College Crew are enrolled college students, 18 and up, never minors.",
   },
   {
     q: "How does payment work?",
