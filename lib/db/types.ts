@@ -1514,6 +1514,7 @@ export type Database = {
           bio: string | null
           created_at: string | null
           display_name: string | null
+          minimum_notice_hours: number | null
           neighborhood: string | null
           provider_id: string | null
           provider_type: Database["public"]["Enums"]["provider_type"] | null
@@ -1527,6 +1528,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           display_name?: string | null
+          minimum_notice_hours?: number | null
           neighborhood?: string | null
           provider_id?: string | null
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
@@ -1540,6 +1542,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           display_name?: string | null
+          minimum_notice_hours?: number | null
           neighborhood?: string | null
           provider_id?: string | null
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
@@ -1549,6 +1552,7 @@ export type Database = {
       public_provider_offerings: {
         Row: {
           hourly_rate_cents: number | null
+          is_hourly_bookable: boolean | null
           preview_image_path: string | null
           price_cents: number | null
           price_type: Database["public"]["Enums"]["price_type"] | null
@@ -1607,6 +1611,10 @@ export type Database = {
           }
       is_provider_approved: {
         Args: { provider_profile_id: string }
+        Returns: boolean
+      }
+      is_provider_offering_hourly_bookable: {
+        Args: { provider_service_id: string }
         Returns: boolean
       }
       owns_provider_profile: { Args: { pp_id: string }; Returns: boolean }

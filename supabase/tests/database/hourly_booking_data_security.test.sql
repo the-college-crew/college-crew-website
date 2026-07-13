@@ -124,6 +124,26 @@ select is(
 );
 select is(
   has_column_privilege(
+    'anon',
+    'public.provider_profiles',
+    'minimum_notice_hours',
+    'select'
+  ),
+  true,
+  'public minimum notice is browser-readable'
+);
+select is(
+  has_column_privilege(
+    'anon',
+    'public.provider_profiles',
+    'stripe_transfers_active',
+    'select'
+  ),
+  false,
+  'private payout readiness inputs remain hidden'
+);
+select is(
+  has_column_privilege(
     'authenticated',
     'public.provider_services',
     'hourly_rate_cents',
@@ -160,7 +180,8 @@ select is(
   array[
     'provider_id', 'display_name', 'bio', 'provider_type', 'neighborhood',
     'availability', 'availability_weekdays', 'availability_start_local',
-    'availability_end_local', 'availability_note', 'created_at'
+    'availability_end_local', 'availability_note', 'created_at',
+    'minimum_notice_hours'
   ]::text[],
   'public provider directory exposes only its approved safe contract'
 );
@@ -174,9 +195,10 @@ select is(
   array[
     'provider_service_id', 'provider_id', 'service_id', 'price_cents',
     'price_type', 'unit', 'preview_image_path', 'hourly_rate_cents',
-    'service_name', 'service_slug', 'service_category', 'service_is_live'
+    'service_name', 'service_slug', 'service_category', 'service_is_live',
+    'is_hourly_bookable'
   ]::text[],
-  'public offering view exposes only catalog and pricing fields'
+  'public offering view adds only the derived readiness fact'
 );
 
 -- ---------------------------------------------------------------------------
@@ -263,25 +285,58 @@ values
   );
 
 insert into public.services (id, name, slug, category, is_live)
-values (
-  '00000000-0000-0000-0000-000000000301',
-  'Phase 1 Service',
-  'phase-1-service',
-  'Test',
-  true
-);
+values
+  (
+    '00000000-0000-0000-0000-000000000301',
+    'Phase 1 Service',
+    'phase-1-service',
+    'Test',
+    true
+  ),
+  (
+    '00000000-0000-0000-0000-000000000302',
+    'Phase 2 Offering Test',
+    'phase-2-offering-test',
+    'Test',
+    true
+  );
 
 insert into public.provider_services (
   id, provider_id, service_id, price_cents, price_type, unit, hourly_rate_cents
 )
-values (
-  '00000000-0000-0000-0000-000000000401',
-  '00000000-0000-0000-0000-000000000201',
-  '00000000-0000-0000-0000-000000000301',
-  5000,
-  'fixed',
-  'per_hour',
-  5000
+values
+  (
+    '00000000-0000-0000-0000-000000000401',
+    '00000000-0000-0000-0000-000000000201',
+    '00000000-0000-0000-0000-000000000301',
+    5000,
+    'fixed',
+    'per_hour',
+    5000
+  ),
+  (
+    '00000000-0000-0000-0000-000000000402',
+    '00000000-0000-0000-0000-000000000202',
+    '00000000-0000-0000-0000-000000000301',
+    0,
+    'quote',
+    'per_hour',
+    null
+  );
+
+select is(
+  public.is_provider_offering_hourly_bookable(
+    '00000000-0000-0000-0000-000000000401'
+  ),
+  true,
+  'derived public readiness is true only for the complete approved offering'
+);
+select is(
+  public.is_provider_offering_hourly_bookable(
+    '00000000-0000-0000-0000-000000000402'
+  ),
+  false,
+  'pending provider and missing rate remain unbookable'
 );
 
 select pg_temp.throws_any_ok(
@@ -635,6 +690,22 @@ select results_eq(
   'anon offering view returns only approved providers and live services'
 );
 select results_eq(
+  $$
+    select minimum_notice_hours::integer
+    from public.public_provider_directory
+  $$,
+  $$ values (24) $$,
+  'anon receives public minimum notice through the sanitized directory'
+);
+select results_eq(
+  $$
+    select is_hourly_bookable
+    from public.public_provider_offerings
+  $$,
+  $$ values (true) $$,
+  'anon receives only the derived bookability fact'
+);
+select results_eq(
   $$ select count(display_name)::bigint from public.provider_profiles $$,
   $$ values (1::bigint) $$,
   'direct safe base-column access remains approval-gated by RLS'
@@ -753,6 +824,55 @@ select lives_ok(
     where id = '00000000-0000-0000-0000-000000000201'
   $$,
   'provider can update an allowed field on their own profile'
+);
+select lives_ok(
+  $$
+    update public.provider_services set hourly_rate_cents = 6000
+    where id = '00000000-0000-0000-0000-000000000401'
+  $$,
+  'provider can update the explicit hourly rate on their own offering'
+);
+select results_eq(
+  $$
+    update public.provider_services set hourly_rate_cents = 6000
+    where id = '00000000-0000-0000-0000-000000000402'
+    returning id
+  $$,
+  $$
+    select id from public.provider_services where false
+  $$,
+  'provider cannot edit another provider offering'
+);
+select lives_ok(
+  $$
+    insert into public.provider_services (
+      provider_id, service_id, price_cents, price_type, unit, hourly_rate_cents
+    ) values (
+      '00000000-0000-0000-0000-000000000201',
+      '00000000-0000-0000-0000-000000000302',
+      0, 'quote', 'per_hour', 4000
+    )
+  $$,
+  'provider can add an hourly offering with legacy compatibility placeholders'
+);
+select results_eq(
+  $$
+    update public.provider_services
+    set hourly_rate_cents = 4500
+    where provider_id = '00000000-0000-0000-0000-000000000201'
+      and service_id = '00000000-0000-0000-0000-000000000302'
+    returning hourly_rate_cents
+  $$,
+  $$ values (4500) $$,
+  'provider can edit an hourly offering they added'
+);
+select lives_ok(
+  $$
+    delete from public.provider_services
+    where provider_id = '00000000-0000-0000-0000-000000000201'
+      and service_id = '00000000-0000-0000-0000-000000000302'
+  $$,
+  'provider can remove an hourly offering they added'
 );
 select pg_temp.throws_any_ok(
   $$
