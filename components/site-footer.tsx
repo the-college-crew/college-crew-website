@@ -1,7 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { Editable } from "@/components/content/editable";
-import { Wordmark } from "@/components/site-header";
 import { getSession } from "@/lib/auth/session";
 import { NEIGHBORHOOD, SITE } from "@/lib/site";
 
@@ -23,35 +23,42 @@ export async function SiteFooter() {
       ];
 
   return (
-    <footer className="relative overflow-hidden bg-viridian text-shell">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -bottom-16 h-64 w-64 rounded-full bg-shell/5"
-      />
-      <div className="relative mx-auto max-w-6xl px-4 py-14">
-        <div className="grid gap-10 sm:grid-cols-3">
+    <footer className="bg-viridian-deep text-shell">
+      <div className="mx-auto max-w-[1140px] px-5 pb-10 pt-[72px] sm:px-8">
+        <div className="grid items-start gap-12 md:grid-cols-[1.4fr_1fr]">
           <div>
-            <Wordmark tone="dark" />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-shell/70">
+            <Link href="/" className="flex items-center gap-3">
+              <Image
+                src="/college-crew-mark-white.png"
+                alt=""
+                width={40}
+                height={37}
+                className="h-10 w-10 object-contain"
+              />
+              <span className="font-display text-2xl font-bold tracking-[-0.01em] text-shell">
+                College Crew
+              </span>
+            </Link>
+            <p className="mt-5 max-w-[38ch] text-[19px] leading-[1.55] text-shell/90">
               <Editable k="footer.tagline">{SITE.tagline}</Editable>
             </p>
-            <p className="mt-3 text-xs text-honeydew">
+            <p className="mt-4 text-sm text-shell/70">
               <Editable k="footer.pilot-note">
-                {`Now serving ${NEIGHBORHOOD.name} — our pilot neighborhood.`}
+                {`Now serving ${NEIGHBORHOOD.name}, our pilot neighborhood.`}
               </Editable>
             </p>
           </div>
 
-          <nav aria-label="Footer" className="text-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-honeydew">
+          <nav aria-label="Footer">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-shell/55">
               Explore
             </p>
-            <ul className="mt-4 space-y-2.5 text-shell/70">
+            <ul className="mt-3 space-y-[11px] text-[15px] font-medium">
               {exploreItems.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="transition-colors hover:text-shell"
+                    className="text-shell/80 transition-colors hover:text-white"
                   >
                     {item.label}
                   </Link>
@@ -59,23 +66,18 @@ export async function SiteFooter() {
               ))}
             </ul>
           </nav>
-
-          <div className="text-xs leading-relaxed text-shell/65">
-            <p>
-              <Editable k="footer.independent">
-                {`Every provider is a verified college student (18+). Providers are independent — ${SITE.name} connects, verifies, and processes payments.`}
-              </Editable>
-            </p>
-          </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-2 border-t border-shell/15 pt-6 text-xs text-shell/50 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 flex flex-wrap justify-between gap-x-5 gap-y-2 border-t border-shell/15 pt-[26px] text-[13px] text-shell/60">
           <p>
-            © {new Date().getFullYear()} {SITE.name}
-          </p>
-          <p>
+            © {new Date().getFullYear()} {SITE.name} ·{" "}
             <Editable k="footer.strapline">
               Verified students · Curated services · Paid securely in-app
+            </Editable>
+          </p>
+          <p>
+            <Editable k="footer.independent">
+              {`Providers are independent. ${SITE.name} connects, verifies, and processes payments.`}
             </Editable>
           </p>
         </div>

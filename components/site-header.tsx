@@ -14,8 +14,6 @@ import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-const serif = "font-[family-name:var(--font-newsreader)]";
-
 const NAV = [
   { href: "/browse", label: "Browse" },
   { href: "/about", label: "About" },
@@ -23,41 +21,24 @@ const NAV = [
 ];
 
 /**
- * College Crew wordmark: a forest logo tile + name. `tone` flips it for use on
- * dark surfaces (the forest footer) vs. light ones (the header).
+ * College Crew wordmark: the grad-cap ant + name. `tone` flips it for use on
+ * dark surfaces (forest provider/admin bars, the footer) vs. light ones.
  */
 export function Wordmark({ tone = "light" }: { tone?: "light" | "dark" }) {
   const onDark = tone === "dark";
   return (
     <Link href="/" className="flex items-center gap-2.5">
-      {onDark ? (
-        <Image
-          src="/college-crew-mark-white.png"
-          alt=""
-          width={40}
-          height={37}
-          className="h-12 w-12 object-contain"
-          priority
-        />
-      ) : (
-        <span
-          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-shell p-1.5 ring-1 ring-stone"
-          aria-hidden
-        >
-          <Image
-            src="/college-crew-mark.png"
-            alt=""
-            width={40}
-            height={37}
-            className="h-full w-full object-contain"
-            priority
-          />
-        </span>
-      )}
+      <Image
+        src={onDark ? "/college-crew-mark-white.png" : "/college-crew-mark.png"}
+        alt=""
+        width={40}
+        height={37}
+        className={cn("object-contain", onDark ? "h-12 w-12" : "h-9 w-9")}
+        priority
+      />
       <span
         className={cn(
-          "text-lg font-semibold tracking-tight",
-          serif,
+          "font-display text-[22px] font-bold tracking-[-0.01em]",
           onDark ? "text-shell" : "text-viridian",
         )}
       >
@@ -76,28 +57,29 @@ export async function SiteHeader() {
     : 0;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-viridian/10 bg-viridian text-shell">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-        <div className="flex items-center gap-3 sm:gap-8">
-          <MobileNav nav={NAV} isAuthed={Boolean(session)} />
-          <Wordmark tone="dark" />
-          <nav
-            aria-label="Main"
-            className="hidden items-center gap-6 text-sm font-semibold text-shell/75 sm:flex"
-          >
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="transition-colors hover:text-shell"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+    <header className="sticky top-0 z-40 border-b-[1.5px] border-viridian/15 bg-shell text-viridian">
+      <div className="mx-auto flex h-[72px] max-w-[1140px] items-center justify-between gap-4 px-5 sm:px-8">
+        <div className="flex min-w-0 items-center gap-2">
+          <MobileNav nav={NAV} isAuthed={Boolean(session)} tone="light" />
+          <Wordmark />
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <nav
+          aria-label="Main"
+          className="hidden flex-1 items-center justify-center gap-7 text-base font-semibold sm:flex"
+        >
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="transition-colors hover:text-viridian/60"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex shrink-0 items-center gap-3.5">
           {session ? (
             <UserMenu
               name={session.profile.full_name}
@@ -109,19 +91,20 @@ export async function SiteHeader() {
                 effectiveRole ?? session.profile.role,
               )}
               unreadCount={unreadCount}
+              badgeRing="ring-shell"
             />
           ) : (
             // On mobile these live inside the hamburger panel instead.
-            <div className="hidden items-center gap-1.5 sm:flex">
+            <div className="hidden items-center gap-3.5 sm:flex">
               <Link
                 href="/login"
-                className="rounded-xl border border-shell/30 px-3.5 py-2 text-sm font-semibold text-shell transition-colors hover:bg-shell/10"
+                className="text-base font-semibold transition-colors hover:text-viridian/60"
               >
                 Log in
               </Link>
               <Link
                 href="/signup"
-                className="rounded-xl bg-honeydew px-4 py-2 text-sm font-semibold text-viridian transition-colors hover:bg-shell"
+                className="inline-flex items-center rounded-full border-[1.6px] border-viridian bg-viridian px-[22px] py-2.5 text-[15px] font-semibold text-shell transition hover:-translate-y-px hover:bg-viridian-ink"
               >
                 Get started
               </Link>

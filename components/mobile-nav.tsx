@@ -16,9 +16,12 @@ type NavItem = { href: string; label: string };
 export function MobileNav({
   nav,
   isAuthed,
+  tone = "dark",
 }: {
   nav: NavItem[];
   isAuthed: boolean;
+  /** "dark" for forest bars (provider/admin); "light" for the shell customer bar. */
+  tone?: "light" | "dark";
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -44,8 +47,11 @@ export function MobileNav({
 
   const close = () => setOpen(false);
 
-  const linkClass =
-    "block rounded-lg px-3 py-3 text-base font-semibold text-shell/85 transition-colors hover:bg-shell/10 hover:text-shell";
+  const onDark = tone === "dark";
+
+  const linkClass = onDark
+    ? "block rounded-lg px-3 py-3 text-base font-semibold text-shell/85 transition-colors hover:bg-shell/10 hover:text-shell"
+    : "block rounded-lg px-3 py-3 text-base font-semibold text-viridian/85 transition-colors hover:bg-viridian/5 hover:text-viridian";
 
   return (
     <div ref={rootRef} className="sm:hidden">
@@ -56,7 +62,11 @@ export function MobileNav({
         aria-expanded={open}
         aria-controls={menuId}
         aria-label={open ? "Close menu" : "Open menu"}
-        className="-ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-shell transition-colors hover:bg-shell/10"
+        className={
+          onDark
+            ? "-ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-shell transition-colors hover:bg-shell/10"
+            : "-ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-viridian transition-colors hover:bg-viridian/5"
+        }
       >
         <svg
           viewBox="0 0 24 24"
@@ -86,7 +96,11 @@ export function MobileNav({
         <div
           id={menuId}
           role="menu"
-          className="absolute left-0 right-0 top-full z-50 border-b border-shell/15 bg-viridian px-4 pb-4 pt-1 shadow-lg"
+          className={
+            onDark
+              ? "absolute left-0 right-0 top-full z-50 border-b border-shell/15 bg-viridian px-4 pb-4 pt-1 shadow-lg"
+              : "absolute left-0 right-0 top-full z-50 border-b border-viridian/15 bg-shell px-4 pb-4 pt-1 shadow-lg"
+          }
         >
           <nav aria-label="Main mobile" className="flex flex-col">
             {nav.map((item) => (
@@ -103,18 +117,32 @@ export function MobileNav({
           </nav>
 
           {!isAuthed ? (
-            <div className="mt-2 flex flex-col gap-2 border-t border-shell/15 pt-3">
+            <div
+              className={
+                onDark
+                  ? "mt-2 flex flex-col gap-2 border-t border-shell/15 pt-3"
+                  : "mt-2 flex flex-col gap-2 border-t border-viridian/15 pt-3"
+              }
+            >
               <Link
                 href="/login"
                 onClick={close}
-                className="rounded-xl border border-shell/30 px-4 py-2.5 text-center text-sm font-semibold text-shell transition-colors hover:bg-shell/10"
+                className={
+                  onDark
+                    ? "rounded-full border border-shell/30 px-4 py-2.5 text-center text-sm font-semibold text-shell transition-colors hover:bg-shell/10"
+                    : "rounded-full border-[1.6px] border-viridian/40 px-4 py-2.5 text-center text-sm font-semibold text-viridian transition-colors hover:bg-viridian/5"
+                }
               >
                 Log in
               </Link>
               <Link
                 href="/signup"
                 onClick={close}
-                className="rounded-xl bg-honeydew px-4 py-2.5 text-center text-sm font-semibold text-viridian transition-colors hover:bg-shell"
+                className={
+                  onDark
+                    ? "rounded-full bg-honeydew px-4 py-2.5 text-center text-sm font-semibold text-viridian transition-colors hover:bg-shell"
+                    : "rounded-full bg-viridian px-4 py-2.5 text-center text-sm font-semibold text-shell transition-colors hover:bg-viridian-ink"
+                }
               >
                 Get started
               </Link>
