@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Newsreader } from "next/font/google";
+import { Bricolage_Grotesque, Hanken_Grotesk } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 
 import { DevBanner } from "@/components/dev-banner";
@@ -8,17 +8,16 @@ import { SITE } from "@/lib/site";
 
 import "./globals.css";
 
-const bodyFont = Manrope({
+const bodyFont = Hanken_Grotesk({
   subsets: ["latin"],
-  variable: "--font-public-sans",
+  variable: "--font-hanken",
 });
 
-// Editorial serif for the cream/forest design system (landing + shared chrome).
-const serifFont = Newsreader({
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+// Characterful grotesque for headings — the ant-mascot homepage design pairs
+// Bricolage Grotesque display type with Hanken Grotesk body text.
+const displayFont = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-newsreader",
+  variable: "--font-bricolage",
 });
 
 export const metadata: Metadata = {
@@ -48,7 +47,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bodyFont.variable} ${serifFont.variable}`}
+      className={`${bodyFont.variable} ${displayFont.variable}`}
     >
       <body className="flex min-h-screen flex-col font-sans">
         {/* Gold, not forest: the sticky header is bg-viridian (#344945), so a

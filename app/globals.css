@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-newsreader), Georgia, serif;
-  --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
 
   /* New College Crew palette from the standalone homepage design. */
   --color-shell: #f7f5f1;
@@ -12,6 +12,9 @@
   --color-honeydew: #e4e3bc;
   --color-viridian: #344945;
   --color-viridian-ink: #2a3a37;
+  /* Footer green and warm card white from the ant-mascot homepage design. */
+  --color-viridian-deep: #2b3a37;
+  --color-card: #fcfbf8;
 
   /* Compatibility aliases used throughout existing operational pages. */
   --color-crew-50: #fbfaf7;
