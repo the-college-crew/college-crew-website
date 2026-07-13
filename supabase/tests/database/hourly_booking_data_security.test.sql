@@ -533,7 +533,18 @@ values
     '00000000-0000-0000-0000-000000000201',
     '00000000-0000-0000-0000-000000000301',
     '2026-07-17T18:00:00Z', '789 Legacy Address', 5000, 750
+  ),
+  (
+    '00000000-0000-0000-0000-000000000504',
+    '00000000-0000-0000-0000-000000000101',
+    '00000000-0000-0000-0000-000000000201',
+    '00000000-0000-0000-0000-000000000301',
+    '2026-07-18T18:00:00Z', '101 Legacy Address', 5000, 750
   );
+
+update public.bookings
+set status = 'declined'
+where id = '00000000-0000-0000-0000-000000000504';
 
 select lives_ok(
   $$
@@ -734,7 +745,7 @@ set local role authenticated;
 
 select results_eq(
   $$ select count(*)::bigint from public.bookings $$,
-  $$ values (3::bigint) $$,
+  $$ values (4::bigint) $$,
   'customer reads only their own bookings'
 );
 select results_eq(
@@ -781,10 +792,11 @@ select pg_temp.throws_any_ok(
 );
 select lives_ok(
   $$
-    update public.bookings set dismissed_at = now()
-    where id = '00000000-0000-0000-0000-000000000502'
+    select public.dismiss_booking(
+      '00000000-0000-0000-0000-000000000504'
+    )
   $$,
-  'legacy customer dismissal compatibility remains available'
+  'legacy customer dismissal compatibility remains available through RPC'
 );
 select pg_temp.throws_any_ok(
   $$
@@ -810,7 +822,7 @@ set local role authenticated;
 
 select results_eq(
   $$ select count(*)::bigint from public.bookings $$,
-  $$ values (3::bigint) $$,
+  $$ values (4::bigint) $$,
   'provider reads only bookings for their provider profile'
 );
 select results_eq(
@@ -883,11 +895,11 @@ select pg_temp.throws_any_ok(
 );
 select lives_ok(
   $$
-    update public.bookings set status = 'accepted'
-    where id = '00000000-0000-0000-0000-000000000503'
-      and status = 'requested'
+    select public.accept_booking_request(
+      '00000000-0000-0000-0000-000000000503'
+    )
   $$,
-  'legacy provider can accept a requested booking'
+  'legacy provider can accept a requested booking through RPC'
 );
 
 reset role;
@@ -905,11 +917,12 @@ set local role authenticated;
 
 select lives_ok(
   $$
-    update public.bookings set status = 'paid'
-    where id = '00000000-0000-0000-0000-000000000503'
-      and status = 'accepted'
+    select public.transition_legacy_booking(
+      '00000000-0000-0000-0000-000000000503',
+      'paid'
+    )
   $$,
-  'legacy customer can move their accepted booking to paid'
+  'legacy customer can move their accepted booking to paid through RPC'
 );
 
 reset role;

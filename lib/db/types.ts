@@ -468,6 +468,7 @@ export type Database = {
           replaced_by_booking_id: string | null
           replacement_for_booking_id: string | null
           response_alert_at: string | null
+          response_alerted_at: string | null
           response_window_hours: number | null
           scheduled_at: string
           service_id: string
@@ -518,6 +519,7 @@ export type Database = {
           replaced_by_booking_id?: string | null
           replacement_for_booking_id?: string | null
           response_alert_at?: string | null
+          response_alerted_at?: string | null
           response_window_hours?: number | null
           scheduled_at: string
           service_id: string
@@ -568,6 +570,7 @@ export type Database = {
           replaced_by_booking_id?: string | null
           replacement_for_booking_id?: string | null
           response_alert_at?: string | null
+          response_alerted_at?: string | null
           response_window_hours?: number | null
           scheduled_at?: string
           service_id?: string
@@ -1591,9 +1594,46 @@ export type Database = {
       }
     }
     Functions: {
+      accept_booking_request: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
+      cancel_booking_request: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       claim_conversation_for_booking: {
         Args: { target_booking_id: string }
         Returns: string
+      }
+      create_hourly_booking_request: {
+        Args: {
+          p_address: string
+          p_details?: string
+          p_estimated_minutes: number
+          p_job_zip: string
+          p_provider_service_id: string
+          p_response_window_hours: number
+          p_scheduled_at: string
+        }
+        Returns: string
+      }
+      decline_booking_request: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
+      dismiss_booking: { Args: { p_booking_id: string }; Returns: string }
+      email_is_confirmed: { Args: { p_email: string }; Returns: boolean }
+      expire_hourly_booking_request: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
+      hourly_replacement_candidate_ids: {
+        Args: { p_booking_id: string }
+        Returns: {
+          provider_id: string
+          provider_service_id: string
+        }[]
       }
       is_admin: { Args: never; Returns: boolean }
       is_conversation_member:
@@ -1617,8 +1657,33 @@ export type Database = {
         Args: { provider_service_id: string }
         Returns: boolean
       }
+      mark_hourly_response_alert: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       owns_provider_profile: { Args: { pp_id: string }; Returns: boolean }
+      rank_hourly_provider_ids: {
+        Args: { p_job_zip: string; p_service_slug?: string }
+        Returns: {
+          provider_id: string
+        }[]
+      }
+      replace_hourly_booking_request: {
+        Args: {
+          p_original_booking_id: string
+          p_provider_service_id: string
+          p_response_window_hours: number
+        }
+        Returns: string
+      }
       shares_thread_with: { Args: { profile_id: string }; Returns: boolean }
+      transition_legacy_booking: {
+        Args: {
+          p_booking_id: string
+          p_target_status: Database["public"]["Enums"]["booking_status"]
+        }
+        Returns: string
+      }
       unread_message_summary: {
         Args: never
         Returns: {
@@ -1897,6 +1962,7 @@ export type BackgroundCheckStatus =
 export type PriceType = Database["public"]["Enums"]["price_type"]
 export type PriceUnit = Database["public"]["Enums"]["price_unit"]
 export type BookingStatus = Database["public"]["Enums"]["booking_status"]
+export type BookingFlow = Database["public"]["Enums"]["booking_flow"]
 export type ModerationStatus =
   Database["public"]["Enums"]["moderation_status"]
 export type LegalAcceptanceKind =
