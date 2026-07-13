@@ -59,7 +59,7 @@ export async function ProviderProfile({
             <Rating rating={provider.rating} />
           </div>
           {provider.bio ? (
-            <p className="mt-4 text-sm leading-relaxed text-ink-soft">
+            <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-ink-soft">
               {provider.bio}
             </p>
           ) : null}
