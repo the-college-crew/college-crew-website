@@ -3,11 +3,11 @@ import "server-only";
 import { hasResendEnv } from "@/lib/env";
 
 /**
- * Transactional email. The only sender for now is the provider .edu
- * verification code. Resend is optional infra: with no RESEND_API_KEY we log
- * the code to the server console instead of sending, so the whole OTP flow is
- * testable in dev before the Resend account exists. Swapping in live email is
- * just setting the two env vars — no code change here.
+ * Transactional email: the provider .edu verification code, plus the founder
+ * notice when profile text is flagged. Resend is optional infra: with no
+ * RESEND_API_KEY we log to the server console instead of sending, so both flows
+ * are testable in dev before the Resend account exists. Swapping in live email
+ * is just setting the two env vars — no code change here.
  *
  * server-only: never bundle the API key path into the browser.
  */
@@ -20,7 +20,7 @@ const FROM =
 type SendResult = { ok: true } | { ok: false; error: string };
 
 async function sendEmail(opts: {
-  to: string;
+  to: string | string[];
   subject: string;
   text: string;
   html?: string;
@@ -29,7 +29,7 @@ async function sendEmail(opts: {
     // Dev/stub path: no provider configured. Surface the content in logs so a
     // developer can complete the flow locally.
     console.info(
-      `[email:stub] To: ${opts.to}\nSubject: ${opts.subject}\n${opts.text}`,
+      `[email:stub] To: ${[opts.to].flat().join(", ")}\nSubject: ${opts.subject}\n${opts.text}`,
     );
     if (opts.html) {
       console.info(`[email:stub:html]\n${opts.html}`);
@@ -155,6 +155,44 @@ function schoolOtpHtml(code: string) {
   </table>
 </body>
 </html>`;
+}
+
+/**
+ * Founder notice: a provider's bio or display name tripped the profile scan
+ * (lib/moderation/profile-text.ts). Moderation is flag-only, so the text is
+ * ALREADY LIVE on the public profile — this email exists so the founders find
+ * out without having to watch the dashboard. Mirrors the flag email that
+ * moderate-message sends for chat.
+ */
+const FOUNDER_NOTIFY = ["Ari@thecollegecrew.com", "zach@thecollegecrew.com"];
+
+const FIELD_LABEL: Record<"display_name" | "bio", string> = {
+  display_name: "display name",
+  bio: "bio",
+};
+
+export function sendProfileFlagEmail(opts: {
+  field: "display_name" | "bio";
+  matched: string[];
+  text: string;
+  userId: string;
+}): Promise<SendResult> {
+  const label = FIELD_LABEL[opts.field];
+  return sendEmail({
+    to: FOUNDER_NOTIFY,
+    subject: `College Crew: a provider ${label} was flagged`,
+    text: [
+      `A provider's ${label} tripped the profile scan. It is LIVE on their public profile — flagging does not block it.`,
+      "",
+      `What matched: ${opts.matched.join(", ")}`,
+      `Provider (user id): ${opts.userId}`,
+      "",
+      `Flagged ${label}:`,
+      opts.text,
+      "",
+      "Review it in the admin dashboard → Flagged, under 'Flagged profiles'. You can edit or clear the text there.",
+    ].join("\n"),
+  });
 }
 
 /** Email a provider their 6-digit school-email verification code. */
