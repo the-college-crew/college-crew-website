@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { openConversationForBooking } from "@/app/actions/messaging";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
+import { DeadlineCountdown } from "@/components/deadline-countdown";
 import { StatusPill } from "@/components/status-pill";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
 import { demoBookings, getDemoPreview } from "@/lib/demo/sample-preview";
-import type { BookingStatus } from "@/lib/db/types";
+import type { BookingFlow, BookingStatus } from "@/lib/db/types";
 import {
   getCustomerConversationIndex,
   type ConversationEntry,
@@ -19,24 +20,38 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDateTime, formatMoney } from "@/lib/utils";
 
-import { cancelBooking } from "./actions";
+import { CancelBookingButton } from "./cancel-booking-button";
 import { ReviewForm } from "./review-form";
 import { DismissDeclinedBookingButton } from "./dismiss-declined-booking-button";
 
 export const metadata: Metadata = { title: "My bookings" };
 
-const UPCOMING: BookingStatus[] = ["requested", "accepted", "paid"];
+const UPCOMING: BookingStatus[] = [
+  "requested",
+  "accepted",
+  "paid",
+  "booked",
+  "in_progress",
+  "invoice_review",
+  "disputed",
+];
 
 type BookingRow = {
   id: string;
+  booking_flow: BookingFlow;
   status: BookingStatus;
   scheduled_at: string;
   address: string;
   price_cents: number;
+  estimated_minutes: number | null;
+  hourly_rate_cents_snapshot: number | null;
+  response_alert_at: string | null;
+  initial_payment_due_at: string | null;
   dismissed_at: string | null;
   service: { name: string };
   provider: { display_name: string };
   review: { id: string } | null;
+  responseAlertReached?: boolean;
 };
 
 type BookingGroups = {
@@ -56,12 +71,27 @@ function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
   const attention: BookingRow[] = [];
   const upcoming: BookingRow[] = [];
   const past: BookingRow[] = [];
-  for (const booking of bookings) {
+  for (const source of bookings) {
+    const responseAlertReached = Boolean(
+      source.booking_flow === "hourly_v1" &&
+        source.status === "requested" &&
+        source.response_alert_at &&
+        new Date(source.response_alert_at) <= now &&
+        new Date(source.scheduled_at) > now,
+    );
+    const booking: BookingRow =
+      source.booking_flow === "hourly_v1" &&
+      source.status === "requested" &&
+      new Date(source.scheduled_at) <= now
+        ? { ...source, status: "expired", responseAlertReached: false }
+        : { ...source, responseAlertReached };
     if (booking.status === "declined" && booking.dismissed_at) continue;
     if (
       booking.status === "declined" &&
       new Date(booking.scheduled_at) >= now
     ) {
+      attention.push(booking);
+    } else if (responseAlertReached) {
       attention.push(booking);
     } else if (UPCOMING.includes(booking.status)) {
       upcoming.push(booking);
@@ -75,9 +105,14 @@ function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
 export default async function CustomerDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; requested?: string; paid?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    requested?: string;
+    replaced?: string;
+    paid?: string;
+  }>;
 }) {
-  const [{ tab, requested, paid }, session] = await Promise.all([
+  const [{ tab, requested, replaced, paid }, session] = await Promise.all([
     searchParams,
     requireRole("customer", "/dashboard"),
   ]);
@@ -97,6 +132,7 @@ export default async function CustomerDashboardPage({
         groups={groups}
         showPast={showPast}
         requested={requested}
+        replaced={replaced}
         paid={paid}
         convoIndex={new Map()}
         demo
@@ -108,7 +144,10 @@ export default async function CustomerDashboardPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, status, scheduled_at, address, price_cents, dismissed_at, service:services(name), provider:provider_profiles(display_name), review:reviews(id)",
+      `id, booking_flow, status, scheduled_at, address, price_cents,
+       estimated_minutes, hourly_rate_cents_snapshot, response_alert_at,
+       initial_payment_due_at, dismissed_at, service:services(name),
+       provider:provider_profiles(display_name), review:reviews(id)`,
     )
     .eq("customer_id", session.user.id)
     .order("scheduled_at", { ascending: showPast ? false : true });
@@ -124,6 +163,7 @@ export default async function CustomerDashboardPage({
       groups={groups}
       showPast={showPast}
       requested={requested}
+      replaced={replaced}
       paid={paid}
       convoIndex={convoIndex}
       customerId={session.user.id}
@@ -135,6 +175,7 @@ function CustomerDashboardView({
   groups,
   showPast,
   requested,
+  replaced,
   paid,
   convoIndex,
   customerId,
@@ -143,6 +184,7 @@ function CustomerDashboardView({
   groups: BookingGroups;
   showPast: boolean;
   requested?: string;
+  replaced?: string;
   paid?: string;
   convoIndex: Map<string, ConversationEntry>;
   customerId?: string;
@@ -185,6 +227,11 @@ function CustomerDashboardView({
           {demo
             ? "Sample request sent. No booking was created, but this is where the confirmation appears."
             : "Request sent. The provider will accept or decline — once they accept, you'll confirm and pay here."}
+        </div>
+      ) : null}
+      {replaced ? (
+        <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
+          Replacement sent. The original request was withdrawn atomically.
         </div>
       ) : null}
       {paid ? (
@@ -287,11 +334,14 @@ function BookingCard({
   const providerName = booking.provider.display_name;
   const isDeclined = booking.status === "declined";
   const isUpcoming = (UPCOMING as string[]).includes(booking.status);
+  const isHourly = booking.booking_flow === "hourly_v1";
+  const responseAlertReached = booking.responseAlertReached === true;
   const note = convo?.latest?.fromOther ? convo.latest : null;
   const hasProviderMessage = Boolean(note);
 
   return (
     <Card
+      data-booking-id={booking.id}
       data-declined-booking={isDeclined || undefined}
       className={cn(
         "p-5 transition-[opacity,transform] duration-200 ease-out",
@@ -307,7 +357,10 @@ function BookingCard({
             with {providerName} · {formatDateTime(booking.scheduled_at)}
           </p>
           <p className="mt-0.5 text-xs text-mist">
-            {booking.address} · {formatMoney(booking.price_cents)}
+            {booking.address} ·{" "}
+            {isHourly && booking.hourly_rate_cents_snapshot != null
+              ? `${formatMoney(booking.hourly_rate_cents_snapshot)}/hr · ${booking.estimated_minutes ?? 60} min estimate`
+              : formatMoney(booking.price_cents)}
           </p>
         </div>
         <StatusPill status={booking.status} />
@@ -331,13 +384,50 @@ function BookingCard({
         </div>
       ) : null}
 
+      {responseAlertReached ? (
+        <div
+          role="status"
+          className="mt-4 rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800"
+        >
+          <p className="font-semibold">The response deadline has passed.</p>
+          <p className="mt-1">
+            Your original request is still open. You can keep waiting, cancel,
+            or atomically send one replacement request.
+          </p>
+        </div>
+      ) : null}
+
+      {isHourly && booking.status === "requested" && booking.response_alert_at ? (
+        <div className="mt-3">
+          <DeadlineCountdown
+            target={booking.response_alert_at}
+            label="Response alert"
+          />
+        </div>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {booking.status === "accepted" ? (
+        {booking.status === "accepted" && !isHourly ? (
           <Link
             href={demo ? "/bookings/demo/confirm" : `/bookings/${booking.id}/confirm`}
             className={buttonClasses({ size: "sm" })}
           >
             Confirm & pay
+          </Link>
+        ) : null}
+
+        {booking.status === "accepted" && isHourly ? (
+          <span className="rounded-lg border border-sky bg-sky px-3 py-1.5 text-xs font-medium text-viridian">
+            Accepted · first-hour payment opens soon
+          </span>
+        ) : null}
+
+        {responseAlertReached && !demo ? (
+          <Link
+            href={`/bookings/${booking.id}/replace`}
+            className={buttonClasses({ size: "sm" })}
+          >
+            Find replacement
           </Link>
         ) : null}
 
@@ -385,15 +475,7 @@ function BookingCard({
             Cancel request
           </Button>
         ) : booking.status === "requested" || booking.status === "accepted" ? (
-          <form action={cancelBooking}>
-            <input type="hidden" name="bookingId" value={booking.id} />
-            <button
-              type="submit"
-              className={buttonClasses({ variant: "danger", size: "sm" })}
-            >
-              Cancel request
-            </button>
-          </form>
+          <CancelBookingButton bookingId={booking.id} />
         ) : null}
       </div>
 

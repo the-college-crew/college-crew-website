@@ -59,6 +59,35 @@ export default async function DemoBookingPage() {
             />
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="estimatedMinutes">Estimated duration</Label>
+              <Select
+                id="estimatedMinutes"
+                name="estimatedMinutes"
+                defaultValue="120"
+              >
+                <option value="60">1 hour</option>
+                <option value="90">1 hour 30 minutes</option>
+                <option value="120">2 hours</option>
+                <option value="180">3 hours</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="responseWindowHours">Response window</Label>
+              <Select
+                id="responseWindowHours"
+                name="responseWindowHours"
+                defaultValue="3"
+              >
+                <option value="1">1 hour</option>
+                <option value="3">3 hours</option>
+                <option value="5">5 hours</option>
+                <option value="12">12 hours</option>
+              </Select>
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="address">Address</Label>
             <Input
@@ -67,6 +96,11 @@ export default async function DemoBookingPage() {
               defaultValue="1420 Maple Lane"
               required
             />
+          </div>
+
+          <div>
+            <Label htmlFor="jobZip">Job ZIP</Label>
+            <Input id="jobZip" name="jobZip" defaultValue="60614" required />
           </div>
 
           <div>
@@ -87,9 +121,9 @@ export default async function DemoBookingPage() {
               </span>
             </div>
             <p className="mt-2 text-xs text-mist">
-              One-hour minimum, then 15-minute increments. Duration and
-              response controls arrive with the guarded hourly request flow in
-              Phase 3; this sample submit only returns to the dashboard.
+              One-hour minimum, then 15-minute increments. After acceptance,
+              the first hour is due; final billing uses actual submitted time.
+              This sample submit only returns to the dashboard.
             </p>
           </div>
 

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { requestOperationMessage } from "@/lib/booking/requests";
 import type { BookingStatus } from "@/lib/db/types";
 import {
   getConversationIdForBooking,
@@ -25,17 +26,20 @@ import { syncProviderPayoutSnapshot } from "@/lib/provider/payout-readiness";
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 type BookingParties = { id: string; customer_id: string; provider_id: string };
 
-async function setBookingStatus(formData: FormData, status: BookingStatus) {
+async function transitionLegacyBooking(
+  formData: FormData,
+  status: Extract<BookingStatus, "completed">,
+) {
   await requireRole("provider");
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("bookings")
-    .update({ status })
-    .eq("id", bookingId);
+  const { error } = await supabase.rpc("transition_legacy_booking", {
+    p_booking_id: bookingId,
+    p_target_status: status,
+  });
   if (error) {
-    throw new Error(`Could not update the booking: ${error.message}`);
+    throw new Error(requestOperationMessage(error));
   }
 
   revalidatePath("/provider/dashboard");
@@ -71,19 +75,25 @@ function conversationIdFor(supabase: ServerClient, booking: BookingParties) {
  * reaching here means the provider already said yes. The DB trigger still
  * enforces that only the provider can move requested → accepted.
  */
-export async function acceptBooking(formData: FormData) {
+export type BookingRequestActionState = { error?: string };
+
+export async function acceptBooking(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
   await requireRole("provider");
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const supabase = await createClient();
 
   const booking = await loadBookingParties(supabase, bookingId);
 
-  const { error } = await supabase
-    .from("bookings")
-    .update({ status: "accepted" })
-    .eq("id", bookingId);
+  const { error } = await supabase.rpc("accept_booking_request", {
+    p_booking_id: bookingId,
+  });
   if (error) {
-    throw new Error(`Could not accept the booking: ${error.message}`);
+    return {
+      error: requestOperationMessage(error, "Could not accept the request."),
+    };
   }
 
   const conversationId = await conversationIdFor(supabase, booking);
@@ -99,7 +109,10 @@ export async function acceptBooking(formData: FormData) {
  * It goes through the moderate-message function like any other message — never
  * a direct insert — so contact-info scanning still applies.
  */
-export async function declineBooking(formData: FormData) {
+export async function declineBooking(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
   await requireRole("provider");
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const message = z
@@ -112,12 +125,13 @@ export async function declineBooking(formData: FormData) {
 
   const booking = await loadBookingParties(supabase, bookingId);
 
-  const { error } = await supabase
-    .from("bookings")
-    .update({ status: "declined" })
-    .eq("id", bookingId);
+  const { error } = await supabase.rpc("decline_booking_request", {
+    p_booking_id: bookingId,
+  });
   if (error) {
-    throw new Error(`Could not decline the booking: ${error.message}`);
+    return {
+      error: requestOperationMessage(error, "Could not decline the request."),
+    };
   }
 
   const conversationId = await conversationIdFor(supabase, booking);
@@ -137,7 +151,7 @@ export async function declineBooking(formData: FormData) {
 }
 
 export async function completeBooking(formData: FormData) {
-  await setBookingStatus(formData, "completed");
+  await transitionLegacyBooking(formData, "completed");
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   type Session,
 } from "@/lib/auth/session";
 import type {
+  BookingFlow,
   BookingStatus,
   Message,
   ProviderProfile,
@@ -134,12 +135,17 @@ export const demoOfferings = [
 
 export type DemoBooking = {
   id: string;
+  booking_flow: BookingFlow;
   status: BookingStatus;
   scheduled_at: string;
   address: string;
   details: string;
   price_cents: number;
   platform_fee_cents: number;
+  estimated_minutes: number | null;
+  hourly_rate_cents_snapshot: number | null;
+  response_alert_at: string | null;
+  initial_payment_due_at: string | null;
   service: { name: string };
   customer: { full_name: string };
   provider: { display_name: string };
@@ -149,12 +155,17 @@ export type DemoBooking = {
 export const demoBookings: DemoBooking[] = [
   {
     id: "demo-booking-requested",
+    booking_flow: "hourly_v1",
     status: "requested",
     scheduled_at: isoInDays(1, 15),
     address: "1420 Maple Lane",
     details: "Front and back yard. Please bring bags for clippings.",
     price_cents: 5500,
     platform_fee_cents: 275,
+    estimated_minutes: 120,
+    hourly_rate_cents_snapshot: 4500,
+    response_alert_at: isoInDays(0, 18),
+    initial_payment_due_at: null,
     service: { name: "Lawn care" },
     customer: { full_name: "Jordan Lee" },
     provider: { display_name: demoProviderProfile.display_name },
@@ -162,12 +173,17 @@ export const demoBookings: DemoBooking[] = [
   },
   {
     id: "demo-booking-accepted",
+    booking_flow: "hourly_v1",
     status: "accepted",
     scheduled_at: isoInDays(3, 10),
     address: "88 College Ave",
     details: "Six first-floor windows and four second-floor windows.",
     price_cents: 8500,
     platform_fee_cents: 425,
+    estimated_minutes: 90,
+    hourly_rate_cents_snapshot: 6000,
+    response_alert_at: isoInDays(0, 18),
+    initial_payment_due_at: isoInDays(1, 10),
     service: { name: "Window washing" },
     customer: { full_name: "Maya Patel" },
     provider: { display_name: demoProviderProfile.display_name },
@@ -175,12 +191,17 @@ export const demoBookings: DemoBooking[] = [
   },
   {
     id: "demo-booking-paid",
+    booking_flow: "legacy",
     status: "paid",
     scheduled_at: isoInDays(6, 13),
     address: "509 Oak Street",
     details: "Help move boxes from garage to basement.",
     price_cents: 12000,
     platform_fee_cents: 600,
+    estimated_minutes: null,
+    hourly_rate_cents_snapshot: null,
+    response_alert_at: null,
+    initial_payment_due_at: null,
     service: { name: "Moving help" },
     customer: { full_name: "Chris Morgan" },
     provider: { display_name: demoProviderProfile.display_name },
@@ -188,12 +209,17 @@ export const demoBookings: DemoBooking[] = [
   },
   {
     id: "demo-booking-declined",
+    booking_flow: "hourly_v1",
     status: "declined",
     scheduled_at: isoInDays(2, 9),
     address: "17 Birch Road",
     details: "Trash & recycling take-out.",
     price_cents: 3000,
     platform_fee_cents: 150,
+    estimated_minutes: 60,
+    hourly_rate_cents_snapshot: 4000,
+    response_alert_at: isoInDays(0, 18),
+    initial_payment_due_at: null,
     service: { name: "Trash & bin service" },
     customer: { full_name: "Sam Rivera" },
     provider: { display_name: demoProviderProfile.display_name },
@@ -201,12 +227,17 @@ export const demoBookings: DemoBooking[] = [
   },
   {
     id: "demo-booking-completed",
+    booking_flow: "legacy",
     status: "completed",
     scheduled_at: isoAgoDays(9, 11),
     address: "24 Elm Court",
     details: "Yard cleanup.",
     price_cents: 6500,
     platform_fee_cents: 325,
+    estimated_minutes: null,
+    hourly_rate_cents_snapshot: null,
+    response_alert_at: null,
+    initial_payment_due_at: null,
     service: { name: "Lawn care" },
     customer: { full_name: "Taylor Brooks" },
     provider: { display_name: demoProviderProfile.display_name },

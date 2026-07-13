@@ -5,6 +5,7 @@ import {
   MonthCalendar,
   type CalendarBooking,
 } from "@/components/month-calendar";
+import { DeadlineCountdown } from "@/components/deadline-countdown";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,7 +24,7 @@ import {
   demoProviderProfile,
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
-import type { BookingStatus } from "@/lib/db/types";
+import type { BookingFlow, BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
@@ -34,12 +35,16 @@ export const metadata: Metadata = { title: "Provider dashboard" };
 
 type ProviderBookingRow = {
   id: string;
+  booking_flow: BookingFlow;
   status: BookingStatus;
   scheduled_at: string;
   address: string;
   details: string;
   price_cents: number;
   platform_fee_cents: number;
+  estimated_minutes: number | null;
+  hourly_rate_cents_snapshot: number | null;
+  response_alert_at: string | null;
   service: { name: string };
   customer: { full_name: string };
 };
@@ -92,7 +97,10 @@ export default async function ProviderDashboardPage({
     supabase
       .from("bookings")
       .select(
-        "id, status, scheduled_at, address, details, price_cents, platform_fee_cents, service:services(name), customer:profiles!bookings_customer_id_fkey(full_name)",
+        `id, booking_flow, status, scheduled_at, address, details, price_cents,
+         platform_fee_cents, estimated_minutes, hourly_rate_cents_snapshot,
+         response_alert_at, service:services(name),
+         customer:profiles!bookings_customer_id_fkey(full_name)`,
       )
       .eq("provider_id", profile.id)
       .order("scheduled_at", { ascending: true }),
@@ -141,16 +149,25 @@ function ProviderDashboardView({
   onboardingComplete: boolean;
   demo?: boolean;
 }) {
-  const requests = bookings.filter((b) => b.status === "requested");
+  const now = new Date();
+  const requests = bookings.filter(
+    (booking) =>
+      booking.status === "requested" &&
+      (booking.booking_flow === "legacy" || new Date(booking.scheduled_at) > now),
+  );
   const earnedCents = bookings
     .filter((b) => b.status === "completed")
     .reduce((sum, b) => sum + net(b), 0);
   const bookedCents = bookings
-    .filter((b) => b.status === "paid")
+    .filter((b) => ["paid", "booked"].includes(b.status))
     .reduce((sum, b) => sum + net(b), 0);
 
   const calendarBookings: CalendarBooking[] = bookings
-    .filter((b) => ["accepted", "paid", "completed"].includes(b.status))
+    .filter((b) =>
+      ["accepted", "paid", "booked", "in_progress", "completed"].includes(
+        b.status,
+      ),
+    )
     .map((b) => ({
       id: b.id,
       scheduled_at: b.scheduled_at,
@@ -280,7 +297,12 @@ function ProviderDashboardView({
               </EmptyState>
             ) : (
               requests.map((booking) => (
-                <Card key={booking.id} pennant className="p-4">
+                <Card
+                  key={booking.id}
+                  data-booking-id={booking.id}
+                  pennant
+                  className="p-4"
+                >
                   <p className="font-display text-lg font-semibold">
                     {booking.service.name}
                   </p>
@@ -303,6 +325,21 @@ function ProviderDashboardView({
                       snapshotted platform fee)
                     </span>
                   </p>
+                  {booking.booking_flow === "hourly_v1" ? (
+                    <div className="mt-2 space-y-1 text-xs text-mist">
+                      <p>
+                        {formatMoney(booking.hourly_rate_cents_snapshot ?? booking.price_cents)}/hr
+                        {" · "}
+                        {booking.estimated_minutes ?? 60}-minute estimate
+                      </p>
+                      {booking.response_alert_at ? (
+                        <DeadlineCountdown
+                          target={booking.response_alert_at}
+                          label="Response requested"
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
                   {demo ? (
                     <div className="mt-3 flex gap-2">
                       <Button type="button" size="sm" disabled>

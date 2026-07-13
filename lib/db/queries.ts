@@ -11,6 +11,7 @@ import type {
   VerificationStatus,
 } from "@/lib/db/types";
 import { hasSupabaseEnv } from "@/lib/env";
+import { getLocationRankedProviderIds } from "@/lib/booking/requests";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getOfferingReadiness } from "@/lib/provider/setup";
@@ -41,6 +42,8 @@ export type ProviderCard = {
   services: OfferedService[];
   rating: { avg: number; count: number } | null;
 };
+
+export type ProviderSort = "suggested" | "location" | "rating" | "rate";
 
 export async function getLiveServices(): Promise<Service[]> {
   if (!hasSupabaseEnv()) return [];
@@ -173,7 +176,11 @@ function mapReviews(
  * unapproved providers (pilot decision); the filter here is for clarity.
  */
 export async function getApprovedProviders(
-  serviceSlug?: string,
+  options: {
+    serviceSlug?: string;
+    sort?: ProviderSort;
+    jobZip?: string;
+  } = {},
 ): Promise<ProviderCard[]> {
   if (!hasSupabaseEnv()) return [];
   const supabase = await createClient();
@@ -218,10 +225,60 @@ export async function getApprovedProviders(
     rating: ratingByProvider.get(p.provider_id) ?? null,
   }));
 
-  return cards.filter(
+  const filtered = cards.filter(
     (card) =>
       card.services.length > 0 &&
-      (!serviceSlug || card.services.some((s) => s.service.slug === serviceSlug)),
+      (!options.serviceSlug ||
+        card.services.some((s) => s.service.slug === options.serviceSlug)),
+  );
+
+  const relevantOfferings = (card: ProviderCard) =>
+    card.services.filter(
+      (offering) =>
+        offering.is_hourly_bookable &&
+        (!options.serviceSlug || offering.service.slug === options.serviceSlug),
+    );
+  const lowestRate = (card: ProviderCard) =>
+    Math.min(
+      ...relevantOfferings(card).map(
+        (offering) => offering.hourly_rate_cents ?? Number.POSITIVE_INFINITY,
+      ),
+      Number.POSITIVE_INFINITY,
+    );
+  const stableTieBreak = (a: ProviderCard, b: ProviderCard) =>
+    a.display_name.localeCompare(b.display_name) || a.id.localeCompare(b.id);
+  const ratingThenRate = (a: ProviderCard, b: ProviderCard) =>
+    (b.rating?.avg ?? 0) - (a.rating?.avg ?? 0) ||
+    lowestRate(a) - lowestRate(b) ||
+    stableTieBreak(a, b);
+
+  if (options.sort === "location" && /^\d{5}$/.test(options.jobZip ?? "")) {
+    const rankedIds = await getLocationRankedProviderIds({
+      jobZip: options.jobZip!,
+      serviceSlug: options.serviceSlug,
+    });
+    const rank = new Map(rankedIds.map((id, index) => [id, index]));
+    return filtered.toSorted(
+      (a, b) =>
+        (rank.get(a.id) ?? Number.POSITIVE_INFINITY) -
+          (rank.get(b.id) ?? Number.POSITIVE_INFINITY) ||
+        ratingThenRate(a, b),
+    );
+  }
+  if (options.sort === "rating") {
+    return filtered.toSorted(ratingThenRate);
+  }
+  if (options.sort === "rate") {
+    return filtered.toSorted(
+      (a, b) => lowestRate(a) - lowestRate(b) || ratingThenRate(a, b),
+    );
+  }
+
+  return filtered.toSorted(
+    (a, b) =>
+      Number(relevantOfferings(b).length > 0) -
+        Number(relevantOfferings(a).length > 0) ||
+      ratingThenRate(a, b),
   );
 }
 

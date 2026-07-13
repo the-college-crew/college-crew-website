@@ -11,10 +11,12 @@ export function ServiceChips({
   services,
   activeSlug,
   basePath = "/browse",
+  preserveParams,
 }: {
   services: Service[];
   activeSlug?: string;
   basePath?: string;
+  preserveParams?: Record<string, string | undefined>;
 }) {
   const chip = (active: boolean) =>
     cn(
@@ -26,13 +28,16 @@ export function ServiceChips({
 
   return (
     <nav aria-label="Filter by service" className="flex flex-wrap gap-2">
-      <Link href={basePath} className={chip(!activeSlug)}>
+      <Link
+        href={buildHref(basePath, undefined, preserveParams)}
+        className={chip(!activeSlug)}
+      >
         All services
       </Link>
       {services.map((service) => (
         <Link
           key={service.id}
-          href={`${basePath}?service=${service.slug}`}
+          href={buildHref(basePath, service.slug, preserveParams)}
           className={chip(activeSlug === service.slug)}
         >
           {service.name}
@@ -40,4 +45,18 @@ export function ServiceChips({
       ))}
     </nav>
   );
+}
+
+function buildHref(
+  basePath: string,
+  serviceSlug?: string,
+  preserveParams?: Record<string, string | undefined>,
+) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(preserveParams ?? {})) {
+    if (value) params.set(key, value);
+  }
+  if (serviceSlug) params.set("service", serviceSlug);
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
 }

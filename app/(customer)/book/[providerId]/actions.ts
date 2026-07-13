@@ -4,41 +4,35 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getSession } from "@/lib/auth/session";
+import { pilotLocalDateTimeToUtc } from "@/lib/booking/policy";
+import {
+  createHourlyRequest,
+  requestOperationMessage,
+} from "@/lib/booking/requests";
+import { areBookingRequestsEnabled, isHourlyBookingEnabled } from "@/lib/env";
 import {
   getConversationIdForBooking,
   sendModeratedMessage,
 } from "@/lib/messaging/conversation";
-import { areBookingRequestsEnabled } from "@/lib/env";
-import { PLATFORM_FEE_RATE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
 export type BookingFormState = { error?: string };
 
 const bookingSchema = z.object({
-  providerId: z.string().uuid(),
   providerServiceId: z.string().uuid("Pick a service."),
-  scheduledAt: z
-    .string()
-    .min(1, "Pick a date and time.")
-    .refine((value) => !Number.isNaN(Date.parse(value)), "Pick a valid date.")
-    .refine(
-      (value) => new Date(value).getTime() > Date.now(),
-      "Pick a time in the future.",
-    ),
-  address: z.string().trim().min(5, "Enter the service address."),
+  scheduledLocal: z.string().min(1, "Pick a date and time."),
+  estimatedMinutes: z.coerce.number().int(),
+  responseWindowHours: z.coerce.number().int(),
+  address: z.string().trim().min(5, "Enter the service address.").max(500),
+  jobZip: z.string().trim().regex(/^\d{5}$/, "Enter a five-digit job ZIP."),
   details: z.string().trim().max(2000).optional().default(""),
 });
 
-/**
- * Creates a booking *request* — no charge happens here (SPEC §3:
- * charge-after-acceptance). Price is snapshotted server-side from the
- * provider's published pricing; the client never sets money fields.
- */
 export async function createBookingRequest(
   _prev: BookingFormState,
   formData: FormData,
 ): Promise<BookingFormState> {
-  if (!areBookingRequestsEnabled()) {
+  if (!isHourlyBookingEnabled() || !areBookingRequestsEnabled()) {
     return {
       error:
         "New booking requests are temporarily paused while we update scheduling.",
@@ -46,95 +40,72 @@ export async function createBookingRequest(
   }
 
   const session = await getSession();
-  if (!session) {
-    return { error: "Log in to request a booking." };
-  }
+  if (!session) return { error: "Log in to request a booking." };
   if (session.profile.role !== "customer") {
     return { error: "Only customer accounts can request bookings." };
   }
-  // Pilot decision: verified email before booking.
   if (!session.user.email_confirmed_at) {
-    return {
-      error:
-        "Confirm your email first — check your inbox for the confirmation link.",
-    };
+    return { error: "Confirm your email before requesting a booking." };
   }
 
   const parsed = bookingSchema.safeParse({
-    providerId: formData.get("providerId"),
     providerServiceId: formData.get("providerServiceId"),
-    scheduledAt: formData.get("scheduledAt"),
+    scheduledLocal: formData.get("scheduledLocal"),
+    estimatedMinutes: formData.get("estimatedMinutes"),
+    responseWindowHours: formData.get("responseWindowHours"),
     address: formData.get("address"),
+    jobZip: formData.get("jobZip"),
     details: formData.get("details"),
   });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const scheduled = pilotLocalDateTimeToUtc(parsed.data.scheduledLocal);
+  if (!scheduled.ok) {
+    return {
+      error:
+        scheduled.reason === "ambiguous"
+          ? "That time occurs twice when daylight saving time ends. Choose another time."
+          : scheduled.reason === "nonexistent"
+            ? "That time does not exist when daylight saving time begins. Choose another time."
+            : "Pick a valid date and time.",
+    };
   }
 
   const supabase = await createClient();
+  const { data: bookingId, error } = await createHourlyRequest(supabase, {
+    providerServiceId: parsed.data.providerServiceId,
+    scheduledAt: scheduled.date.toISOString(),
+    estimatedMinutes: parsed.data.estimatedMinutes,
+    responseWindowHours: parsed.data.responseWindowHours,
+    address: parsed.data.address,
+    jobZip: parsed.data.jobZip,
+    details: parsed.data.details,
+  });
+  if (error || !bookingId) {
+    return { error: requestOperationMessage(error, "Could not send the request — try again.") };
+  }
 
-  // Visible via RLS only while the provider is approved.
-  const { data: offered } = await supabase
-    .from("provider_services")
-    .select("id, provider_id, service_id, price_cents, price_type, service:services(is_live)")
-    .eq("id", parsed.data.providerServiceId)
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, customer_id, provider_id")
+    .eq("id", bookingId)
     .maybeSingle();
 
-  const service = Array.isArray(offered?.service)
-    ? offered.service[0]
-    : offered?.service;
-
-  if (
-    !offered ||
-    offered.provider_id !== parsed.data.providerId ||
-    !service?.is_live
-  ) {
-    return { error: "That service isn't available from this provider." };
-  }
-
-  // Quote-priced services start at $0 and get priced in chat — the charge
-  // flow for quotes is an open question (SPEC §10); pilot books them at $0.
-  const priceCents = offered.price_type === "quote" ? 0 : offered.price_cents;
-
-  const { data: booking, error } = await supabase
-    .from("bookings")
-    .insert({
-      customer_id: session.user.id,
-      provider_id: offered.provider_id,
-      service_id: offered.service_id,
-      scheduled_at: new Date(parsed.data.scheduledAt).toISOString(),
-      address: parsed.data.address,
-      details: parsed.data.details,
-      price_cents: priceCents,
-      platform_fee_cents: Math.round(priceCents * PLATFORM_FEE_RATE),
-    })
-    .select("id")
-    .single();
-  if (error || !booking) {
-    return { error: "Could not send the request — try again." };
-  }
-
-  // Open this booking's thread now, even with no note to seed it: resolving the
-  // thread here is also what claims any pre-booking inquiry chat with this
-  // provider, and doing it at request time means the *first* booking claims it
-  // rather than whichever booking's thread happens to be opened first.
-  //
-  // Then seed the chat with the customer's note so it's the opening message when
-  // either party opens the thread. Best-effort throughout: the booking is
-  // already made, so a moderation hiccup shouldn't fail the request — the note
-  // also stays on the booking card. Sent under the customer's session, so it's
-  // attributed to them (the provider may be the one who first opens the thread).
-  try {
-    const conversationId = await getConversationIdForBooking(supabase, {
-      bookingId: booking.id,
-      customerId: session.user.id,
-      providerId: offered.provider_id,
-    });
-    if (parsed.data.details) {
-      await sendModeratedMessage(supabase, conversationId, parsed.data.details);
+  // Conversation setup is best-effort after the transaction commits. The new
+  // booking remains the source of truth even if moderation is unavailable.
+  if (booking) {
+    try {
+      const conversationId = await getConversationIdForBooking(supabase, {
+        bookingId: booking.id,
+        customerId: booking.customer_id,
+        providerId: booking.provider_id,
+      });
+      if (parsed.data.details) {
+        await sendModeratedMessage(supabase, conversationId, parsed.data.details);
+      }
+    } catch {
+      // The dashboard can retry opening this booking's thread later.
     }
-  } catch {
-    // Non-fatal — the request still went through.
   }
 
   redirect("/dashboard?requested=1");

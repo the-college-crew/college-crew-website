@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
+import { BrowseControls } from "@/components/browse-controls";
 import { Editable } from "@/components/content/editable";
 import { ProviderCard } from "@/components/provider-card";
 import { ServiceChips } from "@/components/service-chips";
@@ -8,21 +10,40 @@ import { buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSession } from "@/lib/auth/session";
-import { getApprovedProviders, getLiveServices } from "@/lib/db/queries";
+import {
+  getApprovedProviders,
+  getLiveServices,
+  type ProviderSort,
+} from "@/lib/db/queries";
+import { BROWSE_ZIP_COOKIE } from "@/lib/browse/preferences";
 
 export const metadata: Metadata = { title: "Browse providers" };
 
 export default async function BrowsePage({
   searchParams,
 }: {
-  searchParams: Promise<{ service?: string }>;
+  searchParams: Promise<{ service?: string; sort?: string }>;
 }) {
-  const { service } = await searchParams;
-  const [services, providers, session] = await Promise.all([
+  const { service, sort: sortParam } = await searchParams;
+  const [services, session, cookieStore] = await Promise.all([
     getLiveServices(),
-    getApprovedProviders(service),
     getSession(),
+    cookies(),
   ]);
+  const sort: ProviderSort = ["location", "rating", "rate"].includes(
+    sortParam ?? "",
+  )
+    ? (sortParam as ProviderSort)
+    : "suggested";
+  const jobZip =
+    cookieStore.get(BROWSE_ZIP_COOKIE)?.value ??
+    session?.profile.postal_code ??
+    undefined;
+  const providers = await getApprovedProviders({
+    serviceSlug: service,
+    sort,
+    jobZip,
+  });
 
   return (
     <div className="space-y-6">
@@ -36,7 +57,16 @@ export default async function BrowsePage({
         }
       />
 
-      <ServiceChips services={services} activeSlug={service} />
+      <ServiceChips
+        services={services}
+        activeSlug={service}
+        preserveParams={{ sort: sort === "suggested" ? undefined : sort }}
+      />
+      <BrowseControls
+        activeSort={sort}
+        serviceSlug={service}
+        jobZip={jobZip}
+      />
 
       {providers.length === 0 ? (
         <EmptyState

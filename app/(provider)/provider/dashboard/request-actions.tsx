@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { FormLoader } from "@/components/form-loader";
 import { Button, buttonClasses } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/field";
+import { FieldError, Textarea } from "@/components/ui/field";
 
 import { acceptBooking, declineBooking } from "../actions";
 
@@ -71,6 +71,7 @@ function ConfirmPanel({
   job: RequestJob;
   onCancel: () => void;
 }) {
+  const [state, formAction] = useActionState(acceptBooking, {});
   const rows: [string, string][] = [
     ["Service", job.serviceName],
     ["For", job.customerName],
@@ -96,19 +97,22 @@ function ConfirmPanel({
           </div>
         ))}
       </dl>
-      <form action={acceptBooking} className="mt-3 flex gap-2">
+      <form action={formAction} className="mt-3 space-y-2">
         <FormLoader />
         <input type="hidden" name="bookingId" value={job.id} />
-        <SubmitButton variant="success" pendingLabel="Accepting…">
-          Yes, I&apos;m in
-        </SubmitButton>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={buttonClasses({ variant: "ghost", size: "sm" })}
-        >
-          Back
-        </button>
+        <FieldError>{state.error}</FieldError>
+        <div className="flex gap-2">
+          <SubmitButton variant="success" pendingLabel="Accepting…">
+            Yes, I&apos;m in
+          </SubmitButton>
+          <button
+            type="button"
+            onClick={onCancel}
+            className={buttonClasses({ variant: "ghost", size: "sm" })}
+          >
+            Back
+          </button>
+        </div>
       </form>
     </div>
   );
@@ -122,9 +126,10 @@ function DeclinePanel({
   onCancel: () => void;
 }) {
   const [note, setNote] = useState("");
+  const [state, formAction] = useActionState(declineBooking, {});
 
   return (
-    <form action={declineBooking} className="mt-3 space-y-2">
+    <form action={formAction} className="mt-3 space-y-2">
       <FormLoader />
       <input type="hidden" name="bookingId" value={job.id} />
       <label
@@ -145,6 +150,7 @@ function DeclinePanel({
       <p className="text-xs text-mist">
         This starts a chat with {job.customerName} so you can sort out a time.
       </p>
+      <FieldError>{state.error}</FieldError>
       <div className="flex gap-2">
         <SubmitButton
           variant="primary"

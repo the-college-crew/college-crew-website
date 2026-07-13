@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
+import { requestOperationMessage } from "@/lib/booking/requests";
 import type { Json } from "@/lib/db/types";
 import {
   requestAuditFields,
@@ -48,7 +49,7 @@ export async function confirmAndPay(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      `id, customer_id, provider_id, status, scheduled_at, address, price_cents,
+      `id, customer_id, provider_id, booking_flow, status, scheduled_at, address, price_cents,
        platform_fee_cents,
        service:services(name, slug),
        provider:provider_profiles(display_name),
@@ -59,6 +60,9 @@ export async function confirmAndPay(
 
   if (!booking || booking.customer_id !== user.id) {
     return { error: "Booking not found." };
+  }
+  if (booking.booking_flow !== "legacy") {
+    return { error: "Hourly first-hour payment is not available yet." };
   }
   if (booking.status !== "accepted") {
     return { error: "This booking isn't awaiting payment." };
@@ -161,12 +165,22 @@ export async function simulatePayment(formData: FormData) {
     );
   }
 
-  const { error } = await supabase
+  const { data: booking } = await supabase
     .from("bookings")
-    .update({ status: "paid" })
-    .eq("id", bookingId);
+    .select("booking_flow")
+    .eq("id", bookingId)
+    .eq("customer_id", user.id)
+    .maybeSingle();
+  if (booking?.booking_flow !== "legacy") {
+    throw new Error("Hourly payment simulation is not available.");
+  }
+
+  const { error } = await supabase.rpc("transition_legacy_booking", {
+    p_booking_id: bookingId,
+    p_target_status: "paid",
+  });
   if (error) {
-    throw new Error(`Could not simulate payment: ${error.message}`);
+    throw new Error(requestOperationMessage(error, "Could not simulate payment."));
   }
 
   revalidatePath("/dashboard");

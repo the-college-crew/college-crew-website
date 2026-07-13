@@ -53,6 +53,7 @@ export async function POST(request: Request) {
           stripe_payment_intent_id: intent.id,
         })
         .eq("id", bookingId)
+        .eq("booking_flow", "legacy")
         .eq("status", "accepted");
     }
   }

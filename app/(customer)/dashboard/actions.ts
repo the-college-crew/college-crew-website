@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireRole, requireUser } from "@/lib/auth/session";
+import { requestOperationMessage } from "@/lib/booking/requests";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -11,43 +12,40 @@ import { createClient } from "@/lib/supabase/server";
  * state-machine trigger are the real enforcement — these are thin wrappers.
  */
 
-export async function cancelBooking(formData: FormData) {
+export type BookingMutationState = { error?: string };
+
+export async function cancelBooking(
+  _previous: BookingMutationState,
+  formData: FormData,
+): Promise<BookingMutationState> {
   await requireUser();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
 
   const supabase = await createClient();
-  // Only 'requested' and 'accepted' can be cancelled. Scoping the update to
-  // those states means a stale click after the provider already declined (or
-  // the booking otherwise moved on) updates zero rows instead of tripping the
-  // state-machine trigger with an illegal transition. revalidate then refreshes
-  // the page to the real status.
-  const { error } = await supabase
-    .from("bookings")
-    .update({ status: "cancelled" })
-    .eq("id", bookingId)
-    .in("status", ["requested", "accepted"]);
+  const { error } = await supabase.rpc("cancel_booking_request", {
+    p_booking_id: bookingId,
+  });
   if (error) {
-    throw new Error(`Could not cancel: ${error.message}`);
+    return {
+      error: requestOperationMessage(error, "Could not cancel the request."),
+    };
   }
 
   revalidatePath("/dashboard");
+  return {};
 }
 
 /** Hide a declined request from this customer's dashboard without deleting it. */
 export async function dismissDeclinedBooking(formData: FormData) {
-  const session = await requireRole("customer", "/dashboard");
+  await requireRole("customer", "/dashboard");
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("bookings")
-    .update({ dismissed_at: new Date().toISOString() })
-    .eq("id", bookingId)
-    .eq("customer_id", session.user.id)
-    .eq("status", "declined")
-    .is("dismissed_at", null);
+  const { error } = await supabase.rpc("dismiss_booking", {
+    p_booking_id: bookingId,
+  });
   if (error) {
-    throw new Error(`Could not dismiss booking: ${error.message}`);
+    throw new Error(requestOperationMessage(error));
   }
 
   revalidatePath("/dashboard");

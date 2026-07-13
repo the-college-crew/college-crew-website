@@ -47,7 +47,13 @@ export default async function ConfirmPayPage({
     .eq("id", id)
     .maybeSingle();
 
-  if (!booking || booking.customer_id !== user.id) notFound();
+  if (
+    !booking ||
+    booking.customer_id !== user.id ||
+    booking.booking_flow !== "legacy"
+  ) {
+    notFound();
+  }
   const service = Array.isArray(booking.service)
     ? booking.service[0]
     : booking.service;

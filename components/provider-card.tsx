@@ -92,6 +92,9 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                 </li>
               ))}
             </ul>
+            <p className="text-[11px] text-mist">
+              One-hour minimum, then billed in 15-minute increments.
+            </p>
           </div>
         </Card>
       </ProviderCardLink>

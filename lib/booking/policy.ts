@@ -263,3 +263,111 @@ export function getPilotLocalParts(value: DateInput) {
     offset: parts.timeZoneName,
   } as const;
 }
+
+const LOCAL_DATE_TIME_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+
+export type PilotLocalDateTimeResult =
+  | { ok: true; date: Date }
+  | { ok: false; reason: "invalid" | "nonexistent" | "ambiguous" };
+
+/**
+ * Convert a datetime-local value into one unambiguous Chicago instant. DST
+ * gaps have no match and fall-back repetitions have two; both are rejected so
+ * the server never guesses which appointment the customer intended.
+ */
+export function pilotLocalDateTimeToUtc(
+  value: string,
+): PilotLocalDateTimeResult {
+  const match = LOCAL_DATE_TIME_PATTERN.exec(value);
+  if (!match) return { ok: false, reason: "invalid" };
+
+  const [, yearRaw, monthRaw, dayRaw, hourRaw, minuteRaw] = match;
+  const target = {
+    year: Number(yearRaw),
+    month: Number(monthRaw),
+    day: Number(dayRaw),
+    hour: Number(hourRaw),
+    minute: Number(minuteRaw),
+  };
+  if (
+    target.month < 1 ||
+    target.month > 12 ||
+    target.day < 1 ||
+    target.day > 31 ||
+    target.hour > 23 ||
+    target.minute > 59
+  ) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const wallClockUtc = Date.UTC(
+    target.year,
+    target.month - 1,
+    target.day,
+    target.hour,
+    target.minute,
+  );
+  const matches: Date[] = [];
+
+  // Chicago is UTC-5/-6. A broad bounded search also keeps this correct if
+  // historical offset rules change without relying on a third-party library.
+  for (let deltaMinutes = -12 * 60; deltaMinutes <= 12 * 60; deltaMinutes += 15) {
+    const candidate = new Date(wallClockUtc + deltaMinutes * 60_000);
+    const parts = getPilotLocalParts(candidate);
+    if (
+      parts.year === target.year &&
+      parts.month === target.month &&
+      parts.day === target.day &&
+      parts.hour === target.hour &&
+      parts.minute === target.minute
+    ) {
+      matches.push(candidate);
+    }
+  }
+
+  if (matches.length === 0) return { ok: false, reason: "nonexistent" };
+  if (matches.length > 1) return { ok: false, reason: "ambiguous" };
+  return { ok: true, date: matches[0] };
+}
+
+function clockMinutes(value: string) {
+  const [hours, minutes] = value.slice(0, 5).split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+const PILOT_WEEKDAY_INDEX: Record<string, number> = {
+  Mon: 0,
+  Tue: 1,
+  Wed: 2,
+  Thu: 3,
+  Fri: 4,
+  Sat: 5,
+  Sun: 6,
+};
+
+export function doesSlotFitPilotAvailability(input: {
+  scheduledAt: DateInput;
+  estimatedMinutes: number;
+  weekdays: readonly number[];
+  startLocal: string;
+  endLocal: string;
+}) {
+  if (!isDurationValid(input.estimatedMinutes, CUSTOMER_ESTIMATE_MINUTES)) {
+    return false;
+  }
+  const start = toDate(input.scheduledAt);
+  const end = new Date(start.getTime() + input.estimatedMinutes * 60_000);
+  const startParts = getPilotLocalParts(start);
+  const endParts = getPilotLocalParts(end);
+  const weekday = PILOT_WEEKDAY_INDEX[startParts.weekday];
+
+  return (
+    startParts.year === endParts.year &&
+    startParts.month === endParts.month &&
+    startParts.day === endParts.day &&
+    input.weekdays.includes(weekday) &&
+    startParts.hour * 60 + startParts.minute >= clockMinutes(input.startLocal) &&
+    endParts.hour * 60 + endParts.minute <= clockMinutes(input.endLocal)
+  );
+}

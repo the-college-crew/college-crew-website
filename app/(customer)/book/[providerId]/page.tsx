@@ -33,6 +33,18 @@ export default async function BookingPage({
   const bookableServices = provider.services.filter(
     (offering) => offering.is_hourly_bookable,
   );
+  const defaultAddress = session
+    ? [
+        session.profile.address_line1,
+        session.profile.address_line2,
+        [session.profile.city, session.profile.state]
+          .filter(Boolean)
+          .join(", "),
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+  const defaultJobZip = session?.profile.postal_code ?? "";
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -53,7 +65,17 @@ export default async function BookingPage({
             until the guarded hourly request flow is ready.
           </p>
         </Card>
-      ) : session && session.profile.role !== "customer" ? (
+      ) : !session ? (
+        <Card className="p-6 text-sm text-ink-soft">
+          <p className="font-semibold text-ink">Log in to send this request.</p>
+          <Link
+            href={`/login?next=${encodeURIComponent(`/book/${provider.id}`)}`}
+            className={buttonClasses({ size: "sm", className: "mt-4" })}
+          >
+            Log in
+          </Link>
+        </Card>
+      ) : session.profile.role !== "customer" ? (
         <Card className="p-6 text-sm text-ink-soft">
           <p>
             You&apos;re signed in as a{" "}
@@ -64,8 +86,9 @@ export default async function BookingPage({
       ) : bookableServices.length > 0 ? (
         <Card pennant className="p-6">
           <BookingRequestForm
-            providerId={provider.id}
             services={bookableServices}
+            defaultAddress={defaultAddress}
+            defaultJobZip={defaultJobZip}
           />
         </Card>
       ) : (
