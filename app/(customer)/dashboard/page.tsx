@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
+import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { demoBookings, getDemoPreview } from "@/lib/demo/sample-preview";
 import type { BookingFlow, BookingStatus } from "@/lib/db/types";
 import {
@@ -152,7 +153,16 @@ export default async function CustomerDashboardPage({
     .eq("customer_id", session.user.id)
     .order("scheduled_at", { ascending: showPast ? false : true });
 
-  const groups = partitionBookings((data ?? []) as BookingRow[], now);
+  const rows = (data ?? []) as BookingRow[];
+  // Release any acceptance whose first-hour payment window has closed, then
+  // reflect the new status before partitioning (Phase 7 schedules this too).
+  const expiredIds = await releaseExpiredAcceptances(supabase, rows);
+  const groups = partitionBookings(
+    rows.map((row) =>
+      expiredIds.has(row.id) ? { ...row, status: "expired" } : row,
+    ),
+    now,
+  );
   const convoIndex = await getCustomerConversationIndex(
     supabase,
     session.user.id,

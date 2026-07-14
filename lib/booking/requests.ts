@@ -50,6 +50,41 @@ export function requestOperationMessage(
   );
 }
 
+/**
+ * Opportunistically release hourly acceptances whose first-hour payment window
+ * has closed. Idempotent and participant-authorized in the DB, so it is safe to
+ * call from a dashboard render; Phase 7 schedules the same operation. Returns
+ * the ids that transitioned to `expired`.
+ */
+export async function releaseExpiredAcceptances(
+  supabase: ServerClient,
+  rows: Array<{
+    id: string;
+    booking_flow: string;
+    status: string;
+    initial_payment_due_at: string | null;
+  }>,
+): Promise<Set<string>> {
+  const now = Date.now();
+  const stale = rows.filter(
+    (row) =>
+      row.booking_flow === "hourly_v1" &&
+      row.status === "accepted" &&
+      row.initial_payment_due_at != null &&
+      new Date(row.initial_payment_due_at).getTime() <= now,
+  );
+  const expired = new Set<string>();
+  await Promise.all(
+    stale.map(async (row) => {
+      const { data } = await supabase.rpc("expire_unpaid_acceptance", {
+        p_booking_id: row.id,
+      });
+      if (data === "expired") expired.add(row.id);
+    }),
+  );
+  return expired;
+}
+
 export async function createHourlyRequest(
   supabase: ServerClient,
   input: {

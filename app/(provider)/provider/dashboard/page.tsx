@@ -17,6 +17,7 @@ import {
   type ReadinessOffering,
 } from "@/components/provider-readiness-checklist";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import {
   demoBookings,
@@ -45,6 +46,7 @@ type ProviderBookingRow = {
   estimated_minutes: number | null;
   hourly_rate_cents_snapshot: number | null;
   response_alert_at: string | null;
+  initial_payment_due_at: string | null;
   service: { name: string };
   customer: { full_name: string };
 };
@@ -99,7 +101,7 @@ export default async function ProviderDashboardPage({
       .select(
         `id, booking_flow, status, scheduled_at, address, details, price_cents,
          platform_fee_cents, estimated_minutes, hourly_rate_cents_snapshot,
-         response_alert_at, service:services(name),
+         response_alert_at, initial_payment_due_at, service:services(name),
          customer:profiles!bookings_customer_id_fkey(full_name)`,
       )
       .eq("provider_id", profile.id)
@@ -110,7 +112,13 @@ export default async function ProviderDashboardPage({
       .eq("provider_id", profile.id),
   ]);
 
-  const bookings = (data ?? []) as ProviderBookingRow[];
+  const rawBookings = (data ?? []) as ProviderBookingRow[];
+  const expiredIds = await releaseExpiredAcceptances(supabase, rawBookings);
+  const bookings = rawBookings.map((booking) =>
+    expiredIds.has(booking.id)
+      ? { ...booking, status: "expired" as BookingStatus }
+      : booking,
+  );
   const offerings: ReadinessOffering[] = (offeringRows ?? []).map(
     (offering) => ({
       id: offering.id,
@@ -154,6 +162,10 @@ function ProviderDashboardView({
     (booking) =>
       booking.status === "requested" &&
       (booking.booking_flow === "legacy" || new Date(booking.scheduled_at) > now),
+  );
+  const awaitingPayment = bookings.filter(
+    (booking) =>
+      booking.booking_flow === "hourly_v1" && booking.status === "accepted",
   );
   const earnedCents = bookings
     .filter((b) => b.status === "completed")
@@ -279,6 +291,41 @@ function ProviderDashboardView({
           </Card>
         ))}
       </div>
+
+      {awaitingPayment.length > 0 ? (
+        <section aria-labelledby="awaiting-payment">
+          <h2
+            id="awaiting-payment"
+            className="font-display text-xl font-semibold"
+          >
+            Awaiting customer payment
+          </h2>
+          <div className="mt-3 space-y-3">
+            {awaitingPayment.map((booking) => (
+              <Card key={booking.id} data-booking-id={booking.id} className="p-4">
+                <p className="font-display text-lg font-semibold">
+                  {booking.service.name}
+                </p>
+                <p className="mt-0.5 text-sm text-ink-soft">
+                  {booking.customer.full_name} ·{" "}
+                  {formatDateTime(booking.scheduled_at)}
+                </p>
+                <p className="mt-1 text-xs text-mist">
+                  Reserved — the customer must pay the first hour to confirm.
+                </p>
+                {booking.initial_payment_due_at ? (
+                  <div className="mt-2">
+                    <DeadlineCountdown
+                      target={booking.initial_payment_due_at}
+                      label="First-hour payment due"
+                    />
+                  </div>
+                ) : null}
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* New requests */}
