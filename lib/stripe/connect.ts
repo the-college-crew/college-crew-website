@@ -299,3 +299,58 @@ export async function refundFirstHourFull(input: {
 
   return { configured: true, refundId: refund.id, amountCents: refund.amount };
 }
+
+/**
+ * Hourly Booking v1 (Phase 6): refund any destination charge — first-hour or
+ * balance, full or partial. Omit `amountCents` for a full refund. Always
+ * reverses the provider transfer and refunds the application fee; on a partial
+ * refund Stripe reverses/refunds *proportionally*, so the provider loses their
+ * 95% share of the reduction and the platform its 5% — the split never drifts.
+ *
+ * Used by cancellations (full first-hour refund), founder cancel_and_refund
+ * (full first-hour + balance), and reduce_billable_minutes (partial balance).
+ * The webhook + `settle_booking_refund`/`reconcile_stripe_refund` remain the
+ * ledger source of truth; this only executes the Stripe side. Idempotent via
+ * the passed key.
+ */
+export async function refundDestinationCharge(input: {
+  paymentIntentId: string;
+  amountCents?: number;
+  idempotencyKey: string;
+}): Promise<
+  | {
+      configured: true;
+      refundId: string;
+      amountCents: number;
+      transferReversalId: string | null;
+    }
+  | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const params: Stripe.RefundCreateParams = {
+    payment_intent: input.paymentIntentId,
+    reverse_transfer: true,
+    refund_application_fee: true,
+  };
+  if (typeof input.amountCents === "number") {
+    params.amount = input.amountCents;
+  }
+
+  const refund = await stripe.refunds.create(params, {
+    idempotencyKey: input.idempotencyKey,
+  });
+
+  const transferReversalId =
+    typeof refund.transfer_reversal === "string"
+      ? refund.transfer_reversal
+      : (refund.transfer_reversal?.id ?? null);
+
+  return {
+    configured: true,
+    refundId: refund.id,
+    amountCents: refund.amount,
+    transferReversalId,
+  };
+}
