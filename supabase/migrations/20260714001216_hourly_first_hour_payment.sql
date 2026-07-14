@@ -206,8 +206,8 @@ $$;
 
 create function public.settle_first_hour_payment(
   p_stripe_payment_intent_id text,
-  p_stripe_payment_method_id text,
-  p_succeeded_at timestamptz
+  p_stripe_payment_method_id text default null,
+  p_succeeded_at timestamptz default null
 )
 returns text
 language plpgsql
@@ -309,8 +309,8 @@ $$;
 create function public.mark_first_hour_payment_unsuccessful(
   p_stripe_payment_intent_id text,
   p_target_status public.booking_payment_status,
-  p_failure_code text,
-  p_failure_message text
+  p_failure_code text default null,
+  p_failure_message text default null
 )
 returns text
 language plpgsql
@@ -370,8 +370,8 @@ $$;
 create function public.record_first_hour_refund(
   p_stripe_payment_intent_id text,
   p_reason text,
-  p_stripe_refund_id text,
-  p_amount_cents integer
+  p_stripe_refund_id text default null,
+  p_amount_cents integer default null
 )
 returns text
 language plpgsql

@@ -1701,8 +1701,8 @@ export type Database = {
       }
       mark_first_hour_payment_unsuccessful: {
         Args: {
-          p_failure_code: string
-          p_failure_message: string
+          p_failure_code?: string
+          p_failure_message?: string
           p_stripe_payment_intent_id: string
           p_target_status: Database["public"]["Enums"]["booking_payment_status"]
         }
@@ -1721,10 +1721,10 @@ export type Database = {
       }
       record_first_hour_refund: {
         Args: {
-          p_amount_cents: number
+          p_amount_cents?: number
           p_reason: string
           p_stripe_payment_intent_id: string
-          p_stripe_refund_id: string
+          p_stripe_refund_id?: string
         }
         Returns: string
       }
@@ -1739,8 +1739,8 @@ export type Database = {
       settle_first_hour_payment: {
         Args: {
           p_stripe_payment_intent_id: string
-          p_stripe_payment_method_id: string
-          p_succeeded_at: string
+          p_stripe_payment_method_id?: string
+          p_succeeded_at?: string
         }
         Returns: string
       }
