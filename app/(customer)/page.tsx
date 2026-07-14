@@ -27,7 +27,7 @@ const BAND =
 const EYEBROW =
   "flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.16em] text-viridian/55";
 const H2 =
-  "mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] text-viridian md:text-[42px]";
+  "mt-3.5 max-w-[20ch] text-balance font-[Georgia,'Times_New_Roman',serif] text-[32px] font-semibold leading-[1.08] text-viridian md:text-[42px]";
 const LEAD =
   "mt-5 max-w-[52ch] text-[17px] leading-[1.55] text-viridian/75 md:text-[19px]";
 
@@ -263,7 +263,7 @@ function Hero({
               Your neighbors, your students
             </Editable>
           </div>
-          <h1 className="mt-[18px] font-display text-[44px] font-bold leading-[1.02] tracking-[-0.025em] text-viridian md:text-[62px] md:leading-none">
+          <h1 className="mt-[18px] font-[Georgia,'Times_New_Roman',serif] text-[44px] font-semibold leading-[1.04] text-viridian md:text-[62px]">
             <Editable k="home.hero.title">
               Hometown help, from someone your block already trusts.
             </Editable>
@@ -502,7 +502,9 @@ function CompareColumn({
           : "rounded-[22px] border-[1.4px] border-viridian/15 bg-stone/55 p-8 text-viridian"
       }
     >
-      <h3 className="font-display text-[22px] font-bold">{title}</h3>
+      <h3 className="font-[Georgia,'Times_New_Roman',serif] text-[22px] font-semibold">
+        {title}
+      </h3>
       <ul className="mt-[22px] space-y-3.5">
         {items.map((item, index) => (
           <li key={index} className="flex gap-3 leading-snug">
@@ -559,7 +561,7 @@ function ServicesSection({ services }: { services: Service[] }) {
                 <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-viridian font-display text-[17px] font-bold text-shell">
                   {display.icon}
                 </span>
-                <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
+                <h3 className="font-[Georgia,'Times_New_Roman',serif] text-[21px] font-semibold leading-tight text-viridian">
                   {service.name}
                 </h3>
                 <p className="leading-normal text-viridian/65">
@@ -610,7 +612,7 @@ function FeaturesSection() {
               <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-honeydew">
                 <AntMark className="h-6 w-6" />
               </div>
-              <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
+              <h3 className="font-[Georgia,'Times_New_Roman',serif] text-[21px] font-semibold leading-tight text-viridian">
                 <Editable k={`home.features.${index}.title`}>{title}</Editable>
               </h3>
               <p className="mt-2 leading-normal text-viridian/65">
@@ -645,7 +647,7 @@ function CTASection({
         <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-shell/60">
           <Editable k="home.cta.eyebrow">Ready when you are</Editable>
         </p>
-        <h2 className="mx-auto mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[42px]">
+        <h2 className="mx-auto mt-3.5 max-w-[20ch] text-balance font-[Georgia,'Times_New_Roman',serif] text-[32px] font-semibold leading-[1.08] md:text-[42px]">
           <Editable k="home.cta.heading">Ready to join College Crew?</Editable>
         </h2>
         <p className="mx-auto mt-5 max-w-[52ch] text-[17px] leading-[1.55] text-shell/80 md:text-[19px]">
