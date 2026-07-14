@@ -134,3 +134,75 @@ export async function createBookingPaymentIntent(input: {
   if (!intent.client_secret) return UNCONFIGURED;
   return { configured: true, clientSecret: intent.client_secret };
 }
+
+/**
+ * Hourly Booking v1 (Phase 4): the customer pays exactly one hourly-rate amount
+ * as the first-hour payment. Destination charge with the booking's 5% first-hour
+ * application fee; `setup_future_usage: "off_session"` saves the method to the
+ * platform Customer for THIS booking's later balance charge (Phase 5).
+ *
+ * The idempotency key is derived from the booking, so a refresh/double-submit
+ * returns the same PaymentIntent instead of creating a second charge. Dynamic
+ * payment methods are enabled (no `payment_method_types`).
+ */
+export async function createFirstHourPaymentIntent(input: {
+  bookingId: string;
+  amountCents: number;
+  applicationFeeCents: number;
+  stripeCustomerId: string;
+  providerStripeAccountId: string;
+  idempotencyKey: string;
+}): Promise<
+  | { configured: true; paymentIntentId: string; clientSecret: string }
+  | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const intent = await stripe.paymentIntents.create(
+    {
+      amount: input.amountCents,
+      currency: "usd",
+      customer: input.stripeCustomerId,
+      application_fee_amount: input.applicationFeeCents,
+      transfer_data: { destination: input.providerStripeAccountId },
+      metadata: { booking_id: input.bookingId, payment_kind: "first_hour" },
+      setup_future_usage: "off_session",
+      automatic_payment_methods: { enabled: true },
+    },
+    { idempotencyKey: input.idempotencyKey },
+  );
+
+  if (!intent.client_secret) return UNCONFIGURED;
+  return {
+    configured: true,
+    paymentIntentId: intent.id,
+    clientSecret: intent.client_secret,
+  };
+}
+
+/**
+ * Full refund of a first-hour destination charge with the transfer and
+ * application fee reversed, so a late/terminal success returns the customer's
+ * money and claws back the provider transfer. Idempotent via the passed key.
+ */
+export async function refundFirstHourFull(input: {
+  paymentIntentId: string;
+  idempotencyKey: string;
+}): Promise<
+  { configured: true; refundId: string; amountCents: number } | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const refund = await stripe.refunds.create(
+    {
+      payment_intent: input.paymentIntentId,
+      reverse_transfer: true,
+      refund_application_fee: true,
+    },
+    { idempotencyKey: input.idempotencyKey },
+  );
+
+  return { configured: true, refundId: refund.id, amountCents: refund.amount };
+}
