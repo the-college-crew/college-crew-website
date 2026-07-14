@@ -17,23 +17,35 @@ import {
   demoProviderProfile,
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
-import type { BookingStatus } from "@/lib/db/types";
+import type { BookingFlow, BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney, formatOfferedPrice } from "@/lib/utils";
 
-import { completeBooking } from "../actions";
+import { completeBooking, markArrived } from "../actions";
 
 export const metadata: Metadata = { title: "Jobs & pricing" };
 
+const ARRIVAL_GRACE_MS = 30 * 60 * 1000;
+
 type JobRow = {
   id: string;
+  booking_flow: BookingFlow;
   status: BookingStatus;
   scheduled_at: string;
   address: string;
   price_cents: number;
   platform_fee_cents: number;
+  hourly_rate_cents_snapshot: number | null;
+  estimated_minutes: number | null;
+  arrived_at: string | null;
   service: { name: string };
   customer: { full_name: string };
+  invoice: {
+    subtotal_cents: number;
+    total_platform_fee_cents: number;
+    remaining_balance_cents: number;
+    status: string;
+  } | null;
 };
 
 /** Upcoming jobs + read-only pricing (editing lives in Profile & settings). */
@@ -46,7 +58,7 @@ export default async function ProviderJobsPage() {
         profile={demoProviderProfile}
         jobs={demoBookings.filter((booking) =>
           ["accepted", "paid"].includes(booking.status),
-        ) as JobRow[]}
+        ) as unknown as JobRow[]}
         offerings={demoOfferings}
         demo
       />
@@ -61,10 +73,22 @@ export default async function ProviderJobsPage() {
     supabase
       .from("bookings")
       .select(
-        "id, status, scheduled_at, address, price_cents, platform_fee_cents, service:services(name), customer:profiles!bookings_customer_id_fkey(full_name)",
+        `id, booking_flow, status, scheduled_at, address, price_cents,
+         platform_fee_cents, hourly_rate_cents_snapshot, estimated_minutes,
+         arrived_at, service:services(name),
+         customer:profiles!bookings_customer_id_fkey(full_name),
+         invoice:booking_invoices(subtotal_cents, total_platform_fee_cents,
+           remaining_balance_cents, status)`,
       )
       .eq("provider_id", profile.id)
-      .in("status", ["accepted", "paid"])
+      .in("status", [
+        "accepted",
+        "paid",
+        "booked",
+        "in_progress",
+        "invoice_review",
+        "completed",
+      ])
       .order("scheduled_at", { ascending: true }),
     supabase
       .from("provider_services")
@@ -144,13 +168,37 @@ function ProviderJobsView({
                   </div>
                   <StatusPill status={job.status} />
                 </div>
-                <p className="mt-2 text-sm font-semibold text-quad-700">
-                  {formatMoney(job.price_cents - job.platform_fee_cents)}{" "}
-                  <span className="text-xs font-normal text-mist">
-                    your payout
-                  </span>
-                </p>
-                <div className="mt-3 flex gap-2">
+                {job.booking_flow === "hourly_v1" ? (
+                  job.invoice ? (
+                    <p className="mt-2 text-sm font-semibold text-quad-700">
+                      {formatMoney(
+                        job.invoice.subtotal_cents -
+                          job.invoice.total_platform_fee_cents,
+                      )}{" "}
+                      <span className="text-xs font-normal text-mist">
+                        your payout
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm text-ink-soft">
+                      <span className="font-semibold text-quad-700">
+                        {formatMoney(job.hourly_rate_cents_snapshot ?? 0)}/hr
+                      </span>{" "}
+                      <span className="text-xs text-mist">
+                        · {job.estimated_minutes ?? 60} min estimate · payout
+                        after invoice
+                      </span>
+                    </p>
+                  )
+                ) : (
+                  <p className="mt-2 text-sm font-semibold text-quad-700">
+                    {formatMoney(job.price_cents - job.platform_fee_cents)}{" "}
+                    <span className="text-xs font-normal text-mist">
+                      your payout
+                    </span>
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   {demo ? (
                     <>
                       <Link
@@ -185,18 +233,7 @@ function ProviderJobsView({
                           Message customer
                         </button>
                       </form>
-                      {job.status === "paid" ? (
-                        <form action={completeBooking}>
-                          <input type="hidden" name="bookingId" value={job.id} />
-                          <Button type="submit" variant="success" size="sm">
-                            Mark completed
-                          </Button>
-                        </form>
-                      ) : (
-                        <span className="self-center text-xs text-mist">
-                          Waiting on customer payment
-                        </span>
-                      )}
+                      <JobMilestoneActions job={job} />
                     </>
                   )}
                 </div>
@@ -251,4 +288,85 @@ function ProviderJobsView({
       </section>
     </div>
   );
+}
+
+/** Status-driven job actions: legacy completion + the hourly work milestones. */
+function JobMilestoneActions({ job }: { job: JobRow }) {
+  if (job.booking_flow === "legacy") {
+    if (job.status === "paid") {
+      return (
+        <form action={completeBooking}>
+          <input type="hidden" name="bookingId" value={job.id} />
+          <Button type="submit" variant="success" size="sm">
+            Mark completed
+          </Button>
+        </form>
+      );
+    }
+    return (
+      <span className="self-center text-xs text-mist">
+        Waiting on customer payment
+      </span>
+    );
+  }
+
+  switch (job.status) {
+    case "accepted":
+      return (
+        <span className="self-center text-xs text-mist">
+          Waiting on first-hour payment
+        </span>
+      );
+    case "booked": {
+      const canArrive =
+        new Date().getTime() >=
+        new Date(job.scheduled_at).getTime() - ARRIVAL_GRACE_MS;
+      if (!canArrive) {
+        return (
+          <span className="self-center text-xs text-mist">
+            “Arrived” unlocks 30 min before the start
+          </span>
+        );
+      }
+      return (
+        <form action={markArrived}>
+          <input type="hidden" name="bookingId" value={job.id} />
+          <Button type="submit" size="sm">
+            Arrived
+          </Button>
+        </form>
+      );
+    }
+    case "in_progress":
+      return (
+        <Link
+          href={`/provider/jobs/${job.id}/complete`}
+          className={buttonClasses({ variant: "success", size: "sm" })}
+        >
+          Complete & invoice
+        </Link>
+      );
+    case "invoice_review":
+      return (
+        <>
+          <Link
+            href={`/provider/jobs/${job.id}/complete`}
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            View invoice
+          </Link>
+          <span className="self-center text-xs text-mist">
+            Awaiting customer payment
+          </span>
+        </>
+      );
+    case "completed":
+      return (
+        <span className="self-center text-xs font-medium text-quad-700">
+          Completed ✓
+        </span>
+      );
+    default:
+      return null;
+  }
 }

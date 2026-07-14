@@ -52,6 +52,7 @@ type BookingRow = {
   service: { name: string };
   provider: { display_name: string };
   review: { id: string } | null;
+  invoice: { status: string; remaining_balance_cents: number } | null;
   responseAlertReached?: boolean;
 };
 
@@ -148,7 +149,8 @@ export default async function CustomerDashboardPage({
       `id, booking_flow, status, scheduled_at, address, price_cents,
        estimated_minutes, hourly_rate_cents_snapshot, response_alert_at,
        initial_payment_due_at, dismissed_at, service:services(name),
-       provider:provider_profiles(display_name), review:reviews(id)`,
+       provider:provider_profiles(display_name), review:reviews(id),
+       invoice:booking_invoices(status, remaining_balance_cents)`,
     )
     .eq("customer_id", session.user.id)
     .order("scheduled_at", { ascending: showPast ? false : true });
@@ -427,6 +429,21 @@ function BookingCard({
         </div>
       ) : null}
 
+      {isHourly &&
+      booking.status === "invoice_review" &&
+      booking.invoice?.status === "requires_action" ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          <p className="font-semibold">Your balance payment needs attention.</p>
+          <p className="mt-1">
+            The final charge didn&apos;t go through — review the invoice and
+            update your payment method.
+          </p>
+        </div>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {booking.status === "accepted" && !isHourly ? (
           <Link
@@ -447,6 +464,17 @@ function BookingCard({
             className={buttonClasses({ size: "sm" })}
           >
             Pay first hour
+          </Link>
+        ) : null}
+
+        {isHourly && booking.status === "invoice_review" && !demo ? (
+          <Link
+            href={`/bookings/${booking.id}/invoice`}
+            className={buttonClasses({ size: "sm" })}
+          >
+            {booking.invoice?.status === "requires_action"
+              ? "Fix payment"
+              : "Review & pay"}
           </Link>
         ) : null}
 
