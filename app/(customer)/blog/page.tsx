@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import Image, { type StaticImageData } from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 
-import dogWalkImage from "@/public/blog/evening-dog-walk.jpg";
 import featuredImage from "@/public/blog/featured-neighborhood-coffee.jpg";
-import houseManagementImage from "@/public/blog/house-management.jpg";
 import soccerImage from "@/public/blog/youth-soccer-coaching.jpg";
+import type { PublicBlogPost } from "@/lib/db/types";
+import { hasSupabaseEnv } from "@/lib/env";
+import { blogImageUrl } from "@/lib/media/blog-images";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Stories from the block",
@@ -22,71 +24,62 @@ const TOPICS = [
   "Coaching",
 ];
 
-const POSTS: Array<{
-  date: string;
-  title: string;
-  image: StaticImageData;
-  imageAlt: string;
-  imagePosition?: string;
-  reverse?: boolean;
-  paragraphs: string[];
-}> = [
-  {
-    date: "March 4, 2026",
-    title: "The Quiet Work of Keeping a Home Running",
-    image: houseManagementImage,
-    imageAlt: "A warmly lit living room cared for while its owner is away",
-    paragraphs: [
-      "Mrs. Alvarez travels for work about a week every month. This past winter she had a pile of packages that needed returning, an empty fridge she wanted filled before she landed, and two houseplants that were not going to make it another few days on their own.",
-      "One of our students, a junior at Loyola who lives four blocks over, took care of all of it. Returns dropped at the UPS store, groceries put away, plants watered, and a quick photo texted over so she knew things were handled while she was gone.",
-      "Honestly, that's most of what house management is. The little stuff that stacks up when life gets busy, done by someone from the neighborhood you'd recognize at the coffee shop. No app full of strangers, and you always know who has your spare key.",
-    ],
-  },
-  {
-    date: "February 18, 2026",
-    title: "Dog Walking, Day and Night, Whatever the Block Needs",
-    image: dogWalkImage,
-    imageAlt: "A College Crew student walking a golden retriever in the evening",
-    imagePosition: "50% 58%",
-    reverse: true,
-    paragraphs: [
-      "Our neighbors don't keep normal hours, so we don't either. Some walks happen at 6am before a shift. Some happen at 10pm when someone's stuck late downtown and the dog has been waiting by the door for an hour.",
-      "Take Winnie, a golden who lives on the corner. Most nights she gets walked by the same two students. Her owner never knows exactly when he'll be home, so he books whoever's free and trusts they'll show up. They always do.",
-      "Rain, snow, early, late. If your dog needs to get out, one of our students will be there, and you'll get a message the second the walk starts.",
-    ],
-  },
-];
+function postDate(iso: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(iso));
+}
 
-function StoryPost({ post }: { post: (typeof POSTS)[number] }) {
+function StoryPost({
+  post,
+  reverse,
+}: {
+  post: PublicBlogPost;
+  reverse: boolean;
+}) {
+  const imageUrl = blogImageUrl(post.image_path);
+  const paragraphs = post.body.split(/\n\s*\n/).filter(Boolean);
+
   return (
     <article className="grid items-start gap-7 sm:grid-cols-2 sm:gap-8">
       <div
         className={
-          post.reverse
+          reverse
             ? "relative aspect-[4/5] overflow-hidden sm:order-2 sm:aspect-auto sm:h-[340px]"
             : "relative aspect-[4/5] overflow-hidden sm:aspect-auto sm:h-[340px]"
         }
       >
-        <Image
-          src={post.image}
-          alt={post.imageAlt}
-          fill
-          sizes="(max-width: 639px) 100vw, (max-width: 1023px) 42vw, 300px"
-          className="object-cover"
-          style={{ objectPosition: post.imagePosition }}
-        />
+        {imageUrl ? (
+          // CMS images may be bundled legacy artwork or public Supabase media.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt={post.title}
+            className="h-full w-full object-cover"
+          />
+        ) : null}
       </div>
 
-      <div className={post.reverse ? "sm:order-1" : undefined}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-viridian">
-          {post.date}
-        </p>
+      <div className={reverse ? "sm:order-1" : undefined}>
+        <time
+          dateTime={post.updated_at}
+          className="text-[10px] font-bold uppercase tracking-[0.2em] text-viridian"
+        >
+          {postDate(post.updated_at)}
+        </time>
         <h2 className="mt-3 font-[Georgia,'Times_New_Roman',serif] text-[29px] leading-[1.13] font-semibold text-viridian italic">
-          {post.title}
+          <Link
+            href={`/blog/${post.slug}`}
+            className="transition-colors hover:text-viridian/65"
+          >
+            {post.title}
+          </Link>
         </h2>
         <div className="mt-5 space-y-5 text-[14px] leading-[1.76] text-viridian/80">
-          {post.paragraphs.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
+          {paragraphs.map((paragraph, index) => (
+            <p key={`${post.id}-${index}`}>{paragraph}</p>
           ))}
         </div>
       </div>
@@ -94,7 +87,17 @@ function StoryPost({ post }: { post: (typeof POSTS)[number] }) {
   );
 }
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  let posts: PublicBlogPost[] = [];
+  if (hasSupabaseEnv()) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("blog_posts")
+      .select("id, slug, title, body, image_path, created_at, updated_at")
+      .order("updated_at", { ascending: false });
+    posts = data ?? [];
+  }
+
   return (
     <div className="relative left-1/2 -my-8 w-screen -translate-x-1/2 bg-card text-viridian">
       <div className="mx-auto max-w-[1140px] px-5 py-8 sm:px-8 sm:py-10">
@@ -158,9 +161,15 @@ export default function BlogPage() {
 
         <div className="grid gap-14 pb-14 pt-12 md:pb-20 md:pt-14 lg:grid-cols-[1.65fr_0.95fr] lg:gap-14">
           <div className="space-y-16">
-            {POSTS.map((post) => (
-              <StoryPost key={post.title} post={post} />
-            ))}
+            {posts.length > 0 ? (
+              posts.map((post, index) => (
+                <StoryPost key={post.id} post={post} reverse={index % 2 === 1} />
+              ))
+            ) : (
+              <p className="border-y border-viridian/20 py-10 font-[Georgia,'Times_New_Roman',serif] text-2xl italic text-viridian/70">
+                New stories are on the way.
+              </p>
+            )}
           </div>
 
           <aside className="border-t border-viridian/20 pt-9 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-12">
