@@ -133,12 +133,14 @@ export function SchoolEmailForm({
         </form>
       ) : null}
 
-      {!pendingEmail && accountEmail ? (
+      {/* Stays available even while a code is pending: if that code never shows
+          up, this is the way out. */}
+      {accountEmail ? (
         <form action={shortcutAction} className="border-t border-line pt-3">
           <p className="text-xs text-ink-soft">
             Your account email{" "}
             <span className="font-medium">{accountEmail}</span> is already a
-            confirmed .edu — you can use it directly.
+            confirmed .edu — you can use it directly, no code needed.
           </p>
           <FieldError>{shortcutState.error}</FieldError>
           <Button

@@ -14,7 +14,7 @@ const BAND =
 const EYEBROW =
   "flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.16em] text-viridian/55";
 const H2 =
-  "mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] text-viridian md:text-[42px]";
+  "mt-3.5 max-w-[20ch] text-balance font-[Georgia,'Times_New_Roman',serif] text-[32px] font-semibold leading-[1.08] text-viridian md:text-[42px]";
 
 export type Step = {
   n: string;
@@ -78,7 +78,7 @@ export function HowItWorksTabs({
               <div className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-viridian font-display text-xl font-bold text-shell">
                 {step.n}
               </div>
-              <h3 className="mt-5 font-display text-[21px] font-semibold leading-tight text-viridian">
+              <h3 className="mt-5 font-[Georgia,'Times_New_Roman',serif] text-[21px] font-semibold leading-tight text-viridian">
                 {step.title}
               </h3>
               <p className="mt-2.5 leading-normal text-viridian/65">
@@ -130,7 +130,7 @@ export function FAQList({
               >
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-5 px-7 py-6 text-left font-display text-xl font-semibold text-viridian"
+                  className="flex w-full items-center justify-between gap-5 px-7 py-6 text-left font-[Georgia,'Times_New_Roman',serif] text-xl font-semibold text-viridian"
                   onClick={() => setOpen(isOpen ? -1 : index)}
                 >
                   <span>{faq.q}</span>

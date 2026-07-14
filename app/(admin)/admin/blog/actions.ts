@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { requireRole } from "@/lib/auth/session";
 import { hasServiceRoleEnv } from "@/lib/env";
-import { BLOG_IMAGES_BUCKET } from "@/lib/media/blog-images";
+import { BLOG_IMAGES_BUCKET, isManagedBlogImage } from "@/lib/media/blog-images";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -171,7 +171,10 @@ export async function updateBlogPost(
     return { error: `Could not save the post: ${updateError.message}` };
   }
 
-  if (nextImagePath !== existing.image_path) {
+  if (
+    nextImagePath !== existing.image_path &&
+    isManagedBlogImage(existing.image_path)
+  ) {
     await admin.storage.from(BLOG_IMAGES_BUCKET).remove([existing.image_path]);
   }
 
@@ -205,7 +208,9 @@ export async function deleteBlogPost(
     .eq("id", postId.data);
   if (deleteError) return { error: `Could not delete the post: ${deleteError.message}` };
 
-  await admin.storage.from(BLOG_IMAGES_BUCKET).remove([existing.image_path]);
+  if (isManagedBlogImage(existing.image_path)) {
+    await admin.storage.from(BLOG_IMAGES_BUCKET).remove([existing.image_path]);
+  }
   revalidateBlog(existing.slug);
   return { success: "Post deleted." };
 }
