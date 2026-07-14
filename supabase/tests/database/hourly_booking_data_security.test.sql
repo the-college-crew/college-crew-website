@@ -839,6 +839,26 @@ select lives_ok(
 );
 select lives_ok(
   $$
+    update public.provider_profiles
+    set id_document_url = '00000000-0000-0000-0000-000000000102/license-front.jpg',
+        id_document_back_url = '00000000-0000-0000-0000-000000000102/license-back.jpg'
+    where id = '00000000-0000-0000-0000-000000000201'
+  $$,
+  'provider can save both identity-document paths on their own profile'
+);
+select lives_ok(
+  $$
+    insert into storage.objects (bucket_id, name, owner_id)
+    values (
+      'id-documents',
+      '00000000-0000-0000-0000-000000000102/license-permission-test.jpg',
+      '00000000-0000-0000-0000-000000000102'
+    )
+  $$,
+  'provider can upload an identity document under their own storage prefix'
+);
+select lives_ok(
+  $$
     update public.provider_services set hourly_rate_cents = 6000
     where id = '00000000-0000-0000-0000-000000000401'
   $$,
@@ -866,6 +886,47 @@ select lives_ok(
     )
   $$,
   'provider can add an hourly offering with legacy compatibility placeholders'
+);
+select lives_ok(
+  $$
+    insert into public.provider_services (
+      provider_id, service_id, price_cents, price_type, unit, hourly_rate_cents
+    ) values (
+      '00000000-0000-0000-0000-000000000201',
+      '00000000-0000-0000-0000-000000000302',
+      0, 'quote', 'per_hour', 4250
+    )
+    on conflict (provider_id, service_id) do update set
+      provider_id = excluded.provider_id,
+      service_id = excluded.service_id,
+      price_cents = excluded.price_cents,
+      price_type = excluded.price_type,
+      unit = excluded.unit,
+      hourly_rate_cents = excluded.hourly_rate_cents
+  $$,
+  'provider pricing upsert can update its conflict-key payload safely'
+);
+select lives_ok(
+  $$
+    insert into storage.objects (bucket_id, name, owner_id)
+    values (
+      'provider-service-images',
+      '00000000-0000-0000-0000-000000000102/00000000-0000-0000-0000-000000000401/permission-test.jpg',
+      '00000000-0000-0000-0000-000000000102'
+    )
+  $$,
+  'provider can upload a service image for their own offering'
+);
+select pg_temp.throws_any_ok(
+  $$
+    insert into storage.objects (bucket_id, name, owner_id)
+    values (
+      'provider-service-images',
+      '00000000-0000-0000-0000-000000000102/00000000-0000-0000-0000-000000000402/not-owned.jpg',
+      '00000000-0000-0000-0000-000000000102'
+    )
+  $$,
+  'provider cannot upload a service image for another provider offering'
 );
 select results_eq(
   $$
