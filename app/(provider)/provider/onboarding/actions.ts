@@ -6,7 +6,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
-import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
+import {
+  claimAccountEmailAsSchool,
+  eligibleAccountSchoolEmail,
+  getVerifiedSchoolEmail,
+} from "@/lib/db/school-email";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { sendSchoolOtpEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -45,6 +49,16 @@ export async function startProviderProfile() {
     if (error && error.code !== "23505") {
       throw new Error(`Could not start onboarding: ${error.message}`);
     }
+  }
+
+  // Signed up with a .edu? Supabase already confirmed they own it, so that IS
+  // the student proof — carry it straight over instead of mailing a code to the
+  // address they just clicked a link in. A failure here is not fatal: the
+  // Verify step still offers the OTP (e.g. when the .edu belongs to another
+  // account, in which case they must use a different one).
+  const accountEmail = eligibleAccountSchoolEmail(session.user);
+  if (accountEmail) {
+    await claimAccountEmailAsSchool(session.user.id, accountEmail);
   }
 
   redirect("/provider/onboarding/verify");
@@ -325,8 +339,10 @@ export async function verifySchoolEmailOtp(
 }
 
 /**
- * Shortcut for providers who signed up WITH their .edu as their login email:
- * Supabase already confirmed it, so no second OTP is needed.
+ * Manual fallback for providers who signed up WITH their .edu as their login
+ * email. startProviderProfile already claims it automatically; this covers
+ * accounts created before that existed, and stays reachable even mid-OTP so a
+ * code that never arrives can't strand anyone.
  */
 export async function useAccountEmailAsSchool(
   _prev: SchoolEmailFormState,
@@ -337,34 +353,20 @@ export async function useAccountEmailAsSchool(
   const session = await requireRole("provider");
   if (!hasServiceRoleEnv()) return NOT_CONFIGURED;
 
-  const email = session.user.email?.toLowerCase();
-  if (!email || !email.endsWith(".edu") || !session.user.email_confirmed_at) {
+  const email = eligibleAccountSchoolEmail(session.user);
+  if (!email) {
     return { error: "Your account email isn't a confirmed .edu address." };
   }
 
-  const admin = createAdminClient();
-  const { data: taken } = await admin
-    .from("provider_school_emails")
-    .select("user_id")
-    .eq("email", email)
-    .maybeSingle();
-  if (taken && taken.user_id !== session.user.id) {
-    return { error: "That school email is already linked to another account." };
+  const claimed = await claimAccountEmailAsSchool(session.user.id, email);
+  if (!claimed.ok) {
+    return {
+      error:
+        claimed.reason === "taken"
+          ? "That school email is already linked to another account."
+          : "Could not save verification — try again.",
+    };
   }
-
-  const { error } = await admin
-    .from("provider_school_emails")
-    .upsert({
-      user_id: session.user.id,
-      email,
-      verified_at: new Date().toISOString(),
-    });
-  if (error) return { error: "Could not save verification — try again." };
-
-  await admin
-    .from("provider_email_verifications")
-    .delete()
-    .eq("user_id", session.user.id);
 
   revalidatePath("/provider/onboarding/verify");
   revalidatePath("/provider/onboarding/review");

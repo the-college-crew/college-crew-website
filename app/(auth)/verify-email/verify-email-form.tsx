@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 
 import { resendConfirmation, type AuthFormState } from "@/app/(auth)/actions";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 
 export function VerifyEmailForm({
@@ -37,9 +38,18 @@ export function VerifyEmailForm({
       ) : null}
       <FieldError>{state.error}</FieldError>
 
-      <Button type="submit" size="lg" className="w-full" disabled={pending}>
-        {pending ? "Sending…" : "Resend confirmation email"}
-      </Button>
+      {state.alreadyConfirmed ? (
+        <Link
+          href="/login"
+          className={buttonClasses({ size: "lg", className: "w-full" })}
+        >
+          Log in →
+        </Link>
+      ) : (
+        <Button type="submit" size="lg" className="w-full" disabled={pending}>
+          {pending ? "Sending…" : "Resend confirmation email"}
+        </Button>
+      )}
     </form>
   );
 }

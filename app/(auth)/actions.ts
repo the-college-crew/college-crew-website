@@ -6,11 +6,12 @@ import { z } from "zod";
 
 import { homePathFor } from "@/lib/auth/session";
 import type { UserRole } from "@/lib/db/types";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasServiceRoleEnv, hasSupabaseEnv } from "@/lib/env";
 import {
   hasAcceptedCurrentMasterAgreement,
   masterAgreementPath,
 } from "@/lib/legal/acceptance";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
   customerSignUpSchema,
@@ -31,6 +32,11 @@ export type AuthFormState = {
   success?: string;
   /** Set on a successful signup so the "check your email" panel can resend. */
   email?: string;
+  /**
+   * The address is already confirmed, so no email was sent (nor could one be).
+   * Surfaces point the user at login instead of leaving them waiting.
+   */
+  alreadyConfirmed?: boolean;
 };
 
 const NOT_CONFIGURED: AuthFormState = {
@@ -198,6 +204,11 @@ export async function signUpProvider(
 /**
  * Resend the signup confirmation email. Wired to the "check your email" panel
  * and the /verify-email recovery page so an expired link is never a dead end.
+ *
+ * Supabase's resend() is a no-op on an already-confirmed account — it returns
+ * success and sends nothing. Reporting that as "sent!" is how a user ends up
+ * waiting forever for an email that was never going to come, so we check the
+ * confirmed state first and tell them the truth: the account is ready, go log in.
  */
 export async function resendConfirmation(
   _prev: AuthFormState,
@@ -208,6 +219,20 @@ export async function resendConfirmation(
   const parsed = emailSchema.safeParse(formData.get("email"));
   if (!parsed.success) {
     return { error: "Enter the email you signed up with." };
+  }
+
+  if (hasServiceRoleEnv()) {
+    const admin = createAdminClient();
+    const { data: confirmed } = await admin.rpc("email_is_confirmed", {
+      p_email: parsed.data,
+    });
+    if (confirmed) {
+      return {
+        success: `${parsed.data} is already verified — there's no new email to send. Log in with the password you chose at signup.`,
+        email: parsed.data,
+        alreadyConfirmed: true,
+      };
+    }
   }
 
   const origin = await siteOrigin();

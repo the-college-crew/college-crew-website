@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect } from "react";
 
 import {
@@ -7,7 +8,7 @@ import {
   resendConfirmation,
   type AuthFormState,
 } from "@/app/(auth)/actions";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 
 /**
@@ -69,9 +70,18 @@ export function SignupSuccess({
           <p className="text-sm font-medium text-green-700">{state.success}</p>
         ) : null}
         <FieldError>{state.error}</FieldError>
-        <Button type="submit" variant="secondary" disabled={pending || !email}>
-          {pending ? "Sending…" : "Resend confirmation email"}
-        </Button>
+        {state.alreadyConfirmed ? (
+          <Link
+            href="/login"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            Log in →
+          </Link>
+        ) : (
+          <Button type="submit" variant="secondary" disabled={pending || !email}>
+            {pending ? "Sending…" : "Resend confirmation email"}
+          </Button>
+        )}
       </form>
 
       <p className="text-xs text-mist">
