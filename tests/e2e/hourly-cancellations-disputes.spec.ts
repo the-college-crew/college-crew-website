@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
-import type { Database, UserRole } from "../../lib/db/types";
+import type { BookingStatus, Database, UserRole } from "../../lib/db/types";
 import {
   getMasterAgreementSnapshot,
   LEGAL_CONTENT_VERSION,
@@ -65,7 +65,7 @@ async function acceptMasterAgreement(
   if (error) throw error;
 }
 
-function baseBooking(id: string, status: string, scheduledAt: Date) {
+function baseBooking(id: string, status: BookingStatus, scheduledAt: Date) {
   const now = Date.now();
   const sched = scheduledAt.getTime();
   // Derive timestamps so the persisted-deadline CHECK constraints hold for both
