@@ -504,6 +504,7 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+#variable_conflict use_column
 declare
   v_now timestamptz := statement_timestamp();
   v_invoice public.booking_invoices%rowtype;

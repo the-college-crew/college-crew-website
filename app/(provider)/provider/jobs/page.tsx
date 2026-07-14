@@ -155,7 +155,7 @@ function ProviderJobsView({
             </EmptyState>
           ) : (
             jobs.map((job) => (
-              <Card key={job.id} className="p-4">
+              <Card key={job.id} data-booking-id={job.id} className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="font-display text-lg font-semibold">
