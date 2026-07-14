@@ -32,6 +32,57 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_posts: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          image_path: string
+          slug: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_path: string
+          slug: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_path?: string
+          slug?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_posts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_audit_events: {
         Row: {
           action: string
@@ -2242,6 +2293,11 @@ export type ProfileModerationEvent = Tables<"profile_moderation_events">
 export type ProviderEmailVerification = Tables<"provider_email_verifications">
 export type ProviderSchoolEmail = Tables<"provider_school_emails">
 export type SiteContent = Tables<"site_content">
+export type BlogPost = Tables<"blog_posts">
+export type PublicBlogPost = Pick<
+  BlogPost,
+  "id" | "slug" | "title" | "body" | "image_path" | "created_at" | "updated_at"
+>
 export type SupportTicket = Omit<
   Tables<"support_tickets">,
   "category" | "sentiment" | "status"
