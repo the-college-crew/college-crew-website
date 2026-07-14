@@ -49,7 +49,7 @@ export async function confirmEmailLink(
             "That reset link has expired — request a new one below.",
           )}`
         : `/verify-email?error=${encodeURIComponent(
-            "That confirmation link is invalid or expired — send yourself a new one below.",
+            "That link has expired or been replaced — if you requested more than one email, only the newest link works. Check for a more recent email, or send a fresh one below.",
           )}`,
     );
   }

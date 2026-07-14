@@ -1805,6 +1805,7 @@ export type Database = {
         Returns: string
       }
       shares_thread_with: { Args: { profile_id: string }; Returns: boolean }
+      signup_role_for_email: { Args: { p_email: string }; Returns: string }
       submit_job_invoice: {
         Args: {
           p_booking_id: string
