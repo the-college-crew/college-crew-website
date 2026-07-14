@@ -49,7 +49,8 @@ type BookingRow = {
   response_alert_at: string | null;
   initial_payment_due_at: string | null;
   dismissed_at: string | null;
-  service: { name: string };
+  cancelled_by_role: string | null;
+  service: { name: string; slug: string };
   provider: { display_name: string };
   review: { id: string } | null;
   invoice: {
@@ -93,10 +94,16 @@ function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
         ? { ...source, status: "expired", responseAlertReached: false }
         : { ...source, responseAlertReached };
     if (booking.status === "declined" && booking.dismissed_at) continue;
+    const providerCancelledUpcoming =
+      booking.status === "cancelled" &&
+      booking.cancelled_by_role === "provider" &&
+      new Date(booking.scheduled_at) >= now;
     if (
       booking.status === "declined" &&
       new Date(booking.scheduled_at) >= now
     ) {
+      attention.push(booking);
+    } else if (providerCancelledUpcoming) {
       attention.push(booking);
     } else if (responseAlertReached) {
       attention.push(booking);
@@ -153,7 +160,8 @@ export default async function CustomerDashboardPage({
     .select(
       `id, booking_flow, status, scheduled_at, address, price_cents,
        estimated_minutes, hourly_rate_cents_snapshot, response_alert_at,
-       initial_payment_due_at, dismissed_at, service:services(name),
+       initial_payment_due_at, dismissed_at, cancelled_by_role,
+       service:services(name, slug),
        provider:provider_profiles(display_name), review:reviews(id),
        invoice:booking_invoices(status, remaining_balance_cents, resolved_at),
        dispute:booking_disputes(id, status)`,
@@ -351,6 +359,9 @@ function BookingCard({
 }) {
   const providerName = booking.provider.display_name;
   const isDeclined = booking.status === "declined";
+  const isProviderCancelled =
+    booking.status === "cancelled" &&
+    booking.cancelled_by_role === "provider";
   const isUpcoming = (UPCOMING as string[]).includes(booking.status);
   const isHourly = booking.booking_flow === "hourly_v1";
   const responseAlertReached = booking.responseAlertReached === true;
@@ -441,6 +452,19 @@ function BookingCard({
               Message them for details, or find another provider below.
             </p>
           )}
+        </div>
+      ) : null}
+
+      {isProviderCancelled ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          <p className="font-semibold">{providerName} cancelled this booking.</p>
+          <p className="mt-1 text-red-700">
+            You&apos;ve been fully refunded. Find another verified student for
+            the same job below.
+          </p>
         </div>
       ) : null}
 
@@ -586,6 +610,15 @@ function BookingCard({
             outcome={cancelOutcome}
             label={cancelLabel}
           />
+        ) : null}
+
+        {isProviderCancelled && !demo ? (
+          <Link
+            href="/browse"
+            className={buttonClasses({ size: "sm" })}
+          >
+            Find a replacement
+          </Link>
         ) : null}
 
         {hasOpenDispute && !demo ? (

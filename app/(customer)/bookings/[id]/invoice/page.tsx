@@ -210,8 +210,14 @@ export default async function InvoicePage({
         )}
 
         <p className="mt-4 border-t border-line pt-3 text-xs text-mist">
-          Something look wrong? Disputes open soon — for now, message your
-          provider or contact College Crew support.
+          Something look wrong?{" "}
+          <Link
+            href={`/bookings/${booking.id}/dispute`}
+            className="underline"
+          >
+            Report a problem
+          </Link>{" "}
+          — a founder reviews it and payment pauses while it’s open.
         </p>
       </Card>
     </div>
