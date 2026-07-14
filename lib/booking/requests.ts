@@ -54,6 +54,21 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["PAYMENT_NOT_FOUND", "That payment could not be found."],
   ["ALREADY_PAID", "This balance is already paid."],
   ["PAYMENT_PROCESSING", "This payment is still processing. Give it a moment."],
+  ["BOOKING_ALREADY_ARRIVED", "This job already started — open a dispute instead of cancelling."],
+  ["USE_NO_SHOW_DISPUTE", "The start time has passed. Report a no-show instead of cancelling."],
+  ["CANCELLATION_REASON_REQUIRED", "Add a short reason for cancelling."],
+  ["INVALID_NARRATIVE", "Describe the issue in at least 10 characters."],
+  ["DISPUTE_ALREADY_OPEN", "This booking is already under review. View the existing case."],
+  ["DISPUTE_WINDOW_CLOSED", "The seven-day window to dispute this booking has closed."],
+  ["DISPUTE_NOT_ALLOWED", "This booking can’t be disputed right now."],
+  ["NO_SHOW_NOT_APPLICABLE", "A no-show report needs the start time to have passed with no arrival."],
+  ["DISPUTE_NOT_FOUND", "There’s no open dispute for this booking."],
+  ["DISPUTE_ALREADY_RESOLVED", "This dispute is already resolved."],
+  ["AUDIT_NOTE_REQUIRED", "Add a resolution note before saving."],
+  ["INVOICE_REQUIRED", "This resolution needs a submitted invoice."],
+  ["REDUCTION_NOT_LOWER", "Reduced time must be less than the submitted time."],
+  ["NOTHING_TO_WAIVE", "There’s no remaining balance to waive."],
+  ["UNKNOWN_RESOLUTION", "Pick a valid resolution."],
 ];
 
 export function requestOperationMessage(

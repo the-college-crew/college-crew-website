@@ -172,16 +172,29 @@ async function handleEvent(
           ? charge.payment_intent
           : (charge.payment_intent?.id ?? null);
       const refundId = charge.refunds?.data?.[0]?.id ?? undefined;
-      if (paymentIntentId) {
-        // Records first-hour refunds (ours or dashboard-initiated); a no-op for
-        // any other charge.
-        await admin.rpc("record_first_hour_refund", {
+      if (paymentIntentId && refundId) {
+        // Reconcile any destination-charge refund (first-hour or balance,
+        // full or partial) against our booking_refunds ledger. Repairs state
+        // when the action's synchronous settle never landed, and records a
+        // dashboard-initiated refund we never authored. Idempotent on the
+        // unique Stripe refund id.
+        await admin.rpc("reconcile_stripe_refund", {
           p_stripe_payment_intent_id: paymentIntentId,
-          p_reason: "charge_refunded",
           p_stripe_refund_id: refundId,
           p_amount_cents: charge.amount_refunded,
+          p_reason: "charge_refunded",
         });
       }
+      break;
+    }
+    case "charge.dispute.created":
+    case "charge.dispute.updated":
+    case "charge.dispute.closed": {
+      // External card-network dispute. Recorded and founder-alerted, kept
+      // strictly separate from internal booking disputes; never auto-resolved.
+      await admin.rpc("record_stripe_dispute", {
+        p_event: event as unknown as Json,
+      });
       break;
     }
     default:

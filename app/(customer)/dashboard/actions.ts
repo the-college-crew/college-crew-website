@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireRole, requireUser } from "@/lib/auth/session";
+import { executePendingRefunds } from "@/lib/booking/refunds";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,7 +13,11 @@ import { createClient } from "@/lib/supabase/server";
  * state-machine trigger are the real enforcement — these are thin wrappers.
  */
 
-export type BookingMutationState = { error?: string };
+export type BookingMutationState = {
+  error?: string;
+  /** The locked cancellation outcome: full_refund | no_refund | no_payment. */
+  policyResult?: string;
+};
 
 export async function cancelBooking(
   _previous: BookingMutationState,
@@ -22,6 +27,34 @@ export async function cancelBooking(
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
 
   const supabase = await createClient();
+
+  // Route hourly bookings through the actor-specific matrix RPC (which records
+  // any owed refund); legacy bookings keep the original pre-payment cancel.
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("booking_flow")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (booking?.booking_flow === "hourly_v1") {
+    const { data: result, error } = await supabase.rpc(
+      "cancel_booking_as_customer",
+      { p_booking_id: bookingId },
+    );
+    if (error) {
+      return {
+        error: requestOperationMessage(error, "Could not cancel the booking."),
+      };
+    }
+    // A full-refund outcome recorded a refund request; execute it now. Any
+    // Stripe/settle failure is reconciled by the webhook — never block the UI.
+    if (result === "full_refund") {
+      await executePendingRefunds(bookingId);
+    }
+    revalidatePath("/dashboard");
+    return { policyResult: result ?? undefined };
+  }
+
   const { error } = await supabase.rpc("cancel_booking_request", {
     p_booking_id: bookingId,
   });

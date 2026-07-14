@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_allowlist: {
@@ -1421,6 +1396,75 @@ export type Database = {
           },
         ]
       }
+      stripe_disputes: {
+        Row: {
+          amount_cents: number | null
+          booking_id: string | null
+          created_at: string
+          currency: string | null
+          evidence_due_by: string | null
+          id: string
+          is_charge_refundable: boolean | null
+          payload: Json
+          payment_id: string | null
+          reason: string | null
+          status: string | null
+          stripe_charge_id: string | null
+          stripe_dispute_id: string
+          stripe_payment_intent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number | null
+          booking_id?: string | null
+          created_at?: string
+          currency?: string | null
+          evidence_due_by?: string | null
+          id?: string
+          is_charge_refundable?: boolean | null
+          payload?: Json
+          payment_id?: string | null
+          reason?: string | null
+          status?: string | null
+          stripe_charge_id?: string | null
+          stripe_dispute_id: string
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number | null
+          booking_id?: string | null
+          created_at?: string
+          currency?: string | null
+          evidence_due_by?: string | null
+          id?: string
+          is_charge_refundable?: boolean | null
+          payload?: Json
+          payment_id?: string | null
+          reason?: string | null
+          status?: string | null
+          stripe_charge_id?: string | null
+          stripe_dispute_id?: string
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_disputes_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_disputes_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "booking_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stripe_webhook_receipts: {
         Row: {
           api_version: string | null
@@ -1708,6 +1752,14 @@ export type Database = {
           payment_id: string
         }[]
       }
+      cancel_booking_as_customer: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
+      cancel_booking_as_provider: {
+        Args: { p_booking_id: string; p_reason: string }
+        Returns: string
+      }
       cancel_booking_request: {
         Args: { p_booking_id: string }
         Returns: string
@@ -1807,12 +1859,29 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      open_booking_dispute: {
+        Args: {
+          p_booking_id: string
+          p_category: Database["public"]["Enums"]["booking_dispute_category"]
+          p_narrative: string
+        }
+        Returns: string
+      }
       owns_provider_profile: { Args: { pp_id: string }; Returns: boolean }
       rank_hourly_provider_ids: {
         Args: { p_job_zip: string; p_service_slug?: string }
         Returns: {
           provider_id: string
         }[]
+      }
+      reconcile_stripe_refund: {
+        Args: {
+          p_amount_cents: number
+          p_reason?: string
+          p_stripe_payment_intent_id: string
+          p_stripe_refund_id: string
+        }
+        Returns: string
       }
       record_first_hour_refund: {
         Args: {
@@ -1823,6 +1892,7 @@ export type Database = {
         }
         Returns: string
       }
+      record_stripe_dispute: { Args: { p_event: Json }; Returns: string }
       replace_hourly_booking_request: {
         Args: {
           p_original_booking_id: string
@@ -1839,8 +1909,38 @@ export type Database = {
           idempotency_key: string
         }[]
       }
+      resolve_booking_dispute: {
+        Args: {
+          p_audit_note: string
+          p_booking_id: string
+          p_resolution_kind: Database["public"]["Enums"]["booking_dispute_resolution"]
+          p_resolved_billable_minutes?: number
+        }
+        Returns: {
+          charge_amount_cents: number
+          charge_application_fee_cents: number
+          charge_idempotency_key: string
+          charge_payment_id: string
+          invoice_id: string
+          outcome: string
+          refund_amount_cents: number
+          refund_idempotency_key: string
+          refund_payment_id: string
+        }[]
+      }
       settle_balance_payment: {
         Args: { p_stripe_payment_intent_id: string; p_succeeded_at?: string }
+        Returns: string
+      }
+      settle_booking_refund: {
+        Args: {
+          p_failure_code?: string
+          p_failure_message?: string
+          p_idempotency_key: string
+          p_status: Database["public"]["Enums"]["booking_refund_status"]
+          p_stripe_refund_id?: string
+          p_stripe_transfer_reversal_id?: string
+        }
         Returns: string
       }
       settle_first_hour_payment: {
@@ -2064,9 +2164,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       background_check_status: ["none", "pending", "passed"],
@@ -2185,6 +2282,7 @@ export type BookingDispute = Tables<"booking_disputes">
 export type BookingAuditEvent = Tables<"booking_audit_events">
 export type StripeWebhookReceipt = Tables<"stripe_webhook_receipts">
 export type StripeCustomer = Tables<"stripe_customers">
+export type StripeDispute = Tables<"stripe_disputes">
 export type EmailOutboxItem = Tables<"email_outbox">
 export type Review = Tables<"reviews">
 export type Conversation = Tables<"conversations">

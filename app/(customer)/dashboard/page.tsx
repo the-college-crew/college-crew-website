@@ -49,10 +49,16 @@ type BookingRow = {
   response_alert_at: string | null;
   initial_payment_due_at: string | null;
   dismissed_at: string | null;
-  service: { name: string };
+  cancelled_by_role: string | null;
+  service: { name: string; slug: string };
   provider: { display_name: string };
   review: { id: string } | null;
-  invoice: { status: string; remaining_balance_cents: number } | null;
+  invoice: {
+    status: string;
+    remaining_balance_cents: number;
+    resolved_at: string | null;
+  } | null;
+  dispute: { id: string; status: string } | null;
   responseAlertReached?: boolean;
 };
 
@@ -88,10 +94,16 @@ function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
         ? { ...source, status: "expired", responseAlertReached: false }
         : { ...source, responseAlertReached };
     if (booking.status === "declined" && booking.dismissed_at) continue;
+    const providerCancelledUpcoming =
+      booking.status === "cancelled" &&
+      booking.cancelled_by_role === "provider" &&
+      new Date(booking.scheduled_at) >= now;
     if (
       booking.status === "declined" &&
       new Date(booking.scheduled_at) >= now
     ) {
+      attention.push(booking);
+    } else if (providerCancelledUpcoming) {
       attention.push(booking);
     } else if (responseAlertReached) {
       attention.push(booking);
@@ -148,9 +160,11 @@ export default async function CustomerDashboardPage({
     .select(
       `id, booking_flow, status, scheduled_at, address, price_cents,
        estimated_minutes, hourly_rate_cents_snapshot, response_alert_at,
-       initial_payment_due_at, dismissed_at, service:services(name),
+       initial_payment_due_at, dismissed_at, cancelled_by_role,
+       service:services(name, slug),
        provider:provider_profiles(display_name), review:reviews(id),
-       invoice:booking_invoices(status, remaining_balance_cents)`,
+       invoice:booking_invoices(status, remaining_balance_cents, resolved_at),
+       dispute:booking_disputes(id, status)`,
     )
     .eq("customer_id", session.user.id)
     .order("scheduled_at", { ascending: showPast ? false : true });
@@ -345,11 +359,56 @@ function BookingCard({
 }) {
   const providerName = booking.provider.display_name;
   const isDeclined = booking.status === "declined";
+  const isProviderCancelled =
+    booking.status === "cancelled" &&
+    booking.cancelled_by_role === "provider";
   const isUpcoming = (UPCOMING as string[]).includes(booking.status);
   const isHourly = booking.booking_flow === "hourly_v1";
   const responseAlertReached = booking.responseAlertReached === true;
   const note = convo?.latest?.fromOther ? convo.latest : null;
   const hasProviderMessage = Boolean(note);
+
+  // Cancellation + dispute eligibility (Phase 6). The RPCs re-check everything
+  // atomically; this only drives what the card offers and the outcome preview.
+  const nowMs = new Date().getTime();
+  const startMs = new Date(booking.scheduled_at).getTime();
+  const startPassed = startMs <= nowMs;
+  const legacyCancel =
+    !isHourly &&
+    (booking.status === "requested" || booking.status === "accepted");
+  const hourlyCancel =
+    isHourly &&
+    !demo &&
+    (booking.status === "requested" ||
+      booking.status === "accepted" ||
+      (booking.status === "booked" && !startPassed));
+  const cancelOutcome: "full_refund" | "no_refund" | "no_payment" | undefined =
+    booking.status === "booked"
+      ? startMs - nowMs >= 12 * 3_600_000
+        ? "full_refund"
+        : "no_refund"
+      : booking.status === "requested" || booking.status === "accepted"
+        ? "no_payment"
+        : undefined;
+  const cancelLabel =
+    booking.status === "booked" ? "Cancel booking" : "Cancel request";
+
+  const hasOpenDispute = booking.dispute?.status === "open";
+  const finalChargeAt = booking.invoice?.resolved_at
+    ? new Date(booking.invoice.resolved_at).getTime()
+    : null;
+  const withinLateWindow =
+    finalChargeAt != null && nowMs <= finalChargeAt + 7 * 24 * 3_600_000;
+  const noShowEligible =
+    isHourly && booking.status === "booked" && startPassed;
+  const disputeEligible =
+    isHourly &&
+    !demo &&
+    !hasOpenDispute &&
+    (noShowEligible ||
+      booking.status === "in_progress" ||
+      booking.status === "invoice_review" ||
+      (booking.status === "completed" && withinLateWindow));
 
   return (
     <Card
@@ -393,6 +452,19 @@ function BookingCard({
               Message them for details, or find another provider below.
             </p>
           )}
+        </div>
+      ) : null}
+
+      {isProviderCancelled ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          <p className="font-semibold">{providerName} cancelled this booking.</p>
+          <p className="mt-1 text-red-700">
+            You&apos;ve been fully refunded. Find another verified student for
+            the same job below.
+          </p>
         </div>
       ) : null}
 
@@ -530,8 +602,43 @@ function BookingCard({
           <Button type="button" variant="danger" size="sm" disabled>
             Cancel request
           </Button>
-        ) : booking.status === "requested" || booking.status === "accepted" ? (
+        ) : legacyCancel ? (
           <CancelBookingButton bookingId={booking.id} />
+        ) : hourlyCancel ? (
+          <CancelBookingButton
+            bookingId={booking.id}
+            outcome={cancelOutcome}
+            label={cancelLabel}
+          />
+        ) : null}
+
+        {isProviderCancelled && !demo ? (
+          <Link
+            href="/browse"
+            className={buttonClasses({ size: "sm" })}
+          >
+            Find a replacement
+          </Link>
+        ) : null}
+
+        {hasOpenDispute && !demo ? (
+          <Link
+            href={`/bookings/${booking.id}/dispute`}
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            View case
+          </Link>
+        ) : disputeEligible ? (
+          <Link
+            href={
+              noShowEligible
+                ? `/bookings/${booking.id}/dispute?category=provider_no_show`
+                : `/bookings/${booking.id}/dispute`
+            }
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            {noShowEligible ? "Report a no-show" : "Report a problem"}
+          </Link>
         ) : null}
       </div>
 

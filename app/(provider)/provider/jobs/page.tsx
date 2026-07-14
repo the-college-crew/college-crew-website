@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney, formatOfferedPrice } from "@/lib/utils";
 
 import { completeBooking, markArrived } from "../actions";
+import { ProviderCancelJob } from "../provider-cancel-job";
 
 export const metadata: Metadata = { title: "Jobs & pricing" };
 
@@ -234,6 +235,11 @@ function ProviderJobsView({
                         </button>
                       </form>
                       <JobMilestoneActions job={job} />
+                      {job.booking_flow === "hourly_v1" &&
+                      !job.arrived_at &&
+                      (job.status === "accepted" || job.status === "booked") ? (
+                        <ProviderCancelJob bookingId={job.id} />
+                      ) : null}
                     </>
                   )}
                 </div>
