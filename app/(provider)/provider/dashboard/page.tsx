@@ -17,6 +17,7 @@ import {
   type ReadinessOffering,
 } from "@/components/provider-readiness-checklist";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { calculatePlatformFeeCents } from "@/lib/booking/policy";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import {
@@ -49,9 +50,36 @@ type ProviderBookingRow = {
   initial_payment_due_at: string | null;
   service: { name: string };
   customer: { full_name: string };
+  invoice: {
+    subtotal_cents: number;
+    total_platform_fee_cents: number;
+    status: string;
+  } | null;
 };
 
-const net = (b: ProviderBookingRow) => b.price_cents - b.platform_fee_cents;
+const legacyNet = (b: ProviderBookingRow) =>
+  b.price_cents - b.platform_fee_cents;
+
+/** Settled provider revenue. Hourly counts the paid invoice's net, never an
+ * estimate or the reserved first hour; legacy counts the confirmed price net. */
+function providerEarnedCents(b: ProviderBookingRow) {
+  if (b.booking_flow === "hourly_v1") {
+    return b.invoice
+      ? b.invoice.subtotal_cents - b.invoice.total_platform_fee_cents
+      : 0;
+  }
+  return legacyNet(b);
+}
+
+/** Reserved (captured but not yet settled) value: the first-hour net for
+ * hourly, the confirmed price net for legacy. */
+function providerReservedCents(b: ProviderBookingRow) {
+  if (b.booking_flow === "hourly_v1") {
+    const rate = b.hourly_rate_cents_snapshot ?? 0;
+    return rate - calculatePlatformFeeCents(rate);
+  }
+  return legacyNet(b);
+}
 
 export default async function ProviderDashboardPage({
   searchParams,
@@ -67,7 +95,7 @@ export default async function ProviderDashboardPage({
     return (
       <ProviderDashboardView
         profile={demoProviderProfile}
-        bookings={demoBookings as ProviderBookingRow[]}
+        bookings={demoBookings as unknown as ProviderBookingRow[]}
         offerings={demoOfferings.map((offering) => ({
           id: offering.id,
           name: offering.service.name,
@@ -102,7 +130,8 @@ export default async function ProviderDashboardPage({
         `id, booking_flow, status, scheduled_at, address, details, price_cents,
          platform_fee_cents, estimated_minutes, hourly_rate_cents_snapshot,
          response_alert_at, initial_payment_due_at, service:services(name),
-         customer:profiles!bookings_customer_id_fkey(full_name)`,
+         customer:profiles!bookings_customer_id_fkey(full_name),
+         invoice:booking_invoices(subtotal_cents, total_platform_fee_cents, status)`,
       )
       .eq("provider_id", profile.id)
       .order("scheduled_at", { ascending: true }),
@@ -169,16 +198,23 @@ function ProviderDashboardView({
   );
   const earnedCents = bookings
     .filter((b) => b.status === "completed")
-    .reduce((sum, b) => sum + net(b), 0);
+    .reduce((sum, b) => sum + providerEarnedCents(b), 0);
   const bookedCents = bookings
-    .filter((b) => ["paid", "booked"].includes(b.status))
-    .reduce((sum, b) => sum + net(b), 0);
+    .filter((b) =>
+      ["paid", "booked", "in_progress", "invoice_review"].includes(b.status),
+    )
+    .reduce((sum, b) => sum + providerReservedCents(b), 0);
 
   const calendarBookings: CalendarBooking[] = bookings
     .filter((b) =>
-      ["accepted", "paid", "booked", "in_progress", "completed"].includes(
-        b.status,
-      ),
+      [
+        "accepted",
+        "paid",
+        "booked",
+        "in_progress",
+        "invoice_review",
+        "completed",
+      ].includes(b.status),
     )
     .map((b) => ({
       id: b.id,
@@ -363,15 +399,17 @@ function ProviderDashboardView({
                       {booking.details}
                     </p>
                   ) : null}
-                  <p className="mt-2 text-sm">
-                    <span className="font-semibold text-quad-700">
-                      {formatMoney(net(booking))}
-                    </span>{" "}
-                    <span className="text-xs text-mist">
-                      your cut of {formatMoney(booking.price_cents)} (after the
-                      snapshotted platform fee)
-                    </span>
-                  </p>
+                  {booking.booking_flow === "legacy" ? (
+                    <p className="mt-2 text-sm">
+                      <span className="font-semibold text-quad-700">
+                        {formatMoney(legacyNet(booking))}
+                      </span>{" "}
+                      <span className="text-xs text-mist">
+                        your cut of {formatMoney(booking.price_cents)} (after the
+                        snapshotted platform fee)
+                      </span>
+                    </p>
+                  ) : null}
                   {booking.booking_flow === "hourly_v1" ? (
                     <div className="mt-2 space-y-1 text-xs text-mist">
                       <p>

@@ -16,7 +16,8 @@ type AdminClient = ReturnType<typeof createAdminClient>;
  *
  *   - hourly `first_hour` success → settle_first_hour_payment (accepted→booked),
  *     refunding late/terminal successes without reviving the booking;
- *   - hourly failure/cancellation → mark_first_hour_payment_unsuccessful;
+ *   - hourly `balance` success → settle_balance_payment (invoice_review→completed);
+ *   - hourly failure/cancellation → mark_{first_hour,balance}_payment_unsuccessful;
  *   - refund lifecycle → record_first_hour_refund;
  *   - legacy success → the original accepted→paid update.
  *
@@ -110,6 +111,11 @@ async function handleEvent(
       const intent = event.data.object as Stripe.PaymentIntent;
       if (intent.metadata.payment_kind === "first_hour") {
         await settleFirstHour(admin, event, intent);
+      } else if (intent.metadata.payment_kind === "balance") {
+        await admin.rpc("settle_balance_payment", {
+          p_stripe_payment_intent_id: intent.id,
+          p_succeeded_at: new Date(event.created * 1000).toISOString(),
+        });
       } else if (intent.metadata.booking_id) {
         // Legacy full-price flow: the state-machine trigger validates the edge.
         await admin
@@ -130,6 +136,13 @@ async function handleEvent(
           p_failure_code: intent.last_payment_error?.code ?? undefined,
           p_failure_message: intent.last_payment_error?.message ?? undefined,
         });
+      } else if (intent.metadata.payment_kind === "balance") {
+        await admin.rpc("mark_balance_payment_unsuccessful", {
+          p_stripe_payment_intent_id: intent.id,
+          p_target_status: "failed",
+          p_failure_code: intent.last_payment_error?.code ?? undefined,
+          p_failure_message: intent.last_payment_error?.message ?? undefined,
+        });
       }
       break;
     }
@@ -137,6 +150,13 @@ async function handleEvent(
       const intent = event.data.object as Stripe.PaymentIntent;
       if (intent.metadata.payment_kind === "first_hour") {
         await admin.rpc("mark_first_hour_payment_unsuccessful", {
+          p_stripe_payment_intent_id: intent.id,
+          p_target_status: "cancelled",
+          p_failure_code: intent.cancellation_reason ?? "canceled",
+          p_failure_message: "PaymentIntent canceled",
+        });
+      } else if (intent.metadata.payment_kind === "balance") {
+        await admin.rpc("mark_balance_payment_unsuccessful", {
           p_stripe_payment_intent_id: intent.id,
           p_target_status: "cancelled",
           p_failure_code: intent.cancellation_reason ?? "canceled",

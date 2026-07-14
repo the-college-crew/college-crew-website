@@ -110,7 +110,14 @@ export function ConfirmPayPanel({
  * Stripe context. On success Stripe redirects to the confirm page, which
  * shows "finalizing" until the webhook flips the booking to `paid`.
  */
-export function PaymentForm({ bookingId }: { bookingId: string }) {
+export function PaymentForm({
+  bookingId,
+  returnPath = "confirm",
+}: {
+  bookingId: string;
+  /** Path segment under /bookings/[id] to return to after Stripe redirects. */
+  returnPath?: "confirm" | "invoice";
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -126,7 +133,7 @@ export function PaymentForm({ bookingId }: { bookingId: string }) {
     const result = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/bookings/${bookingId}/confirm`,
+        return_url: `${window.location.origin}/bookings/${bookingId}/${returnPath}`,
       },
     });
 

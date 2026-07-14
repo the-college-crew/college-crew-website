@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -258,6 +263,7 @@ export type Database = {
           action_required_reason: string | null
           amount_cents: number
           application_fee_cents: number
+          attempt_count: number
           authorized_at: string | null
           booking_id: string
           created_at: string
@@ -283,6 +289,7 @@ export type Database = {
           action_required_reason?: string | null
           amount_cents: number
           application_fee_cents: number
+          attempt_count?: number
           authorized_at?: string | null
           booking_id: string
           created_at?: string
@@ -308,6 +315,7 @@ export type Database = {
           action_required_reason?: string | null
           amount_cents?: number
           application_fee_cents?: number
+          attempt_count?: number
           authorized_at?: string | null
           booking_id?: string
           created_at?: string
@@ -1619,6 +1627,10 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      attach_balance_payment_intent: {
+        Args: { p_invoice_id: string; p_stripe_payment_intent_id: string }
+        Returns: undefined
+      }
       attach_first_hour_payment_intent: {
         Args: {
           p_booking_id: string
@@ -1626,6 +1638,15 @@ export type Database = {
           p_stripe_payment_intent_id: string
         }
         Returns: undefined
+      }
+      begin_balance_payment: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          amount_cents: number
+          application_fee_cents: number
+          idempotency_key: string
+          payment_id: string
+        }[]
       }
       begin_first_hour_payment: {
         Args: { p_authorization_version: string; p_booking_id: string }
@@ -1643,6 +1664,19 @@ export type Database = {
       claim_conversation_for_booking: {
         Args: { target_booking_id: string }
         Returns: string
+      }
+      claim_due_invoice: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          amount_cents: number
+          application_fee_cents: number
+          booking_id: string
+          idempotency_key: string
+          payment_id: string
+          stripe_connected_account_id: string
+          stripe_customer_id: string
+          stripe_payment_method_id: string
+        }[]
       }
       create_hourly_booking_request: {
         Args: {
@@ -1699,6 +1733,16 @@ export type Database = {
         Args: { provider_service_id: string }
         Returns: boolean
       }
+      mark_balance_payment_unsuccessful: {
+        Args: {
+          p_failure_code?: string
+          p_failure_message?: string
+          p_stripe_payment_intent_id: string
+          p_target_status: Database["public"]["Enums"]["booking_payment_status"]
+        }
+        Returns: string
+      }
+      mark_booking_arrived: { Args: { p_booking_id: string }; Returns: string }
       mark_first_hour_payment_unsuccessful: {
         Args: {
           p_failure_code?: string
@@ -1736,6 +1780,18 @@ export type Database = {
         }
         Returns: string
       }
+      reset_balance_payment_for_retry: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          amount_cents: number
+          application_fee_cents: number
+          idempotency_key: string
+        }[]
+      }
+      settle_balance_payment: {
+        Args: { p_stripe_payment_intent_id: string; p_succeeded_at?: string }
+        Returns: string
+      }
       settle_first_hour_payment: {
         Args: {
           p_stripe_payment_intent_id: string
@@ -1744,7 +1800,19 @@ export type Database = {
         }
         Returns: string
       }
+      settle_zero_balance_invoice: {
+        Args: { p_invoice_id: string }
+        Returns: string
+      }
       shares_thread_with: { Args: { profile_id: string }; Returns: boolean }
+      submit_job_invoice: {
+        Args: {
+          p_booking_id: string
+          p_provider_explanation: string
+          p_submitted_minutes: number
+        }
+        Returns: string
+      }
       transition_legacy_booking: {
         Args: {
           p_booking_id: string

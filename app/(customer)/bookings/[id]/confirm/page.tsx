@@ -356,9 +356,20 @@ function HourlyConfirmView({
               First hour paid — you&apos;re on the schedule. You&apos;ll see the
               final invoice here after the job.
             </div>
-          ) : ["in_progress", "invoice_review", "disputed"].includes(
-              booking.status,
-            ) ? (
+          ) : booking.status === "invoice_review" ? (
+            <div className="space-y-3 rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
+              <p>
+                The provider submitted the final invoice. Review it and pay the
+                remaining balance.
+              </p>
+              <Link
+                href={`/bookings/${booking.id}/invoice`}
+                className={buttonClasses({ size: "sm" })}
+              >
+                Review & pay
+              </Link>
+            </div>
+          ) : ["in_progress", "disputed"].includes(booking.status) ? (
             <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
               This booking is already underway. Track it from your dashboard.
             </div>

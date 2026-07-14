@@ -155,6 +155,60 @@ export async function completeBooking(formData: FormData) {
 }
 
 /**
+ * Hourly Booking v1 (Phase 5): the assigned provider taps Arrived, moving a
+ * booked job to in_progress with an immutable server timestamp. The 30-minute
+ * grace and provider authorization are enforced by mark_booking_arrived.
+ */
+export async function markArrived(formData: FormData) {
+  await requireRole("provider");
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_booking_arrived", {
+    p_booking_id: bookingId,
+  });
+  if (error) {
+    throw new Error(requestOperationMessage(error, "Could not mark arrival."));
+  }
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  redirect(`/provider/jobs/${bookingId}/complete`);
+}
+
+/**
+ * Job Complete + invoice submission (Phase 5): records work_completed_at and
+ * the actual billable time, computes the invoice from the immutable snapshots,
+ * and moves in_progress → invoice_review. All money math and bounds live in
+ * submit_job_invoice; this only forwards the provider's edited minutes/note.
+ */
+export async function submitInvoice(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireRole("provider");
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const submittedMinutes = z.coerce
+    .number()
+    .int()
+    .parse(formData.get("submittedMinutes"));
+  const explanation = z.string().max(2000).parse(formData.get("explanation") ?? "");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("submit_job_invoice", {
+    p_booking_id: bookingId,
+    p_submitted_minutes: submittedMinutes,
+    p_provider_explanation: explanation,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not submit the invoice."),
+    };
+  }
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  redirect(`/provider/jobs/${bookingId}/complete`);
+}
+
+/**
  * Post-approval "Connect Stripe" (SPEC §6): hosted Express onboarding.
  * While the Stripe test account is unprovisioned this lands back on the
  * dashboard with a pending notice.

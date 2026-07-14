@@ -37,6 +37,23 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["BOOKING_NOT_FOUND", "Booking not found."],
   ["BOOKING_NOT_DISMISSIBLE", "This booking is no longer dismissible."],
   ["LEGACY_TRANSITION_NOT_ALLOWED", "This legacy booking changed before the action completed."],
+  ["NOT_AUTHORIZED", "You’re not assigned to this job."],
+  ["ARRIVAL_TOO_EARLY", "You can mark yourself arrived up to 30 minutes before the start."],
+  ["BOOKING_NOT_BOOKED", "This job isn’t ready to start yet."],
+  ["BOOKING_NOT_IN_PROGRESS", "Mark yourself arrived before submitting the invoice."],
+  ["INVALID_MINUTES", "Enter billable time from 1 to 24 hours in 15-minute steps."],
+  ["OVERAGE_EXPLANATION_REQUIRED", "Add a note explaining the time beyond the estimate."],
+  ["INVOICE_NOT_FOUND", "That invoice no longer exists."],
+  ["BOOKING_NOT_IN_REVIEW", "This booking isn’t awaiting payment review."],
+  ["INVOICE_NOT_PAYABLE", "This invoice can’t be paid right now."],
+  ["NO_BALANCE_DUE", "There’s no remaining balance to pay."],
+  ["BALANCE_DUE", "This invoice still has a balance due."],
+  ["DISPUTE_OPEN", "This booking is under review; payment is paused."],
+  ["FIRST_HOUR_PAYMENT_MISSING", "The first-hour payment for this booking is missing."],
+  ["PAYMENT_NOT_ATTACHABLE", "This payment changed before it could be recorded. Refresh and try again."],
+  ["PAYMENT_NOT_FOUND", "That payment could not be found."],
+  ["ALREADY_PAID", "This balance is already paid."],
+  ["PAYMENT_PROCESSING", "This payment is still processing. Give it a moment."],
 ];
 
 export function requestOperationMessage(
