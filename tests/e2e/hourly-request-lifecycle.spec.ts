@@ -349,8 +349,20 @@ test("browse, request, accept, replace, cancel, decline, and expire without Stri
     `[data-booking-id="${requestedBookingId}"]`,
   );
   await expect(acceptedCard.getByText("Accepted — awaiting payment")).toBeVisible();
-  await expect(acceptedCard.getByText("first-hour payment opens soon")).toBeVisible();
+  await expect(
+    acceptedCard.getByRole("link", { name: "Pay first hour" }),
+  ).toBeVisible();
   await expect(acceptedCard.getByRole("link", { name: "Confirm & pay" })).toHaveCount(0);
+
+  // The hourly first-hour confirm surface renders (Stripe is blank in E2E).
+  await acceptedCard.getByRole("link", { name: "Pay first hour" }).click();
+  await expect(customerPage).toHaveURL(
+    new RegExp(`/bookings/${requestedBookingId}/confirm`),
+  );
+  await expect(
+    customerPage.getByText("Confirm & pay the first hour"),
+  ).toBeVisible();
+  await customerPage.goto("/dashboard");
 
   const alertCard = customerPage.locator(
     `[data-booking-id="${responseAlertBookingId}"]`,
