@@ -400,7 +400,7 @@ begin
   )
   values (
     v_payment.booking_id, v_payment.id, v_amount, coalesce(nullif(btrim(p_reason), ''), 'late_success_after_deadline'),
-    case when coalesce(btrim(p_stripe_refund_id), '') <> '' then 'succeeded' else 'created' end,
+    (case when coalesce(btrim(p_stripe_refund_id), '') <> '' then 'succeeded' else 'created' end)::public.booking_refund_status,
     v_key, p_stripe_refund_id, true, true,
     case when coalesce(btrim(p_stripe_refund_id), '') <> '' then now() else null end
   )
