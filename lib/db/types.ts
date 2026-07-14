@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -2081,7 +2086,6 @@ export const Constants = {
     },
   },
 } as const
-
 
 // App-facing aliases derived from the generated schema. Keep aliases here;
 // never hand-edit generated table/view row definitions above.
