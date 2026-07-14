@@ -406,6 +406,17 @@ function BookingCard({
         </div>
       ) : null}
 
+      {isHourly &&
+      booking.status === "accepted" &&
+      booking.initial_payment_due_at ? (
+        <div className="mt-3">
+          <DeadlineCountdown
+            target={booking.initial_payment_due_at}
+            label="First-hour payment due"
+          />
+        </div>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {booking.status === "accepted" && !isHourly ? (
           <Link
@@ -416,10 +427,17 @@ function BookingCard({
           </Link>
         ) : null}
 
-        {booking.status === "accepted" && isHourly ? (
+        {booking.status === "accepted" && isHourly && demo ? (
           <span className="rounded-lg border border-sky bg-sky px-3 py-1.5 text-xs font-medium text-viridian">
-            Accepted · first-hour payment opens soon
+            Accepted · pay the first hour
           </span>
+        ) : booking.status === "accepted" && isHourly ? (
+          <Link
+            href={`/bookings/${booking.id}/confirm`}
+            className={buttonClasses({ size: "sm" })}
+          >
+            Pay first hour
+          </Link>
         ) : null}
 
         {responseAlertReached && !demo ? (

@@ -23,10 +23,10 @@ import { confirmAndPay, simulatePayment, type ConfirmPayState } from "./actions"
  * action returns for a missing secret key.
  */
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
+export const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
 /** Match the Payment Element to the cream/forest theme. */
-const appearance = {
+export const appearance = {
   variables: {
     colorPrimary: "#344945",
     colorBackground: "#fffdf8",
@@ -110,7 +110,7 @@ export function ConfirmPayPanel({
  * Stripe context. On success Stripe redirects to the confirm page, which
  * shows "finalizing" until the webhook flips the booking to `paid`.
  */
-function PaymentForm({ bookingId }: { bookingId: string }) {
+export function PaymentForm({ bookingId }: { bookingId: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
