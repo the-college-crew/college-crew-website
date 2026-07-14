@@ -1,5 +1,6 @@
 "use server";
 
+import type { AuthError } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -61,6 +62,16 @@ type SignUpData = {
   postal_code: string;
   dateOfBirth?: string;
 };
+
+/**
+ * GoTrue's email rate-limit error is user-hostile ("you can only request this
+ * after 0 seconds") — translate it; pass everything else through.
+ */
+function friendlyAuthEmailError(error: AuthError): string {
+  return error.code === "over_email_send_rate_limit"
+    ? "We just sent you an email — give it a minute to arrive, then try again."
+    : error.message;
+}
 
 async function siteOrigin() {
   const headerList = await headers();
@@ -167,8 +178,33 @@ async function signUp(
     metadata.date_of_birth = data.dateOfBirth;
   }
 
+  // GoTrue obfuscates duplicate signups as successes: a confirmed duplicate
+  // comes back as a fake user with no email sent, and an UNCONFIRMED duplicate
+  // quietly mints a fresh confirmation token — killing the link in every
+  // earlier email. Detect both up front (an unconfirmed duplicate is
+  // indistinguishable from a fresh signup in the response), or the user clicks
+  // a dead link and concludes confirmation is broken.
+  let existedUnconfirmed = false;
+  if (hasServiceRoleEnv()) {
+    const admin = createAdminClient();
+    const { data: confirmed } = await admin.rpc("email_is_confirmed", {
+      p_email: data.email,
+    });
+    if (confirmed) {
+      return {
+        success: `${data.email} already has an account — log in with the password you chose when you first signed up.`,
+        email: data.email,
+        alreadyConfirmed: true,
+      };
+    }
+    const { data: existingRole } = await admin.rpc("signup_role_for_email", {
+      p_email: data.email,
+    });
+    existedUnconfirmed = existingRole !== null;
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data: signUpResult, error } = await supabase.auth.signUp({
     email: data.email,
     password: data.password,
     options: {
@@ -177,7 +213,24 @@ async function signUp(
     },
   });
   if (error) {
-    return { error: error.message };
+    return { error: friendlyAuthEmailError(error) };
+  }
+
+  if (existedUnconfirmed) {
+    return {
+      success:
+        "You already started signing up, so we just emailed you a fresh confirmation link. Only this newest email works — links in earlier emails are now dead.",
+      email: data.email,
+    };
+  }
+
+  // Confirmed-duplicate tell when the service-role env isn't available.
+  if (signUpResult.user && signUpResult.user.identities?.length === 0) {
+    return {
+      success: `${data.email} already has an account — log in with the password you chose when you first signed up.`,
+      email: data.email,
+      alreadyConfirmed: true,
+    };
   }
 
   return {
@@ -221,6 +274,9 @@ export async function resendConfirmation(
     return { error: "Enter the email you signed up with." };
   }
 
+  // Providers should land back in onboarding, not on the customer dashboard.
+  let confirmedNext = "/dashboard";
+
   if (hasServiceRoleEnv()) {
     const admin = createAdminClient();
     const { data: confirmed } = await admin.rpc("email_is_confirmed", {
@@ -233,6 +289,13 @@ export async function resendConfirmation(
         alreadyConfirmed: true,
       };
     }
+
+    const { data: role } = await admin.rpc("signup_role_for_email", {
+      p_email: parsed.data,
+    });
+    if (role === "provider") {
+      confirmedNext = "/provider/onboarding/verify";
+    }
   }
 
   const origin = await siteOrigin();
@@ -240,14 +303,16 @@ export async function resendConfirmation(
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: parsed.data,
-    options: { emailRedirectTo: `${origin}/auth/callback?next=/dashboard` },
+    options: {
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(confirmedNext)}`,
+    },
   });
   if (error) {
-    return { error: error.message };
+    return { error: friendlyAuthEmailError(error) };
   }
 
   return {
-    success: `New confirmation email sent to ${parsed.data}. It can take a minute to arrive.`,
+    success: `New confirmation email sent to ${parsed.data}. It can take a minute to arrive — and only this newest link works; earlier emails are now dead.`,
     email: parsed.data,
   };
 }
