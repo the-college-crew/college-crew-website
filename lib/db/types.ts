@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -1341,6 +1336,32 @@ export type Database = {
           },
         ]
       }
+      stripe_customers: {
+        Row: {
+          created_at: string
+          stripe_customer_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          stripe_customer_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          stripe_customer_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_customers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stripe_webhook_receipts: {
         Row: {
           api_version: string | null
@@ -1598,6 +1619,23 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      attach_first_hour_payment_intent: {
+        Args: {
+          p_booking_id: string
+          p_stripe_customer_id: string
+          p_stripe_payment_intent_id: string
+        }
+        Returns: undefined
+      }
+      begin_first_hour_payment: {
+        Args: { p_authorization_version: string; p_booking_id: string }
+        Returns: {
+          amount_cents: number
+          application_fee_cents: number
+          idempotency_key: string
+          payment_id: string
+        }[]
+      }
       cancel_booking_request: {
         Args: { p_booking_id: string }
         Returns: string
@@ -1625,6 +1663,10 @@ export type Database = {
       dismiss_booking: { Args: { p_booking_id: string }; Returns: string }
       email_is_confirmed: { Args: { p_email: string }; Returns: boolean }
       expire_hourly_booking_request: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
+      expire_unpaid_acceptance: {
         Args: { p_booking_id: string }
         Returns: string
       }
@@ -1657,6 +1699,15 @@ export type Database = {
         Args: { provider_service_id: string }
         Returns: boolean
       }
+      mark_first_hour_payment_unsuccessful: {
+        Args: {
+          p_failure_code: string
+          p_failure_message: string
+          p_stripe_payment_intent_id: string
+          p_target_status: Database["public"]["Enums"]["booking_payment_status"]
+        }
+        Returns: string
+      }
       mark_hourly_response_alert: {
         Args: { p_booking_id: string }
         Returns: string
@@ -1668,11 +1719,28 @@ export type Database = {
           provider_id: string
         }[]
       }
+      record_first_hour_refund: {
+        Args: {
+          p_amount_cents: number
+          p_reason: string
+          p_stripe_payment_intent_id: string
+          p_stripe_refund_id: string
+        }
+        Returns: string
+      }
       replace_hourly_booking_request: {
         Args: {
           p_original_booking_id: string
           p_provider_service_id: string
           p_response_window_hours: number
+        }
+        Returns: string
+      }
+      settle_first_hour_payment: {
+        Args: {
+          p_stripe_payment_intent_id: string
+          p_stripe_payment_method_id: string
+          p_succeeded_at: string
         }
         Returns: string
       }
@@ -1963,6 +2031,12 @@ export type PriceType = Database["public"]["Enums"]["price_type"]
 export type PriceUnit = Database["public"]["Enums"]["price_unit"]
 export type BookingStatus = Database["public"]["Enums"]["booking_status"]
 export type BookingFlow = Database["public"]["Enums"]["booking_flow"]
+export type BookingPaymentKind =
+  Database["public"]["Enums"]["booking_payment_kind"]
+export type BookingPaymentStatus =
+  Database["public"]["Enums"]["booking_payment_status"]
+export type BookingRefundStatus =
+  Database["public"]["Enums"]["booking_refund_status"]
 export type ModerationStatus =
   Database["public"]["Enums"]["moderation_status"]
 export type LegalAcceptanceKind =
@@ -1991,6 +2065,7 @@ export type BookingRefund = Tables<"booking_refunds">
 export type BookingDispute = Tables<"booking_disputes">
 export type BookingAuditEvent = Tables<"booking_audit_events">
 export type StripeWebhookReceipt = Tables<"stripe_webhook_receipts">
+export type StripeCustomer = Tables<"stripe_customers">
 export type EmailOutboxItem = Tables<"email_outbox">
 export type Review = Tables<"reviews">
 export type Conversation = Tables<"conversations">
