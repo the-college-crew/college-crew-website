@@ -115,7 +115,7 @@ export default async function DisputePage({
 
   // No existing dispute — derive eligibility and the offered categories exactly
   // as open_booking_dispute does, so the page never offers an impossible action.
-  const now = Date.now();
+  const now = new Date().getTime();
   const startPassed = new Date(booking.scheduled_at).getTime() <= now;
 
   let categories: DisputeCategory[] | null = null;

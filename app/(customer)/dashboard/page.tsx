@@ -370,7 +370,7 @@ function BookingCard({
 
   // Cancellation + dispute eligibility (Phase 6). The RPCs re-check everything
   // atomically; this only drives what the card offers and the outcome preview.
-  const nowMs = Date.now();
+  const nowMs = new Date().getTime();
   const startMs = new Date(booking.scheduled_at).getTime();
   const startPassed = startMs <= nowMs;
   const legacyCancel =
