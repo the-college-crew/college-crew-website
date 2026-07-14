@@ -155,6 +155,49 @@ export async function completeBooking(formData: FormData) {
 }
 
 /**
+ * Hourly Booking v1 (Phase 6): the assigned provider cancels a booked/accepted
+ * job before Arrived, with a required reason. cancel_booking_as_provider always
+ * fully refunds a captured first hour (recorded there); we execute that refund
+ * here. After a paid cancellation the customer is offered optional replacements
+ * on the cancelled booking's page — no auto-rebooking.
+ */
+export async function cancelBookingAsProvider(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireRole("provider");
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const reason = z
+    .string()
+    .trim()
+    .min(3, "Add a short reason for cancelling.")
+    .max(500)
+    .parse(formData.get("reason"));
+
+  const supabase = await createClient();
+  const { data: result, error } = await supabase.rpc(
+    "cancel_booking_as_provider",
+    { p_booking_id: bookingId, p_reason: reason },
+  );
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not cancel the job."),
+    };
+  }
+
+  // A captured first hour is always refunded on a provider cancellation; the
+  // webhook reconciles any Stripe/settle failure, so never block the UI.
+  if (result === "full_refund") {
+    const { executePendingRefunds } = await import("@/lib/booking/refunds");
+    await executePendingRefunds(bookingId);
+  }
+
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  redirect("/provider/dashboard");
+}
+
+/**
  * Hourly Booking v1 (Phase 5): the assigned provider taps Arrived, moving a
  * booked job to in_progress with an immutable server timestamp. The 30-minute
  * grace and provider authorization are enforced by mark_booking_arrived.

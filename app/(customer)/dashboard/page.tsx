@@ -52,7 +52,12 @@ type BookingRow = {
   service: { name: string };
   provider: { display_name: string };
   review: { id: string } | null;
-  invoice: { status: string; remaining_balance_cents: number } | null;
+  invoice: {
+    status: string;
+    remaining_balance_cents: number;
+    resolved_at: string | null;
+  } | null;
+  dispute: { id: string; status: string } | null;
   responseAlertReached?: boolean;
 };
 
@@ -150,7 +155,8 @@ export default async function CustomerDashboardPage({
        estimated_minutes, hourly_rate_cents_snapshot, response_alert_at,
        initial_payment_due_at, dismissed_at, service:services(name),
        provider:provider_profiles(display_name), review:reviews(id),
-       invoice:booking_invoices(status, remaining_balance_cents)`,
+       invoice:booking_invoices(status, remaining_balance_cents, resolved_at),
+       dispute:booking_disputes(id, status)`,
     )
     .eq("customer_id", session.user.id)
     .order("scheduled_at", { ascending: showPast ? false : true });
@@ -351,6 +357,48 @@ function BookingCard({
   const note = convo?.latest?.fromOther ? convo.latest : null;
   const hasProviderMessage = Boolean(note);
 
+  // Cancellation + dispute eligibility (Phase 6). The RPCs re-check everything
+  // atomically; this only drives what the card offers and the outcome preview.
+  const nowMs = Date.now();
+  const startMs = new Date(booking.scheduled_at).getTime();
+  const startPassed = startMs <= nowMs;
+  const legacyCancel =
+    !isHourly &&
+    (booking.status === "requested" || booking.status === "accepted");
+  const hourlyCancel =
+    isHourly &&
+    !demo &&
+    (booking.status === "requested" ||
+      booking.status === "accepted" ||
+      (booking.status === "booked" && !startPassed));
+  const cancelOutcome: "full_refund" | "no_refund" | "no_payment" | undefined =
+    booking.status === "booked"
+      ? startMs - nowMs >= 12 * 3_600_000
+        ? "full_refund"
+        : "no_refund"
+      : booking.status === "requested" || booking.status === "accepted"
+        ? "no_payment"
+        : undefined;
+  const cancelLabel =
+    booking.status === "booked" ? "Cancel booking" : "Cancel request";
+
+  const hasOpenDispute = booking.dispute?.status === "open";
+  const finalChargeAt = booking.invoice?.resolved_at
+    ? new Date(booking.invoice.resolved_at).getTime()
+    : null;
+  const withinLateWindow =
+    finalChargeAt != null && nowMs <= finalChargeAt + 7 * 24 * 3_600_000;
+  const noShowEligible =
+    isHourly && booking.status === "booked" && startPassed;
+  const disputeEligible =
+    isHourly &&
+    !demo &&
+    !hasOpenDispute &&
+    (noShowEligible ||
+      booking.status === "in_progress" ||
+      booking.status === "invoice_review" ||
+      (booking.status === "completed" && withinLateWindow));
+
   return (
     <Card
       data-booking-id={booking.id}
@@ -530,8 +578,34 @@ function BookingCard({
           <Button type="button" variant="danger" size="sm" disabled>
             Cancel request
           </Button>
-        ) : booking.status === "requested" || booking.status === "accepted" ? (
+        ) : legacyCancel ? (
           <CancelBookingButton bookingId={booking.id} />
+        ) : hourlyCancel ? (
+          <CancelBookingButton
+            bookingId={booking.id}
+            outcome={cancelOutcome}
+            label={cancelLabel}
+          />
+        ) : null}
+
+        {hasOpenDispute && !demo ? (
+          <Link
+            href={`/bookings/${booking.id}/dispute`}
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            View case
+          </Link>
+        ) : disputeEligible ? (
+          <Link
+            href={
+              noShowEligible
+                ? `/bookings/${booking.id}/dispute?category=provider_no_show`
+                : `/bookings/${booking.id}/dispute`
+            }
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            {noShowEligible ? "Report a no-show" : "Report a problem"}
+          </Link>
         ) : null}
       </div>
 
