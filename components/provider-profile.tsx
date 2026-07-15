@@ -8,6 +8,7 @@ import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { getEffectiveRole, getSession } from "@/lib/auth/session";
 import type { PublicProviderProfile } from "@/lib/db/queries";
+import { providerAvatarUrl } from "@/lib/media/provider-avatars";
 import {
   PROVIDER_WEEKDAYS,
   formatAvailabilityWindow,
@@ -43,6 +44,7 @@ export async function ProviderProfile({
   const session = await getSession();
   const viewerRole = session ? await getEffectiveRole() : null;
   const canMessage = !session || viewerRole === "customer";
+  const avatarUrl = providerAvatarUrl(provider.avatar_image_path);
 
   return (
     <article className="pennant overflow-hidden rounded-3xl border border-stone bg-paper shadow-xl shadow-viridian/10">
@@ -50,6 +52,16 @@ export async function ProviderProfile({
       {/* Identity — morph target for the Browse card's ViewTransition. */}
       <ViewTransition name={`provider-${provider.id}`} share="morph">
         <section className="px-6 pb-7 pt-14 sm:px-8">
+          {/* Headshot lifted to overlap the banner above. Public asset, so a
+              plain <img> avoids stale optimizer copies after replace. */}
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt=""
+              className="-mt-[4.5rem] mb-3 h-24 w-24 rounded-full border-4 border-paper object-cover shadow-md"
+            />
+          ) : null}
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-3xl font-semibold">
               {provider.company_name || provider.display_name || "Student provider"}

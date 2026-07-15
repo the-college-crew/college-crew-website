@@ -40,6 +40,7 @@ export type ProviderCard = {
   bio: string;
   provider_type: ProviderType;
   neighborhood: string;
+  avatar_image_path: string | null;
   services: OfferedService[];
   rating: { avg: number; count: number } | null;
 };
@@ -61,6 +62,7 @@ export async function getLiveServices(): Promise<Service[]> {
 
 const PROVIDER_CARD_SELECT = `
   id, display_name, company_name, bio, provider_type, neighborhood,
+  avatar_image_path,
   provider_services (
     id, price_cents, price_type, unit, preview_image_path, hourly_rate_cents,
     service:services ( id, name, slug, category, is_live )
@@ -223,6 +225,7 @@ export async function getApprovedProviders(
     bio: p.bio,
     provider_type: p.provider_type,
     neighborhood: p.neighborhood,
+    avatar_image_path: p.avatar_image_path,
     services: offeringsByProvider.get(p.provider_id) ?? [],
     rating: ratingByProvider.get(p.provider_id) ?? null,
   }));
@@ -354,6 +357,7 @@ export async function getPublicProviderProfile(
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
+    avatar_image_path: provider.avatar_image_path,
     services: liveServices,
     rating: mapRating(rating),
     availability_weekdays: provider.availability_weekdays ?? [],
@@ -442,6 +446,7 @@ export async function getAdminProviderProfile(
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
+    avatar_image_path: provider.avatar_image_path,
     // Show every service the provider offers, even ones no longer live.
     services: adminOfferings,
     rating: mapRating(rating),

@@ -1128,6 +1128,7 @@ export type Database = {
           availability_note: string
           availability_start_local: string | null
           availability_weekdays: number[]
+          avatar_image_path: string | null
           background_check_status: Database["public"]["Enums"]["background_check_status"]
           bio: string
           company_name: string | null
@@ -1152,6 +1153,7 @@ export type Database = {
           availability_note?: string
           availability_start_local?: string | null
           availability_weekdays?: number[]
+          avatar_image_path?: string | null
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
           bio?: string
           company_name?: string | null
@@ -1176,6 +1178,7 @@ export type Database = {
           availability_note?: string
           availability_start_local?: string | null
           availability_weekdays?: number[]
+          avatar_image_path?: string | null
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
           bio?: string
           company_name?: string | null
@@ -1641,6 +1644,7 @@ export type Database = {
           availability_note: string | null
           availability_start_local: string | null
           availability_weekdays: number[] | null
+          avatar_image_path: string | null
           bio: string | null
           company_name: string | null
           created_at: string | null
@@ -1656,6 +1660,7 @@ export type Database = {
           availability_note?: string | null
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
+          avatar_image_path?: string | null
           bio?: string | null
           company_name?: string | null
           created_at?: string | null
@@ -1671,6 +1676,7 @@ export type Database = {
           availability_note?: string | null
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
+          avatar_image_path?: string | null
           bio?: string | null
           company_name?: string | null
           created_at?: string | null

@@ -6,6 +6,7 @@ import { ServiceBanner } from "@/components/service-banner";
 import { Badge, VerifiedCheck } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { ProviderCard as ProviderCardData } from "@/lib/db/queries";
+import { providerAvatarUrl } from "@/lib/media/provider-avatars";
 import { formatOfferedPrice } from "@/lib/utils";
 
 export function Rating({
@@ -36,6 +37,7 @@ export function Rating({
  */
 export function ProviderCard({ provider }: { provider: ProviderCardData }) {
   const href = `/providers/${provider.id}`;
+  const avatarUrl = providerAvatarUrl(provider.avatar_image_path);
 
   return (
     <ProviderCardViewTransition href={href} name={`provider-${provider.id}`}>
@@ -47,6 +49,16 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
           <ServiceBanner services={provider.services} />
 
           <div className="flex flex-col gap-2.5 p-5">
+            {/* Round headshot lifted to overlap the banner above. Public asset,
+                so a plain <img> avoids stale optimizer copies after replace. */}
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt=""
+                className="-mt-12 h-16 w-16 rounded-full border-4 border-paper object-cover shadow-sm"
+              />
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-display text-xl font-semibold">
                 {provider.company_name || provider.display_name || "Student provider"}

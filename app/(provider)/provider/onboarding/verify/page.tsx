@@ -4,11 +4,13 @@ import { redirect } from "next/navigation";
 
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { AvatarUploadForm } from "@/app/(shared)/account/avatar-upload-form";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import {
   getPendingSchoolEmail,
   getVerifiedSchoolEmail,
 } from "@/lib/db/school-email";
+import { providerAvatarUrl } from "@/lib/media/provider-avatars";
 import { createClient } from "@/lib/supabase/server";
 
 import { WizardSteps } from "../../_components/wizard-steps";
@@ -39,7 +41,9 @@ export default async function OnboardingVerifyPage() {
   const hasFront = Boolean(profile.id_document_url);
   const hasBack = Boolean(profile.id_document_back_url);
   const idUploaded = hasFront && hasBack;
-  const readyForNext = schoolVerified && idUploaded;
+  const hasAvatar = Boolean(profile.avatar_image_path);
+  const avatarUrl = providerAvatarUrl(profile.avatar_image_path);
+  const readyForNext = schoolVerified && idUploaded && hasAvatar;
   const supabase = await createClient();
   const signDocument = async (path: string | null) => {
     if (!path) return null;
@@ -65,6 +69,7 @@ export default async function OnboardingVerifyPage() {
         schoolVerified={schoolVerified}
         hasFront={hasFront}
         hasBack={hasBack}
+        hasAvatar={hasAvatar}
         frontUrl={frontUrl}
         backUrl={backUrl}
       />
@@ -127,6 +132,21 @@ export default async function OnboardingVerifyPage() {
             </div>
           </Card>
 
+          <Card pennant className="mt-4 p-6">
+            <h2 className="font-display text-xl font-semibold">
+              Add your profile photo
+            </h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              This is public — a clear photo of your face so neighbors know who
+              they&apos;re inviting over. It shows on Browse and your profile, and
+              is required before you can go live.
+            </p>
+
+            <div className="mt-5">
+              <AvatarUploadForm imageUrl={avatarUrl} />
+            </div>
+          </Card>
+
           <div className="mt-6 flex justify-between border-t border-line pt-4">
             <Link
               href="/provider/onboarding/account"
@@ -143,7 +163,8 @@ export default async function OnboardingVerifyPage() {
               </Link>
             ) : (
               <span className="self-center text-xs text-mist">
-                Verify your school email and upload your ID to continue.
+                Verify your school email, upload your ID, and add a profile photo
+                to continue.
               </span>
             )}
           </div>
@@ -159,6 +180,7 @@ function VerificationStatusCard({
   schoolVerified,
   hasFront,
   hasBack,
+  hasAvatar,
   frontUrl,
   backUrl,
 }: {
@@ -167,10 +189,11 @@ function VerificationStatusCard({
   schoolVerified: boolean;
   hasFront: boolean;
   hasBack: boolean;
+  hasAvatar: boolean;
   frontUrl: string | null;
   backUrl: string | null;
 }) {
-  const complete = schoolVerified && hasFront && hasBack;
+  const complete = schoolVerified && hasFront && hasBack && hasAvatar;
   const title = approved
     ? "You’re verified"
     : rejected
@@ -220,6 +243,12 @@ function VerificationStatusCard({
           <span className="block text-xs text-mist">License back</span>
           <span className="font-semibold text-ink">
             {hasBack ? "Uploaded ✓" : "Missing"}
+          </span>
+        </li>
+        <li className="rounded-lg border border-line bg-paper/70 px-3 py-2">
+          <span className="block text-xs text-mist">Profile photo</span>
+          <span className="font-semibold text-ink">
+            {hasAvatar ? "Added ✓" : "Missing"}
           </span>
         </li>
       </ul>
