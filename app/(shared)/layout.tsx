@@ -41,7 +41,7 @@ export default async function SharedLayout({
           ) : null}
         </div>
       </header>
-      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+      <main id="main" className="flex min-h-0 flex-1 flex-col">{children}</main>
     </div>
   );
 }

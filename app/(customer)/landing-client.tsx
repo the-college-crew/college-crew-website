@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
+import { useId, useState } from "react";
 
 /**
  * Interactive landing sections. All copy arrives pre-rendered from the server
@@ -14,7 +15,7 @@ const BAND =
 const EYEBROW =
   "flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.16em] text-viridian/55";
 const H2 =
-  "mt-3.5 max-w-[20ch] text-balance font-[Georgia,'Times_New_Roman',serif] text-[32px] font-semibold leading-[1.08] text-viridian md:text-[42px]";
+  "mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] text-viridian md:text-[42px]";
 
 export type Step = {
   n: string;
@@ -37,7 +38,7 @@ export function HowItWorksTabs({
   const steps = tab === "families" ? parentSteps : studentSteps;
 
   const pill = (active: boolean) =>
-    `rounded-full border-[1.3px] px-[13px] py-2 text-[13px] font-semibold transition ${
+    `rounded-full border-[1.3px] px-[13px] py-2 text-[13px] font-semibold transition duration-200 active:scale-[0.97] ${
       active
         ? "border-viridian bg-viridian text-shell"
         : "border-viridian/20 text-viridian hover:bg-viridian/5"
@@ -70,15 +71,32 @@ export function HowItWorksTabs({
         </div>
 
         <div className="grid gap-[22px] md:grid-cols-3">
-          {steps.map((step) => (
+          {steps.map((step, index) => (
             <div
               key={step.n}
-              className="rounded-[22px] border-[1.4px] border-viridian/15 bg-card p-[30px]"
+              className="rounded-[22px] border-[1.4px] border-viridian/15 bg-card p-[30px] transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]"
             >
-              <div className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-viridian font-display text-xl font-bold text-shell">
-                {step.n}
+              {/* Number + a dashed trail the ant "walks" toward the next step. */}
+              <div className="flex items-center gap-4">
+                <div className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-viridian font-display text-xl font-bold text-shell">
+                  {step.n}
+                </div>
+                <span
+                  className="h-0 flex-1 border-t-2 border-dashed border-viridian/20"
+                  aria-hidden
+                />
+                {index === steps.length - 1 ? (
+                  <Image
+                    src="/college-crew-mark.png"
+                    alt=""
+                    width={36}
+                    height={33}
+                    className="h-6 w-6 shrink-0 object-contain"
+                    aria-hidden
+                  />
+                ) : null}
               </div>
-              <h3 className="mt-5 font-[Georgia,'Times_New_Roman',serif] text-[21px] font-semibold leading-tight text-viridian">
+              <h3 className="mt-5 font-display text-[21px] font-semibold leading-tight text-viridian">
                 {step.title}
               </h3>
               <p className="mt-2.5 leading-normal text-viridian/65">
@@ -110,6 +128,7 @@ export function FAQList({
   items: FaqItem[];
 }) {
   const [open, setOpen] = useState(0);
+  const baseId = useId();
 
   return (
     <section className={`${BAND} bg-stone`}>
@@ -122,6 +141,7 @@ export function FAQList({
         <div>
           {items.map((faq, index) => {
             const isOpen = open === index;
+            const panelId = `${baseId}-faq-${index}`;
 
             return (
               <div
@@ -130,12 +150,14 @@ export function FAQList({
               >
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-5 px-7 py-6 text-left font-[Georgia,'Times_New_Roman',serif] text-xl font-semibold text-viridian"
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  className="flex w-full items-center justify-between gap-5 px-7 py-6 text-left font-display text-xl font-semibold text-viridian"
                   onClick={() => setOpen(isOpen ? -1 : index)}
                 >
                   <span>{faq.q}</span>
                   <span
-                    className={`shrink-0 text-3xl font-light leading-none text-viridian transition-transform ${
+                    className={`shrink-0 text-3xl font-light leading-none text-viridian transition-transform duration-200 ${
                       isOpen ? "rotate-45" : ""
                     }`}
                     aria-hidden
@@ -143,11 +165,19 @@ export function FAQList({
                     +
                   </span>
                 </button>
-                {isOpen ? (
-                  <p className="max-w-[70ch] px-7 pb-[26px] text-[17px] leading-[1.55] text-viridian/75">
-                    {faq.a}
-                  </p>
-                ) : null}
+                {/* grid-rows keeps the answer in the DOM and animates height. */}
+                <div
+                  id={panelId}
+                  className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <p className="max-w-[70ch] px-7 pb-[26px] text-[17px] leading-[1.55] text-viridian/75">
+                      {faq.a}
+                    </p>
+                  </div>
+                </div>
               </div>
             );
           })}

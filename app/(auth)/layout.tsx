@@ -6,7 +6,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center bg-shell px-4 py-12">
+    <main id="main" className="flex flex-1 flex-col items-center justify-center bg-shell px-4 py-12">
       <div className="mb-6">
         <Wordmark />
       </div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { MobileNav } from "@/components/mobile-nav";
+import { NavLinks } from "@/components/nav-links";
 import { UserMenu } from "@/components/user-menu";
 import {
   dashboardLabelFor,
@@ -68,15 +69,7 @@ export async function SiteHeader() {
           aria-label="Main"
           className="hidden flex-1 items-center justify-center gap-7 text-base font-semibold sm:flex"
         >
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="transition-colors hover:text-viridian/60"
-            >
-              {item.label}
-            </Link>
-          ))}
+          <NavLinks nav={NAV} />
         </nav>
 
         <div className="flex shrink-0 items-center gap-3.5">
