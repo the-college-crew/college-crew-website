@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
 
 import { BrowseControls } from "@/components/browse-controls";
 import { Editable } from "@/components/content/editable";
@@ -15,7 +14,11 @@ import {
   getLiveServices,
   type ProviderSort,
 } from "@/lib/db/queries";
-import { BROWSE_ZIP_COOKIE } from "@/lib/browse/preferences";
+import {
+  buildBookingFromSummary,
+  getBookingFrom,
+  resolveBookingOrigin,
+} from "@/lib/location/booking-from";
 
 export const metadata: Metadata = { title: "Browse providers" };
 
@@ -25,24 +28,24 @@ export default async function BrowsePage({
   searchParams: Promise<{ service?: string; sort?: string }>;
 }) {
   const { service, sort: sortParam } = await searchParams;
-  const [services, session, cookieStore] = await Promise.all([
+  const [services, session, bookingFrom] = await Promise.all([
     getLiveServices(),
     getSession(),
-    cookies(),
+    getBookingFrom(),
   ]);
   const sort: ProviderSort = ["location", "rating", "rate"].includes(
     sortParam ?? "",
   )
     ? (sortParam as ProviderSort)
     : "suggested";
-  const jobZip =
-    cookieStore.get(BROWSE_ZIP_COOKIE)?.value ??
-    session?.profile.postal_code ??
-    undefined;
+  const origin = resolveBookingOrigin(bookingFrom, session?.profile ?? null);
   const providers = await getApprovedProviders({
     serviceSlug: service,
     sort,
-    jobZip,
+    jobZip: origin.zip || undefined,
+    origin: origin.isSet
+      ? { latitude: origin.latitude, longitude: origin.longitude }
+      : null,
   });
 
   return (
@@ -65,7 +68,7 @@ export default async function BrowsePage({
       <BrowseControls
         activeSort={sort}
         serviceSlug={service}
-        jobZip={jobZip}
+        bookingFrom={buildBookingFromSummary(bookingFrom, session?.profile ?? null)}
       />
 
       {providers.length === 0 ? (

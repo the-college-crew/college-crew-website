@@ -11,6 +11,10 @@ import {
 } from "@/lib/booking/requests";
 import { areBookingRequestsEnabled, isHourlyBookingEnabled } from "@/lib/env";
 import {
+  getBookingFrom,
+  resolveBookingOrigin,
+} from "@/lib/location/booking-from";
+import {
   getConversationIdForBooking,
   sendModeratedMessage,
 } from "@/lib/messaging/conversation";
@@ -23,8 +27,6 @@ const bookingSchema = z.object({
   scheduledLocal: z.string().min(1, "Pick a date and time."),
   estimatedMinutes: z.coerce.number().int(),
   responseWindowHours: z.coerce.number().int(),
-  address: z.string().trim().min(5, "Enter the service address.").max(500),
-  jobZip: z.string().trim().regex(/^\d{5}$/, "Enter a five-digit job ZIP."),
   details: z.string().trim().max(2000).optional().default(""),
 });
 
@@ -53,11 +55,21 @@ export async function createBookingRequest(
     scheduledLocal: formData.get("scheduledLocal"),
     estimatedMinutes: formData.get("estimatedMinutes"),
     responseWindowHours: formData.get("responseWindowHours"),
-    address: formData.get("address"),
-    jobZip: formData.get("jobZip"),
     details: formData.get("details"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  // The service address comes from the "Booking from" selection, not form
+  // fields: home re-resolves from the profile (server truth), an "other"
+  // address comes from the cookie written when it was chosen and geocoded.
+  const bookingFrom = await getBookingFrom();
+  const origin = resolveBookingOrigin(bookingFrom, session.profile);
+  if (!origin.isSet || origin.addressLine.length < 5 || !/^\d{5}$/.test(origin.zip)) {
+    return {
+      error:
+        "Choose where the job is with “Booking from” at the top of this page.",
+    };
+  }
 
   const scheduled = pilotLocalDateTimeToUtc(parsed.data.scheduledLocal);
   if (!scheduled.ok) {
@@ -77,8 +89,12 @@ export async function createBookingRequest(
     scheduledAt: scheduled.date.toISOString(),
     estimatedMinutes: parsed.data.estimatedMinutes,
     responseWindowHours: parsed.data.responseWindowHours,
-    address: parsed.data.address,
-    jobZip: parsed.data.jobZip,
+    address: origin.addressLine,
+    jobZip: origin.zip,
+    addressKind: origin.kind,
+    serviceCity: origin.town,
+    latitude: origin.latitude,
+    longitude: origin.longitude,
     details: parsed.data.details,
   });
   if (error || !bookingId) {

@@ -3,7 +3,7 @@ import { ViewTransition } from "react";
 
 import { openConversationWithProvider } from "@/app/actions/messaging";
 import { FormLoader } from "@/components/form-loader";
-import { Rating } from "@/components/provider-card";
+import { LocationLine, Rating } from "@/components/provider-card";
 import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { getEffectiveRole, getSession } from "@/lib/auth/session";
@@ -74,9 +74,11 @@ export async function ProviderProfile({
                 ? "Student business"
                 : "Hardworking individual"}
             </Badge>
-            {provider.neighborhood ? (
-              <span className="text-xs text-mist">{provider.neighborhood}</span>
-            ) : null}
+            <LocationLine
+              town={provider.town}
+              distanceMiles={provider.distance_miles}
+              className="text-xs text-mist"
+            />
             <Rating rating={provider.rating} />
           </div>
           {provider.bio ? (

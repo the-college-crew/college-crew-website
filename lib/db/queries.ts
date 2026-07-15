@@ -10,8 +10,9 @@ import type {
   Service,
   VerificationStatus,
 } from "@/lib/db/types";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasServiceRoleEnv, hasSupabaseEnv } from "@/lib/env";
 import { getLocationRankedProviderIds } from "@/lib/booking/requests";
+import { milesBetween, type MaybeCoordinates } from "@/lib/geo/distance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getOfferingReadiness } from "@/lib/provider/setup";
@@ -40,10 +41,50 @@ export type ProviderCard = {
   bio: string;
   provider_type: ProviderType;
   neighborhood: string;
+  /** Operating-address town; falls back to the legacy neighborhood tag. */
+  town: string;
+  /** Straight-line miles from the viewer's "booking from" origin, if both sides geocoded. */
+  distance_miles: number | null;
   avatar_image_path: string | null;
   services: OfferedService[];
   rating: { avg: number; count: number } | null;
 };
+
+/** Viewer origin for distance lines. Null → town-only display. */
+export type ViewerOrigin = MaybeCoordinates | null;
+
+type ProviderLocationFacts = {
+  city: string;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+/**
+ * Town + coordinates of each provider's operating address (their profile
+ * address). Server-only via the admin client: raw coordinates never reach the
+ * browser — callers pass on only the town string and a computed miles number.
+ */
+async function getProviderLocationFacts(
+  providerIds: string[],
+): Promise<Map<string, ProviderLocationFacts>> {
+  const facts = new Map<string, ProviderLocationFacts>();
+  if (!hasServiceRoleEnv() || providerIds.length === 0) return facts;
+
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("provider_profiles")
+    .select("id, user:profiles ( city, latitude, longitude )")
+    .in("id", providerIds);
+
+  for (const row of data ?? []) {
+    facts.set(row.id, {
+      city: row.user?.city ?? "",
+      latitude: row.user?.latitude ?? null,
+      longitude: row.user?.longitude ?? null,
+    });
+  }
+  return facts;
+}
 
 export type ProviderSort = "suggested" | "location" | "rating" | "rate";
 
@@ -183,6 +224,7 @@ export async function getApprovedProviders(
     serviceSlug?: string;
     sort?: ProviderSort;
     jobZip?: string;
+    origin?: ViewerOrigin;
   } = {},
 ): Promise<ProviderCard[]> {
   if (!hasSupabaseEnv()) return [];
@@ -197,13 +239,15 @@ export async function getApprovedProviders(
   if (!safeProviders.length) return [];
 
   const providerIds = safeProviders.map((provider) => provider.provider_id);
-  const [{ data: offeringRows }, { data: ratings }] = await Promise.all([
-    supabase
-      .from("public_provider_offerings")
-      .select("*")
-      .in("provider_id", providerIds),
-    supabase.from("provider_ratings").select("*"),
-  ]);
+  const [{ data: offeringRows }, { data: ratings }, locationFacts] =
+    await Promise.all([
+      supabase
+        .from("public_provider_offerings")
+        .select("*")
+        .in("provider_id", providerIds),
+      supabase.from("provider_ratings").select("*"),
+      getProviderLocationFacts(providerIds),
+    ]);
 
   const offeringsByProvider = new Map<string, OfferedService[]>();
   for (const row of (offeringRows ?? []).filter(isSafePublicOfferingRow)) {
@@ -218,17 +262,22 @@ export async function getApprovedProviders(
     if (rating.provider_id && mapped) ratingByProvider.set(rating.provider_id, mapped);
   }
 
-  const cards: ProviderCard[] = safeProviders.map((p) => ({
-    id: p.provider_id,
-    display_name: p.display_name,
-    company_name: p.company_name,
-    bio: p.bio,
-    provider_type: p.provider_type,
-    neighborhood: p.neighborhood,
-    avatar_image_path: p.avatar_image_path,
-    services: offeringsByProvider.get(p.provider_id) ?? [],
-    rating: ratingByProvider.get(p.provider_id) ?? null,
-  }));
+  const cards: ProviderCard[] = safeProviders.map((p) => {
+    const facts = locationFacts.get(p.provider_id);
+    return {
+      id: p.provider_id,
+      display_name: p.display_name,
+      company_name: p.company_name,
+      bio: p.bio,
+      provider_type: p.provider_type,
+      neighborhood: p.neighborhood,
+      town: facts?.city || p.neighborhood,
+      distance_miles: milesBetween(options.origin, facts),
+      avatar_image_path: p.avatar_image_path,
+      services: offeringsByProvider.get(p.provider_id) ?? [],
+      rating: ratingByProvider.get(p.provider_id) ?? null,
+    };
+  });
 
   const filtered = cards.filter(
     (card) =>
@@ -302,6 +351,7 @@ export type PublicProviderProfile = ProviderCard & {
 /** Everything the public provider profile page needs, or null if not visible. */
 export async function getPublicProviderProfile(
   providerId: string,
+  origin: ViewerOrigin = null,
 ): Promise<PublicProviderProfile | null> {
   if (!hasSupabaseEnv()) return null;
   const supabase = await createClient();
@@ -312,6 +362,7 @@ export async function getPublicProviderProfile(
     { data: rating },
     { data: reviews },
     { data: services },
+    locationFacts,
   ] = await Promise.all([
       supabase
         .from("public_provider_directory")
@@ -334,6 +385,7 @@ export async function getPublicProviderProfile(
         .order("created_at", { ascending: false })
         .limit(20),
       supabase.from("services").select("id, name"),
+      getProviderLocationFacts([providerId]),
     ]);
 
   if (!provider || !isSafePublicProviderRow(provider)) return null;
@@ -345,6 +397,7 @@ export async function getPublicProviderProfile(
 
   if (liveServices.length === 0) return null;
 
+  const facts = locationFacts.get(providerId);
   return {
     id: provider.provider_id,
     display_name: provider.display_name,
@@ -352,6 +405,8 @@ export async function getPublicProviderProfile(
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
+    town: facts?.city || provider.neighborhood,
+    distance_miles: milesBetween(origin, facts),
     avatar_image_path: provider.avatar_image_path,
     services: liveServices,
     rating: mapRating(rating),
@@ -434,6 +489,9 @@ export async function getAdminProviderProfile(
     }),
   );
 
+  const locationFacts = await getProviderLocationFacts([providerId]);
+  const facts = locationFacts.get(providerId);
+
   return {
     id: provider.id,
     display_name: provider.display_name,
@@ -441,6 +499,8 @@ export async function getAdminProviderProfile(
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
+    town: facts?.city || provider.neighborhood,
+    distance_miles: null,
     avatar_image_path: provider.avatar_image_path,
     // Show every service the provider offers, even ones no longer live.
     services: adminOfferings,

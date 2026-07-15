@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BookingFrom } from "@/components/booking-from";
+import { LocationLine } from "@/components/provider-card";
 import { VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,6 +14,11 @@ import {
   areBookingRequestsEnabled,
   isHourlyBookingEnabled,
 } from "@/lib/env";
+import {
+  buildBookingFromSummary,
+  getBookingFrom,
+  resolveBookingOrigin,
+} from "@/lib/location/booking-from";
 
 import { BookingRequestForm } from "./booking-form";
 
@@ -23,36 +30,35 @@ export default async function BookingPage({
   params: Promise<{ providerId: string }>;
 }) {
   const { providerId } = await params;
-  const [provider, session] = await Promise.all([
-    getPublicProviderProfile(providerId),
+  const [session, bookingFrom] = await Promise.all([
     getSession(),
+    getBookingFrom(),
   ]);
+  const origin = resolveBookingOrigin(bookingFrom, session?.profile ?? null);
+  const provider = await getPublicProviderProfile(
+    providerId,
+    origin.isSet
+      ? { latitude: origin.latitude, longitude: origin.longitude }
+      : null,
+  );
   if (!provider) notFound();
   const requestsEnabled =
     isHourlyBookingEnabled() && areBookingRequestsEnabled();
   const bookableServices = provider.services.filter(
     (offering) => offering.is_hourly_bookable,
   );
-  const defaultAddress = session
-    ? [
-        session.profile.address_line1,
-        session.profile.address_line2,
-        [session.profile.city, session.profile.state]
-          .filter(Boolean)
-          .join(", "),
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : "";
-  const defaultJobZip = session?.profile.postal_code ?? "";
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
         title={provider.display_name || "Request booking"}
         description={
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex flex-wrap items-center gap-2">
             <VerifiedBadge />
+            <LocationLine
+              town={provider.town}
+              distanceMiles={provider.distance_miles}
+            />
           </span>
         }
       />
@@ -85,10 +91,21 @@ export default async function BookingPage({
         </Card>
       ) : bookableServices.length > 0 ? (
         <Card pennant className="p-6">
+          <div className="mb-5 border-b border-line pb-5">
+            <BookingFrom
+              summary={buildBookingFromSummary(bookingFrom, session.profile)}
+            />
+            {origin.isSet ? (
+              <p className="mt-2 text-xs text-mist">{origin.addressLine}</p>
+            ) : (
+              <p className="mt-2 text-xs font-medium text-red-700">
+                Choose where the job is before sending your request.
+              </p>
+            )}
+          </div>
           <BookingRequestForm
             services={bookableServices}
-            defaultAddress={defaultAddress}
-            defaultJobZip={defaultJobZip}
+            originReady={origin.isSet}
           />
         </Card>
       ) : (

@@ -40,6 +40,19 @@ const BTN_GHOST = `${BTN} border-viridian text-viridian hover:bg-viridian/5`;
 const BTN_PRIMARY_ON_DARK = `${BTN} border-shell bg-shell text-viridian hover:bg-[#e7e4dc]`;
 const BTN_GHOST_ON_DARK = `${BTN} border-shell/45 text-shell hover:bg-shell/10`;
 
+/*
+ * Shared card come-forward behavior. Every box on the page lifts and casts a
+ * viridian-tinted shadow on hover; bordered cards also deepen their edge.
+ * Radius/padding stay per-section so section rhythm is unchanged. Cards carry
+ * `group` so their inner icon tile can react to the same hover.
+ */
+const CARD_LIFT =
+  "transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]";
+const CARD_LIFT_BORDERED = `${CARD_LIFT} hover:border-viridian/30`;
+// Icon tile that inverts (honeydew → viridian) as its card is hovered.
+const ICON_TILE_HOVER =
+  "transition duration-200 group-hover:bg-viridian group-hover:text-shell";
+
 const SERVICE_BLURBS: Record<string, string> = {
   "lawn-yard-care": "Mowing, edging, and yard tidy-ups handled by students nearby.",
   "pet-care": "Walks, drop-ins, and sitting while you're out or away.",
@@ -259,9 +272,9 @@ function Hero({
             ].map((item, index) => (
               <span
                 key={item}
-                className="flex items-center gap-2 rounded-full border-[1.4px] border-viridian/20 bg-white/50 px-4 py-[9px] text-sm font-semibold"
+                className="group flex items-center gap-2 rounded-full border-[1.4px] border-viridian/20 bg-white/50 px-4 py-[9px] text-sm font-semibold transition duration-200 hover:border-viridian/40 hover:bg-white"
               >
-                <span className="h-[7px] w-[7px] rounded-full bg-viridian" />
+                <span className="h-[7px] w-[7px] rounded-full bg-viridian transition duration-200 group-hover:scale-125" />
                 <Editable k={`home.hero.points.${index}`}>{item}</Editable>
               </span>
             ))}
@@ -465,8 +478,8 @@ function CompareColumn({
     <div
       className={
         dark
-          ? "rounded-[22px] bg-viridian p-8 text-shell"
-          : "rounded-[22px] border-[1.4px] border-viridian/15 bg-stone/55 p-8 text-viridian"
+          ? `group rounded-[22px] bg-viridian p-8 text-shell ${CARD_LIFT}`
+          : `group rounded-[22px] border-[1.4px] border-viridian/15 bg-stone/55 p-8 text-viridian ${CARD_LIFT_BORDERED}`
       }
     >
       <h3 className="font-display text-[22px] font-bold">{title}</h3>
@@ -518,9 +531,11 @@ function ServicesSection({ services }: { services: Service[] }) {
             <Link
               key={service.id}
               href={`/browse?service=${service.slug}`}
-              className="flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]"
+              className={`group flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] ${CARD_LIFT_BORDERED}`}
             >
-              <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-honeydew text-viridian">
+              <span
+                className={`flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-honeydew text-viridian ${ICON_TILE_HOVER}`}
+              >
                 <ServiceIcon slug={service.slug} className="h-[26px] w-[26px]" />
               </span>
               <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
@@ -568,9 +583,11 @@ function FeaturesSection() {
           {FEATURES.map(({ title, body }, index) => (
             <div
               key={title}
-              className="rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px]"
+              className={`group rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] ${CARD_LIFT_BORDERED}`}
             >
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-honeydew text-viridian">
+              <div
+                className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-honeydew text-viridian ${ICON_TILE_HOVER}`}
+              >
                 <FeatureIcon index={index} className="h-6 w-6" />
               </div>
               <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">

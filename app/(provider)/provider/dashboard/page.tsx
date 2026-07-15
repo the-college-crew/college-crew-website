@@ -16,8 +16,10 @@ import {
   ProviderReadinessChecklist,
   type ReadinessOffering,
 } from "@/components/provider-readiness-checklist";
+import { LocationLine } from "@/components/provider-card";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { calculatePlatformFeeCents } from "@/lib/booking/policy";
+import { milesBetween } from "@/lib/geo/distance";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import {
@@ -41,6 +43,11 @@ type ProviderBookingRow = {
   status: BookingStatus;
   scheduled_at: string;
   address: string;
+  service_city: string;
+  latitude: number | null;
+  longitude: number | null;
+  /** Miles from the provider's operating address; computed server-side. */
+  distance_miles?: number | null;
   details: string;
   price_cents: number;
   platform_fee_cents: number;
@@ -127,7 +134,8 @@ export default async function ProviderDashboardPage({
     supabase
       .from("bookings")
       .select(
-        `id, booking_flow, status, scheduled_at, address, details, price_cents,
+        `id, booking_flow, status, scheduled_at, address, service_city,
+         latitude, longitude, details, price_cents,
          platform_fee_cents, estimated_minutes, hourly_rate_cents_snapshot,
          response_alert_at, initial_payment_due_at, service:services(name),
          customer:profiles!bookings_customer_id_fkey(full_name),
@@ -143,11 +151,15 @@ export default async function ProviderDashboardPage({
 
   const rawBookings = (data ?? []) as ProviderBookingRow[];
   const expiredIds = await releaseExpiredAcceptances(supabase, rawBookings);
-  const bookings = rawBookings.map((booking) =>
-    expiredIds.has(booking.id)
-      ? { ...booking, status: "expired" as BookingStatus }
-      : booking,
-  );
+  const bookings = rawBookings.map((booking) => ({
+    ...booking,
+    status: expiredIds.has(booking.id)
+      ? ("expired" as BookingStatus)
+      : booking.status,
+    // Distance from the provider's operating address, computed here so raw
+    // coordinates never leave the server render.
+    distance_miles: milesBetween(session.profile, booking),
+  }));
   const offerings: ReadinessOffering[] = (offeringRows ?? []).map(
     (offering) => ({
       id: offering.id,
@@ -392,6 +404,12 @@ function ProviderDashboardView({
                   <p className="mt-0.5 text-sm text-ink-soft">
                     {booking.customer.full_name} ·{" "}
                     {formatDateTime(booking.scheduled_at)}
+                  </p>
+                  <p className="mt-0.5">
+                    <LocationLine
+                      town={booking.service_city ?? ""}
+                      distanceMiles={booking.distance_miles ?? null}
+                    />
                   </p>
                   <p className="mt-0.5 text-xs text-mist">{booking.address}</p>
                   {booking.details ? (

@@ -18,6 +18,9 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["RESPONSE_WINDOW_REACHES_START", "Choose a shorter response window."],
   ["INVALID_JOB_ZIP", "Enter a five-digit job ZIP."],
   ["INVALID_JOB_ADDRESS", "Enter the complete service address."],
+  ["INVALID_ADDRESS_KIND", "Choose the job location with “Booking from”."],
+  ["INVALID_SERVICE_CITY", "Choose the job location with “Booking from”."],
+  ["INVALID_COORDINATES", "Choose the job location with “Booking from”."],
   ["DETAILS_TOO_LONG", "Keep job details to 2,000 characters or fewer."],
   ["MINIMUM_NOTICE_NOT_MET", "This job no longer meets the provider’s scheduling notice."],
   ["OUTSIDE_PROVIDER_AVAILABILITY", "The full job estimate must fit the provider’s availability."],
@@ -126,6 +129,10 @@ export async function createHourlyRequest(
     responseWindowHours: number;
     address: string;
     jobZip: string;
+    addressKind: "home" | "other";
+    serviceCity: string;
+    latitude: number | null;
+    longitude: number | null;
     details: string;
   },
 ) {
@@ -137,6 +144,10 @@ export async function createHourlyRequest(
     p_address: input.address,
     p_job_zip: input.jobZip,
     p_details: input.details,
+    p_address_kind: input.addressKind,
+    p_service_city: input.serviceCity,
+    p_latitude: input.latitude ?? undefined,
+    p_longitude: input.longitude ?? undefined,
   });
 }
 

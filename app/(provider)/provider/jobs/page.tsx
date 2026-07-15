@@ -9,8 +9,10 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { LocationLine } from "@/components/provider-card";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { milesBetween } from "@/lib/geo/distance";
 import {
   demoBookings,
   demoOfferings,
@@ -34,6 +36,11 @@ type JobRow = {
   status: BookingStatus;
   scheduled_at: string;
   address: string;
+  service_city: string;
+  latitude: number | null;
+  longitude: number | null;
+  /** Miles from the provider's operating address; computed server-side. */
+  distance_miles?: number | null;
   price_cents: number;
   platform_fee_cents: number;
   hourly_rate_cents_snapshot: number | null;
@@ -51,7 +58,7 @@ type JobRow = {
 
 /** Upcoming jobs + read-only pricing (editing lives in Profile & settings). */
 export default async function ProviderJobsPage() {
-  await requireRole("provider", "/provider/jobs");
+  const session = await requireRole("provider", "/provider/jobs");
   const demoPreview = await getDemoPreview("provider");
   if (demoPreview) {
     return (
@@ -74,7 +81,8 @@ export default async function ProviderJobsPage() {
     supabase
       .from("bookings")
       .select(
-        `id, booking_flow, status, scheduled_at, address, price_cents,
+        `id, booking_flow, status, scheduled_at, address, service_city,
+         latitude, longitude, price_cents,
          platform_fee_cents, hourly_rate_cents_snapshot, estimated_minutes,
          arrived_at, service:services(name),
          customer:profiles!bookings_customer_id_fkey(full_name),
@@ -97,7 +105,12 @@ export default async function ProviderJobsPage() {
       .eq("provider_id", profile.id),
   ]);
 
-  const jobs = (jobsData ?? []) as JobRow[];
+  // Distance from the provider's operating address, computed here so raw
+  // coordinates never leave the server render.
+  const jobs = ((jobsData ?? []) as JobRow[]).map((job) => ({
+    ...job,
+    distance_miles: milesBetween(session.profile, job),
+  }));
   const liveOfferings = (offerings ?? []).filter(
     (offered) => offered.service?.is_live,
   );
@@ -164,6 +177,12 @@ function ProviderJobsView({
                     </p>
                     <p className="mt-0.5 text-sm text-ink-soft">
                       {job.customer.full_name} · {formatDateTime(job.scheduled_at)}
+                    </p>
+                    <p className="mt-0.5">
+                      <LocationLine
+                        town={job.service_city ?? ""}
+                        distanceMiles={job.distance_miles ?? null}
+                      />
                     </p>
                     <p className="mt-0.5 text-xs text-mist">{job.address}</p>
                   </div>

@@ -28,13 +28,18 @@ export function formatMiles(miles: number): string {
   return `${Math.round(miles)} mi`;
 }
 
+export type MaybeCoordinates = {
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
 /**
  * The distance between two possibly-missing coordinate pairs, or null when
  * either side has no geocoded position. Keeps callers to one null check.
  */
 export function milesBetween(
-  a: Partial<Coordinates> | null | undefined,
-  b: Partial<Coordinates> | null | undefined,
+  a: MaybeCoordinates | null | undefined,
+  b: MaybeCoordinates | null | undefined,
 ): number | null {
   if (
     a?.latitude == null ||

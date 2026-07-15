@@ -74,11 +74,11 @@ export function HowItWorksTabs({
           {steps.map((step, index) => (
             <div
               key={step.n}
-              className="rounded-[22px] border-[1.4px] border-viridian/15 bg-card p-[30px] transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]"
+              className="group rounded-[22px] border-[1.4px] border-viridian/15 bg-card p-[30px] transition duration-200 hover:-translate-y-[3px] hover:border-viridian/30 hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]"
             >
               {/* Number + a dashed trail the ant "walks" toward the next step. */}
               <div className="flex items-center gap-4">
-                <div className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-viridian font-display text-xl font-bold text-shell">
+                <div className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-viridian font-display text-xl font-bold text-shell transition duration-200 group-hover:scale-105">
                   {step.n}
                 </div>
                 <span
@@ -146,7 +146,7 @@ export function FAQList({
             return (
               <div
                 key={index}
-                className="mb-3.5 overflow-hidden rounded-[18px] border-[1.4px] border-viridian/15 bg-card"
+                className="mb-3.5 overflow-hidden rounded-[18px] border-[1.4px] border-viridian/15 bg-card transition duration-200 hover:border-viridian/30 hover:shadow-[0_14px_30px_-24px_rgba(52,73,69,0.5)]"
               >
                 <button
                   type="button"

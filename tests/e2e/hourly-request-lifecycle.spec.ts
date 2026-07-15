@@ -289,9 +289,9 @@ test("browse, request, accept, replace, cancel, decline, and expire without Stri
   const customerPage = await customerContext.newPage();
   await login(customerPage, customerEmail);
 
+  // Location sort now derives the origin ZIP from the customer's saved home
+  // address (60615) via the "Booking from" default — no manual ZIP entry.
   await customerPage.goto(`/browse?service=synthetic-hourly-${runId}&sort=location`);
-  await customerPage.getByLabel("Job ZIP").fill("60615");
-  await customerPage.getByRole("button", { name: "Use ZIP" }).click();
   const providerCards = customerPage.locator('a[href^="/providers/"]');
   const cardTexts = await providerCards.allTextContents();
   expect(cardTexts.findIndex((text) => text.includes("E2E Provider Two"))).toBeLessThan(
@@ -306,8 +306,10 @@ test("browse, request, accept, replace, cancel, decline, and expire without Stri
   await customerPage.getByLabel("Date & time").fill(localInput(requestedStart));
   await customerPage.getByLabel("Estimated duration").selectOption("120");
   await customerPage.getByLabel("Provider response window").selectOption("1");
-  await customerPage.getByLabel("Service address").fill("100 Synthetic Street, Chicago, IL");
-  await customerPage.getByLabel("Job ZIP").fill("60615");
+  // The service address comes from "Booking from" (defaults to home).
+  await expect(
+    customerPage.getByText("100 Synthetic Street, Chicago, IL 60615"),
+  ).toBeVisible();
   await customerPage.getByLabel("Job details").fill("Customer-created hourly request");
   await customerPage.getByRole("button", { name: "Send hourly request" }).click();
   await expect(customerPage).toHaveURL(/\/dashboard\?requested=1/);

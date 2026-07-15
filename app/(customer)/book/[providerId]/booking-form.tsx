@@ -41,12 +41,11 @@ function durationLabel(minutes: number) {
 
 export function BookingRequestForm({
   services,
-  defaultAddress,
-  defaultJobZip,
+  originReady,
 }: {
   services: OfferedService[];
-  defaultAddress: string;
-  defaultJobZip: string;
+  /** False until "Booking from" resolves to a usable service address. */
+  originReady: boolean;
 }) {
   const [state, formAction, pending] = useActionState<
     BookingFormState,
@@ -165,33 +164,6 @@ export function BookingRequestForm({
       </div>
 
       <div>
-        <Label htmlFor="address">Service address</Label>
-        <Input
-          id="address"
-          name="address"
-          autoComplete="street-address"
-          defaultValue={defaultAddress}
-          placeholder="Street address for the job"
-          required
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="jobZip">Job ZIP</Label>
-        <Input
-          id="jobZip"
-          name="jobZip"
-          inputMode="numeric"
-          autoComplete="postal-code"
-          pattern="[0-9]{5}"
-          maxLength={5}
-          defaultValue={defaultJobZip}
-          required
-        />
-        <FieldHint>Used privately to check provider service areas.</FieldHint>
-      </div>
-
-      <div>
         <Label htmlFor="details">Job details</Label>
         <Textarea
           id="details"
@@ -236,7 +208,7 @@ export function BookingRequestForm({
         type="submit"
         size="lg"
         className="w-full"
-        disabled={pending || !effectiveResponseHours}
+        disabled={pending || !effectiveResponseHours || !originReady}
       >
         {pending ? "Sending request…" : "Send hourly request"}
       </Button>

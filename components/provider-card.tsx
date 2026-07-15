@@ -6,6 +6,7 @@ import { ServiceBanner } from "@/components/service-banner";
 import { Badge, VerifiedCheck } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { ProviderCard as ProviderCardData } from "@/lib/db/queries";
+import { formatMiles } from "@/lib/geo/distance";
 import { providerAvatarUrl } from "@/lib/media/provider-avatars";
 import { formatOfferedPrice } from "@/lib/utils";
 
@@ -26,6 +27,28 @@ export function Rating({
       <span className="text-mist">
         ({rating.count} review{rating.count === 1 ? "" : "s"})
       </span>
+    </span>
+  );
+}
+
+/** "Town · 2.3 mi away" — town only when either side lacks coordinates. */
+export function LocationLine({
+  town,
+  distanceMiles,
+  className,
+}: {
+  town: string;
+  distanceMiles: number | null;
+  className?: string;
+}) {
+  if (!town && distanceMiles == null) return null;
+  return (
+    <span className={className ?? "text-xs font-medium text-ink-soft"}>
+      {town}
+      {town && distanceMiles != null ? " · " : ""}
+      {distanceMiles != null ? (
+        <span className="text-mist">{formatMiles(distanceMiles)} away</span>
+      ) : null}
     </span>
   );
 }
@@ -66,13 +89,17 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
               <VerifiedCheck />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Badge tone={provider.provider_type === "business" ? "blue" : "gray"}>
                 {provider.provider_type === "business"
                   ? "Student business"
                   : "Hardworking individual"}
               </Badge>
               <Rating rating={provider.rating} />
+              <LocationLine
+                town={provider.town}
+                distanceMiles={provider.distance_miles}
+              />
             </div>
 
             {provider.bio ? (
