@@ -229,11 +229,21 @@ function CustomerDashboardView({
   return (
     <div className="space-y-6">
       {demo ? null : (
-        <RealtimeRefresh
-          channel={`customer-bookings:${customerId}`}
-          table="bookings"
-          filter={`customer_id=eq.${customerId}`}
-        />
+        <>
+          <RealtimeRefresh
+            channel={`customer-bookings:${customerId}`}
+            table="bookings"
+            filter={`customer_id=eq.${customerId}`}
+          />
+          <RealtimeRefresh
+            channel={`customer-invoices:${customerId}`}
+            table="booking_invoices"
+          />
+          <RealtimeRefresh
+            channel={`customer-disputes:${customerId}`}
+            table="booking_disputes"
+          />
+        </>
       )}
       <PageHeader
         title="My bookings"

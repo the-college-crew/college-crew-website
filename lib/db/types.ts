@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       admin_allowlist: {
@@ -127,6 +122,74 @@ export type Database = {
           },
           {
             foreignKeyName: "booking_audit_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_automation_jobs: {
+        Row: {
+          attempt_count: number
+          booking_id: string
+          completed_at: string | null
+          created_at: string
+          event_key: string
+          id: string
+          kind: string
+          last_error_at: string | null
+          last_error_class: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
+          next_attempt_at: string
+          run_at: string
+          source_id: string | null
+          status: string
+          terminal_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          booking_id: string
+          completed_at?: string | null
+          created_at?: string
+          event_key: string
+          id?: string
+          kind: string
+          last_error_at?: string | null
+          last_error_class?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_attempt_at: string
+          run_at: string
+          source_id?: string | null
+          status?: string
+          terminal_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          booking_id?: string
+          completed_at?: string | null
+          created_at?: string
+          event_key?: string
+          id?: string
+          kind?: string
+          last_error_at?: string | null
+          last_error_class?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_attempt_at?: string
+          run_at?: string
+          source_id?: string | null
+          status?: string
+          terminal_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_automation_jobs_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
@@ -778,13 +841,20 @@ export type Database = {
           event_key: string
           id: string
           last_error: string | null
+          last_error_at: string | null
+          last_error_class: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
           locked_at: string | null
+          next_attempt_at: string
           payload: Json
+          provider_message_id: string | null
           recipient_email: string
           recipient_user_id: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["email_outbox_status"]
           template: string
+          terminal_at: string | null
           updated_at: string
         }
         Insert: {
@@ -795,13 +865,20 @@ export type Database = {
           event_key: string
           id?: string
           last_error?: string | null
+          last_error_at?: string | null
+          last_error_class?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
           locked_at?: string | null
+          next_attempt_at?: string
           payload?: Json
+          provider_message_id?: string | null
           recipient_email: string
           recipient_user_id?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["email_outbox_status"]
           template: string
+          terminal_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -812,13 +889,20 @@ export type Database = {
           event_key?: string
           id?: string
           last_error?: string | null
+          last_error_at?: string | null
+          last_error_class?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
           locked_at?: string | null
+          next_attempt_at?: string
           payload?: Json
+          provider_message_id?: string | null
           recipient_email?: string
           recipient_user_id?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["email_outbox_status"]
           template?: string
+          terminal_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1151,6 +1235,8 @@ export type Database = {
           availability_weekdays: number[]
           avatar_image_path: string | null
           background_check_status: Database["public"]["Enums"]["background_check_status"]
+          banner_image_path: string | null
+          banner_style: string
           bio: string
           company_name: string | null
           created_at: string
@@ -1176,6 +1262,8 @@ export type Database = {
           availability_weekdays?: number[]
           avatar_image_path?: string | null
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
+          banner_image_path?: string | null
+          banner_style?: string
           bio?: string
           company_name?: string | null
           created_at?: string
@@ -1201,6 +1289,8 @@ export type Database = {
           availability_weekdays?: number[]
           avatar_image_path?: string | null
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
+          banner_image_path?: string | null
+          banner_style?: string
           bio?: string
           company_name?: string | null
           created_at?: string
@@ -1666,6 +1756,8 @@ export type Database = {
           availability_start_local: string | null
           availability_weekdays: number[] | null
           avatar_image_path: string | null
+          banner_image_path: string | null
+          banner_style: string | null
           bio: string | null
           company_name: string | null
           created_at: string | null
@@ -1682,6 +1774,8 @@ export type Database = {
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
           avatar_image_path?: string | null
+          banner_image_path?: string | null
+          banner_style?: string | null
           bio?: string | null
           company_name?: string | null
           created_at?: string | null
@@ -1698,6 +1792,8 @@ export type Database = {
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
           avatar_image_path?: string | null
+          banner_image_path?: string | null
+          banner_style?: string | null
           bio?: string | null
           company_name?: string | null
           created_at?: string | null
@@ -1755,6 +1851,14 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      admin_retry_booking_automation_job: {
+        Args: { p_job_id: string }
+        Returns: boolean
+      }
+      admin_retry_email_outbox: {
+        Args: { p_outbox_id: string }
+        Returns: boolean
+      }
       attach_balance_payment_intent: {
         Args: { p_invoice_id: string; p_stripe_payment_intent_id: string }
         Returns: undefined
@@ -1797,6 +1901,17 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      claim_booking_automation_jobs: {
+        Args: { p_lease_seconds?: number; p_limit?: number }
+        Returns: {
+          attempt_count: number
+          booking_id: string
+          id: string
+          kind: string
+          lease_token: string
+          source_id: string
+        }[]
+      }
       claim_conversation_for_booking: {
         Args: { target_booking_id: string }
         Returns: string
@@ -1813,6 +1928,23 @@ export type Database = {
           stripe_customer_id: string
           stripe_payment_method_id: string
         }[]
+      }
+      claim_email_outbox: {
+        Args: { p_lease_seconds?: number; p_limit?: number }
+        Returns: {
+          attempt_count: number
+          booking_id: string
+          event_key: string
+          id: string
+          lease_token: string
+          payload: Json
+          recipient_email: string
+          template: string
+        }[]
+      }
+      complete_booking_automation_job: {
+        Args: { p_job_id: string; p_lease_token: string }
+        Returns: boolean
       }
       create_hourly_booking_request: {
         Args: {
@@ -1882,6 +2014,15 @@ export type Database = {
         }
         Returns: string
       }
+      mark_balance_payment_unsuccessful_by_invoice: {
+        Args: {
+          p_failure_code?: string
+          p_failure_message?: string
+          p_invoice_id: string
+          p_target_status: Database["public"]["Enums"]["booking_payment_status"]
+        }
+        Returns: string
+      }
       mark_booking_arrived: { Args: { p_booking_id: string }; Returns: string }
       mark_first_hour_payment_unsuccessful: {
         Args: {
@@ -1930,6 +2071,10 @@ export type Database = {
         Returns: string
       }
       record_stripe_dispute: { Args: { p_event: Json }; Returns: string }
+      release_due_invoice_claim: {
+        Args: { p_invoice_id: string }
+        Returns: boolean
+      }
       replace_hourly_booking_request: {
         Args: {
           p_original_booking_id: string
@@ -1965,6 +2110,26 @@ export type Database = {
           refund_payment_id: string
         }[]
       }
+      retry_booking_automation_job: {
+        Args: {
+          p_error_class: string
+          p_job_id: string
+          p_lease_token: string
+          p_retry_after_seconds: number
+          p_terminal?: boolean
+        }
+        Returns: boolean
+      }
+      retry_email_outbox: {
+        Args: {
+          p_error_class: string
+          p_lease_token: string
+          p_outbox_id: string
+          p_retry_after_seconds: number
+          p_terminal?: boolean
+        }
+        Returns: boolean
+      }
       settle_balance_payment: {
         Args: { p_stripe_payment_intent_id: string; p_succeeded_at?: string }
         Returns: string
@@ -1979,6 +2144,14 @@ export type Database = {
           p_stripe_transfer_reversal_id?: string
         }
         Returns: string
+      }
+      settle_email_outbox: {
+        Args: {
+          p_lease_token: string
+          p_outbox_id: string
+          p_provider_message_id?: string
+        }
+        Returns: boolean
       }
       settle_first_hour_payment: {
         Args: {
@@ -2277,26 +2450,18 @@ export const Constants = {
 // never hand-edit generated table/view row definitions above.
 export type UserRole = Database["public"]["Enums"]["user_role"]
 export type ProviderType = Database["public"]["Enums"]["provider_type"]
-export type VerificationStatus =
-  Database["public"]["Enums"]["verification_status"]
-export type BackgroundCheckStatus =
-  Database["public"]["Enums"]["background_check_status"]
+export type VerificationStatus = Database["public"]["Enums"]["verification_status"]
+export type BackgroundCheckStatus = Database["public"]["Enums"]["background_check_status"]
 export type PriceType = Database["public"]["Enums"]["price_type"]
 export type PriceUnit = Database["public"]["Enums"]["price_unit"]
 export type BookingStatus = Database["public"]["Enums"]["booking_status"]
 export type BookingFlow = Database["public"]["Enums"]["booking_flow"]
-export type BookingPaymentKind =
-  Database["public"]["Enums"]["booking_payment_kind"]
-export type BookingPaymentStatus =
-  Database["public"]["Enums"]["booking_payment_status"]
-export type BookingRefundStatus =
-  Database["public"]["Enums"]["booking_refund_status"]
-export type ModerationStatus =
-  Database["public"]["Enums"]["moderation_status"]
-export type LegalAcceptanceKind =
-  Database["public"]["Enums"]["legal_acceptance_kind"]
+export type BookingPaymentKind = Database["public"]["Enums"]["booking_payment_kind"]
+export type BookingPaymentStatus = Database["public"]["Enums"]["booking_payment_status"]
+export type BookingRefundStatus = Database["public"]["Enums"]["booking_refund_status"]
+export type ModerationStatus = Database["public"]["Enums"]["moderation_status"]
+export type LegalAcceptanceKind = Database["public"]["Enums"]["legal_acceptance_kind"]
 
-// These columns use checked text values rather than Postgres enums.
 export type ProfileTextField = "display_name" | "bio" | "company_name"
 export type SupportTicketCategory =
   | "website"
@@ -2313,6 +2478,7 @@ export type Service = Tables<"services">
 export type ProviderProfile = Tables<"provider_profiles">
 export type ProviderService = Tables<"provider_services">
 export type Booking = Tables<"bookings">
+export type BookingAutomationJob = Tables<"booking_automation_jobs">
 export type BookingInvoice = Tables<"booking_invoices">
 export type BookingPayment = Tables<"booking_payments">
 export type BookingRefund = Tables<"booking_refunds">

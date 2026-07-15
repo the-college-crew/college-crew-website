@@ -9,7 +9,11 @@ import { z } from "zod";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { PROVIDER_AVATARS_BUCKET } from "@/lib/media/provider-avatars";
-import { PROVIDER_SERVICE_IMAGES_BUCKET } from "@/lib/media/provider-service-images";
+import {
+  BANNER_STYLES,
+  PROVIDER_BANNERS_BUCKET,
+  type BannerStyle,
+} from "@/lib/media/provider-banners";
 import { screenProfileText } from "@/lib/moderation/profile-text";
 import { parseProviderAvailabilityForm } from "@/lib/provider/setup";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -30,8 +34,9 @@ export type ProviderSettingsFormState = {
   fieldErrors?: Record<string, string>;
 };
 
-const MAX_SERVICE_PREVIEW_BYTES = 5 * 1024 * 1024;
-const SERVICE_PREVIEW_EXTENSION: Record<string, string> = {
+// Shared image-upload limits for the avatar and banner photos.
+const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
+const IMAGE_UPLOAD_EXTENSION: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
@@ -171,11 +176,11 @@ export async function saveSettingsPricing(
 }
 
 /**
- * Save one public photo for an offered service. The server action both proves
- * the offering belongs to the signed-in provider and uses a new object path on
- * every replacement, avoiding stale CDN copies of the old photo.
+ * Pick which built-in banner theme shows when no banner photo is uploaded. The
+ * choice is remembered under any uploaded photo, so removing the photo reverts
+ * to it. Validated against BANNER_STYLES (mirrors the column's CHECK).
  */
-export async function uploadProviderServicePreview(
+export async function updateProviderBannerStyle(
   _prev: ProviderSettingsFormState,
   formData: FormData,
 ): Promise<ProviderSettingsFormState> {
@@ -183,36 +188,56 @@ export async function uploadProviderServicePreview(
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
-  const parsedId = z.string().uuid().safeParse(formData.get("providerServiceId"));
-  if (!parsedId.success) return { error: "Unknown service." };
+  const styleValue = formData.get("style");
+  if (
+    typeof styleValue !== "string" ||
+    !BANNER_STYLES.includes(styleValue as BannerStyle)
+  ) {
+    return { error: "Pick a valid banner theme." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("provider_profiles")
+    .update({ banner_style: styleValue })
+    .eq("id", profile.id);
+  if (error) {
+    return { error: "Could not save your banner theme — try again." };
+  }
+
+  revalidateProviderStorefront(profile.id);
+  return { success: "Banner theme saved." };
+}
+
+/**
+ * Save the provider's optional banner photo. While present it overrides the
+ * chosen theme everywhere. Uses a fresh object path on each replacement to
+ * avoid stale CDN copies, then deletes the previous photo.
+ */
+export async function uploadProviderBanner(
+  _prev: ProviderSettingsFormState,
+  formData: FormData,
+): Promise<ProviderSettingsFormState> {
+  await requireRole("provider");
+  const profile = await getOwnProviderProfile();
+  if (!profile) redirect("/provider/onboarding/account");
 
   const image = formData.get("image");
   if (!(image instanceof File) || image.size === 0) {
     return { error: "Choose a photo to upload." };
   }
-  if (image.size > MAX_SERVICE_PREVIEW_BYTES) {
+  if (image.size > MAX_IMAGE_UPLOAD_BYTES) {
     return { error: "Choose an image smaller than 5 MB." };
   }
-  const extension = SERVICE_PREVIEW_EXTENSION[image.type];
+  const extension = IMAGE_UPLOAD_EXTENSION[image.type];
   if (!extension) {
     return { error: "Use a JPG, PNG, or WebP image." };
   }
 
   const supabase = await createClient();
-  const { data: offering, error: offeringError } = await supabase
-    .from("provider_services")
-    .select("id, preview_image_path")
-    .eq("id", parsedId.data)
-    .eq("provider_id", profile.id)
-    .maybeSingle();
-
-  if (offeringError || !offering) {
-    return { error: "That service is no longer available to edit." };
-  }
-
-  const path = `${profile.user_id}/${offering.id}/${randomUUID()}.${extension}`;
+  const path = `${profile.user_id}/${randomUUID()}.${extension}`;
   const { error: uploadError } = await supabase.storage
-    .from(PROVIDER_SERVICE_IMAGES_BUCKET)
+    .from(PROVIDER_BANNERS_BUCKET)
     .upload(path, image, {
       cacheControl: "31536000",
       contentType: image.type,
@@ -224,60 +249,53 @@ export async function uploadProviderServicePreview(
   }
 
   const { error: updateError } = await supabase
-    .from("provider_services")
-    .update({ preview_image_path: path })
-    .eq("id", offering.id)
-    .eq("provider_id", profile.id);
+    .from("provider_profiles")
+    .update({ banner_image_path: path })
+    .eq("id", profile.id);
 
   if (updateError) {
-    await supabase.storage.from(PROVIDER_SERVICE_IMAGES_BUCKET).remove([path]);
+    await supabase.storage.from(PROVIDER_BANNERS_BUCKET).remove([path]);
     return { error: "Could not save that photo — please try again." };
   }
 
-  if (offering.preview_image_path) {
+  if (profile.banner_image_path) {
     await supabase.storage
-      .from(PROVIDER_SERVICE_IMAGES_BUCKET)
-      .remove([offering.preview_image_path]);
+      .from(PROVIDER_BANNERS_BUCKET)
+      .remove([profile.banner_image_path]);
   }
 
   revalidateProviderStorefront(profile.id);
-  return { success: "Service preview photo saved." };
+  return { success: "Banner photo saved." };
 }
 
-/** Remove an existing public storefront photo without touching its offering. */
-export async function removeProviderServicePreview(
+/** Remove the banner photo, reverting the banner to the chosen theme. */
+export async function removeProviderBanner(
+  // Bound via useActionState, so it keeps the (prevState, formData) shape even
+  // though a removal needs neither.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _prev: ProviderSettingsFormState,
-  formData: FormData,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _formData: FormData,
 ): Promise<ProviderSettingsFormState> {
   await requireRole("provider");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
-  const parsedId = z.string().uuid().safeParse(formData.get("providerServiceId"));
-  if (!parsedId.success) return { error: "Unknown service." };
-
-  const supabase = await createClient();
-  const { data: offering, error: offeringError } = await supabase
-    .from("provider_services")
-    .select("id, preview_image_path")
-    .eq("id", parsedId.data)
-    .eq("provider_id", profile.id)
-    .maybeSingle();
-  if (offeringError || !offering?.preview_image_path) {
-    return { error: "There is no preview photo to remove." };
+  if (!profile.banner_image_path) {
+    return { error: "There is no banner photo to remove." };
   }
 
-  const path = offering.preview_image_path;
+  const path = profile.banner_image_path;
+  const supabase = await createClient();
   const { error: updateError } = await supabase
-    .from("provider_services")
-    .update({ preview_image_path: null })
-    .eq("id", offering.id)
-    .eq("provider_id", profile.id);
+    .from("provider_profiles")
+    .update({ banner_image_path: null })
+    .eq("id", profile.id);
   if (updateError) return { error: "Could not remove that photo — try again." };
 
-  await supabase.storage.from(PROVIDER_SERVICE_IMAGES_BUCKET).remove([path]);
+  await supabase.storage.from(PROVIDER_BANNERS_BUCKET).remove([path]);
   revalidateProviderStorefront(profile.id);
-  return { success: "Service preview photo removed." };
+  return { success: "Banner photo removed — your theme is back." };
 }
 
 /**
@@ -298,10 +316,10 @@ export async function uploadProviderAvatar(
   if (!(image instanceof File) || image.size === 0) {
     return { error: "Choose a photo to upload." };
   }
-  if (image.size > MAX_SERVICE_PREVIEW_BYTES) {
+  if (image.size > MAX_IMAGE_UPLOAD_BYTES) {
     return { error: "Choose an image smaller than 5 MB." };
   }
-  const extension = SERVICE_PREVIEW_EXTENSION[image.type];
+  const extension = IMAGE_UPLOAD_EXTENSION[image.type];
   if (!extension) {
     return { error: "Use a JPG, PNG, or WebP image." };
   }

@@ -31,12 +31,10 @@ alter table public.profiles
   add constraint profiles_coordinates_paired check (
     (latitude is null) = (longitude is null)
   );
-
 comment on column public.profiles.latitude is
   'Geocoded from the profile address (US Census). Server-written only — no client update grant.';
 comment on column public.profiles.geocoded_at is
   'Last geocode attempt. Null coordinates with a timestamp mean the address did not match.';
-
 -- ---------------------------------------------------------------------------
 -- 2) bookings: immutable service-location snapshot
 -- ---------------------------------------------------------------------------
@@ -61,12 +59,10 @@ alter table public.bookings
   add constraint bookings_coordinates_paired check (
     (latitude is null) = (longitude is null)
   );
-
 comment on column public.bookings.address_kind is
   'Whether the customer booked from their saved home address or a one-off other address.';
 comment on column public.bookings.service_city is
   'Town snapshot for the provider-facing "Town · X miles away" line.';
-
 -- ---------------------------------------------------------------------------
 -- 3) create_hourly_booking_request: accept the location snapshot
 -- ---------------------------------------------------------------------------
@@ -76,7 +72,6 @@ comment on column public.bookings.service_city is
 drop function public.create_hourly_booking_request(
   uuid, timestamptz, integer, integer, text, text, text
 );
-
 create function public.create_hourly_booking_request(
   p_provider_service_id uuid,
   p_scheduled_at timestamptz,
@@ -247,7 +242,6 @@ begin
   return v_booking_id;
 end;
 $$;
-
 revoke all on function public.create_hourly_booking_request(
   uuid, timestamptz, integer, integer, text, text, text, text, text,
   double precision, double precision
@@ -256,7 +250,6 @@ grant execute on function public.create_hourly_booking_request(
   uuid, timestamptz, integer, integer, text, text, text, text, text,
   double precision, double precision
 ) to authenticated;
-
 -- ---------------------------------------------------------------------------
 -- 4) replace_hourly_booking_request: carry the snapshot onto the replacement
 -- ---------------------------------------------------------------------------

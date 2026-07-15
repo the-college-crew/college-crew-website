@@ -82,6 +82,8 @@ export const demoProviderProfile: ProviderProfile = {
   id_document_url: null,
   id_document_back_url: null,
   avatar_image_path: null,
+  banner_image_path: null,
+  banner_style: "forest",
   background_check_status: "passed",
   stripe_account_id: "acct_demo_provider",
   availability: {

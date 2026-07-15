@@ -11,6 +11,10 @@ import type {
   VerificationStatus,
 } from "@/lib/db/types";
 import { hasServiceRoleEnv, hasSupabaseEnv } from "@/lib/env";
+import {
+  toBannerStyle,
+  type BannerStyle,
+} from "@/lib/media/provider-banners";
 import { getLocationRankedProviderIds } from "@/lib/booking/requests";
 import { milesBetween, type MaybeCoordinates } from "@/lib/geo/distance";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -46,6 +50,8 @@ export type ProviderCard = {
   /** Straight-line miles from the viewer's "booking from" origin, if both sides geocoded. */
   distance_miles: number | null;
   avatar_image_path: string | null;
+  banner_image_path: string | null;
+  banner_style: BannerStyle;
   services: OfferedService[];
   rating: { avg: number; count: number } | null;
 };
@@ -103,7 +109,7 @@ export async function getLiveServices(): Promise<Service[]> {
 
 const PROVIDER_CARD_SELECT = `
   id, display_name, company_name, bio, provider_type, neighborhood,
-  avatar_image_path,
+  avatar_image_path, banner_image_path, banner_style,
   provider_services (
     id, price_cents, price_type, unit, preview_image_path, hourly_rate_cents,
     service:services ( id, name, slug, category, is_live )
@@ -274,6 +280,8 @@ export async function getApprovedProviders(
       town: facts?.city || p.neighborhood,
       distance_miles: milesBetween(options.origin, facts),
       avatar_image_path: p.avatar_image_path,
+      banner_image_path: p.banner_image_path,
+      banner_style: toBannerStyle(p.banner_style),
       services: offeringsByProvider.get(p.provider_id) ?? [],
       rating: ratingByProvider.get(p.provider_id) ?? null,
     };
@@ -408,6 +416,8 @@ export async function getPublicProviderProfile(
     town: facts?.city || provider.neighborhood,
     distance_miles: milesBetween(origin, facts),
     avatar_image_path: provider.avatar_image_path,
+    banner_image_path: provider.banner_image_path,
+    banner_style: toBannerStyle(provider.banner_style),
     services: liveServices,
     rating: mapRating(rating),
     availability_weekdays: provider.availability_weekdays ?? [],
@@ -502,6 +512,8 @@ export async function getAdminProviderProfile(
     town: facts?.city || provider.neighborhood,
     distance_miles: null,
     avatar_image_path: provider.avatar_image_path,
+    banner_image_path: provider.banner_image_path,
+    banner_style: toBannerStyle(provider.banner_style),
     // Show every service the provider offers, even ones no longer live.
     services: adminOfferings,
     rating: mapRating(rating),

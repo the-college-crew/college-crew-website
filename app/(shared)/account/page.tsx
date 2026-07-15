@@ -32,14 +32,14 @@ import { formatOfferedPrice } from "@/lib/utils";
 
 import { AccountPasswordForm, AccountProfileForm } from "./account-forms";
 import { AvatarUploadForm } from "./avatar-upload-form";
+import { BannerUploadForm } from "./banner-upload-form";
 import {
   saveSettingsPricing,
   updateAvailability,
 } from "./provider-actions";
-import { ProviderServicePreviewForm } from "./provider-service-preview-form";
 import { ProviderProfileForm } from "./provider-settings-forms";
 import { providerAvatarUrl } from "@/lib/media/provider-avatars";
-import { providerServiceImageUrl } from "@/lib/media/provider-service-images";
+import { toBannerStyle } from "@/lib/media/provider-banners";
 import {
   formatAvailabilityDays,
   formatAvailabilityWindow,
@@ -162,22 +162,10 @@ async function ProviderStorefront({
     supabase
       .from("provider_services")
       .select(
-        "id, service_id, price_cents, price_type, unit, preview_image_path, hourly_rate_cents, service:services(name, is_live)",
+        "id, service_id, price_cents, price_type, unit, hourly_rate_cents, service:services(name, is_live)",
       )
       .eq("provider_id", providerProfile.id),
   ]);
-  const liveServiceNameById = new Map(services.map((service) => [service.id, service.name]));
-  const previews = (offerings ?? [])
-    .map((offering) => {
-      const serviceName = liveServiceNameById.get(offering.service_id);
-      if (!serviceName) return null;
-      return {
-        id: offering.id,
-        serviceName,
-        imageUrl: providerServiceImageUrl(offering.preview_image_path),
-      };
-    })
-    .filter((preview): preview is NonNullable<typeof preview> => preview !== null);
   const readinessOfferings = (offerings ?? []).map((offering) => ({
     id: offering.id,
     name: offering.service?.name ?? "Retired service",
@@ -216,6 +204,16 @@ async function ProviderStorefront({
       </Section>
 
       <Section
+        title="Profile banner"
+        description="The wide banner behind your headshot on Browse and your profile. Pick a theme or upload your own photo."
+      >
+        <BannerUploadForm
+          imagePath={providerProfile.banner_image_path}
+          activeStyle={toBannerStyle(providerProfile.banner_style)}
+        />
+      </Section>
+
+      <Section
         title="Public profile"
         description="What neighbors see on Browse and your profile page."
       >
@@ -243,13 +241,6 @@ async function ProviderStorefront({
           action={saveSettingsPricing}
           submitLabel="Save pricing"
         />
-      </Section>
-
-      <Section
-        title="Service preview photos"
-        description="Add one photo for each service you offer. These replace the illustrated segments in your Browse and profile banner."
-      >
-        <ProviderServicePreviewForm previews={previews} />
       </Section>
 
       <Section title="Payouts">

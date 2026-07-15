@@ -36,9 +36,10 @@ export async function attemptDueInvoiceCharge(
     .maybeSingle();
   if (error || !claim) return "not_claimable";
   if (!claim.stripe_payment_method_id || !claim.stripe_customer_id) {
-    // No saved method to charge off-session — leave it recoverable.
-    await admin.rpc("mark_balance_payment_unsuccessful", {
-      p_stripe_payment_intent_id: `missing_method_${invoiceId}`,
+    // Stripe cannot create a PaymentIntent, so settle by the durable invoice
+    // claim instead of inventing an external id that cannot match a payment.
+    await admin.rpc("mark_balance_payment_unsuccessful_by_invoice", {
+      p_invoice_id: invoiceId,
       p_target_status: "requires_action",
       p_failure_code: "no_saved_method",
       p_failure_message: "No saved payment method for off-session charge.",
@@ -46,19 +47,28 @@ export async function attemptDueInvoiceCharge(
     return "requires_action";
   }
 
-  const intent = await createBalancePaymentIntent({
-    invoiceId,
-    bookingId: claim.booking_id,
-    amountCents: claim.amount_cents,
-    applicationFeeCents: claim.application_fee_cents,
-    stripeCustomerId: claim.stripe_customer_id,
-    stripePaymentMethodId: claim.stripe_payment_method_id,
-    providerStripeAccountId: claim.stripe_connected_account_id,
-    idempotencyKey: claim.idempotency_key,
-    confirm: true,
-    offSession: true,
-  });
-  if (!intent.configured) return "unconfigured";
+  let intent: Awaited<ReturnType<typeof createBalancePaymentIntent>>;
+  try {
+    intent = await createBalancePaymentIntent({
+      invoiceId,
+      bookingId: claim.booking_id,
+      amountCents: claim.amount_cents,
+      applicationFeeCents: claim.application_fee_cents,
+      stripeCustomerId: claim.stripe_customer_id,
+      stripePaymentMethodId: claim.stripe_payment_method_id,
+      providerStripeAccountId: claim.stripe_connected_account_id,
+      idempotencyKey: claim.idempotency_key,
+      confirm: true,
+      offSession: true,
+    });
+  } catch (error) {
+    await admin.rpc("release_due_invoice_claim", { p_invoice_id: invoiceId });
+    throw error;
+  }
+  if (!intent.configured) {
+    await admin.rpc("release_due_invoice_claim", { p_invoice_id: invoiceId });
+    return "unconfigured";
+  }
 
   await admin.rpc("attach_balance_payment_intent", {
     p_invoice_id: invoiceId,

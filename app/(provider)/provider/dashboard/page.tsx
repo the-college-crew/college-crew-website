@@ -240,11 +240,21 @@ function ProviderDashboardView({
   return (
     <div className="space-y-6">
       {demo ? null : (
-        <RealtimeRefresh
-          channel={`provider-bookings:${profile.id}`}
-          table="bookings"
-          filter={`provider_id=eq.${profile.id}`}
-        />
+        <>
+          <RealtimeRefresh
+            channel={`provider-bookings:${profile.id}`}
+            table="bookings"
+            filter={`provider_id=eq.${profile.id}`}
+          />
+          <RealtimeRefresh
+            channel={`provider-invoices:${profile.id}`}
+            table="booking_invoices"
+          />
+          <RealtimeRefresh
+            channel={`provider-disputes:${profile.id}`}
+            table="booking_disputes"
+          />
+        </>
       )}
       <PageHeader
         title="Dashboard"
