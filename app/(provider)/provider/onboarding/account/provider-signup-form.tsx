@@ -41,6 +41,15 @@ export function ProviderSignupForm() {
       </div>
 
       <div>
+        <Label htmlFor="companyName">Company name (optional)</Label>
+        <Input id="companyName" name="companyName" autoComplete="organization" />
+        <FieldHint>
+          Run a small business (e.g. a window-washing company)? Add its name
+          and we&apos;ll show that instead of your name to neighbors.
+        </FieldHint>
+      </div>
+
+      <div>
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"

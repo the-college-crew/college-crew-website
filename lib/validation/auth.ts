@@ -118,6 +118,7 @@ export const providerSignUpSchema = z
     city: addressSchema.shape.city,
     state: addressSchema.shape.state,
     postal_code: addressSchema.shape.postal_code,
+    companyName: z.string().trim().max(120).optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match.",

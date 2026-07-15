@@ -49,7 +49,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
           <div className="flex flex-col gap-2.5 p-5">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-display text-xl font-semibold">
-                {provider.display_name || "Student provider"}
+                {provider.company_name || provider.display_name || "Student provider"}
               </h3>
               <VerifiedCheck />
             </div>

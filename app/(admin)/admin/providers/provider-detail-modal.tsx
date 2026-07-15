@@ -168,6 +168,19 @@ export function ProviderDetailModal({
                   <Rating rating={profile.rating} />
                 </div>
 
+                {editing || profile.company_name ? (
+                  <p className="mt-2 text-sm text-ink-soft">
+                    Company name:{" "}
+                    <EditableProviderField
+                      providerId={profile.id}
+                      field="company_name"
+                      value={profile.company_name ?? ""}
+                      editing={editing}
+                      placeholder="None"
+                    />
+                  </p>
+                ) : null}
+
                 <p
                   className={cn(
                     "mt-4 text-sm leading-relaxed text-ink-soft",
@@ -196,8 +209,8 @@ export function ProviderDetailModal({
                 </button>
                 {editing ? (
                   <p className="mt-2 text-xs text-mist">
-                    Double-click the name or bio to edit. Enter saves, Esc
-                    cancels. Changes apply immediately.
+                    Double-click the name, company name, or bio to edit. Enter
+                    saves, Esc cancels. Changes apply immediately.
                   </p>
                 ) : null}
               </section>

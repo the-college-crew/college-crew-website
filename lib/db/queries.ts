@@ -36,6 +36,7 @@ export type OfferedService = {
 export type ProviderCard = {
   id: string;
   display_name: string;
+  company_name: string | null;
   bio: string;
   provider_type: ProviderType;
   neighborhood: string;
@@ -59,7 +60,7 @@ export async function getLiveServices(): Promise<Service[]> {
 }
 
 const PROVIDER_CARD_SELECT = `
-  id, display_name, bio, provider_type, neighborhood,
+  id, display_name, company_name, bio, provider_type, neighborhood,
   provider_services (
     id, price_cents, price_type, unit, preview_image_path, hourly_rate_cents,
     service:services ( id, name, slug, category, is_live )
@@ -218,6 +219,7 @@ export async function getApprovedProviders(
   const cards: ProviderCard[] = safeProviders.map((p) => ({
     id: p.provider_id,
     display_name: p.display_name,
+    company_name: p.company_name,
     bio: p.bio,
     provider_type: p.provider_type,
     neighborhood: p.neighborhood,
@@ -348,6 +350,7 @@ export async function getPublicProviderProfile(
   return {
     id: provider.provider_id,
     display_name: provider.display_name,
+    company_name: provider.company_name,
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
@@ -435,6 +438,7 @@ export async function getAdminProviderProfile(
   return {
     id: provider.id,
     display_name: provider.display_name,
+    company_name: provider.company_name,
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,

@@ -74,6 +74,18 @@ export function ProviderProfileForm({ profile }: { profile: ProviderProfile }) {
         </div>
       </div>
       <div>
+        <Label htmlFor="companyName">Company name (optional)</Label>
+        <Input
+          id="companyName"
+          name="companyName"
+          defaultValue={profile.company_name ?? ""}
+        />
+        <FieldHint>
+          If you run a small business, this replaces your display name on
+          Browse and your public profile.
+        </FieldHint>
+      </div>
+      <div>
         <Label htmlFor="neighborhood">Neighborhood</Label>
         <Input
           id="neighborhood"
