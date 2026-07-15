@@ -42,9 +42,11 @@ export async function startProviderProfile() {
   const existing = await getOwnProviderProfile();
   if (!existing) {
     const supabase = await createClient();
+    const companyName = session.user.user_metadata.company_name;
     const { error } = await supabase.from("provider_profiles").insert({
       user_id: session.user.id,
       display_name: session.profile.full_name,
+      company_name: typeof companyName === "string" ? companyName : null,
     });
     if (error && error.code !== "23505") {
       throw new Error(`Could not start onboarding: ${error.message}`);

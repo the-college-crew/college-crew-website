@@ -61,6 +61,7 @@ type SignUpData = {
   state: string;
   postal_code: string;
   dateOfBirth?: string;
+  companyName?: string;
 };
 
 /**
@@ -141,7 +142,12 @@ async function signUp(
     city: formData.get("city"),
     state: formData.get("state"),
     postal_code: formData.get("postal_code"),
-    ...(role === "provider" ? { dateOfBirth: formData.get("dateOfBirth") } : {}),
+    ...(role === "provider"
+      ? {
+          dateOfBirth: formData.get("dateOfBirth"),
+          companyName: formData.get("companyName") ?? "",
+        }
+      : {}),
   };
 
   // Parse per role so the output type stays concrete (a union of the two
@@ -176,6 +182,9 @@ async function signUp(
   };
   if (data.dateOfBirth) {
     metadata.date_of_birth = data.dateOfBirth;
+  }
+  if (data.companyName) {
+    metadata.company_name = data.companyName;
   }
 
   // GoTrue obfuscates duplicate signups as successes: a confirmed duplicate

@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { ProfileTextField } from "@/lib/db/types";
 import { hasResendEnv } from "@/lib/env";
 
 /**
@@ -166,13 +167,14 @@ function schoolOtpHtml(code: string) {
  */
 const FOUNDER_NOTIFY = ["Ari@thecollegecrew.com", "zach@thecollegecrew.com"];
 
-const FIELD_LABEL: Record<"display_name" | "bio", string> = {
+const FIELD_LABEL: Record<ProfileTextField, string> = {
   display_name: "display name",
   bio: "bio",
+  company_name: "company name",
 };
 
 export function sendProfileFlagEmail(opts: {
-  field: "display_name" | "bio";
+  field: ProfileTextField;
   matched: string[];
   text: string;
   userId: string;

@@ -38,6 +38,7 @@ type ProfileFlagEvent = {
 const PROFILE_FIELD_LABEL: Record<ProfileTextField, string> = {
   display_name: "Display name",
   bio: "Bio",
+  company_name: "Company name",
 };
 
 type ThreadMessage = {

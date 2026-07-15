@@ -1130,6 +1130,7 @@ export type Database = {
           availability_weekdays: number[]
           background_check_status: Database["public"]["Enums"]["background_check_status"]
           bio: string
+          company_name: string | null
           created_at: string
           display_name: string
           id: string
@@ -1153,6 +1154,7 @@ export type Database = {
           availability_weekdays?: number[]
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
           bio?: string
+          company_name?: string | null
           created_at?: string
           display_name?: string
           id?: string
@@ -1176,6 +1178,7 @@ export type Database = {
           availability_weekdays?: number[]
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
           bio?: string
+          company_name?: string | null
           created_at?: string
           display_name?: string
           id?: string
@@ -1639,6 +1642,7 @@ export type Database = {
           availability_start_local: string | null
           availability_weekdays: number[] | null
           bio: string | null
+          company_name: string | null
           created_at: string | null
           display_name: string | null
           minimum_notice_hours: number | null
@@ -1653,6 +1657,7 @@ export type Database = {
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
           bio?: string | null
+          company_name?: string | null
           created_at?: string | null
           display_name?: string | null
           minimum_notice_hours?: number | null
@@ -1667,6 +1672,7 @@ export type Database = {
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
           bio?: string | null
+          company_name?: string | null
           created_at?: string | null
           display_name?: string | null
           minimum_notice_hours?: number | null
@@ -2260,7 +2266,7 @@ export type LegalAcceptanceKind =
   Database["public"]["Enums"]["legal_acceptance_kind"]
 
 // These columns use checked text values rather than Postgres enums.
-export type ProfileTextField = "display_name" | "bio"
+export type ProfileTextField = "display_name" | "bio" | "company_name"
 export type SupportTicketCategory =
   | "website"
   | "feature_or_service"

@@ -90,7 +90,7 @@ export async function toggleServiceLive(formData: FormData) {
   revalidatePath("/");
 }
 
-const providerTextFieldSchema = z.enum(["display_name", "bio"]);
+const providerTextFieldSchema = z.enum(["display_name", "bio", "company_name"]);
 const providerTextValueSchema = z.string().trim().max(2000);
 
 export type ProviderTextResult = { ok: true } | { ok: false; error: string };
@@ -122,7 +122,9 @@ export async function updateProviderText(
   const update =
     parsedField.data === "display_name"
       ? { display_name: parsedValue.data }
-      : { bio: parsedValue.data };
+      : parsedField.data === "bio"
+        ? { bio: parsedValue.data }
+        : { company_name: parsedValue.data || null };
 
   const admin = createAdminClient();
   const { error } = await admin

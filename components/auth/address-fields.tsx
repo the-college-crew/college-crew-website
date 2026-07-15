@@ -30,7 +30,7 @@ export function AddressFields({
 }) {
   return (
     <fieldset className="space-y-4">
-      <legend className="mb-1 text-sm font-medium text-ink">{legend}</legend>
+      <legend className="mb-2 text-base font-semibold text-ink">{legend}</legend>
 
       <div>
         <Label htmlFor="address_line1">Street address</Label>

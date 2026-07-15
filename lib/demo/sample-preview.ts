@@ -74,6 +74,7 @@ export const demoProviderProfile: ProviderProfile = {
   id: "demo-provider",
   user_id: "demo-provider-user",
   display_name: "Avery's Student Services",
+  company_name: null,
   bio: "Junior at the local university helping neighbors with yard work, window washing, and weekend odd jobs.",
   provider_type: "business",
   neighborhood: "Pilot neighborhood",

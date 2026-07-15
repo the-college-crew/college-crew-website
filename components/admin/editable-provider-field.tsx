@@ -26,7 +26,7 @@ export function EditableProviderField({
   className,
 }: {
   providerId: string;
-  field: "display_name" | "bio";
+  field: "display_name" | "bio" | "company_name";
   value: string;
   editing: boolean;
   placeholder?: string;

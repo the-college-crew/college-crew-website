@@ -45,6 +45,7 @@ function revalidateProviderStorefront(providerId: string) {
 
 const profileSchema = z.object({
   displayName: z.string().trim().min(1, "Enter a display name."),
+  companyName: z.string().trim().max(120).optional().default(""),
   providerType: z.enum(["business", "individual"]),
   neighborhood: z.string().trim().max(120).optional().default(""),
   bio: z.string().trim().max(2000).optional().default(""),
@@ -61,6 +62,7 @@ export async function updateProviderProfile(
 
   const parsed = profileSchema.safeParse({
     displayName: formData.get("displayName"),
+    companyName: formData.get("companyName"),
     providerType: formData.get("providerType"),
     neighborhood: formData.get("neighborhood"),
     bio: formData.get("bio"),
@@ -75,11 +77,14 @@ export async function updateProviderProfile(
   // That makes this action the only write path, so it needs the service-role
   // client. .eq("id", profile.id) keeps it scoped to the caller's own row:
   // profile came from getOwnProviderProfile(), which is RLS-scoped to them.
+  const companyName = parsed.data.companyName || null;
+
   const admin = createAdminClient();
   const { error } = await admin
     .from("provider_profiles")
     .update({
       display_name: parsed.data.displayName,
+      company_name: companyName,
       provider_type: parsed.data.providerType,
       neighborhood: parsed.data.neighborhood,
       bio: parsed.data.bio,
@@ -98,6 +103,7 @@ export async function updateProviderProfile(
   // real ones on the admin dashboard.
   const changed = [
     { field: "display_name", text: parsed.data.displayName, before: profile.display_name },
+    { field: "company_name", text: companyName ?? "", before: profile.company_name ?? "" },
     { field: "bio", text: parsed.data.bio, before: profile.bio },
   ] as const;
 
