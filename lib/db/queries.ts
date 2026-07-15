@@ -279,12 +279,7 @@ export async function getApprovedProviders(
     );
   }
 
-  return filtered.toSorted(
-    (a, b) =>
-      Number(relevantOfferings(b).length > 0) -
-        Number(relevantOfferings(a).length > 0) ||
-      ratingThenRate(a, b),
-  );
+  return filtered.toSorted(ratingThenRate);
 }
 
 export type PublicReview = {
