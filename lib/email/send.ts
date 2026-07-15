@@ -18,22 +18,39 @@ import { hasResendEnv } from "@/lib/env";
 const FROM =
   process.env.EMAIL_FROM?.trim() || "College Crew <onboarding@resend.dev>";
 
-type SendResult = { ok: true } | { ok: false; error: string };
+export type SendResult =
+  | { ok: true; providerMessageId?: string }
+  | { ok: false; error: string };
 
-async function sendEmail(opts: {
+export async function sendEmail(opts: {
   to: string | string[];
   subject: string;
   text: string;
   html?: string;
+  idempotencyKey?: string;
+  /** Booking automation must never emit recipients or bodies into logs. */
+  redactedLog?: boolean;
+  /** Durable outbox delivery must retry instead of treating a stub as sent. */
+  requireProvider?: boolean;
 }): Promise<SendResult> {
   if (!hasResendEnv()) {
-    // Dev/stub path: no provider configured. Surface the content in logs so a
-    // developer can complete the flow locally.
-    console.info(
-      `[email:stub] To: ${[opts.to].flat().join(", ")}\nSubject: ${opts.subject}\n${opts.text}`,
-    );
-    if (opts.html) {
-      console.info(`[email:stub:html]\n${opts.html}`);
+    if (opts.redactedLog) {
+      console.info("[email:stub]", {
+        event: "delivery_stubbed",
+        idempotencyKey: opts.idempotencyKey,
+        recipientCount: [opts.to].flat().length,
+      });
+    } else {
+      // School verification remains locally testable without Resend.
+      console.info(
+        `[email:stub] To: ${[opts.to].flat().join(", ")}\nSubject: ${opts.subject}\n${opts.text}`,
+      );
+      if (opts.html) {
+        console.info(`[email:stub:html]\n${opts.html}`);
+      }
+    }
+    if (opts.requireProvider) {
+      return { ok: false, error: "Email provider is not configured." };
     }
     return { ok: true };
   }
@@ -41,20 +58,23 @@ async function sendEmail(opts: {
   // Loaded lazily so the dependency is only touched when a key is present.
   const { Resend } = await import("resend");
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const { error } = await resend.emails.send({
-    from: FROM,
-    to: opts.to,
-    subject: opts.subject,
-    text: opts.text,
-    ...(opts.html ? { html: opts.html } : {}),
-  });
+  const { data, error } = await resend.emails.send(
+    {
+      from: FROM,
+      to: opts.to,
+      subject: opts.subject,
+      text: opts.text,
+      ...(opts.html ? { html: opts.html } : {}),
+    },
+    opts.idempotencyKey ? { idempotencyKey: opts.idempotencyKey } : undefined,
+  );
   if (error) {
     return { ok: false, error: error.message };
   }
-  return { ok: true };
+  return { ok: true, providerMessageId: data?.id };
 }
 
-function getPublicSiteUrl() {
+export function getPublicSiteUrl() {
   const raw =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
