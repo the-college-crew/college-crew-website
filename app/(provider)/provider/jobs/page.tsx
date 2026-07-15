@@ -129,11 +129,21 @@ function ProviderJobsView({
   return (
     <div className="space-y-8">
       {demo ? null : (
-        <RealtimeRefresh
-          channel={`provider-jobs:${profile.id}`}
-          table="bookings"
-          filter={`provider_id=eq.${profile.id}`}
-        />
+        <>
+          <RealtimeRefresh
+            channel={`provider-jobs:${profile.id}`}
+            table="bookings"
+            filter={`provider_id=eq.${profile.id}`}
+          />
+          <RealtimeRefresh
+            channel={`provider-job-invoices:${profile.id}`}
+            table="booking_invoices"
+          />
+          <RealtimeRefresh
+            channel={`provider-job-disputes:${profile.id}`}
+            table="booking_disputes"
+          />
+        </>
       )}
       <PageHeader
         title="Jobs & pricing"

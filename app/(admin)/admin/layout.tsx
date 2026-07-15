@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { href: "/admin/services", label: "Service curation" },
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/disputes", label: "Disputes" },
+  { href: "/admin/operations", label: "Operations" },
   { href: "/admin/flagged", label: "Flagged messages" },
   { href: "/admin/support", label: "Support inbox" },
   { href: "/admin/blog", label: "Blog" },
@@ -64,6 +65,9 @@ export default async function AdminLayout({
           </Link>
           <Link href="/admin/disputes" className="hover:text-shell">
             Disputes
+          </Link>
+          <Link href="/admin/operations" className="hover:text-shell">
+            Operations
           </Link>
           <Link href="/admin/flagged" className="hover:text-shell">
             Flagged messages

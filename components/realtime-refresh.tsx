@@ -37,6 +37,12 @@ export function RealtimeRefresh({
       timer = setTimeout(() => router.refresh(), 250);
     };
 
+    // A reconnect can span changes that Postgres Changes will not replay. The
+    // server-rendered query is authoritative, so reconcile whenever the browser
+    // comes online and whenever the channel establishes a new subscription.
+    const handleOnline = () => refreshSoon();
+    window.addEventListener("online", handleOnline);
+
     void (async () => {
       await client.realtime.setAuth();
       if (!active) return;
@@ -48,11 +54,14 @@ export function RealtimeRefresh({
           { event: "*", schema: "public", table, filter },
           refreshSoon,
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") refreshSoon();
+        });
     })();
 
     return () => {
       active = false;
+      window.removeEventListener("online", handleOnline);
       if (timer) clearTimeout(timer);
       if (subscription) client.removeChannel(subscription);
     };
