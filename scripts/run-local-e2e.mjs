@@ -28,9 +28,16 @@ const result = spawnSync("npx", ["playwright", "test", ...process.argv.slice(2)]
     SUPABASE_SERVICE_ROLE_KEY: local.SERVICE_ROLE_KEY,
     HOURLY_BOOKING_ENABLED: "true",
     BOOKING_REQUESTS_ENABLED: "true",
-    STRIPE_SECRET_KEY: "",
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "",
-    STRIPE_WEBHOOK_SECRET: "",
+    // Shape-valid test-only placeholders. The browser journeys settle payment
+    // state through synthetic database fixtures and never call Stripe/Resend.
+    STRIPE_SECRET_KEY: "rk_test_local_e2e_placeholder",
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_local_e2e_placeholder",
+    STRIPE_WEBHOOK_SECRET: "whsec_local_e2e_placeholder",
+    RESEND_API_KEY: "re_local_e2e_placeholder",
+    EMAIL_FROM: "College Crew Tests <no-reply@example.test>",
+    NEXT_PUBLIC_SITE_URL: "https://example.test",
+    BOOKING_CRON_SECRET: "local-e2e-cron-secret-at-least-32-characters",
+    FOUNDER_OPERATIONS_EMAILS: "founder@example.test",
   },
 });
 
