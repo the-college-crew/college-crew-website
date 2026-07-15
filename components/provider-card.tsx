@@ -2,7 +2,7 @@ import {
   ProviderCardLink,
   ProviderCardViewTransition,
 } from "@/components/provider-card-link";
-import { ServiceBanner } from "@/components/service-banner";
+import { ProfileBanner } from "@/components/profile-banner";
 import { Badge, VerifiedCheck } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { ProviderCard as ProviderCardData } from "@/lib/db/queries";
@@ -46,7 +46,11 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
           pennant
           className="flex flex-col transition-shadow group-hover/flip:shadow-md group-hover/flip:shadow-viridian/10"
         >
-          <ServiceBanner services={provider.services} />
+          <ProfileBanner
+            imagePath={provider.banner_image_path}
+            style={provider.banner_style}
+            className="h-24"
+          />
 
           <div className="flex flex-col gap-2.5 p-5">
             {/* Round headshot lifted to overlap the banner above. Public asset,
@@ -56,7 +60,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
               <img
                 src={avatarUrl}
                 alt=""
-                className="-mt-12 h-16 w-16 rounded-full border-4 border-paper object-cover shadow-sm"
+                className="-mt-12 relative z-10 h-16 w-16 rounded-full border-4 border-paper object-cover shadow-sm"
               />
             ) : null}
             <div className="flex flex-wrap items-center gap-2">

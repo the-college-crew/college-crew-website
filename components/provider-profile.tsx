@@ -18,7 +18,7 @@ import {
   areBookingRequestsEnabled,
   isHourlyBookingEnabled,
 } from "@/lib/env";
-import { ServiceBanner } from "./service-banner";
+import { ProfileBanner } from "./profile-banner";
 
 /** Public provider profile content shown inside the browse overlay. */
 export async function ProviderProfile({
@@ -48,7 +48,11 @@ export async function ProviderProfile({
 
   return (
     <article className="pennant overflow-hidden rounded-3xl border border-stone bg-paper shadow-xl shadow-viridian/10">
-      <ServiceBanner services={provider.services} className="h-52 border-b border-line" />
+      <ProfileBanner
+        imagePath={provider.banner_image_path}
+        style={provider.banner_style}
+        className="h-52 border-b border-line"
+      />
       {/* Identity — morph target for the Browse card's ViewTransition. */}
       <ViewTransition name={`provider-${provider.id}`} share="morph">
         <section className="px-6 pb-7 pt-14 sm:px-8">
@@ -59,7 +63,7 @@ export async function ProviderProfile({
             <img
               src={avatarUrl}
               alt=""
-              className="-mt-[4.5rem] mb-3 h-24 w-24 rounded-full border-4 border-paper object-cover shadow-md"
+              className="-mt-[4.5rem] relative z-10 mb-3 h-24 w-24 rounded-full border-4 border-paper object-cover shadow-md"
             />
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
