@@ -1,6 +1,6 @@
 import type { UserRole } from "@/lib/db/types";
 
-export const LEGAL_CONTENT_VERSION = "2026-07-08";
+export const LEGAL_CONTENT_VERSION = "2026-07-15";
 
 export type LegalSource = "pdf" | "drafted";
 
@@ -14,6 +14,11 @@ export type LegalSection = {
 export type ServiceRiskAddendum = {
   title: string;
   source: LegalSource;
+  body: string[];
+};
+
+export type HourlyTermsSection = {
+  title: string;
   body: string[];
 };
 
@@ -105,6 +110,82 @@ export const MASTER_SECTIONS: LegalSection[] = [
     ],
   },
 ];
+
+export const HOURLY_TERMS_INTRO = [
+  "These Hourly Booking Terms and Fee Schedule apply to each booking identified as an hourly booking. They supplement the Master Service Agreement. If these terms conflict with general marketplace copy, these terms control for that hourly booking.",
+] as const;
+
+export const HOURLY_TERMS_SECTIONS: HourlyTermsSection[] = [
+  {
+    title: "Customer charges and billing time",
+    body: [
+      "Customers pay the provider's hourly rate for billable work. College Crew does not add a separate customer platform fee during the pilot.",
+      "Each hourly booking has a one-hour minimum. Time after the first hour is billed in 15-minute increments.",
+      "A customer's estimate may be between 60 minutes and 12 hours and is not the final bill. After completing the work, the provider submits actual billable time between 60 minutes and 24 hours in 15-minute increments. Time above the customer's estimate requires a written explanation.",
+    ],
+  },
+  {
+    title: "Provider fee",
+    body: [
+      "College Crew deducts a platform fee equal to 5% of the final job charge from the provider's payout. The provider receives 95%, subject to refunds, disputes, and Stripe's processing rules.",
+      "College Crew absorbs Stripe's payment-processing fee during the pilot. The processing fee is not added to the customer's bill and does not reduce the provider's stated 95% share.",
+      "The 5% fee is snapshotted when the booking request is created. A later Fee Schedule change does not alter an existing booking.",
+    ],
+  },
+  {
+    title: "Request, acceptance, and first-hour payment",
+    body: [
+      "Sending a request does not charge the customer and does not guarantee the booking. The provider may accept or decline. The provider's acceptance reserves the requested time while the customer completes the first-hour payment.",
+      "The first-hour payment is due at the earlier of 12 hours after acceptance or the scheduled start. If payment is not completed by that deadline, the reservation may expire.",
+      "The saved payment method is scoped to the same booking. It is not a wallet balance or authorization for unrelated bookings. The first-hour payment is credited only against the same booking's final invoice.",
+      "Stripe webhooks determine whether a payment succeeded. A late success after the payment deadline is refunded and does not revive the booking.",
+    ],
+  },
+  {
+    title: "Invoice review and final payment",
+    body: [
+      "After arriving and completing the work, the provider submits actual billable time and any required over-estimate explanation. The customer may confirm the invoice and pay the remaining balance immediately.",
+      "If the customer neither confirms nor opens a dispute, College Crew may attempt the saved payment method 24 hours after invoice submission.",
+      "A failed charge or a charge requiring authentication remains unpaid. The booking is not marked completed until payment succeeds or an authorized founder resolution waives the balance.",
+    ],
+  },
+  {
+    title: "Cancellations and refunds",
+    body: [
+      "Before arrival, a provider cancellation returns all captured booking payments to the original payment method, and the customer may request an available replacement. A request or accepted reservation that has not been paid has no payment to refund.",
+      "Before arrival, a customer cancellation at least 12 hours before the scheduled start returns all captured booking payments to the original payment method. If the customer cancels less than 12 hours before the scheduled start, the first-hour payment is not refundable: the provider retains 95% and College Crew retains 5%, while College Crew absorbs Stripe processing fees.",
+      "If the provider has not marked Arrived by the scheduled start, the customer may report a provider no-show. After the provider marks Arrived, cancellation, service, time, and payment concerns are handled through the internal dispute process; no automatic refund or cancellation is triggered.",
+      "Approved refunds return money to the original payment method. Timing after approval is controlled by Stripe and the customer's financial institution.",
+    ],
+  },
+  {
+    title: "Internal disputes",
+    body: [
+      "A customer may open a dispute while reviewing the provider's invoice or for seven days after the final charge succeeds. Opening a timely dispute before the automatic balance charge freezes that charge while College Crew reviews the matter.",
+      "The customer supplies a category and narrative. Opening a dispute does not let the customer edit the provider's submitted time or trigger an automatic refund.",
+      "College Crew founders review disputes manually. They may approve the submitted hours, reduce billable time, waive the remaining balance, or cancel and refund captured booking payments. Every resolution includes an internal audit note, and College Crew may request additional information from either party.",
+      "This internal review process does not remove rights that cannot legally be waived and does not resolve the separate formal-dispute forum language in the Master Service Agreement.",
+    ],
+  },
+  {
+    title: "Availability, response windows, and replacements",
+    body: [
+      "Provider availability and minimum notice describe when a customer may send a request; they do not guarantee that the provider will accept.",
+      "The customer selects a response window. Reaching that alert time does not automatically expire the original request. The original remains open until it is accepted, declined, withdrawn, replaced, or reaches the scheduled start.",
+      "Sending a replacement request withdraws the original request. College Crew does not silently or automatically rebook the customer. Replacement suggestions are limited to providers whose current setup and schedule fit the request. Private service ZIPs and customer addresses are not disclosed in public results.",
+    ],
+  },
+  {
+    title: "Notifications",
+    body: [
+      "Material booking, payment, refund, cancellation, invoice, dispute, and recovery events may be communicated through transactional email and state-based dashboard notices.",
+      "Email and dashboard notices are conveniences. Users remain responsible for reviewing their booking and invoice status in the application. SMS, push notifications, and a persistent notification center are not part of the pilot.",
+    ],
+  },
+];
+
+export const HOURLY_PAYMENT_AUTHORIZATION =
+  "I authorize College Crew to charge the displayed first-hour amount now. I also authorize College Crew and Stripe to save this payment method for this booking only and to charge the remaining approved invoice balance. If I do not confirm or dispute the invoice, College Crew may attempt the remaining balance 24 hours after the provider submits the invoice. The final amount is based on the provider's hourly rate and submitted billable time, subject to the one-hour minimum, 15-minute billing increments, and the dispute process.";
 
 export const BOOKING_FIXED_SCAFFOLD = [
   "By confirming this booking, you acknowledge that you have read and understood the risk disclosures below, specific to the service category selected. This acknowledgment supplements and is incorporated into the Master Service Agreement.",
@@ -199,6 +280,13 @@ export function getMasterAgreementSnapshot(role: UserRole) {
       title: section.title,
       body: section.body,
     })),
+    hourlyTerms: {
+      intro: [...HOURLY_TERMS_INTRO],
+      sections: HOURLY_TERMS_SECTIONS.map((section) => ({
+        title: section.title,
+        body: section.body,
+      })),
+    },
   };
 }
 
@@ -213,6 +301,7 @@ export function getBookingAddendumSnapshot(input: {
   address: string;
   providerName: string;
   customerName: string;
+  includeHourlyTerms?: boolean;
 }) {
   const risk = getServiceRiskAddendum(input.serviceSlug);
   if (!risk) return null;
@@ -234,6 +323,18 @@ export function getBookingAddendumSnapshot(input: {
       body: risk.body,
     },
     generalFamilyDisclosure: [...GENERAL_FAMILY_DISCLOSURE],
+    ...(input.includeHourlyTerms
+      ? {
+          hourlyTerms: {
+            intro: [...HOURLY_TERMS_INTRO],
+            sections: HOURLY_TERMS_SECTIONS.map((section) => ({
+              title: section.title,
+              body: section.body,
+            })),
+          },
+          paymentAuthorization: HOURLY_PAYMENT_AUTHORIZATION,
+        }
+      : {}),
     consentLabel: BOOKING_CONSENT_LABEL,
   };
 }

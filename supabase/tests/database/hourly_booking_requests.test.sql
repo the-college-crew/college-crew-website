@@ -79,6 +79,29 @@ values
     '{"role":"provider","full_name":"Provider Two Owner"}'::jsonb
   );
 
+insert into public.legal_acceptances (
+  user_id, kind, role, version, content_hash, signer_name, snapshot
+)
+values
+  (
+    '10000000-0000-0000-0000-000000001101', 'master_agreement',
+    'customer', '2026-07-15',
+    'c23126dcfbd3b87132b66c7786de09a940edac9270bb5c59e423ce52dca43ed1',
+    'Phase Three Customer', '{}'::jsonb
+  ),
+  (
+    '10000000-0000-0000-0000-000000001102', 'master_agreement',
+    'provider', '2026-07-15',
+    'e89347ece1acb4359f73bc6d368bdef77775b7aac84da6e463430f17f7b745ca',
+    'Provider One Owner', '{}'::jsonb
+  ),
+  (
+    '10000000-0000-0000-0000-000000001103', 'master_agreement',
+    'provider', '2026-07-15',
+    'e89347ece1acb4359f73bc6d368bdef77775b7aac84da6e463430f17f7b745ca',
+    'Provider Two Owner', '{}'::jsonb
+  );
+
 update public.profiles
 set address_line1 = '100 Test Street', city = 'Chicago', state = 'IL', postal_code = '60614'
 where id = '10000000-0000-0000-0000-000000001101';
@@ -244,6 +267,24 @@ select results_eq(
   'request snapshots rate, policy, first-hour amount, fee, and response deadline'
 );
 
+select results_eq(
+  $$
+    select terms_version, customer_authorization_version,
+      customer_authorization_snapshot ->> 'version'
+    from public.bookings
+    where customer_id = '10000000-0000-0000-0000-000000001101'
+      and booking_flow = 'hourly_v1'
+    order by created_at
+    limit 1
+  $$,
+  $$ values (
+    '2026-07-15',
+    'hourly-v1-saved-method-2026-07-15',
+    'hourly-v1-saved-method-2026-07-15'
+  ) $$,
+  'new request snapshots the published legal and authorization versions'
+);
+
 select pg_temp.throws_any_ok(
   $$
     select public.create_hourly_booking_request(
@@ -359,6 +400,8 @@ select pg_temp.throws_any_ok(
 );
 
 reset role;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claims', '', true);
 select pg_temp.insert_hourly_fixture(
   '10000000-0000-0000-0000-000000001601',
   '10000000-0000-0000-0000-000000001201',

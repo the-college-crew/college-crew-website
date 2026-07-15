@@ -5,6 +5,7 @@ import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
+import { HOURLY_PAYMENT_AUTHORIZATION } from "@/lib/legal/waivers";
 
 import { confirmFirstHourPayment, type ConfirmPayState } from "./actions";
 import { PaymentForm, appearance, stripePromise } from "./confirm-pay-panel";
@@ -80,10 +81,9 @@ export function HourlyPayPanel({
           className="mt-1 h-4 w-4 rounded border-line"
         />
         <span>
-          I authorize College Crew to charge my card {firstHourLabel} now and to
-          save this payment method to charge the remaining balance for this
-          booking (estimated total {estimatedTotalLabel}, remaining about{" "}
-          {balanceLabel}) after the work is completed and reviewed.
+          {HOURLY_PAYMENT_AUTHORIZATION} The displayed first-hour amount is{" "}
+          {firstHourLabel}; the current estimate is {estimatedTotalLabel}, with
+          an estimated remaining balance of {balanceLabel}.
         </span>
       </label>
 

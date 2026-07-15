@@ -32,7 +32,8 @@ export const LATE_DISPUTE_DAYS = 7;
 
 export const HOURLY_FEE_POLICY_VERSION = "hourly-v1-500bps" as const;
 export const HOURLY_CANCELLATION_POLICY_VERSION = "hourly-v1-12h" as const;
-export const HOURLY_AUTHORIZATION_VERSION = "hourly-v1-saved-method" as const;
+export const HOURLY_AUTHORIZATION_VERSION =
+  "hourly-v1-saved-method-2026-07-15" as const;
 
 type DateInput = Date | string | number;
 

@@ -10,6 +10,9 @@ import {
 } from "@/lib/legal/acceptance";
 import {
   getMasterSections,
+  HOURLY_PAYMENT_AUTHORIZATION,
+  HOURLY_TERMS_INTRO,
+  HOURLY_TERMS_SECTIONS,
   LEGAL_CONTENT_VERSION,
   MASTER_INTRO,
 } from "@/lib/legal/waivers";
@@ -68,6 +71,39 @@ export default async function MasterAgreementPage({
               </div>
             </section>
           ))}
+
+          <section className="border-t border-line pt-5">
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Hourly Booking Terms &amp; Fee Schedule
+            </h2>
+            <div className="mt-2 space-y-3">
+              {HOURLY_TERMS_INTRO.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
+
+          {HOURLY_TERMS_SECTIONS.map((section) => (
+            <section key={section.title} className="border-t border-line pt-5">
+              <h3 className="font-display text-base font-semibold text-ink">
+                {section.title}
+              </h3>
+              <div className="mt-2 space-y-3">
+                {section.body.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </section>
+          ))}
+
+          <section className="border-t border-line pt-5">
+            <h3 className="font-display text-base font-semibold text-ink">
+              First-hour payment authorization
+            </h3>
+            <p className="mt-2 rounded-lg border border-line bg-court p-4">
+              {HOURLY_PAYMENT_AUTHORIZATION}
+            </p>
+          </section>
         </div>
 
         <div className="mt-8 border-t border-line pt-6">

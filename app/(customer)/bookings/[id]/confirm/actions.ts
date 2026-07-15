@@ -213,6 +213,7 @@ export async function confirmFirstHourPayment(
         address: booking.address,
         providerName: provider?.display_name ?? "Provider",
         customerName: customer?.full_name ?? "Customer",
+        includeHourlyTerms: true,
       })
     : null;
   if (!service || !snapshot) {

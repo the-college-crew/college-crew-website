@@ -12,6 +12,7 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["CUSTOMER_ROLE_REQUIRED", "Only customer accounts can request bookings."],
   ["EMAIL_CONFIRMATION_REQUIRED", "Confirm your email before requesting a booking."],
   ["CUSTOMER_NAME_REQUIRED", "Add your name in account settings before booking."],
+  ["LEGAL_ACCEPTANCE_REQUIRED", "Review and accept the current agreement before booking."],
   ["OFFERING_NOT_BOOKABLE", "That service is no longer available to book."],
   ["INVALID_DURATION", "Choose an estimate from 1 to 12 hours in 15-minute steps."],
   ["INVALID_RESPONSE_WINDOW", "Choose a response window that ends before the job."],

@@ -259,6 +259,16 @@ values
     '{"role":"provider","full_name":"Pending Provider"}'::jsonb
   );
 
+insert into public.legal_acceptances (
+  user_id, kind, role, version, content_hash, signer_name, snapshot
+)
+values (
+  '00000000-0000-0000-0000-000000000102', 'master_agreement',
+  'provider', '2026-07-15',
+  'e89347ece1acb4359f73bc6d368bdef77775b7aac84da6e463430f17f7b745ca',
+  'Test Provider', '{}'::jsonb
+);
+
 insert into public.provider_profiles (
   id,
   user_id,

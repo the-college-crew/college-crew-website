@@ -4,6 +4,9 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   GENERAL_FAMILY_DISCLOSURE,
+  HOURLY_PAYMENT_AUTHORIZATION,
+  HOURLY_TERMS_INTRO,
+  HOURLY_TERMS_SECTIONS,
   LEGAL_CONTENT_VERSION,
   MASTER_INTRO,
   MASTER_SECTIONS,
@@ -43,6 +46,37 @@ export default function LegalOverviewPage() {
               </div>
             </section>
           ))}
+        </div>
+      </Card>
+
+      <Card pennant className="p-6">
+        <h2 className="font-display text-lg font-semibold text-ink">
+          Hourly Booking Terms &amp; Fee Schedule
+        </h2>
+        <div className="mt-3 space-y-5 text-sm leading-6 text-ink-soft">
+          {HOURLY_TERMS_INTRO.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+          {HOURLY_TERMS_SECTIONS.map((section) => (
+            <section key={section.title} className="border-t border-line pt-5">
+              <h3 className="font-display text-base font-semibold text-ink">
+                {section.title}
+              </h3>
+              <div className="mt-2 space-y-3">
+                {section.body.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </section>
+          ))}
+          <section className="border-t border-line pt-5">
+            <h3 className="font-display text-base font-semibold text-ink">
+              First-hour payment authorization
+            </h3>
+            <p className="mt-2 rounded-lg border border-line bg-court p-4">
+              {HOURLY_PAYMENT_AUTHORIZATION}
+            </p>
+          </section>
         </div>
       </Card>
 

@@ -51,6 +51,16 @@ values
   ('20000000-0000-0000-0000-000000002102', 'p4-provider@example.test', now(),
    '{"role":"provider","full_name":"Phase Four Provider"}'::jsonb);
 
+insert into public.legal_acceptances (
+  user_id, kind, role, version, content_hash, signer_name, snapshot
+)
+values (
+  '20000000-0000-0000-0000-000000002101', 'master_agreement',
+  'customer', '2026-07-15',
+  'c23126dcfbd3b87132b66c7786de09a940edac9270bb5c59e423ce52dca43ed1',
+  'Phase Four Customer', '{}'::jsonb
+);
+
 update public.profiles
 set address_line1 = '200 Test Street', city = 'Chicago', state = 'IL', postal_code = '60614'
 where id = '20000000-0000-0000-0000-000000002101';
@@ -131,27 +141,27 @@ set local role authenticated;
 
 select results_eq(
   $$ select amount_cents, application_fee_cents, idempotency_key
-     from public.begin_first_hour_payment('20000000-0000-0000-0000-000000002501', 'hourly-v1-saved-method') $$,
+     from public.begin_first_hour_payment('20000000-0000-0000-0000-000000002501', 'hourly-v1-saved-method-2026-07-15') $$,
   $$ values (5000, 250, 'fh_20000000-0000-0000-0000-000000002501') $$,
   'begin returns the first-hour amount, 5% fee, and a deterministic key'
 );
 
 -- Idempotent: a second begin does not create a second payment row.
 select lives_ok(
-  $$ select public.begin_first_hour_payment('20000000-0000-0000-0000-000000002501', 'hourly-v1-saved-method') $$,
+  $$ select public.begin_first_hour_payment('20000000-0000-0000-0000-000000002501', 'hourly-v1-saved-method-2026-07-15') $$,
   'begin is safe to call again'
 );
 
 -- Past the payment window is rejected.
 select pg_temp.throws_any_ok(
-  $$ select public.begin_first_hour_payment('20000000-0000-0000-0000-000000002502', 'hourly-v1-saved-method') $$,
+  $$ select public.begin_first_hour_payment('20000000-0000-0000-0000-000000002502', 'hourly-v1-saved-method-2026-07-15') $$,
   'begin is rejected once the payment window closes'
 );
 
 -- Another user cannot begin someone else's payment.
 select set_config('request.jwt.claim.sub', '20000000-0000-0000-0000-000000002102', true);
 select pg_temp.throws_any_ok(
-  $$ select public.begin_first_hour_payment('20000000-0000-0000-0000-000000002501', 'hourly-v1-saved-method') $$,
+  $$ select public.begin_first_hour_payment('20000000-0000-0000-0000-000000002501', 'hourly-v1-saved-method-2026-07-15') $$,
   'a non-owner cannot begin the payment'
 );
 

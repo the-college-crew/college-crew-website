@@ -262,6 +262,7 @@ function HourlyConfirmView({
     address: booking.address,
     providerName,
     customerName,
+    includeHourlyTerms: true,
   });
 
   const dueAt = booking.initial_payment_due_at;
@@ -312,6 +313,39 @@ function HourlyConfirmView({
             <li>College Crew&apos;s 5% fee comes out of the provider&apos;s earnings.</li>
           </ul>
         </div>
+
+        {isAccepted && addendum ? (
+          <section className="mt-5 rounded-xl border border-line bg-court p-4 text-sm leading-6 text-ink-soft">
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Booking Risk Addendum
+            </h2>
+            <div className="mt-3 space-y-3">
+              {BOOKING_FIXED_SCAFFOLD.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
+            <div className="mt-4 border-t border-line pt-4">
+              <h3 className="font-display text-base font-semibold text-ink">
+                {addendum.serviceRisk.title}
+              </h3>
+              <div className="mt-2 space-y-3">
+                {addendum.serviceRisk.body.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 border-t border-line pt-4">
+              <h3 className="font-display text-base font-semibold text-ink">
+                General Family Disclosure Requirement
+              </h3>
+              <div className="mt-2 space-y-3">
+                {GENERAL_FAMILY_DISCLOSURE.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <div className="mt-6">
           {isAccepted && paidSucceeded ? (
