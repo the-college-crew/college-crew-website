@@ -130,9 +130,22 @@ describe("attemptDueInvoiceCharge", () => {
     mockRpc({ ...CLAIM, stripe_payment_method_id: null });
     expect(await attemptDueInvoiceCharge("inv_1")).toBe("requires_action");
     expect(rpc).toHaveBeenCalledWith(
-      "mark_balance_payment_unsuccessful",
-      expect.objectContaining({ p_target_status: "requires_action" }),
+      "mark_balance_payment_unsuccessful_by_invoice",
+      expect.objectContaining({
+        p_invoice_id: "inv_1",
+        p_target_status: "requires_action",
+      }),
     );
+  });
+
+  it("releases the invoice claim when Stripe is unconfigured", async () => {
+    const { attemptDueInvoiceCharge } = await import("./invoicing");
+    mockRpc(CLAIM);
+    createBalancePaymentIntent.mockResolvedValue({ configured: false });
+    expect(await attemptDueInvoiceCharge("inv_1")).toBe("unconfigured");
+    expect(rpc).toHaveBeenCalledWith("release_due_invoice_claim", {
+      p_invoice_id: "inv_1",
+    });
   });
 
   it("returns processing on a synchronous success", async () => {
