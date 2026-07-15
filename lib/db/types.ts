@@ -1407,21 +1407,27 @@ export type Database = {
           booking_id: string
           created_at: string
           id: string
+          provider_id: string
           rating: number
+          service_id: string
           text: string
         }
         Insert: {
           booking_id: string
           created_at?: string
           id?: string
+          provider_id: string
           rating: number
+          service_id: string
           text?: string
         }
         Update: {
           booking_id?: string
           created_at?: string
           id?: string
+          provider_id?: string
           rating?: number
+          service_id?: string
           text?: string
         }
         Relationships: [
@@ -1430,6 +1436,27 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: true
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "public_provider_directory"
+            referencedColumns: ["provider_id"]
+          },
+          {
+            foreignKeyName: "reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -1700,14 +1727,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "bookings_provider_id_fkey"
+            foreignKeyName: "reviews_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "provider_profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "bookings_provider_id_fkey"
+            foreignKeyName: "reviews_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "public_provider_directory"
@@ -1724,23 +1751,39 @@ export type Database = {
           service_id: string | null
           text: string | null
         }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          provider_id?: string | null
+          rating?: number | null
+          service_id?: string | null
+          text?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          provider_id?: string | null
+          rating?: number | null
+          service_id?: string | null
+          text?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "bookings_provider_id_fkey"
+            foreignKeyName: "reviews_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "provider_profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "bookings_provider_id_fkey"
+            foreignKeyName: "reviews_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "public_provider_directory"
             referencedColumns: ["provider_id"]
           },
           {
-            foreignKeyName: "bookings_service_id_fkey"
+            foreignKeyName: "reviews_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
@@ -1975,6 +2018,13 @@ export type Database = {
       expire_unpaid_acceptance: {
         Args: { p_booking_id: string }
         Returns: string
+      }
+      get_my_booking_reviews: {
+        Args: never
+        Returns: {
+          booking_id: string
+          review_id: string
+        }[]
       }
       hourly_replacement_candidate_ids: {
         Args: { p_booking_id: string }

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth/session";
 import { executePendingRefunds } from "@/lib/booking/refunds";
 import { requestOperationMessage } from "@/lib/booking/requests";
+import type { Database } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -109,11 +110,14 @@ export async function submitReview(
 
   const supabase = await createClient();
   // RLS: insert allowed only for the customer's own completed booking.
-  const { error } = await supabase.from("reviews").insert({
+  // provider_id/service_id are required generated row fields but are omitted
+  // from the granted insert columns and derived by the database trigger.
+  const reviewInsert = {
     booking_id: parsed.data.bookingId,
     rating: parsed.data.rating,
     text: parsed.data.text,
-  });
+  } as Database["public"]["Tables"]["reviews"]["Insert"];
+  const { error } = await supabase.from("reviews").insert(reviewInsert);
   if (error) {
     return {
       error:

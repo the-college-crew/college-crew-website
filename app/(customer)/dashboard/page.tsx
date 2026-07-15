@@ -155,21 +155,33 @@ export default async function CustomerDashboardPage({
   }
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("bookings")
-    .select(
-      `id, booking_flow, status, scheduled_at, address, price_cents,
-       estimated_minutes, hourly_rate_cents_snapshot, response_alert_at,
-       initial_payment_due_at, dismissed_at, cancelled_by_role,
-       service:services(name, slug),
-       provider:provider_profiles(display_name), review:reviews(id),
-       invoice:booking_invoices(status, remaining_balance_cents, resolved_at),
-       dispute:booking_disputes(id, status)`,
-    )
-    .eq("customer_id", session.user.id)
-    .order("scheduled_at", { ascending: showPast ? false : true });
+  const [{ data }, { data: reviewRows }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select(
+        `id, booking_flow, status, scheduled_at, address, price_cents,
+         estimated_minutes, hourly_rate_cents_snapshot, response_alert_at,
+         initial_payment_due_at, dismissed_at, cancelled_by_role,
+         service:services(name, slug),
+         provider:provider_profiles(display_name),
+         invoice:booking_invoices(status, remaining_balance_cents, resolved_at),
+         dispute:booking_disputes(id, status)`,
+      )
+      .eq("customer_id", session.user.id)
+      .order("scheduled_at", { ascending: showPast ? false : true }),
+    supabase.rpc("get_my_booking_reviews"),
+  ]);
 
-  const rows = (data ?? []) as BookingRow[];
+  const reviewByBooking = new Map(
+    (reviewRows ?? []).map((review) => [
+      review.booking_id,
+      { id: review.review_id },
+    ]),
+  );
+  const rows = (data ?? []).map((booking) => ({
+    ...booking,
+    review: reviewByBooking.get(booking.id) ?? null,
+  })) as BookingRow[];
   // Release any acceptance whose first-hour payment window has closed, then
   // reflect the new status before partitioning (Phase 7 schedules this too).
   const expiredIds = await releaseExpiredAcceptances(supabase, rows);
