@@ -23,7 +23,9 @@ export async function SiteFooter() {
       ];
 
   return (
-    <footer className="bg-viridian-deep text-shell">
+    // The border keeps the footer from melting into the landing page's dark
+    // CTA band, which is a near-identical green.
+    <footer className="border-t border-shell/15 bg-viridian-deep text-shell">
       <div className="mx-auto max-w-[1140px] px-5 pb-10 pt-[72px] sm:px-8">
         <div className="grid items-start gap-12 md:grid-cols-[1.4fr_1fr]">
           <div>

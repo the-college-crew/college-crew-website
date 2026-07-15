@@ -139,7 +139,7 @@ export default async function ProviderLayout({
         ) : null}
       </header>
       {verifyNudge ? <ProviderVerifyBanner {...verifyNudge} /> : null}
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         {children}
       </main>
     </>

@@ -50,6 +50,12 @@ export default function RootLayout({
       className={`${bodyFont.variable} ${displayFont.variable}`}
     >
       <body className="flex min-h-screen flex-col font-sans">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-viridian focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-shell"
+        >
+          Skip to content
+        </a>
         {/* Gold, not forest: the sticky header is bg-viridian (#344945), so a
             forest bar would be invisible against it. Gold reads on both the
             forest header and the cream body. */}

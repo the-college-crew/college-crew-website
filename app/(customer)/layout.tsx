@@ -19,7 +19,7 @@ export default async function CustomerLayout({
   return (
     <EditModeProvider>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         {children}
       </main>
       <SiteFooter />

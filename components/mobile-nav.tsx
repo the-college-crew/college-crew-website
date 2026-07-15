@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
 type NavItem = { href: string; label: string };
@@ -26,6 +27,7 @@ export function MobileNav({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!open) return;
@@ -103,17 +105,26 @@ export function MobileNav({
           }
         >
           <nav aria-label="Main mobile" className="flex flex-col">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                role="menuitem"
-                className={linkClass}
-                onClick={close}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {nav.map((item) => {
+              const active =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  role="menuitem"
+                  aria-current={active ? "page" : undefined}
+                  className={`${linkClass} ${
+                    active ? (onDark ? "bg-shell/10" : "bg-viridian/5") : ""
+                  }`}
+                  onClick={close}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           {!isAuthed ? (

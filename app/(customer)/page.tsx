@@ -10,6 +10,7 @@ import type { Service } from "@/lib/db/types";
 type Cta = { href: string; label: string };
 
 import { FAQList, HowItWorksTabs, type FaqItem, type Step } from "./landing-client";
+import { FeatureIcon, ServiceIcon } from "./landing-icons";
 
 const MARK_SRC = "/college-crew-mark.png";
 const MARK_STONE_SRC = "/college-crew-mark-stone.png";
@@ -27,77 +28,40 @@ const BAND =
 const EYEBROW =
   "flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.16em] text-viridian/55";
 const H2 =
-  "mt-3.5 max-w-[20ch] text-balance font-[Georgia,'Times_New_Roman',serif] text-[32px] font-semibold leading-[1.08] text-viridian md:text-[42px]";
+  "mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] text-viridian md:text-[42px]";
 const LEAD =
   "mt-5 max-w-[52ch] text-[17px] leading-[1.55] text-viridian/75 md:text-[19px]";
 
 const BTN =
-  "inline-flex items-center justify-center gap-2 rounded-full border-[1.6px] px-[26px] py-[15px] text-base font-semibold transition hover:-translate-y-px";
+  "inline-flex items-center justify-center gap-2 rounded-full border-[1.6px] px-[26px] py-[15px] text-base font-semibold transition duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]";
 const BTN_PRIMARY = `${BTN} border-viridian bg-viridian text-shell hover:bg-viridian-ink`;
 const BTN_GHOST = `${BTN} border-viridian text-viridian hover:bg-viridian/5`;
 // Inverted variants for the dark CTA band.
 const BTN_PRIMARY_ON_DARK = `${BTN} border-shell bg-shell text-viridian hover:bg-[#e7e4dc]`;
 const BTN_GHOST_ON_DARK = `${BTN} border-shell/45 text-shell hover:bg-shell/10`;
 
-type ServiceDisplay = {
-  blurb: string;
-  icon: string;
+const SERVICE_BLURBS: Record<string, string> = {
+  "lawn-yard-care": "Mowing, edging, and yard tidy-ups handled by students nearby.",
+  "pet-care": "Walks, drop-ins, and sitting while you're out or away.",
+  "house-management":
+    "Errands and home tasks: package returns, grocery pickup, and check-ins.",
+  tutoring:
+    "Where students have the biggest edge: real help with the subjects they just took.",
+  "youth-sports-coaching":
+    "Student athletes coach kids on fundamentals, confidence, and skills.",
+  hauling: "Heavy lifting and junk removal, with the muscle to actually move it.",
+  "pressure-washing":
+    "Driveways, patios, and outdoor surfaces handled by equipped student crews.",
+  "window-washing":
+    "Interior and exterior windows from student-run crews with the right gear.",
+  babysitting:
+    "Highest demand, highest trust bar: added after the pilot once the right safeguards are in place.",
 };
 
-const SERVICE_DISPLAY: Record<string, ServiceDisplay> = {
-  "lawn-yard-care": {
-    blurb: "Mowing, edging, and yard tidy-ups handled by students nearby.",
-    icon: "LC",
-  },
-  "pet-care": {
-    blurb: "Walks, drop-ins, and sitting while you're out or away.",
-    icon: "DW",
-  },
-  "house-management": {
-    blurb: "Errands and home tasks: package returns, grocery pickup, and check-ins.",
-    icon: "HM",
-  },
-  tutoring: {
-    blurb: "Where students have the biggest edge: real help with the subjects they just took.",
-    icon: "TT",
-  },
-  "youth-sports-coaching": {
-    blurb: "Student athletes coach kids on fundamentals, confidence, and skills.",
-    icon: "SC",
-  },
-  hauling: {
-    blurb: "Heavy lifting and junk removal, with the muscle to actually move it.",
-    icon: "HJ",
-  },
-  "pressure-washing": {
-    blurb: "Driveways, patios, and outdoor surfaces handled by equipped student crews.",
-    icon: "PW",
-  },
-  "window-washing": {
-    blurb: "Interior and exterior windows from student-run crews with the right gear.",
-    icon: "WW",
-  },
-  babysitting: {
-    blurb: "Highest demand, highest trust bar: added after the pilot once the right safeguards are in place.",
-    icon: "BS",
-  },
-};
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join("");
-}
-
-function serviceDisplay(service: Service): ServiceDisplay {
+function serviceBlurb(service: Service): string {
   return (
-    SERVICE_DISPLAY[service.slug] ?? {
-      blurb: "Verified student help for practical jobs around the neighborhood.",
-      icon: initials(service.name) || "CC",
-    }
+    SERVICE_BLURBS[service.slug] ??
+    "Verified student help for practical jobs around the neighborhood."
   );
 }
 
@@ -244,6 +208,8 @@ function Hero({
 }) {
   return (
     <section className="relative overflow-hidden bg-stone py-16 md:py-[104px]">
+      {/* Emerges from the corner like the CTA band's watermark — kept out of
+          the phone mock's shadow so it actually reads. */}
       <Image
         src={MARK_STONE_SRC}
         alt=""
@@ -251,7 +217,7 @@ function Hero({
         height={551}
         priority
         aria-hidden
-        className="pointer-events-none absolute -right-[90px] top-5 z-0 hidden w-[600px] max-w-none -rotate-6 opacity-50 lg:block"
+        className="pointer-events-none absolute -bottom-[120px] -left-[100px] z-0 hidden w-[430px] max-w-none rotate-[16deg] opacity-60 lg:block"
       />
       <div
         className={`${WRAP} relative z-10 grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]`}
@@ -263,7 +229,7 @@ function Hero({
               Your neighbors, your students
             </Editable>
           </div>
-          <h1 className="mt-[18px] font-[Georgia,'Times_New_Roman',serif] text-[44px] font-semibold leading-[1.04] text-viridian md:text-[62px]">
+          <h1 className="mt-[18px] font-display text-[44px] font-bold leading-[1.02] tracking-[-0.025em] text-viridian md:text-[62px] md:leading-none">
             <Editable k="home.hero.title">
               Hometown help, from someone your block already trusts.
             </Editable>
@@ -309,14 +275,15 @@ function Hero({
 
 /** The iPhone "Book a job" mock from the reference design — pure decoration. */
 function PhoneMock({ services }: { services: Service[] }) {
-  const tabs = services.slice(0, 6);
+  // Four pills wrap into two tidy rows; six leaves a ragged tail.
+  const tabs = services.slice(0, 4);
 
   return (
     <div className="relative mx-auto w-full max-w-[346px] rounded-[54px] bg-[#1b2523] p-[13px] shadow-[0_36px_72px_-26px_rgba(27,37,35,0.6),0_6px_18px_rgba(27,37,35,0.28)]">
       {/* Notch */}
       <div className="absolute left-1/2 top-[13px] z-10 h-7 w-[132px] -translate-x-1/2 rounded-b-[18px] bg-[#1b2523]" />
       <div className="overflow-hidden rounded-[42px] bg-card">
-        <div className="flex items-center justify-between px-7 pb-1.5 pt-[15px] text-sm font-bold text-viridian">
+        <div className="flex items-center justify-between px-7 pb-1.5 pt-[15px] text-sm font-bold tabular-nums text-viridian">
           <span>9:41</span>
           <span className="flex items-center gap-[7px]">
             <span className="flex h-[11px] items-end gap-[2px]" aria-hidden>
@@ -377,11 +344,11 @@ function PhoneMock({ services }: { services: Service[] }) {
                   123 Maple Street
                 </p>
               </div>
-              <p className="font-display text-[34px] font-bold leading-none text-viridian">
+              <p className="font-display text-[34px] font-bold leading-none tabular-nums text-viridian">
                 $45
               </p>
             </div>
-            <p className="text-sm text-viridian/65">
+            <p className="text-sm tabular-nums text-viridian/65">
               Sat, May 10 · 9:00 AM · 45 min
             </p>
             <p className="mt-3">
@@ -395,12 +362,12 @@ function PhoneMock({ services }: { services: Service[] }) {
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky font-display text-xl font-bold text-viridian">
               E
             </span>
-            <div>
-              <p className="text-[15px] font-bold text-viridian">
-                Ethan · Northwestern &apos;27
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-bold text-viridian">
+                Ethan T.
               </p>
-              <p className="text-[13px] text-viridian/65">
-                ID verified · 2 miles away
+              <p className="truncate text-[13px] text-viridian/65">
+                Northwestern &apos;27 · 2 mi
               </p>
             </div>
             <p className="ml-auto text-right text-[13px] font-bold text-viridian">
@@ -502,9 +469,7 @@ function CompareColumn({
           : "rounded-[22px] border-[1.4px] border-viridian/15 bg-stone/55 p-8 text-viridian"
       }
     >
-      <h3 className="font-[Georgia,'Times_New_Roman',serif] text-[22px] font-semibold">
-        {title}
-      </h3>
+      <h3 className="font-display text-[22px] font-bold">{title}</h3>
       <ul className="mt-[22px] space-y-3.5">
         {items.map((item, index) => (
           <li key={index} className="flex gap-3 leading-snug">
@@ -549,29 +514,25 @@ function ServicesSection({ services }: { services: Service[] }) {
               Live services will appear here once the catalog is available.
             </div>
           ) : null}
-          {services.map((service) => {
-            const display = serviceDisplay(service);
-
-            return (
-              <Link
-                key={service.id}
-                href={`/browse?service=${service.slug}`}
-                className="flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] transition hover:-translate-y-[3px] hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]"
-              >
-                <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-viridian font-display text-[17px] font-bold text-shell">
-                  {display.icon}
-                </span>
-                <h3 className="font-[Georgia,'Times_New_Roman',serif] text-[21px] font-semibold leading-tight text-viridian">
-                  {service.name}
-                </h3>
-                <p className="leading-normal text-viridian/65">
-                  <Editable k={`home.services.${service.slug}.blurb`}>
-                    {display.blurb}
-                  </Editable>
-                </p>
-              </Link>
-            );
-          })}
+          {services.map((service) => (
+            <Link
+              key={service.id}
+              href={`/browse?service=${service.slug}`}
+              className="flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]"
+            >
+              <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-honeydew text-viridian">
+                <ServiceIcon slug={service.slug} className="h-[26px] w-[26px]" />
+              </span>
+              <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
+                {service.name}
+              </h3>
+              <p className="leading-normal text-viridian/65">
+                <Editable k={`home.services.${service.slug}.blurb`}>
+                  {serviceBlurb(service)}
+                </Editable>
+              </p>
+            </Link>
+          ))}
         </div>
       </div>
     </section>
@@ -609,10 +570,10 @@ function FeaturesSection() {
               key={title}
               className="rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px]"
             >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-honeydew">
-                <AntMark className="h-6 w-6" />
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-honeydew text-viridian">
+                <FeatureIcon index={index} className="h-6 w-6" />
               </div>
-              <h3 className="font-[Georgia,'Times_New_Roman',serif] text-[21px] font-semibold leading-tight text-viridian">
+              <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
                 <Editable k={`home.features.${index}.title`}>{title}</Editable>
               </h3>
               <p className="mt-2 leading-normal text-viridian/65">
@@ -647,7 +608,7 @@ function CTASection({
         <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-shell/60">
           <Editable k="home.cta.eyebrow">Ready when you are</Editable>
         </p>
-        <h2 className="mx-auto mt-3.5 max-w-[20ch] text-balance font-[Georgia,'Times_New_Roman',serif] text-[32px] font-semibold leading-[1.08] md:text-[42px]">
+        <h2 className="mx-auto mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[42px]">
           <Editable k="home.cta.heading">Ready to join College Crew?</Editable>
         </h2>
         <p className="mx-auto mt-5 max-w-[52ch] text-[17px] leading-[1.55] text-shell/80 md:text-[19px]">
