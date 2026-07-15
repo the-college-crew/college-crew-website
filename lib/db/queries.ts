@@ -16,6 +16,11 @@ import {
   type BannerStyle,
 } from "@/lib/media/provider-banners";
 import { getLocationRankedProviderIds } from "@/lib/booking/requests";
+import {
+  isBeyondServiceRadius,
+  recommendationScore,
+  utcDateKey,
+} from "@/lib/browse/ranking";
 import { milesBetween, type MaybeCoordinates } from "@/lib/geo/distance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -90,6 +95,31 @@ async function getProviderLocationFacts(
     });
   }
   return facts;
+}
+
+/**
+ * Completed-job count per provider, for the recommendation ranking. Counts
+ * bookings that reached the terminal 'completed' state (both fixed-price and
+ * hourly work land there). Server-only via the admin client — the bookings
+ * table isn't readable across customers, so this can't run as the anon client.
+ */
+async function getProviderCompletedJobCounts(
+  providerIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (!hasServiceRoleEnv() || providerIds.length === 0) return counts;
+
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("bookings")
+    .select("provider_id")
+    .eq("status", "completed")
+    .in("provider_id", providerIds);
+
+  for (const row of data ?? []) {
+    counts.set(row.provider_id, (counts.get(row.provider_id) ?? 0) + 1);
+  }
+  return counts;
 }
 
 export type ProviderSort = "suggested" | "location" | "rating" | "rate";
@@ -336,7 +366,37 @@ export async function getApprovedProviders(
     );
   }
 
-  return filtered.toSorted(ratingThenRate);
+  // Default "suggested" sort: the recommendation engine. Quality (smoothed
+  // rating, log-scaled completed jobs, profile completeness) with 20% daily
+  // exploration noise, then a distance demotion; providers measured beyond the
+  // service radius are dropped. Distance stays neutral when the viewer has no
+  // origin, so this degrades to pure quality + noise for logged-out browsing.
+  const jobCounts = await getProviderCompletedJobCounts(
+    filtered.map((card) => card.id),
+  );
+  const dateKey = utcDateKey();
+  const scoreById = new Map(
+    filtered.map((card) => [
+      card.id,
+      recommendationScore({
+        providerId: card.id,
+        avgRating: card.rating?.avg ?? 0,
+        reviewCount: card.rating?.count ?? 0,
+        completedJobs: jobCounts.get(card.id) ?? 0,
+        hasBio: card.bio.trim().length > 0,
+        hasPreview: card.services.some((s) => Boolean(s.preview_image_path)),
+        distanceMiles: card.distance_miles,
+        dateKey,
+      }),
+    ]),
+  );
+  return filtered
+    .filter((card) => !isBeyondServiceRadius(card.distance_miles))
+    .toSorted(
+      (a, b) =>
+        (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0) ||
+        stableTieBreak(a, b),
+    );
 }
 
 export type PublicReview = {
