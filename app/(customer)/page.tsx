@@ -367,7 +367,7 @@ function PhoneMock({ services }: { services: Service[] }) {
                 Ethan T.
               </p>
               <p className="truncate text-[13px] text-viridian/65">
-                Northwestern &apos;27 · 2 mi away
+                Northwestern &apos;27 · 2 mi
               </p>
             </div>
             <p className="ml-auto text-right text-[13px] font-bold text-viridian">
