@@ -31,12 +31,14 @@ import { createClient } from "@/lib/supabase/server";
 import { formatOfferedPrice } from "@/lib/utils";
 
 import { AccountPasswordForm, AccountProfileForm } from "./account-forms";
+import { AvatarUploadForm } from "./avatar-upload-form";
 import {
   saveSettingsPricing,
   updateAvailability,
 } from "./provider-actions";
 import { ProviderServicePreviewForm } from "./provider-service-preview-form";
 import { ProviderProfileForm } from "./provider-settings-forms";
+import { providerAvatarUrl } from "@/lib/media/provider-avatars";
 import { providerServiceImageUrl } from "@/lib/media/provider-service-images";
 import {
   formatAvailabilityDays,
@@ -203,6 +205,15 @@ async function ProviderStorefront({
         profile={providerProfile}
         offerings={readinessOfferings}
       />
+
+      <Section
+        title="Profile photo"
+        description="Your public headshot on Browse and your profile. Required to stay visible to neighbors."
+      >
+        <AvatarUploadForm
+          imageUrl={providerAvatarUrl(providerProfile.avatar_image_path)}
+        />
+      </Section>
 
       <Section
         title="Public profile"

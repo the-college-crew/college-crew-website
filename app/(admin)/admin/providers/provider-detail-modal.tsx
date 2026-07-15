@@ -9,6 +9,7 @@ import { Rating } from "@/components/provider-card";
 import { ProviderReadinessChecklist } from "@/components/provider-readiness-checklist";
 import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
+import { providerAvatarUrl } from "@/lib/media/provider-avatars";
 import type { VerificationStatus } from "@/lib/db/types";
 import { cn, formatDate, formatOfferedPrice } from "@/lib/utils";
 import {
@@ -259,6 +260,21 @@ export function ProviderDetailModal({
                             url={detail.idDocumentBackUrl}
                           />
                         </span>
+                      )}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-mist">Profile photo</dt>
+                    <dd className="font-medium">
+                      {profile.avatar_image_path ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={providerAvatarUrl(profile.avatar_image_path) ?? ""}
+                          alt="Provider profile photo"
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-mist">Not uploaded</span>
                       )}
                     </dd>
                   </div>

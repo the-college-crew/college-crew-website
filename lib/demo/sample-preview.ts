@@ -81,6 +81,7 @@ export const demoProviderProfile: ProviderProfile = {
   verification_status: "approved",
   id_document_url: null,
   id_document_back_url: null,
+  avatar_image_path: null,
   background_check_status: "passed",
   stripe_account_id: "acct_demo_provider",
   availability: {

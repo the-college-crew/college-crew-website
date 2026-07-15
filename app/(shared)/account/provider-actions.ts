@@ -8,6 +8,7 @@ import { after } from "next/server";
 import { z } from "zod";
 
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { PROVIDER_AVATARS_BUCKET } from "@/lib/media/provider-avatars";
 import { PROVIDER_SERVICE_IMAGES_BUCKET } from "@/lib/media/provider-service-images";
 import { screenProfileText } from "@/lib/moderation/profile-text";
 import { parseProviderAvailabilityForm } from "@/lib/provider/setup";
@@ -277,4 +278,64 @@ export async function removeProviderServicePreview(
   await supabase.storage.from(PROVIDER_SERVICE_IMAGES_BUCKET).remove([path]);
   revalidateProviderStorefront(profile.id);
   return { success: "Service preview photo removed." };
+}
+
+/**
+ * Save the provider's required public profile photo. One photo per provider,
+ * shared across every offering. Uses a fresh object path on each replacement to
+ * avoid stale CDN copies, then deletes the previous photo. There is no removal
+ * counterpart on purpose — the photo is required to stay publicly visible.
+ */
+export async function uploadProviderAvatar(
+  _prev: ProviderSettingsFormState,
+  formData: FormData,
+): Promise<ProviderSettingsFormState> {
+  await requireRole("provider");
+  const profile = await getOwnProviderProfile();
+  if (!profile) redirect("/provider/onboarding/account");
+
+  const image = formData.get("image");
+  if (!(image instanceof File) || image.size === 0) {
+    return { error: "Choose a photo to upload." };
+  }
+  if (image.size > MAX_SERVICE_PREVIEW_BYTES) {
+    return { error: "Choose an image smaller than 5 MB." };
+  }
+  const extension = SERVICE_PREVIEW_EXTENSION[image.type];
+  if (!extension) {
+    return { error: "Use a JPG, PNG, or WebP image." };
+  }
+
+  const supabase = await createClient();
+  const path = `${profile.user_id}/${randomUUID()}.${extension}`;
+  const { error: uploadError } = await supabase.storage
+    .from(PROVIDER_AVATARS_BUCKET)
+    .upload(path, image, {
+      cacheControl: "31536000",
+      contentType: image.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    return { error: `Photo upload failed: ${uploadError.message}` };
+  }
+
+  const { error: updateError } = await supabase
+    .from("provider_profiles")
+    .update({ avatar_image_path: path })
+    .eq("id", profile.id);
+
+  if (updateError) {
+    await supabase.storage.from(PROVIDER_AVATARS_BUCKET).remove([path]);
+    return { error: "Could not save that photo — please try again." };
+  }
+
+  if (profile.avatar_image_path) {
+    await supabase.storage
+      .from(PROVIDER_AVATARS_BUCKET)
+      .remove([profile.avatar_image_path]);
+  }
+
+  revalidateProviderStorefront(profile.id);
+  return { success: "Profile photo saved." };
 }
