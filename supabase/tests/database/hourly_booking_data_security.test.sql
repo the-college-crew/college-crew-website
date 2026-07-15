@@ -146,6 +146,26 @@ select is(
   has_column_privilege(
     'anon',
     'public.provider_profiles',
+    'banner_image_path',
+    'select'
+  ),
+  true,
+  'public provider banner paths are browser-readable'
+);
+select is(
+  has_column_privilege(
+    'anon',
+    'public.provider_profiles',
+    'banner_style',
+    'select'
+  ),
+  true,
+  'public provider banner themes are browser-readable'
+);
+select is(
+  has_column_privilege(
+    'anon',
+    'public.provider_profiles',
     'stripe_transfers_active',
     'select'
   ),
@@ -191,7 +211,8 @@ select is(
     'provider_id', 'display_name', 'bio', 'provider_type', 'neighborhood',
     'availability', 'availability_weekdays', 'availability_start_local',
     'availability_end_local', 'availability_note', 'created_at',
-    'minimum_notice_hours', 'company_name', 'avatar_image_path'
+    'minimum_notice_hours', 'company_name', 'avatar_image_path',
+    'banner_image_path', 'banner_style'
   ]::text[],
   'public provider directory exposes only its approved safe contract'
 );

@@ -22,7 +22,7 @@ select is(
 select is(
   has_function_privilege(
     'authenticated',
-    'public.create_hourly_booking_request(uuid,timestamptz,integer,integer,text,text,text)',
+    'public.create_hourly_booking_request(uuid,timestamptz,integer,integer,text,text,text,text,text,double precision,double precision)',
     'execute'
   ),
   true,
@@ -31,7 +31,7 @@ select is(
 select is(
   has_function_privilege(
     'anon',
-    'public.create_hourly_booking_request(uuid,timestamptz,integer,integer,text,text,text)',
+    'public.create_hourly_booking_request(uuid,timestamptz,integer,integer,text,text,text,text,text,double precision,double precision)',
     'execute'
   ),
   false,
