@@ -1130,6 +1130,8 @@ export type Database = {
           availability_weekdays: number[]
           avatar_image_path: string | null
           background_check_status: Database["public"]["Enums"]["background_check_status"]
+          banner_image_path: string | null
+          banner_style: string
           bio: string
           company_name: string | null
           created_at: string
@@ -1155,6 +1157,8 @@ export type Database = {
           availability_weekdays?: number[]
           avatar_image_path?: string | null
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
+          banner_image_path?: string | null
+          banner_style?: string
           bio?: string
           company_name?: string | null
           created_at?: string
@@ -1180,6 +1184,8 @@ export type Database = {
           availability_weekdays?: number[]
           avatar_image_path?: string | null
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
+          banner_image_path?: string | null
+          banner_style?: string
           bio?: string
           company_name?: string | null
           created_at?: string
@@ -1645,6 +1651,8 @@ export type Database = {
           availability_start_local: string | null
           availability_weekdays: number[] | null
           avatar_image_path: string | null
+          banner_image_path: string | null
+          banner_style: string | null
           bio: string | null
           company_name: string | null
           created_at: string | null
@@ -1661,6 +1669,8 @@ export type Database = {
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
           avatar_image_path?: string | null
+          banner_image_path?: string | null
+          banner_style?: string | null
           bio?: string | null
           company_name?: string | null
           created_at?: string | null
@@ -1677,6 +1687,8 @@ export type Database = {
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
           avatar_image_path?: string | null
+          banner_image_path?: string | null
+          banner_style?: string | null
           bio?: string | null
           company_name?: string | null
           created_at?: string | null

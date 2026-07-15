@@ -11,6 +11,10 @@ import type {
   VerificationStatus,
 } from "@/lib/db/types";
 import { hasSupabaseEnv } from "@/lib/env";
+import {
+  toBannerStyle,
+  type BannerStyle,
+} from "@/lib/media/provider-banners";
 import { getLocationRankedProviderIds } from "@/lib/booking/requests";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -41,6 +45,8 @@ export type ProviderCard = {
   provider_type: ProviderType;
   neighborhood: string;
   avatar_image_path: string | null;
+  banner_image_path: string | null;
+  banner_style: BannerStyle;
   services: OfferedService[];
   rating: { avg: number; count: number } | null;
 };
@@ -62,7 +68,7 @@ export async function getLiveServices(): Promise<Service[]> {
 
 const PROVIDER_CARD_SELECT = `
   id, display_name, company_name, bio, provider_type, neighborhood,
-  avatar_image_path,
+  avatar_image_path, banner_image_path, banner_style,
   provider_services (
     id, price_cents, price_type, unit, preview_image_path, hourly_rate_cents,
     service:services ( id, name, slug, category, is_live )
@@ -226,6 +232,8 @@ export async function getApprovedProviders(
     provider_type: p.provider_type,
     neighborhood: p.neighborhood,
     avatar_image_path: p.avatar_image_path,
+    banner_image_path: p.banner_image_path,
+    banner_style: toBannerStyle(p.banner_style),
     services: offeringsByProvider.get(p.provider_id) ?? [],
     rating: ratingByProvider.get(p.provider_id) ?? null,
   }));
@@ -353,6 +361,8 @@ export async function getPublicProviderProfile(
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
     avatar_image_path: provider.avatar_image_path,
+    banner_image_path: provider.banner_image_path,
+    banner_style: toBannerStyle(provider.banner_style),
     services: liveServices,
     rating: mapRating(rating),
     availability_weekdays: provider.availability_weekdays ?? [],
@@ -442,6 +452,8 @@ export async function getAdminProviderProfile(
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
     avatar_image_path: provider.avatar_image_path,
+    banner_image_path: provider.banner_image_path,
+    banner_style: toBannerStyle(provider.banner_style),
     // Show every service the provider offers, even ones no longer live.
     services: adminOfferings,
     rating: mapRating(rating),
