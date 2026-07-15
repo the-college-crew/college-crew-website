@@ -4,6 +4,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
 import type { ProviderProfile } from "@/lib/db/types";
+import { stableContentHash } from "@/lib/legal/acceptance";
+import {
+  getMasterAgreementSnapshot,
+  LEGAL_CONTENT_VERSION,
+} from "@/lib/legal/waivers";
 import { getOfferingReadiness } from "@/lib/provider/setup";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -34,12 +39,28 @@ export default async function AdminProvidersPage({
   // Private provider fields are never browser-role readable. This page performs
   // an explicit role check before using the server-only administrative client.
   const supabase = createAdminClient();
-  const { data } = await supabase
-    .from("provider_profiles")
-    .select(
-      "*, user:profiles(full_name), provider_services(hourly_rate_cents, service:services(slug, is_live))",
-    )
-    .order("created_at", { ascending: true });
+  const expectedProviderAgreementHash = stableContentHash(
+    getMasterAgreementSnapshot("provider"),
+  );
+  const [{ data }, { data: legalRows }] = await Promise.all([
+    supabase
+      .from("provider_profiles")
+      .select(
+        "*, user:profiles(full_name), provider_services(hourly_rate_cents, service:services(slug, is_live))",
+      )
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("legal_acceptances")
+      .select("user_id, content_hash")
+      .eq("kind", "master_agreement")
+      .eq("role", "provider")
+      .eq("version", LEGAL_CONTENT_VERSION),
+  ]);
+  const legallyReadyUsers = new Set(
+    (legalRows ?? [])
+      .filter((row) => row.content_hash === expectedProviderAgreementHash)
+      .map((row) => row.user_id),
+  );
 
   // Verified school (.edu) emails, keyed by user (no direct FK to join on).
   const { data: schoolRows } = await supabase
@@ -79,6 +100,7 @@ export default async function AdminProvidersPage({
           service_is_live: offering.service.is_live,
         }).bookable,
     ),
+    hasCurrentLegalAcceptance: legallyReadyUsers.has(p.user_id),
     serviceSlugs: Array.from(
       new Set(
         p.provider_services
@@ -98,8 +120,8 @@ export default async function AdminProvidersPage({
         table="provider_school_emails"
       />
       <PageHeader
-        title="Provider approvals"
-        description="Review driver's licenses by hand, filter by service, and clean up profiles. Approving flips the provider live in Browse and unlocks their Stripe connection."
+        title="Provider approvals & rollout readiness"
+        description={`Review verification and every Hourly Booking launch requirement. Agreement version ${LEGAL_CONTENT_VERSION} is required in addition to service, schedule, ZIP, and Stripe readiness.`}
       />
 
       {err === "env" ? (

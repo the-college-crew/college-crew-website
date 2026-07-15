@@ -8,7 +8,6 @@ import { requireUser } from "@/lib/auth/session";
 import { HOURLY_AUTHORIZATION_VERSION } from "@/lib/booking/policy";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import type { Json } from "@/lib/db/types";
-import { areBookingRequestsEnabled, isHourlyBookingEnabled } from "@/lib/env";
 import {
   requestAuditFields,
   stableContentHash,
@@ -156,10 +155,8 @@ export async function confirmFirstHourPayment(
   _prev: ConfirmPayState,
   formData: FormData,
 ): Promise<ConfirmPayState> {
-  if (!isHourlyBookingEnabled() || !areBookingRequestsEnabled()) {
-    return { error: "Hourly booking isn’t available right now." };
-  }
-
+  // Rollback disables only NEW request creation. An already-accepted booking
+  // must remain payable so turning off the request flag never strands it.
   const user = await requireUser();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   if (formData.get("acceptAddendum") !== "on") {

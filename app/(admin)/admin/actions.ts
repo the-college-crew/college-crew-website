@@ -10,6 +10,11 @@ import {
   type AdminProviderProfile,
 } from "@/lib/db/queries";
 import { hasServiceRoleEnv } from "@/lib/env";
+import { stableContentHash } from "@/lib/legal/acceptance";
+import {
+  getMasterAgreementSnapshot,
+  LEGAL_CONTENT_VERSION,
+} from "@/lib/legal/waivers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -141,6 +146,8 @@ export async function updateProviderText(
 export type AdminProviderDetail = {
   profile: AdminProviderProfile;
   schoolEmail: string | null;
+  hasCurrentLegalAcceptance: boolean;
+  legalContentVersion: string;
   idDocumentUrl: string | null;
   idDocumentBackUrl: string | null;
 };
@@ -163,6 +170,7 @@ export async function loadAdminProviderProfile(
   if (!profile) return null;
 
   let schoolEmail: string | null = null;
+  let hasCurrentLegalAcceptance = false;
   let idDocumentUrl: string | null = null;
   let idDocumentBackUrl: string | null = null;
 
@@ -175,12 +183,25 @@ export async function loadAdminProviderProfile(
       .eq("id", parsedId.data)
       .maybeSingle();
     if (prof) {
-      const { data: school } = await admin
-        .from("provider_school_emails")
-        .select("email")
-        .eq("user_id", prof.user_id)
-        .maybeSingle();
+      const [{ data: school }, { data: legal }] = await Promise.all([
+        admin
+          .from("provider_school_emails")
+          .select("email")
+          .eq("user_id", prof.user_id)
+          .maybeSingle(),
+        admin
+          .from("legal_acceptances")
+          .select("content_hash")
+          .eq("user_id", prof.user_id)
+          .eq("kind", "master_agreement")
+          .eq("role", "provider")
+          .eq("version", LEGAL_CONTENT_VERSION)
+          .maybeSingle(),
+      ]);
       schoolEmail = school?.email ?? null;
+      hasCurrentLegalAcceptance =
+        legal?.content_hash ===
+        stableContentHash(getMasterAgreementSnapshot("provider"));
     }
 
     const signIdDoc = async (path: string | null) => {
@@ -196,5 +217,12 @@ export async function loadAdminProviderProfile(
     ]);
   }
 
-  return { profile, schoolEmail, idDocumentUrl, idDocumentBackUrl };
+  return {
+    profile,
+    schoolEmail,
+    hasCurrentLegalAcceptance,
+    legalContentVersion: LEGAL_CONTENT_VERSION,
+    idDocumentUrl,
+    idDocumentBackUrl,
+  };
 }

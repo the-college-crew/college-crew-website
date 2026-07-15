@@ -154,7 +154,9 @@
     <button data-s="landing"><span class="n">01</span>Landing</button>
     <button data-s="browse"><span class="n">02</span>Browse providers</button>
     <button data-s="profile"><span class="n">03</span>Provider profile</button>
-    <button data-s="booking"><span class="n">04</span>Booking &amp; pay</button>
+    <button data-s="booking"><span class="n">04</span>Hourly request</button>
+    <button data-s="pay"><span class="n">04B</span>First-hour payment</button>
+    <button data-s="invoice"><span class="n">04C</span>Invoice &amp; dispute</button>
     <button data-s="cust"><span class="n">05</span>Customer dashboard</button>
     <button data-s="about"><span class="n">06</span>About us</button>
     <button data-s="blog"><span class="n">07</span>Blog</button>
@@ -165,6 +167,7 @@
     <button data-s="psettings"><span class="n">11</span>Profile &amp; settings</button>
     <div class="grp">Admin (founders)</div>
     <button data-s="admin"><span class="n">12</span>Admin dashboard</button>
+    <button data-s="operations"><span class="n">12B</span>Booking operations</button>
     <button data-s="supportinbox"><span class="n">15</span>Support inbox</button>
     <div class="grp">Shared</div>
     <button data-s="auth"><span class="n">13</span>Sign up / Log in</button>
@@ -183,9 +186,11 @@
             <div class="node start">Landing</div><span class="arrow">&rarr;</span>
             <div class="node">Browse</div><span class="arrow">&rarr;</span>
             <div class="node">Provider profile</div><span class="arrow">&rarr;</span>
-            <div class="node">Booking</div><span class="arrow">&rarr;</span>
-            <div class="node">Pay (Stripe)</div><span class="arrow">&rarr;</span>
-            <div class="node">My bookings</div>
+            <div class="node">Hourly request</div><span class="arrow">&rarr;</span>
+            <div class="node">Provider accepts</div><span class="arrow">&rarr;</span>
+            <div class="node">Pay first hour</div><span class="arrow">&rarr;</span>
+            <div class="node">Work + invoice</div><span class="arrow">&rarr;</span>
+            <div class="node">Final payment</div>
             <span class="arrow">&middot;</span><div class="node side">About</div><span class="arrow">&middot;</span><div class="node side">Blog</div><span class="arrow">&middot;</span><div class="node side">Feedback / support</div>
           </div>
         </div>
@@ -193,11 +198,11 @@
           <div class="flow">
             <div class="node start">Sign up (.edu)</div><span class="arrow">&rarr;</span>
             <div class="node">Verify (ID upload)</div><span class="arrow">&rarr;</span>
-            <div class="node">Set services + pricing</div><span class="arrow">&rarr;</span>
+            <div class="node">Set hourly rates + availability</div><span class="arrow">&rarr;</span>
             <div class="node">Submit</div><span class="arrow">&rarr;</span>
             <div class="node gate">&check; Approved</div><span class="arrow">&rarr;</span>
             <div class="node">Connect Stripe</div><span class="arrow">&rarr;</span>
-            <div class="node">Dashboard &middot; Calendar &middot; Jobs</div>
+            <div class="node">Accept &middot; Arrive &middot; Invoice</div>
           </div>
         </div>
         <div class="lane"><div class="ltag">Admin · founders only</div>
@@ -205,16 +210,17 @@
             <div class="node admin">Approve providers</div><span class="arrow">&middot;</span>
             <div class="node admin">Verification queue</div><span class="arrow">&middot;</span>
             <div class="node admin">Curate services</div><span class="arrow">&middot;</span>
-            <div class="node admin">Oversee bookings</div><span class="arrow">&middot;</span>
+            <div class="node admin">Resolve disputes</div><span class="arrow">&middot;</span>
+            <div class="node admin">Recover failed operations</div><span class="arrow">&middot;</span>
             <div class="node admin">Support inbox</div>
           </div>
         </div>
       </div>
       <div class="note">
         <h4>What changed in v1</h4>
-        <p>Provider side grew into a real product: a step-by-step <b>onboarding wizard</b>, a <b>calendar</b> on the dashboard, and dedicated <b>Jobs &amp; pricing</b> and <b>Profile &amp; settings</b> pages.</p>
-        <p>Customer side gained <b>About</b> and <b>Blog</b>, and completed jobs now live under <b>Past</b>.</p>
-        <span class="q">star Still open from v0: charge timing (upfront vs after accept), and fixed prices vs "request a quote" on the public profile.</span>
+        <p>The pilot now uses one locked hourly journey: request, provider acceptance, first-hour payment, arrival, actual-time invoice, final payment, and completion.</p>
+        <p>Response alerts offer optional replacements without silently expiring or rebooking the original request. Founders handle disputes and failed automation.</p>
+        <span class="q">Pilot economics: 5% comes from the provider payout; customers pay no added platform fee. Stripe stays in test mode until a separate live-mode decision.</span>
       </div>
     </section>
 
@@ -269,7 +275,7 @@
           <div class="muted" style="font-size:12px">8 student providers near you</div>
           <div class="card pcard"><div class="avatar"></div><div style="flex:1">
             <div style="font-weight:600">Jordan's Window Co. <span class="badge">&check;</span></div>
-            <div class="muted" style="font-size:12px">Window &amp; power washing · from $80</div>
+            <div class="muted" style="font-size:12px">Window &amp; power washing · $40/hr</div>
             <div style="font-size:12px"><span class="star">&starf;&starf;&starf;&starf;&starf;</span> 4.9 (23)</div></div><a class="btn sm">View</a></div>
           <div class="card pcard"><div class="avatar"></div><div style="flex:1">
             <div style="font-weight:600">Mia R. <span class="badge amber">ID pending</span></div>
@@ -277,14 +283,14 @@
             <div style="font-size:12px"><span class="star">&starf;&starf;&starf;&starf;&star;</span> 4.6 (8)</div></div><a class="btn sm">View</a></div>
           <div class="card pcard"><div class="avatar"></div><div style="flex:1">
             <div style="font-weight:600">Haul Bros <span class="badge">&check;</span></div>
-            <div class="muted" style="font-size:12px">Junk removal · moving · from $120</div>
+            <div class="muted" style="font-size:12px">Junk removal · moving · $32/hr</div>
             <div style="font-size:12px"><span class="star">&starf;&starf;&starf;&starf;&starf;</span> 5.0 (11)</div></div><a class="btn sm">View</a></div>
         </div>
       </div></div>
       <div class="note">
         <h4>Browse · the demand side</h4>
-        <p>Scoped to the launch neighborhood. Cards show who / price / rating + the <b>verified badge</b>. Shows both a business and an individual.</p>
-        <span class="q">star Filter by service first, or show everyone? star Show unverified providers at all, or only after ID check?</span>
+        <p>Only approved providers appear. Cards use hourly rates and can sort by suggested, location, rating, or rate without exposing private service ZIPs.</p>
+        <span class="q">An offering without an explicit hourly rate, complete availability, service ZIP, current agreement, and active Stripe transfers stays visibly unavailable.</span>
       </div>
     </section>
 
@@ -301,8 +307,8 @@
           </div>
           <div class="lbl">About</div><div class="bar w90"></div><div class="bar w60"></div>
           <div class="lbl">Services &amp; pricing</div>
-          <div class="card"><div class="sum"><span>Window washing</span><b>from $80</b></div>
-            <div class="sum" style="border-top:1px solid var(--fill)"><span>Power washing</span><b>from $120</b></div></div>
+          <div class="card"><div class="sum"><span>Window washing</span><b>$40/hr</b></div>
+            <div class="sum" style="border-top:1px solid var(--fill)"><span>Power washing</span><b>$55/hr</b></div></div>
           <div class="lbl">Availability</div>
           <div class="muted" style="font-size:12px">Weekends · weekday evenings</div>
           <div class="lbl">Reviews</div>
@@ -313,7 +319,7 @@
       <div class="note">
         <h4>Provider profile · public view</h4>
         <p>What customers see. This page is <b>generated from the provider's own Profile &amp; settings</b> (screen 11) — bio, services, availability all flow from there.</p>
-        <span class="q">star Fixed prices vs "request a quote" (moving help is fuzzy)?</span>
+        <span class="q">Rates are hourly only. The public schedule shows selected weekdays, one shared time window, a note, and minimum notice without revealing the private service ZIP.</span>
       </div>
     </section>
 
@@ -322,22 +328,66 @@
       <div class="phone"><div class="status"></div><div class="app">
         <div class="appbar"><div class="ico">&larr;</div><div class="title">Request a booking</div></div>
         <div class="scr">
-          <div class="steps"><div class="st on"><div class="d">1</div>Details</div><div class="st"><div class="d">2</div>Review</div><div class="st"><div class="d">3</div>Pay</div></div>
+          <div class="steps"><div class="st on"><div class="d">1</div>Details</div><div class="st"><div class="d">2</div>Review</div><div class="st"><div class="d">3</div>Request</div></div>
           <div class="lbl">Service</div><div class="field">Window washing — Jordan's Window Co.</div>
           <div class="lbl">When</div><div class="row"><div class="field">Date &#128197;</div><div class="field">Time &#9201;</div></div>
+          <div class="row"><div class="field">Estimate · 2 hours</div><div class="field">Response · 3 hours</div></div>
           <div class="lbl">Where</div><div class="field">Your address</div>
           <div class="lbl">Details for the provider</div><div class="field" style="height:64px">e.g. 8 ground-floor windows, side gate code…</div>
           <div class="lbl">Estimated total</div>
-          <div class="card"><div class="sum"><span>Window washing</span><span>$120.00</span></div>
-            <div class="sum tot"><span>You pay</span><span>$120.00</span></div>
-            <div class="muted" style="font-size:11px">Provider receives $102 · HomeGrown keeps 15%</div></div>
-          <a class="btn primary">Continue to payment</a>
+          <div class="card"><div class="sum"><span>$40/hr × 2 hours</span><span>$80.00</span></div>
+            <div class="sum tot"><span>Charge today</span><span>$0.00</span></div>
+            <div class="muted" style="font-size:11px">One-hour minimum · 15-minute increments after the first hour</div></div>
+          <a class="btn primary">Send hourly request</a>
         </div>
       </div></div>
       <div class="note">
-        <h4>Booking &amp; pay</h4>
-        <p>Customer sees only the job price; your 15% comes out of the provider's cut. Hands off to <b>Stripe</b> (test mode for the demo).</p>
-        <span class="q">star Charge upfront and refund if declined, or charge only after the provider accepts? Still the key unresolved fork.</span>
+        <h4>Hourly request · no charge yet</h4>
+        <p>The slot must fit the provider's Central-time availability and minimum notice. The response alert does not expire the request; a replacement request atomically withdraws it.</p>
+        <span class="q">The estimate is 60–720 minutes. Customers pay no added platform fee; the provider's 5% fee is snapshotted on the booking.</span>
+      </div>
+    </section>
+
+    <!-- 04B FIRST-HOUR PAYMENT -->
+    <section class="screen" id="pay">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">Confirm first hour</div></div>
+        <div class="scr">
+          <div class="badge">&check; Provider accepted</div>
+          <div class="h">Reserve Saturday at 10:00am</div>
+          <div class="card"><div class="sum"><span>Hourly rate</span><b>$40.00/hr</b></div>
+            <div class="sum tot"><span>Due now · first hour</span><b>$40.00</b></div>
+            <div class="muted" style="font-size:11px">Due by 8:00pm today or the scheduled start, whichever comes first.</div></div>
+          <div class="field">Stripe Payment Element</div>
+          <div class="field">&#9744; Accept booking risk addendum</div>
+          <div class="field">&#9744; Authorize first-hour charge and save this method for this booking's final balance</div>
+          <a class="btn primary">Pay $40.00 &amp; reserve</a>
+        </div>
+      </div></div>
+      <div class="note"><h4>First-hour payment</h4>
+        <p>Acceptance reserves the slot temporarily. Stripe webhooks alone advance the booking to Booked. A success after the deadline is refunded with transfer and application-fee reversal.</p>
+        <span class="q">The saved method is scoped to this booking, not a wallet. Final billing uses actual provider-submitted time.</span>
+      </div>
+    </section>
+
+    <!-- 04C INVOICE AND DISPUTE -->
+    <section class="screen" id="invoice">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&larr;</div><div class="title">Review invoice</div></div>
+        <div class="scr">
+          <div class="badge amber">Review by tomorrow · 3:15pm</div>
+          <div class="card"><div class="sum"><span>Actual billable time</span><b>2 hr 15 min</b></div>
+            <div class="sum"><span>$40/hr</span><span>$90.00</span></div>
+            <div class="sum"><span>First hour paid</span><span>− $40.00</span></div>
+            <div class="sum tot"><span>Remaining balance</span><b>$50.00</b></div></div>
+          <div class="muted" style="font-size:12px">Confirm now, or the saved method is attempted 24 hours after submission. A timely dispute freezes that attempt.</div>
+          <a class="btn primary">Confirm &amp; pay $50.00</a>
+          <a class="btn ghost">Report a problem</a>
+        </div>
+      </div></div>
+      <div class="note"><h4>Actual-time invoice &amp; dispute</h4>
+        <p>The provider taps Arrived, then submits completion and billable time together. Time rounds up to 15 minutes with a one-hour minimum; over-estimate time needs an explanation.</p>
+        <span class="q">Failed or authentication-required payments stay unpaid. Founders may approve, reduce time, waive the balance, or cancel and refund with an immutable note.</span>
       </div>
     </section>
 
@@ -350,10 +400,12 @@
             <div class="tabs"><div class="t on" data-tab="cust-up">Upcoming</div><div class="t" data-tab="cust-past">Past</div></div>
             <div class="tabpanel" id="cust-up">
               <div class="card"><div style="display:flex;justify-content:space-between"><b>Window washing</b><span class="pill req">Requested</span></div>
-                <div class="muted" style="font-size:12px">Jordan's Window Co. · Sat 10am</div>
-                <div style="margin-top:8px"><a class="btn sm ghost">Message</a> <a class="btn sm ghost">Cancel</a></div></div>
-              <div class="card"><div style="display:flex;justify-content:space-between"><b>Junk removal</b><span class="pill ok">Confirmed</span></div>
-                <div class="muted" style="font-size:12px">Haul Bros · Sun 1pm</div></div>
+                <div class="muted" style="font-size:12px">Jordan's Window Co. · Sat 10am · response alert reached</div>
+                <div style="margin-top:8px"><a class="btn sm primary">See replacements</a> <a class="btn sm ghost">Cancel</a></div></div>
+              <div class="card"><div style="display:flex;justify-content:space-between"><b>Junk removal</b><span class="pill ok">Accepted · pay</span></div>
+                <div class="muted" style="font-size:12px">Haul Bros · Sun 1pm · $32/hr</div><a class="btn sm primary">Pay first hour</a></div>
+              <div class="card"><div style="display:flex;justify-content:space-between"><b>Yard care</b><span class="pill ok">Invoice review</span></div>
+                <div class="muted" style="font-size:12px">2 hr 15 min · $50 balance · autocharge in 18h</div></div>
             </div>
             <div class="tabpanel hide" id="cust-past">
               <div class="card"><div style="display:flex;justify-content:space-between"><b>Babysitting</b><span class="pill done">Completed</span></div>
@@ -365,9 +417,9 @@
         </div>
       </div></div>
       <div class="note">
-        <h4>Customer dashboard &check; fixed</h4>
-        <p><b>Completed jobs now live under Past</b> (click the tab) — Upcoming shows only Requested + Confirmed. Status pills mirror the bookings state machine.</p>
-        <span class="q">star In-app messaging in scope for v1, or punt to text and add chat later? I'd still cut it from v1.</span>
+        <h4>Customer dashboard · state-driven attention</h4>
+        <p>Cards derive from booking, invoice, payment, refund, and dispute state: replacements, first-hour deadline, upcoming work, invoice review, recovery, and cases.</p>
+        <span class="q">Realtime is a refresh hint, not a notification ledger. Page-load state remains authoritative.</span>
       </div>
     </section>
 
@@ -428,7 +480,8 @@
             <div class="st on" data-step="1"><div class="d">1</div>Account</div>
             <div class="st" data-step="2"><div class="d">2</div>Verify</div>
             <div class="st" data-step="3"><div class="d">3</div>Services</div>
-            <div class="st" data-step="4"><div class="d">4</div>Review</div>
+            <div class="st" data-step="4"><div class="d">4</div>Availability</div>
+            <div class="st" data-step="5"><div class="d">5</div>Review</div>
           </div>
 
           <div class="wstep" data-page="1">
@@ -449,17 +502,26 @@
 
           <div class="wstep hide" data-page="3">
             <div class="lbl">Step 3 · What you offer</div>
-            <div class="card"><div class="row"><div class="field" style="flex:2;margin:0">Service &#9662;</div><div class="field" style="flex:1;margin:0">$ price</div></div></div>
+            <div class="card"><div class="row"><div class="field" style="flex:2;margin:0">Service &#9662;</div><div class="field" style="flex:1;margin:0">$ / hour</div></div></div>
             <a class="btn ghost sm">+ Add another service</a>
             <a class="btn primary" style="margin-top:12px" data-go="next">Next &rarr;</a>
             <a class="btn ghost" data-go="back">&larr; Back</a>
           </div>
 
           <div class="wstep hide" data-page="4">
-            <div class="lbl">Step 4 · Review &amp; submit</div>
+            <div class="lbl">Step 4 · Availability &amp; service area</div>
+            <div class="chips"><span class="chip on">Mon</span><span class="chip on">Tue</span><span class="chip">Wed</span><span class="chip on">Sat</span></div>
+            <div class="row"><div class="field">From 9am</div><div class="field">To 6pm</div></div>
+            <div class="field">Private service ZIP</div><div class="field">Minimum notice · 24 hours</div>
+            <a class="btn primary" data-go="next">Next &rarr;</a><a class="btn ghost" data-go="back">&larr; Back</a>
+          </div>
+
+          <div class="wstep hide" data-page="5">
+            <div class="lbl">Step 5 · Review &amp; submit</div>
             <div class="card"><div class="sum"><span class="muted">Email</span><span>you@school.edu</span></div>
               <div class="sum"><span class="muted">ID</span><span>uploaded</span></div>
-              <div class="sum"><span class="muted">Services</span><span>Window washing · $80</span></div></div>
+              <div class="sum"><span class="muted">Services</span><span>Window washing · $40/hr</span></div>
+              <div class="sum"><span class="muted">Schedule</span><span>Mon, Tue, Sat · 9–6</span></div></div>
             <div class="muted" style="font-size:12px">Payment setup (Stripe) comes after you're approved.</div>
             <a class="btn primary" style="margin-top:8px">Submit for approval</a>
             <a class="btn ghost" data-go="back">&larr; Back</a>
@@ -469,7 +531,7 @@
       <div class="note">
         <h4>Onboarding · step-by-step wizard &check; rebuilt</h4>
         <p>Now a <b>true multi-page wizard</b> — one form per page, Next/Back (click through it). Per your note, <b>Stripe is removed from onboarding</b> and happens <b>after verification/approval</b> (prompted on the dashboard + in settings).</p>
-        <span class="q">star Should "Submit" require all services filled, or can they add services later? star Pricing freedom — free-form or pick from ranges you set?</span>
+        <span class="q">Hourly rates must be entered explicitly; legacy prices are never converted. Incomplete offerings remain unavailable and show the exact missing requirement.</span>
       </div>
     </section>
 
@@ -485,7 +547,7 @@
           </div>
           <div class="lbl">New requests</div>
           <div class="card"><div style="display:flex;justify-content:space-between"><b>Window washing</b><span class="pill req">New</span></div>
-            <div class="muted" style="font-size:12px">Sat 10am · Maple St · $120</div>
+            <div class="muted" style="font-size:12px">Sat 10am · Maple St · $40/hr · 2h estimate</div>
             <div style="margin-top:9px"><a class="btn sm primary">Accept</a> <a class="btn sm ghost">Decline</a></div></div>
           <div class="lbl">Your calendar</div>
           <div class="cal">
@@ -498,8 +560,8 @@
       </div></div>
       <div class="note">
         <h4>Provider dashboard + calendar &check; added</h4>
-        <p>Kept earnings + accept/decline, added the <b>calendar</b> you asked for: booking days are highlighted — <b>tap one</b> to see the job, time and location. The <b>Stripe banner</b> up top is the post-approval connect prompt.</p>
-        <span class="q">star Calendar feeds from accepted bookings + availability. Month view enough, or also a day/agenda list?</span>
+        <p>Requests show rate, estimate, response timing, and location. Accepted jobs reserve the slot; Booked jobs expose Arrived, then Job Complete + invoice.</p>
+        <span class="q">Provider cancellation requires a reason, refunds captured payments, and offers optional replacements without auto-rebooking.</span>
       </div>
     </section>
 
@@ -512,25 +574,24 @@
             <div class="tabs"><div class="t on" data-tab="job-up">Upcoming jobs</div><div class="t" data-tab="job-price">Services &amp; pricing</div></div>
             <div class="tabpanel" id="job-up">
               <div class="card"><div style="display:flex;justify-content:space-between"><b>Window washing</b><span class="pill ok">Confirmed</span></div>
-                <div class="muted" style="font-size:12px">Sat Apr 19 · 10am · Maple St · $120</div></div>
+                <div class="muted" style="font-size:12px">Sat Apr 19 · 10am · Maple St · $40/hr</div><a class="btn sm primary">Arrived</a></div>
               <div class="card"><div style="display:flex;justify-content:space-between"><b>Power washing</b><span class="pill ok">Confirmed</span></div>
-                <div class="muted" style="font-size:12px">Sun Apr 20 · 9am · Oak Ave · $140</div></div>
+                <div class="muted" style="font-size:12px">Sun Apr 20 · 9am · Oak Ave · $55/hr</div></div>
               <div class="card"><div style="display:flex;justify-content:space-between"><b>Window washing</b><span class="pill req">Requested</span></div>
                 <div class="muted" style="font-size:12px">Tue Apr 22 · 2pm · Elm St · $90</div></div>
             </div>
             <div class="tabpanel hide" id="job-price">
-              <div class="muted" style="font-size:12px">Set what you charge per service. Customers see these on your profile.</div>
-              <div class="card"><div class="sum"><span>Window washing</span><span><b>$80</b> · edit</span></div>
-                <div class="sum" style="border-top:1px solid var(--fill)"><span>Power washing</span><span><b>$120</b> · edit</span></div></div>
-              <a class="btn ghost sm">+ Add a service</a>
+              <div class="muted" style="font-size:12px">Read-only here. Edit hourly rates in Profile &amp; settings.</div>
+              <div class="card"><div class="sum"><span>Window washing</span><span><b>$40/hr</b></span></div>
+                <div class="sum" style="border-top:1px solid var(--fill)"><span>Power washing</span><span><b>$55/hr</b></span></div></div>
             </div>
           </div>
         </div>
       </div></div>
       <div class="note">
         <h4>Jobs &amp; pricing (new)</h4>
-        <p>Two jobs-to-be-done: see the <b>list of upcoming jobs</b> (the calendar's companion view) and <b>manage service pricing</b> (click the tabs). Pricing edits here update the public profile.</p>
-        <span class="q">star Pricing editable here AND in Profile &amp; settings — pick one home for it, or fine in both? I'd make this the single source.</span>
+        <p>Upcoming jobs carry lifecycle actions and hourly snapshots. Pricing is deliberately read-only here; Profile &amp; settings is the single editing source.</p>
+        <span class="q">After Arrived, Job Complete opens the invoice flow with rounded elapsed-time prefill and an explanation for time above estimate.</span>
       </div>
     </section>
 
@@ -545,6 +606,9 @@
           <div class="lbl">Availability</div>
           <div class="chips"><span class="chip on">Mon</span><span class="chip on">Tue</span><span class="chip">Wed</span><span class="chip on">Thu</span><span class="chip on">Fri</span><span class="chip on">Sat</span><span class="chip">Sun</span></div>
           <div class="row"><div class="field">From 9am</div><div class="field">To 6pm</div></div>
+          <div class="field">Service ZIP · private</div><div class="field">Minimum notice · 24 hours</div>
+          <div class="lbl">Services &amp; hourly rates</div>
+          <div class="card"><div class="sum"><span>Window washing</span><b>$40/hr · edit</b></div></div>
           <div class="lbl">Account</div>
           <div class="field">Username · jordanwindow</div>
           <div class="field">Email · jordan@school.edu</div>
@@ -559,7 +623,7 @@
       <div class="note">
         <h4>Provider profile &amp; settings (new)</h4>
         <p>The provider's self-management hub: <b>bio</b>, <b>availability</b> (feeds the calendar + booking), and settings — <b>username, email, password, Stripe</b>. Pilot trust language is limited to 18+, .edu, student-ID review, founder approval, in-app payments, and support.</p>
-        <span class="q">star Availability as day-toggles + hours (drawn) enough, or per-day custom hours? star Post-approval Stripe connect can also live here — agree?</span>
+        <span class="q">Pilot availability is provider-wide: weekdays plus one shared Central-time window. Flexible per-service availability remains deferred.</span>
       </div>
     </section>
 
@@ -588,9 +652,22 @@
       </div></div>
       <div class="note">
         <h4>Admin · your control panel</h4>
-        <p>Founders-only, non-negotiable for the pilot: the <b>verification gate</b> (approve providers — this flips them to "approved" and unlocks Stripe) and <b>service curation</b>.</p>
-        <span class="q">star Who gets admin access — all four, or just you and Ari?</span>
+        <p>Founder readiness adds exact checks for approval, live service, hourly rate, availability, private ZIP, notice, current agreement, and active Stripe transfers.</p>
+        <span class="q">Incomplete providers remain approved for profile review but their incomplete offerings cannot receive hourly requests.</span>
       </div>
+    </section>
+
+    <!-- 12B BOOKING OPERATIONS -->
+    <section class="screen" id="operations">
+      <div class="phone"><div class="status"></div><div class="app">
+        <div class="appbar"><div class="ico">&#9881;</div><div class="title">Booking operations</div></div>
+        <div class="scr">
+          <div class="grid2"><div class="card"><b>0</b><div class="muted">Failed jobs</div></div><div class="card"><b>0</b><div class="muted">Failed email</div></div></div>
+          <div class="lbl">Open disputes</div><div class="card"><b>Invoice time concern</b><div class="muted" style="font-size:11px">Frozen before autocharge · review timeline</div><a class="btn sm primary">Resolve</a></div>
+          <div class="lbl">Recovery queues</div><div class="card"><div class="sum"><span>Refund failures</span><span class="badge">0</span></div><div class="sum"><span>Webhook failures</span><span class="badge">0</span></div></div>
+        </div>
+      </div></div>
+      <div class="note"><h4>Founder operations</h4><p>Redacted queues expose terminal scheduler, email, refund, webhook, and external-card-dispute failures with safe retries.</p><span class="q">Monitoring is operational, not a customer notification center. Every dispute resolution requires an immutable internal note.</span></div>
     </section>
 
     <!-- 13 AUTH -->
@@ -706,7 +783,7 @@
   }
   wiz.addEventListener('click', e=>{
     const g=e.target.closest('[data-go]'); if(!g) return;
-    step += (g.dataset.go==='next'?1:-1); step=Math.max(1,Math.min(4,step)); showStep(step);
+    step += (g.dataset.go==='next'?1:-1); step=Math.max(1,Math.min(5,step)); showStep(step);
   });
 
   const bookings = {

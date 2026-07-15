@@ -85,7 +85,7 @@ const FEATURES = [
   },
   {
     title: "Secure in-app payments",
-    body: "No cash, no Venmo: payment is held and released once the job's done.",
+    body: "Pay the first hour after acceptance, then the actual-time balance securely in the app.",
   },
   {
     title: "A reputation that travels",
@@ -100,8 +100,8 @@ const FEATURES = [
     body: "Every student completes 18+, .edu, and student-ID review first.",
   },
   {
-    title: "Guarantee & support",
-    body: "If a job isn't done right, we make it right. That's what the fee funds.",
+    title: "Clear support",
+    body: "Cancellation, no-show, refund, and billing concerns follow one visible review process.",
   },
 ];
 
@@ -342,11 +342,11 @@ function PhoneMock({ services }: { services: Service[] }) {
                 </p>
               </div>
               <p className="font-display text-[34px] font-bold leading-none tabular-nums text-viridian">
-                $45
+                $45/hr
               </p>
             </div>
             <p className="text-sm tabular-nums text-viridian/65">
-              Sat, May 10 · 9:00 AM · 45 min
+              Sat, May 10 · 9:00 AM · est. 60 min
             </p>
             <p className="mt-3">
               <span className="inline-flex items-center gap-[7px] rounded-full bg-honeydew px-[11px] py-[5px] text-[13px] font-semibold text-viridian">
@@ -373,7 +373,7 @@ function PhoneMock({ services }: { services: Service[] }) {
           </div>
 
           <Link href="/browse" className={`${BTN_PRIMARY} w-full`}>
-            Book job · $45
+            Request at $45/hour
           </Link>
           <p className="mt-3 text-center text-[13px] text-viridian/65">
             <Editable k="home.banner.note">

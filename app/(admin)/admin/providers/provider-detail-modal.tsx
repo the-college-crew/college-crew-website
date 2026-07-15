@@ -292,12 +292,30 @@ export function ProviderDetailModal({
                           : "Not connected"}
                     </dd>
                   </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-mist">Provider agreement</dt>
+                    <dd className="font-medium">
+                      {detail.hasCurrentLegalAcceptance ? (
+                        <span className="text-quad-700">
+                          Version {detail.legalContentVersion} accepted ✓
+                        </span>
+                      ) : (
+                        <span className="text-gold-700">
+                          Version {detail.legalContentVersion} required
+                        </span>
+                      )}
+                    </dd>
+                  </div>
                 </dl>
               </section>
 
               <section className="border-t border-line px-6 py-5 sm:px-8">
                 <ProviderReadinessChecklist
                   profile={profile}
+                  legalAcceptance={{
+                    ready: detail.hasCurrentLegalAcceptance,
+                    version: detail.legalContentVersion,
+                  }}
                   offerings={profile.services.map((offering) => ({
                     id: offering.id,
                     name: offering.service.name,

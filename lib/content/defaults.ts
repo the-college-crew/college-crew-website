@@ -23,7 +23,7 @@ export const PARENT_STEPS = [
   {
     n: "3",
     title: "Book, pay, rebook",
-    body: "Pay securely in-app, rate the job, and book the same student again whenever you need them.",
+    body: "Pay the first hour after acceptance, review the actual-time invoice, and rebook students you trust.",
   },
 ];
 
@@ -52,11 +52,11 @@ export const FAQS = [
   },
   {
     q: "How does payment work?",
-    a: "Booking, payment, and ratings all happen in the app. No cash and no separate Venmo requests.",
+    a: "A request is free. After acceptance you pay the first hour, then review the actual-time invoice and remaining balance in the app.",
   },
   {
-    q: "What does the Trust & Safety fee cover?",
-    a: "A small per-booking fee funds ID verification, student review, and support if something goes wrong.",
+    q: "Does the customer pay a platform fee?",
+    a: "No. Customers pay the provider's hourly job price. College Crew collects its 5% fee from the provider payout and absorbs payment processing fees.",
   },
   {
     q: "Can I book the same student again next season?",

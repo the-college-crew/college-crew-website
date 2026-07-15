@@ -24,6 +24,7 @@ export type ProviderRow = {
   hasSchoolEmail: boolean;
   serviceCount: number;
   bookingReady: boolean;
+  hasCurrentLegalAcceptance: boolean;
   serviceSlugs: string[];
 };
 
@@ -350,8 +351,16 @@ function ProviderListRow({
       </div>
       <div className="flex items-center gap-2">
         {row.status === "approved" ? (
-          <Badge tone={row.bookingReady ? "green" : "gold"}>
-            {row.bookingReady ? "Booking ready" : "Setup needed"}
+          <Badge
+            tone={
+              row.bookingReady && row.hasCurrentLegalAcceptance ? "green" : "gold"
+            }
+          >
+            {row.bookingReady && row.hasCurrentLegalAcceptance
+              ? "Launch ready"
+              : !row.hasCurrentLegalAcceptance
+                ? "Agreement needed"
+                : "Setup needed"}
           </Badge>
         ) : null}
         <Badge tone={statusTone[row.status]}>{row.status}</Badge>

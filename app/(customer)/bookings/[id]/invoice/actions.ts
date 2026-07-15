@@ -5,7 +5,6 @@ import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
 import { requestOperationMessage } from "@/lib/booking/requests";
-import { areBookingRequestsEnabled, isHourlyBookingEnabled } from "@/lib/env";
 import { createBalancePaymentIntent } from "@/lib/stripe/connect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -95,9 +94,7 @@ export async function confirmInvoiceBalance(
   _prev: InvoicePayState,
   formData: FormData,
 ): Promise<InvoicePayState> {
-  if (!isHourlyBookingEnabled() || !areBookingRequestsEnabled()) {
-    return { error: "Hourly booking isn’t available right now." };
-  }
+  // Existing jobs remain finishable while new requests are rolled back.
   const user = await requireUser();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
 
@@ -180,9 +177,7 @@ export async function recoverInvoicePayment(
   _prev: InvoicePayState,
   formData: FormData,
 ): Promise<InvoicePayState> {
-  if (!isHourlyBookingEnabled() || !areBookingRequestsEnabled()) {
-    return { error: "Hourly booking isn’t available right now." };
-  }
+  // Recovery is lifecycle completion, not new booking creation.
   const user = await requireUser();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
 

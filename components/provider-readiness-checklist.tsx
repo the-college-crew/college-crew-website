@@ -13,6 +13,7 @@ export type ReadinessOffering = {
 export function ProviderReadinessChecklist({
   profile,
   offerings,
+  legalAcceptance,
 }: {
   profile: Pick<
     ProviderProfile,
@@ -26,6 +27,7 @@ export function ProviderReadinessChecklist({
     | "service_zip"
   >;
   offerings: ReadinessOffering[];
+  legalAcceptance?: { ready: boolean; version: string };
 }) {
   if (offerings.length === 0) {
     return (
@@ -40,7 +42,9 @@ export function ProviderReadinessChecklist({
     offering,
     readiness: getOfferingReadiness(profile, offering),
   }));
-  const allReady = rows.every(({ readiness }) => readiness.bookable);
+  const allReady =
+    rows.every(({ readiness }) => readiness.bookable) &&
+    (legalAcceptance?.ready ?? true);
 
   return (
     <div className="rounded-lg border border-line bg-court/60 p-4">
@@ -52,6 +56,16 @@ export function ProviderReadinessChecklist({
           {allReady ? "Ready" : "Setup needed"}
         </Badge>
       </div>
+      {legalAcceptance ? (
+        <p
+          className={`mt-3 text-xs font-medium ${
+            legalAcceptance.ready ? "text-quad-700" : "text-gold-700"
+          }`}
+        >
+          {legalAcceptance.ready ? "✓" : "○"} Provider agreement version{" "}
+          {legalAcceptance.version}{legalAcceptance.ready ? " accepted" : " required"}
+        </p>
+      ) : null}
       <ul className="mt-3 space-y-3">
         {rows.map(({ offering, readiness }) => (
           <li key={offering.id} className="rounded-lg border border-line bg-paper p-3">
