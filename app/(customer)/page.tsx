@@ -3,13 +3,13 @@ import Link from "next/link";
 
 import { Editable } from "@/components/content/editable";
 import { getEffectiveRole, getSession } from "@/lib/auth/session";
-import { FAQS, PARENT_STEPS, STUDENT_STEPS } from "@/lib/content/defaults";
+import { PARENT_STEPS, STUDENT_STEPS } from "@/lib/content/defaults";
 import { getLiveServices } from "@/lib/db/queries";
 import type { Service } from "@/lib/db/types";
 
 type Cta = { href: string; label: string };
 
-import { FAQList, HowItWorksTabs, type FaqItem, type Step } from "./landing-client";
+import { HowItWorksTabs, type Step } from "./landing-client";
 import { FeatureIcon, ServiceIcon } from "./landing-icons";
 
 const MARK_SRC = "/college-crew-mark.png";
@@ -132,22 +132,6 @@ export default async function LandingPage() {
       />
       <ServicesSection services={services} />
       <FeaturesSection />
-      <FAQList
-        rule={<AntRule />}
-        eyebrow={
-          <>
-            <AntMark />
-            <Editable k="home.faq.eyebrow">FAQ</Editable>
-          </>
-        }
-        heading={<Editable k="home.faq.heading">Good to know.</Editable>}
-        items={FAQS.map(
-          (faq, index): FaqItem => ({
-            q: <Editable k={`home.faq.${index}.q`}>{faq.q}</Editable>,
-            a: <Editable k={`home.faq.${index}.a`}>{faq.a}</Editable>,
-          }),
-        )}
-      />
       {showProviderCtas ? (
         <CTASection showProviderCta={showProviderCtas} primaryCta={primaryCta} />
       ) : null}
