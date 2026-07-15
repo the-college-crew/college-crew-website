@@ -136,6 +136,16 @@ select is(
   has_column_privilege(
     'anon',
     'public.provider_profiles',
+    'avatar_image_path',
+    'select'
+  ),
+  true,
+  'public provider avatar paths are browser-readable'
+);
+select is(
+  has_column_privilege(
+    'anon',
+    'public.provider_profiles',
     'stripe_transfers_active',
     'select'
   ),
@@ -181,7 +191,7 @@ select is(
     'provider_id', 'display_name', 'bio', 'provider_type', 'neighborhood',
     'availability', 'availability_weekdays', 'availability_start_local',
     'availability_end_local', 'availability_note', 'created_at',
-    'minimum_notice_hours'
+    'minimum_notice_hours', 'company_name', 'avatar_image_path'
   ]::text[],
   'public provider directory exposes only its approved safe contract'
 );
@@ -233,6 +243,7 @@ insert into public.provider_profiles (
   user_id,
   display_name,
   bio,
+  avatar_image_path,
   verification_status,
   id_document_url,
   id_document_back_url,
@@ -252,6 +263,7 @@ values
     '00000000-0000-0000-0000-000000000102',
     'Approved Provider',
     'Safe public bio',
+    '00000000-0000-0000-0000-000000000102/avatar.jpg',
     'approved',
     'private/front.jpg',
     'private/back.jpg',
@@ -270,6 +282,7 @@ values
     '00000000-0000-0000-0000-000000000104',
     'Pending Provider',
     'Not public yet',
+    null,
     'pending',
     null,
     null,
