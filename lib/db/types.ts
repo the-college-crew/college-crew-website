@@ -462,6 +462,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           address: string
+          address_kind: string
           arrived_at: string | null
           billing_increment_minutes: number | null
           billing_minimum_minutes: number | null
@@ -487,6 +488,8 @@ export type Database = {
           id: string
           initial_payment_due_at: string | null
           job_zip: string | null
+          latitude: number | null
+          longitude: number | null
           pilot_timezone: string
           platform_fee_bps: number | null
           platform_fee_cents: number
@@ -500,6 +503,7 @@ export type Database = {
           response_alerted_at: string | null
           response_window_hours: number | null
           scheduled_at: string
+          service_city: string
           service_id: string
           service_name_snapshot: string | null
           status: Database["public"]["Enums"]["booking_status"]
@@ -513,6 +517,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           address: string
+          address_kind?: string
           arrived_at?: string | null
           billing_increment_minutes?: number | null
           billing_minimum_minutes?: number | null
@@ -538,6 +543,8 @@ export type Database = {
           id?: string
           initial_payment_due_at?: string | null
           job_zip?: string | null
+          latitude?: number | null
+          longitude?: number | null
           pilot_timezone?: string
           platform_fee_bps?: number | null
           platform_fee_cents: number
@@ -551,6 +558,7 @@ export type Database = {
           response_alerted_at?: string | null
           response_window_hours?: number | null
           scheduled_at: string
+          service_city?: string
           service_id: string
           service_name_snapshot?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
@@ -564,6 +572,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           address?: string
+          address_kind?: string
           arrived_at?: string | null
           billing_increment_minutes?: number | null
           billing_minimum_minutes?: number | null
@@ -589,6 +598,8 @@ export type Database = {
           id?: string
           initial_payment_due_at?: string | null
           job_zip?: string | null
+          latitude?: number | null
+          longitude?: number | null
           pilot_timezone?: string
           platform_fee_bps?: number | null
           platform_fee_cents?: number
@@ -602,6 +613,7 @@ export type Database = {
           response_alerted_at?: string | null
           response_window_hours?: number | null
           scheduled_at?: string
+          service_city?: string
           service_id?: string
           service_name_snapshot?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
@@ -1055,7 +1067,10 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           full_name: string
+          geocoded_at: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           postal_code: string
           role: Database["public"]["Enums"]["user_role"]
           state: string
@@ -1067,7 +1082,10 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           full_name?: string
+          geocoded_at?: string | null
           id: string
+          latitude?: number | null
+          longitude?: number | null
           postal_code?: string
           role?: Database["public"]["Enums"]["user_role"]
           state?: string
@@ -1079,7 +1097,10 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           full_name?: string
+          geocoded_at?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           postal_code?: string
           role?: Database["public"]["Enums"]["user_role"]
           state?: string
@@ -1796,12 +1817,16 @@ export type Database = {
       create_hourly_booking_request: {
         Args: {
           p_address: string
+          p_address_kind?: string
           p_details?: string
           p_estimated_minutes: number
           p_job_zip: string
+          p_latitude?: number
+          p_longitude?: number
           p_provider_service_id: string
           p_response_window_hours: number
           p_scheduled_at: string
+          p_service_city?: string
         }
         Returns: string
       }
