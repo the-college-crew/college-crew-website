@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
 import { hasServiceRoleEnv } from "@/lib/env";
+import { geocodeProfileAddress } from "@/lib/geocode/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { addressSchema, passwordSchema } from "@/lib/validation/auth";
@@ -57,6 +58,14 @@ export async function updateProfile(
     })
     .eq("id", user.id);
   if (error) return { error: error.message };
+
+  // Re-derive coordinates from the saved address (server-only write path).
+  await geocodeProfileAddress(user.id, {
+    line1: parsed.data.address_line1,
+    city: parsed.data.city,
+    state: parsed.data.state,
+    zip: parsed.data.postal_code,
+  });
 
   revalidatePath("/account");
   return { success: "Profile updated." };

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { homePathFor } from "@/lib/auth/session";
 import type { UserRole } from "@/lib/db/types";
 import { hasServiceRoleEnv, hasSupabaseEnv } from "@/lib/env";
+import { geocodeProfileAddress } from "@/lib/geocode/profile";
 import {
   hasAcceptedCurrentMasterAgreement,
   masterAgreementPath,
@@ -240,6 +241,17 @@ async function signUp(
       email: data.email,
       alreadyConfirmed: true,
     };
+  }
+
+  // The handle_new_user trigger has persisted the address; derive coordinates
+  // for the distance feature. Best-effort — a miss degrades to town-only.
+  if (signUpResult.user) {
+    await geocodeProfileAddress(signUpResult.user.id, {
+      line1: data.address_line1,
+      city: data.city,
+      state: data.state,
+      zip: data.postal_code,
+    });
   }
 
   return {
