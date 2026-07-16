@@ -5,7 +5,10 @@ import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
 import { requestOperationMessage } from "@/lib/booking/requests";
-import { createBalancePaymentIntent } from "@/lib/stripe/connect";
+import {
+  confirmBalancePaymentIntent,
+  createBalancePaymentIntent,
+} from "@/lib/stripe/connect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -130,6 +133,8 @@ export async function confirmInvoiceBalance(
     return { unconfigured: true };
   }
 
+  // Create unconfirmed, attach, THEN confirm — the settlement webhook can win
+  // a race against the attach, and an unattached success strands the invoice.
   const intent = await createBalancePaymentIntent({
     invoiceId: invoice.id,
     bookingId: booking.id,
@@ -139,29 +144,42 @@ export async function confirmInvoiceBalance(
     stripePaymentMethodId: saved.stripePaymentMethodId,
     providerStripeAccountId: saved.providerStripeAccountId,
     idempotencyKey: begun.idempotency_key,
-    confirm: true,
-    offSession: false,
   });
   if (!intent.configured) return { unconfigured: true };
 
-  await supabase.rpc("attach_balance_payment_intent", {
-    p_invoice_id: invoice.id,
-    p_stripe_payment_intent_id: intent.paymentIntentId,
-  });
+  const { error: attachError } = await supabase.rpc(
+    "attach_balance_payment_intent",
+    {
+      p_invoice_id: invoice.id,
+      p_stripe_payment_intent_id: intent.paymentIntentId,
+    },
+  );
+  if (attachError) {
+    // Nothing was confirmed, so no money moved; the retry reuses this intent.
+    return {
+      error: requestOperationMessage(attachError, "Could not record the payment. Try again."),
+    };
+  }
 
-  if (intent.status === "succeeded" || intent.status === "processing") {
+  const confirmed = await confirmBalancePaymentIntent({
+    paymentIntentId: intent.paymentIntentId,
+    offSession: false,
+  });
+  if (!confirmed.configured) return { unconfigured: true };
+
+  if (confirmed.status === "succeeded" || confirmed.status === "processing") {
     revalidatePath("/dashboard");
     return { processing: true };
   }
-  if (intent.status === "requires_action") {
-    return { clientSecret: intent.clientSecret ?? undefined };
+  if (confirmed.status === "requires_action") {
+    return { clientSecret: confirmed.clientSecret ?? undefined };
   }
 
   // Hard decline: record it so the invoice becomes recoverable, then surface it.
   await admin.rpc("mark_balance_payment_unsuccessful", {
-    p_stripe_payment_intent_id: intent.paymentIntentId,
+    p_stripe_payment_intent_id: confirmed.paymentIntentId,
     p_target_status: "failed",
-    p_failure_code: intent.status,
+    p_failure_code: confirmed.status,
     p_failure_message: "The card was declined.",
   });
   revalidatePath(`/bookings/${booking.id}/invoice`);
@@ -209,7 +227,6 @@ export async function recoverInvoicePayment(
     stripeCustomerId: saved.stripeCustomerId,
     providerStripeAccountId: saved.providerStripeAccountId,
     idempotencyKey: reset.idempotency_key,
-    confirm: false,
   });
   if (!intent.configured) return { unconfigured: true };
 

@@ -69,6 +69,7 @@ describe("invoice allocation SQL parity", () => {
 // ---------------------------------------------------------------------------
 const rpc = vi.fn();
 const createBalancePaymentIntent = vi.fn();
+const confirmBalancePaymentIntent = vi.fn();
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/admin", () => ({
@@ -77,7 +78,16 @@ vi.mock("@/lib/supabase/admin", () => ({
 vi.mock("@/lib/stripe/connect", () => ({
   createBalancePaymentIntent: (...args: unknown[]) =>
     createBalancePaymentIntent(...args),
+  confirmBalancePaymentIntent: (...args: unknown[]) =>
+    confirmBalancePaymentIntent(...args),
 }));
+
+const UNCONFIRMED_INTENT = {
+  configured: true,
+  paymentIntentId: "pi_1",
+  clientSecret: "cs",
+  status: "requires_confirmation",
+};
 
 type ClaimRow = {
   payment_id: string;
@@ -115,6 +125,7 @@ describe("attemptDueInvoiceCharge", () => {
   beforeEach(() => {
     rpc.mockReset();
     createBalancePaymentIntent.mockReset();
+    confirmBalancePaymentIntent.mockReset();
   });
   afterEach(() => vi.clearAllMocks());
 
@@ -148,32 +159,65 @@ describe("attemptDueInvoiceCharge", () => {
     });
   });
 
-  it("returns processing on a synchronous success", async () => {
+  it("attaches the intent BEFORE confirming, then returns processing", async () => {
     const { attemptDueInvoiceCharge } = await import("./invoicing");
     mockRpc(CLAIM);
-    createBalancePaymentIntent.mockResolvedValue({
-      configured: true,
-      paymentIntentId: "pi_1",
-      clientSecret: "cs",
-      status: "succeeded",
+    const order: string[] = [];
+    rpc.mockImplementation((fn: string) => {
+      order.push(fn);
+      if (fn === "claim_due_invoice") {
+        return { maybeSingle: () => Promise.resolve({ data: CLAIM, error: null }) };
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
+    createBalancePaymentIntent.mockResolvedValue(UNCONFIRMED_INTENT);
+    confirmBalancePaymentIntent.mockImplementation(async () => {
+      order.push("confirm");
+      return { ...UNCONFIRMED_INTENT, status: "succeeded" };
     });
     expect(await attemptDueInvoiceCharge("inv_1")).toBe("processing");
     expect(rpc).toHaveBeenCalledWith("attach_balance_payment_intent", {
       p_invoice_id: "inv_1",
       p_stripe_payment_intent_id: "pi_1",
     });
-    expect(createBalancePaymentIntent).toHaveBeenCalledWith(
-      expect.objectContaining({ confirm: true, offSession: true }),
+    // The webhook can win a confirm-vs-attach race, so attach must come first.
+    expect(order.indexOf("attach_balance_payment_intent")).toBeLessThan(
+      order.indexOf("confirm"),
     );
+    expect(createBalancePaymentIntent).toHaveBeenCalledWith(
+      expect.not.objectContaining({ confirm: expect.anything() }),
+    );
+    expect(confirmBalancePaymentIntent).toHaveBeenCalledWith({
+      paymentIntentId: "pi_1",
+      offSession: true,
+    });
+  });
+
+  it("releases the claim when the attach fails, without confirming", async () => {
+    const { attemptDueInvoiceCharge } = await import("./invoicing");
+    rpc.mockImplementation((fn: string) => {
+      if (fn === "claim_due_invoice") {
+        return { maybeSingle: () => Promise.resolve({ data: CLAIM, error: null }) };
+      }
+      if (fn === "attach_balance_payment_intent") {
+        return Promise.resolve({ data: null, error: { message: "boom" } });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
+    createBalancePaymentIntent.mockResolvedValue(UNCONFIRMED_INTENT);
+    await expect(attemptDueInvoiceCharge("inv_1")).rejects.toBeTruthy();
+    expect(confirmBalancePaymentIntent).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith("release_due_invoice_claim", {
+      p_invoice_id: "inv_1",
+    });
   });
 
   it("records requires_action when the bank needs authentication", async () => {
     const { attemptDueInvoiceCharge } = await import("./invoicing");
     mockRpc(CLAIM);
-    createBalancePaymentIntent.mockResolvedValue({
-      configured: true,
-      paymentIntentId: "pi_1",
-      clientSecret: "cs",
+    createBalancePaymentIntent.mockResolvedValue(UNCONFIRMED_INTENT);
+    confirmBalancePaymentIntent.mockResolvedValue({
+      ...UNCONFIRMED_INTENT,
       status: "requires_action",
     });
     expect(await attemptDueInvoiceCharge("inv_1")).toBe("requires_action");
@@ -182,9 +226,9 @@ describe("attemptDueInvoiceCharge", () => {
   it("records a hard decline as failed", async () => {
     const { attemptDueInvoiceCharge } = await import("./invoicing");
     mockRpc(CLAIM);
-    createBalancePaymentIntent.mockResolvedValue({
-      configured: true,
-      paymentIntentId: "pi_1",
+    createBalancePaymentIntent.mockResolvedValue(UNCONFIRMED_INTENT);
+    confirmBalancePaymentIntent.mockResolvedValue({
+      ...UNCONFIRMED_INTENT,
       clientSecret: null,
       status: "requires_payment_method",
     });
@@ -203,5 +247,6 @@ describe("attemptDueInvoiceCharge", () => {
       reason: "no key",
     });
     expect(await attemptDueInvoiceCharge("inv_1")).toBe("unconfigured");
+    expect(confirmBalancePaymentIntent).not.toHaveBeenCalled();
   });
 });
