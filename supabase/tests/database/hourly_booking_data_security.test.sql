@@ -212,7 +212,7 @@ select is(
     'availability', 'availability_weekdays', 'availability_start_local',
     'availability_end_local', 'availability_note', 'created_at',
     'minimum_notice_hours', 'company_name', 'avatar_image_path',
-    'banner_image_path', 'banner_style'
+    'banner_image_path', 'banner_style', 'availability_windows'
   ]::text[],
   'public provider directory exposes only its approved safe contract'
 );
@@ -327,6 +327,14 @@ values
     false,
     null
   );
+
+insert into public.provider_availability_windows (
+  provider_id, weekday, start_local, end_local
+)
+values
+  ('00000000-0000-0000-0000-000000000201', 0, '09:00', '17:00'),
+  ('00000000-0000-0000-0000-000000000201', 2, '09:00', '17:00'),
+  ('00000000-0000-0000-0000-000000000201', 4, '09:00', '17:00');
 
 insert into public.services (id, name, slug, category, is_live)
 values
@@ -735,12 +743,26 @@ select set_config('request.jwt.claims', '{"role":"anon"}', true);
 set local role anon;
 
 select results_eq(
-  $$ select count(*)::bigint from public.public_provider_directory $$,
+  $$
+    select count(*)::bigint
+    from public.public_provider_directory
+    where provider_id in (
+      '00000000-0000-0000-0000-000000000201',
+      '00000000-0000-0000-0000-000000000202'
+    )
+  $$,
   $$ values (1::bigint) $$,
   'anon directory returns approved providers only'
 );
 select results_eq(
-  $$ select count(*)::bigint from public.public_provider_offerings $$,
+  $$
+    select count(*)::bigint
+    from public.public_provider_offerings
+    where provider_id in (
+      '00000000-0000-0000-0000-000000000201',
+      '00000000-0000-0000-0000-000000000202'
+    )
+  $$,
   $$ values (1::bigint) $$,
   'anon offering view returns only approved providers and live services'
 );
@@ -748,6 +770,7 @@ select results_eq(
   $$
     select minimum_notice_hours::integer
     from public.public_provider_directory
+    where provider_id = '00000000-0000-0000-0000-000000000201'
   $$,
   $$ values (24) $$,
   'anon receives public minimum notice through the sanitized directory'
@@ -756,12 +779,20 @@ select results_eq(
   $$
     select is_hourly_bookable
     from public.public_provider_offerings
+    where provider_service_id = '00000000-0000-0000-0000-000000000401'
   $$,
   $$ values (true) $$,
   'anon receives only the derived bookability fact'
 );
 select results_eq(
-  $$ select count(display_name)::bigint from public.provider_profiles $$,
+  $$
+    select count(display_name)::bigint
+    from public.provider_profiles
+    where id in (
+      '00000000-0000-0000-0000-000000000201',
+      '00000000-0000-0000-0000-000000000202'
+    )
+  $$,
   $$ values (1::bigint) $$,
   'direct safe base-column access remains approval-gated by RLS'
 );
