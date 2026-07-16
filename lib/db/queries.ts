@@ -98,26 +98,39 @@ async function getProviderLocationFacts(
 }
 
 /**
- * Completed-job count per provider, for the recommendation ranking. Counts
- * bookings that reached the terminal 'completed' state (both fixed-price and
- * hourly work land there). Server-only via the admin client — the bookings
- * table isn't readable across customers, so this can't run as the anon client.
+ * Completed-job count per provider, for the recommendation ranking. Reads the
+ * provider_completed_jobs aggregate view (one row per provider; both
+ * fixed-price and hourly work land in the terminal 'completed' state). The view
+ * is a SECURITY DEFINER aggregate granted to anon/authenticated, so this exposes
+ * only the count — never raw booking rows — and needs no service-role client on
+ * the public Browse path. One row per provider means no unbounded read and no
+ * row-cap truncation as history grows.
+ *
+ * On a read error we surface it and return an empty map: the ranking then
+ * degrades to quality-without-jobs uniformly for everyone, rather than silently
+ * ranking some providers as if they had zero completed jobs.
  */
 async function getProviderCompletedJobCounts(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   providerIds: string[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
-  if (!hasServiceRoleEnv() || providerIds.length === 0) return counts;
+  if (providerIds.length === 0) return counts;
 
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("bookings")
-    .select("provider_id")
-    .eq("status", "completed")
+  const { data, error } = await supabase
+    .from("provider_completed_jobs")
+    .select("provider_id, completed_jobs")
     .in("provider_id", providerIds);
 
+  if (error) {
+    console.error("getProviderCompletedJobCounts failed", error);
+    return counts;
+  }
+
   for (const row of data ?? []) {
-    counts.set(row.provider_id, (counts.get(row.provider_id) ?? 0) + 1);
+    if (row.provider_id !== null && row.completed_jobs !== null) {
+      counts.set(row.provider_id, row.completed_jobs);
+    }
   }
   return counts;
 }
@@ -372,6 +385,7 @@ export async function getApprovedProviders(
   // service radius are dropped. Distance stays neutral when the viewer has no
   // origin, so this degrades to pure quality + noise for logged-out browsing.
   const jobCounts = await getProviderCompletedJobCounts(
+    supabase,
     filtered.map((card) => card.id),
   );
   const dateKey = utcDateKey();

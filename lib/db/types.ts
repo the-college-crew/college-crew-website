@@ -1719,6 +1719,28 @@ export type Database = {
       }
     }
     Views: {
+      provider_completed_jobs: {
+        Row: {
+          completed_jobs: number | null
+          provider_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "public_provider_directory"
+            referencedColumns: ["provider_id"]
+          },
+        ]
+      }
       provider_ratings: {
         Row: {
           avg_rating: number | null
@@ -2561,6 +2583,7 @@ export type SupportTicket = Omit<
   status: SupportTicketStatus
 }
 export type LegalAcceptance = Tables<"legal_acceptances">
+export type ProviderCompletedJobs = Tables<"provider_completed_jobs">
 export type ProviderRating = Tables<"provider_ratings">
 export type ProviderReview = Tables<"provider_reviews">
 export type PublicProviderDirectoryRow = Tables<"public_provider_directory">
