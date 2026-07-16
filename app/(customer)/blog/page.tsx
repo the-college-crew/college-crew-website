@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import featuredImage from "@/public/blog/featured-neighborhood-coffee.jpg";
-import soccerImage from "@/public/blog/youth-soccer-coaching.jpg";
+import chicagoSkylineImage from "@/public/blog/chicago-skyline.jpg";
 import type { PublicBlogPost } from "@/lib/db/types";
 import { hasSupabaseEnv } from "@/lib/env";
 import { blogImageUrl } from "@/lib/media/blog-images";
@@ -178,26 +178,27 @@ export default async function BlogPage() {
             </h2>
             <div className="mt-5 space-y-4 text-[14px] leading-[1.78] text-viridian/80">
               <p>
-                College Crew&apos;s co-owner, Gianna, has spent years coaching
-                youth soccer around here. She&apos;s the kind of coach who knows
-                every kid&apos;s name and gets their parents to actually stay for
-                practice.
+                College Crew started with a simple frustration: every college
+                student lands in a new town and has to prove themselves from
+                scratch, while families right down the street can never find
+                help they actually trust.
               </p>
               <p>
-                That&apos;s exactly why youth sports coaching earned a place on
-                College Crew. Student athletes teaching kids fundamentals,
-                confidence, and heart, from people the family already knows
-                and trusts on the block.
+                The four of us were those students. So we built the thing we
+                wished existed: a place where a verified student can build a
+                reputation through completed work, and neighbors can book
+                trusted help from someone nearby. No anonymous listings, just
+                students doing the work they already do best.
               </p>
             </div>
 
             <div className="relative mt-7 aspect-[3/2] overflow-hidden">
               <Image
-                src={soccerImage}
-                alt="Gianna coaching children during a neighborhood youth soccer game"
+                src={chicagoSkylineImage}
+                alt="The Chicago skyline at dusk with Lake Michigan in the background"
                 fill
                 sizes="(max-width: 1023px) 100vw, 350px"
-                className="object-cover object-[center_35%]"
+                className="object-cover"
               />
             </div>
 
