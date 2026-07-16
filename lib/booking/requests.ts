@@ -59,7 +59,7 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["PAYMENT_NOT_FOUND", "That payment could not be found."],
   ["ALREADY_PAID", "This balance is already paid."],
   ["PAYMENT_PROCESSING", "This payment is still processing. Give it a moment."],
-  ["BOOKING_ALREADY_ARRIVED", "This job already started — open a dispute instead of cancelling."],
+  ["BOOKING_ALREADY_ARRIVED", "This job already started. Open a dispute instead of cancelling."],
   ["USE_NO_SHOW_DISPUTE", "The start time has passed. Report a no-show instead of cancelling."],
   ["CANCELLATION_REASON_REQUIRED", "Add a short reason for cancelling."],
   ["INVALID_NARRATIVE", "Describe the issue in at least 10 characters."],

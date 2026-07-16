@@ -17,7 +17,7 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
   if (state.success) {
     return (
       <p className="text-sm font-medium text-quad-700">
-        Thanks — your review is live on the provider&apos;s profile.
+        Thanks! Your review is live on the provider&apos;s profile.
       </p>
     );
   }
@@ -56,7 +56,7 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
             </label>
           ))}
           <span className="ml-2 text-xs text-mist">
-            {rating ? `${rating} out of 5` : "Choose 1–5 stars"}
+            {rating ? `${rating} out of 5` : "Choose 1-5 stars"}
           </span>
         </div>
       </fieldset>

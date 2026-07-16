@@ -28,8 +28,8 @@ export { PLATFORM_FEE_BPS };
 export const PLATFORM_FEE_RATE = PLATFORM_FEE_BPS / BASIS_POINTS_SCALE;
 
 export const TEAM = [
-  { name: "Zach", role: "Co-founder — product & customers" },
-  { name: "Ari", role: "Co-founder — providers & platform" },
-  { name: "Max", role: "Co-founder — operations & legal" },
-  { name: "Gianna", role: "Co-founder — marketing & community" },
+  { name: "Zach", role: "Co-founder, product & customers" },
+  { name: "Ari", role: "Co-founder, providers & platform" },
+  { name: "Max", role: "Co-founder, operations & legal" },
+  { name: "Gianna", role: "Co-founder, marketing & community" },
 ] as const;

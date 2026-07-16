@@ -31,7 +31,7 @@ export async function confirmEmailLink(
   );
 
   if (typeof tokenHash !== "string" || typeof rawType !== "string") {
-    return { error: "That link is missing its token — request a new email." };
+    return { error: "That link is missing its token. Request a new email." };
   }
   const type = rawType as EmailOtpType;
 
@@ -46,10 +46,10 @@ export async function confirmEmailLink(
     redirect(
       type === "recovery" || next === "/reset-password"
         ? `/forgot-password?error=${encodeURIComponent(
-            "That reset link has expired — request a new one below.",
+            "That reset link has expired. Request a new one below.",
           )}`
         : `/verify-email?error=${encodeURIComponent(
-            "That link has expired or been replaced — if you requested more than one email, only the newest link works. Check for a more recent email, or send a fresh one below.",
+            "That link has expired or been replaced. If you requested more than one email, only the newest link works. Check for a more recent email, or send a fresh one below.",
           )}`,
     );
   }

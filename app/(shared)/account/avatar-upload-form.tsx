@@ -52,7 +52,7 @@ export function AvatarUploadForm({ imageUrl }: { imageUrl: string | null }) {
             className="cursor-pointer file:mr-3 file:rounded-lg file:border-0 file:bg-honeydew file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-viridian"
           />
           <FieldHint>
-            A clear headshot — this is the face customers see on Browse and your
+            A clear headshot. This is the face customers see on Browse and your
             profile. JPG, PNG, or WebP, up to 5 MB.
           </FieldHint>
         </div>

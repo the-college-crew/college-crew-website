@@ -98,7 +98,7 @@ export async function createBookingRequest(
     details: parsed.data.details,
   });
   if (error || !bookingId) {
-    return { error: requestOperationMessage(error, "Could not send the request — try again.") };
+    return { error: requestOperationMessage(error, "Could not send the request. Try again.") };
   }
 
   const { data: booking } = await supabase

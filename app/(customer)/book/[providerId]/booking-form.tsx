@@ -100,7 +100,7 @@ export function BookingRequestForm({
         >
           {services.map((offered) => (
             <option key={offered.id} value={offered.id}>
-              {offered.service.name} — {formatOfferedPrice(offered)}
+              {offered.service.name} · {formatOfferedPrice(offered)}
             </option>
           ))}
         </Select>
@@ -178,25 +178,25 @@ export function BookingRequestForm({
         <div className="flex items-center justify-between font-semibold">
           <span>Hourly rate</span>
           <span className="text-quad-700">
-            {selected ? formatOfferedPrice(selected) : "—"}
+            {selected ? formatOfferedPrice(selected) : "-"}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <span>Estimated subtotal</span>
-          <span>{estimatedSubtotal == null ? "—" : formatMoney(estimatedSubtotal)}</span>
+          <span>{estimatedSubtotal == null ? "-" : formatMoney(estimatedSubtotal)}</span>
         </div>
         <div className="flex items-center justify-between">
           <span>Due after provider accepts</span>
           <span>
             {selected?.hourly_rate_cents == null
-              ? "—"
+              ? "-"
               : formatMoney(selected.hourly_rate_cents)}
           </span>
         </div>
         <p className="border-t border-line pt-3 text-xs text-mist">
           The first hour is paid only after acceptance. Final billing uses the
           provider&apos;s submitted actual time, rounded to 15-minute increments.
-          College Crew&apos;s fee comes from provider earnings—there is no added
+          College Crew&apos;s fee comes from provider earnings. There is no added
           customer platform fee. Cancel before payment and there is no charge;
           the 12-hour cancellation policy applies after payment.
         </p>

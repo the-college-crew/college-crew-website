@@ -104,7 +104,7 @@ export default async function InvoicePage({
     },
     {
       label: "First hour already paid",
-      value: `– ${formatMoney(invoice.first_hour_credit_cents)}`,
+      value: `- ${formatMoney(invoice.first_hour_credit_cents)}`,
     },
     {
       label: "Remaining balance",
@@ -165,7 +165,7 @@ export default async function InvoicePage({
         ) : null}
 
         <p className="mt-4 border-t border-line pt-3 text-xs text-mist">
-          The 5% platform fee comes out of the provider&apos;s payout — the
+          The 5% platform fee comes out of the provider&apos;s payout; the
           amount above is all you pay.
         </p>
       </Card>
@@ -216,8 +216,7 @@ export default async function InvoicePage({
             className="underline"
           >
             Report a problem
-          </Link>{" "}
-          — a founder reviews it and payment pauses while it’s open.
+          </Link>. A founder reviews it and payment pauses while it’s open.
         </p>
       </Card>
     </div>

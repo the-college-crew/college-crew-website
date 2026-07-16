@@ -15,7 +15,7 @@ export default function GoodbyePage() {
         </h1>
         <p className="mt-3 text-sm text-ink-soft">
           Your College Crew account and all of its data have been permanently
-          removed. Thanks for giving us a try — you&apos;re always welcome back.
+          removed. Thanks for giving us a try. You&apos;re always welcome back.
         </p>
         <div className="mt-6">
           <Link href="/" className={buttonClasses({ variant: "primary" })}>

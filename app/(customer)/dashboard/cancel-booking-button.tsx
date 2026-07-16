@@ -11,7 +11,7 @@ import { cancelBooking } from "./actions";
 const OUTCOME_COPY: Record<string, string> = {
   full_refund: "You’ll be fully refunded.",
   no_refund:
-    "Less than 12 hours before the start — the first-hour charge isn’t refundable.",
+    "Less than 12 hours before the start, so the first-hour charge isn’t refundable.",
   no_payment: "Nothing has been charged yet.",
 };
 

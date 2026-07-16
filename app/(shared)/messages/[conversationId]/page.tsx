@@ -123,7 +123,7 @@ export default async function ConversationPage({
           <p className="font-display text-xs font-semibold text-mist">
             {booking
               ? `${booking.service?.name ?? "Booking"} · ${formatDateTime(booking.scheduled_at)}`
-              : "General inquiry — no booking yet"}
+              : "General inquiry (no booking yet)"}
           </p>
           <h1 className="font-display text-2xl font-semibold">
             {otherName || "Conversation"}

@@ -11,7 +11,7 @@ const config: Record<BookingStatus, { label: string; classes: string }> = {
     classes: "border-honeydew bg-honeydew text-viridian",
   },
   accepted: {
-    label: "Accepted — awaiting payment",
+    label: "Accepted, awaiting payment",
     classes: "border-sky bg-sky text-viridian",
   },
   booked: {

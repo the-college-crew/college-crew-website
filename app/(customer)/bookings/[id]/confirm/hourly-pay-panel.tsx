@@ -53,7 +53,7 @@ export function HourlyPayPanel({
       <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
         <p className="font-semibold">Payments aren&apos;t live yet.</p>
         <p className="mt-1">
-          Stripe isn&apos;t configured in this environment — this button will run
+          Stripe isn&apos;t configured in this environment. This button will run
           the real (test-mode) payment once it is.
         </p>
         <FieldError>{state.error}</FieldError>

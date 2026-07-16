@@ -54,7 +54,7 @@ export default async function BrowsePage({
         title={<Editable k="browse.header.title">Browse the crew</Editable>}
         description={
           <Editable k="browse.header.description">
-            Verified student providers in your neighborhood — businesses and
+            Verified student providers in your neighborhood: businesses and
             individuals. Only ID-approved students are listed.
           </Editable>
         }
@@ -87,7 +87,7 @@ export default async function BrowsePage({
         >
           {service ? (
             <Editable k="browse.empty.filtered">
-              Nobody offers this service yet — try another filter, or check
+              Nobody offers this service yet. Try another filter, or check
               back soon.
             </Editable>
           ) : (

@@ -44,14 +44,14 @@ export async function GET(request: Request) {
   if (isRecovery) {
     return NextResponse.redirect(
       `${origin}/forgot-password?error=${encodeURIComponent(
-        "That reset link has expired — request a new one below.",
+        "That reset link has expired. Request a new one below.",
       )}`,
     );
   }
 
   return NextResponse.redirect(
     `${origin}/verify-email?error=${encodeURIComponent(
-      "That confirmation link is invalid or expired — send yourself a new one below.",
+      "That confirmation link is invalid or expired. Send yourself a new one below.",
     )}`,
   );
 }

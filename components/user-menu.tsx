@@ -19,11 +19,11 @@ import { cn } from "@/lib/utils";
 
 // Dark brand tints that all take white text; picked deterministically per user.
 const AVATAR_COLORS = [
-  "bg-crew-600",
-  "bg-quad-600",
+  "bg-viridian",
+  "bg-sage-700",
   "bg-forest-700",
-  "bg-crew-800",
-  "bg-quad-700",
+  "bg-forest-950",
+  "bg-gold-800",
   "bg-forest-600",
 ];
 
@@ -103,7 +103,7 @@ export function UserMenu({
   }, [open]);
 
   const itemClass =
-    "block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-ink transition-colors hover:bg-court";
+    "block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-ink transition-colors hover:bg-stone/45";
 
   return (
     <div ref={rootRef} className="relative">
@@ -158,7 +158,7 @@ export function UserMenu({
         <div
           id={menuId}
           role="menu"
-          className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-line bg-paper p-1.5 shadow-lg"
+          className="menu-pop absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border-[1.4px] border-viridian/15 bg-paper p-1.5 shadow-[0_18px_40px_-18px_rgba(52,73,69,0.4)]"
         >
           <div className="border-b border-line px-3 py-2">
             <p className="truncate text-sm font-semibold text-ink">{displayName}</p>
@@ -181,8 +181,8 @@ export function UserMenu({
                     aria-pressed={currentRole === view.role}
                     className={
                       currentRole === view.role
-                        ? "rounded-lg bg-crew-600 px-2 py-1.5 text-xs font-semibold text-white"
-                        : "rounded-lg border border-line px-2 py-1.5 text-xs font-semibold text-ink-soft hover:bg-court hover:text-crew-700"
+                        ? "rounded-full border-[1.3px] border-viridian bg-viridian px-2 py-1.5 text-xs font-semibold text-shell"
+                        : "rounded-full border-[1.3px] border-viridian/20 px-2 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:bg-stone/45 hover:text-viridian"
                     }
                   >
                     {view.label}
@@ -264,7 +264,7 @@ export function UserMenu({
               <button
                 type="submit"
                 role="menuitem"
-                className="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+                className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
               >
                 Sign out
               </button>
