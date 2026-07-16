@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  compareDistanceNearestFirst,
   completenessScore,
   dailySeed,
   distanceMultiplier,
-  isBeyondServiceRadius,
   jobsScore,
   recommendationScore,
   smoothedRatingScore,
@@ -94,9 +94,9 @@ describe("distanceMultiplier", () => {
     expect(distanceMultiplier(10)).toBe(0.5);
   });
 
-  it("hard-cuts beyond the service radius", () => {
-    expect(distanceMultiplier(10.1)).toBe(0);
-    expect(distanceMultiplier(50)).toBe(0);
+  it("keeps distant providers visible at the lowest multiplier", () => {
+    expect(distanceMultiplier(10.1)).toBe(0.5);
+    expect(distanceMultiplier(50)).toBe(0.5);
   });
 
   it("stays neutral when distance is unmeasurable", () => {
@@ -104,11 +104,17 @@ describe("distanceMultiplier", () => {
   });
 });
 
-describe("isBeyondServiceRadius", () => {
-  it("only flags measured, too-far providers", () => {
-    expect(isBeyondServiceRadius(null)).toBe(false);
-    expect(isBeyondServiceRadius(10)).toBe(false);
-    expect(isBeyondServiceRadius(10.5)).toBe(true);
+describe("compareDistanceNearestFirst", () => {
+  it("orders measurable distances from nearest to farthest", () => {
+    expect(compareDistanceNearestFirst(2, 7)).toBeLessThan(0);
+    expect(compareDistanceNearestFirst(7, 2)).toBeGreaterThan(0);
+    expect(compareDistanceNearestFirst(2, 2)).toBe(0);
+  });
+
+  it("puts unmeasurable distances last", () => {
+    expect(compareDistanceNearestFirst(2, null)).toBeLessThan(0);
+    expect(compareDistanceNearestFirst(null, 2)).toBeGreaterThan(0);
+    expect(compareDistanceNearestFirst(null, null)).toBe(0);
   });
 });
 
@@ -143,8 +149,10 @@ describe("recommendationScore", () => {
     expect(recommendationScore(near)).toBeGreaterThan(recommendationScore(far));
   });
 
-  it("returns 0 for a provider beyond the service radius", () => {
-    expect(recommendationScore({ ...base, distanceMiles: 20 })).toBe(0);
+  it("keeps a provider beyond ten miles eligible but demoted", () => {
+    const distant = recommendationScore({ ...base, distanceMiles: 20 });
+    expect(distant).toBeGreaterThan(0);
+    expect(distant).toBeLessThan(recommendationScore(base));
   });
 
   it("bounds day-to-day movement by the random weight", () => {

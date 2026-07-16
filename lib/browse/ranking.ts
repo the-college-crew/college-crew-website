@@ -10,8 +10,8 @@
  * 0..1 (smoothed rating, log-scaled completed jobs, profile completeness).
  * `dailyRandom` is a deterministic per-provider value that rotates once a day —
  * it spreads exposure across providers without reshuffling the list on every
- * page load. `distance` is a post-ranking multiplier; providers measured
- * beyond MAX_SERVICE_MILES are cut entirely (see distanceMultiplier).
+ * page load. `distance` is a post-ranking multiplier that gradually demotes
+ * farther providers without hiding them.
  *
  * Everything here is pure and side-effect-free so it stays unit-testable; the
  * data fetching and sort wiring live in lib/db/queries.ts.
@@ -43,9 +43,6 @@ export const JOBS_SATURATION = 25;
 /** Completeness signals and their weights (must sum to 1). */
 export const BIO_WEIGHT = 0.5;
 export const PREVIEW_WEIGHT = 0.5;
-
-/** Beyond this many measured miles a provider is hard-cut from the suggested list. */
-export const MAX_SERVICE_MILES = 10;
 
 // --- Sub-scores (each returns 0..1) ---------------------------------------
 
@@ -92,7 +89,7 @@ export function dailySeed(providerId: string, dateKey: string): number {
 
 /**
  * Distance demotion multiplier by measured straight-line miles:
- *   ≤3 → 1.0, ≤5 → 0.8, ≤8 → 0.6, ≤10 → 0.5, >10 → 0 (hard cut).
+ *   ≤3 → 1.0, ≤5 → 0.8, ≤8 → 0.6, >8 → 0.5.
  * A null distance (viewer origin unknown, or provider not geocoded) is
  * unmeasurable and stays neutral at 1.0 — we never hide a provider we can't
  * actually place.
@@ -102,13 +99,23 @@ export function distanceMultiplier(miles: number | null): number {
   if (miles <= 3) return 1;
   if (miles <= 5) return 0.8;
   if (miles <= 8) return 0.6;
-  if (miles <= MAX_SERVICE_MILES) return 0.5;
-  return 0;
+  return 0.5;
 }
 
-/** True when a provider is measured beyond the service radius and must be dropped. */
-export function isBeyondServiceRadius(miles: number | null): boolean {
-  return miles != null && miles > MAX_SERVICE_MILES;
+/**
+ * Ascending distance comparator for the explicit Location sort. Providers
+ * without a measurable distance come after every provider we can place.
+ */
+export function compareDistanceNearestFirst(
+  aMiles: number | null,
+  bMiles: number | null,
+): number {
+  const a = aMiles != null && Number.isFinite(aMiles) ? aMiles : null;
+  const b = bMiles != null && Number.isFinite(bMiles) ? bMiles : null;
+  if (a === b) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a - b;
 }
 
 // --- Composite score -------------------------------------------------------
@@ -125,9 +132,8 @@ export type RankingInput = {
 };
 
 /**
- * Final recommendation score (higher ranks first). Providers beyond the
- * service radius return 0 via the distance multiplier; callers should also
- * drop them with isBeyondServiceRadius rather than relying on the 0.
+ * Final recommendation score (higher ranks first). Distance can demote a
+ * provider, but it never makes an otherwise eligible provider disappear.
  */
 export function recommendationScore(input: RankingInput): number {
   const quality =
