@@ -192,8 +192,8 @@ export default async function MessagesPage() {
 
       {people.length === 0 ? (
         <EmptyState title="No conversations yet">
-          Each booking gets its own chat. Request a job — or message a provider
-          from their profile — and the conversation shows up here.
+          Each booking gets its own chat. Request a job (or message a provider
+          from their profile) and the conversation shows up here.
         </EmptyState>
       ) : (
         <ul className="mt-6 space-y-3">

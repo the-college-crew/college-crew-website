@@ -4,9 +4,10 @@ import { useActionState, useState } from "react";
 
 import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
-import { FieldError, FieldHint, Input } from "@/components/ui/field";
+import { FieldError, FieldHint } from "@/components/ui/field";
 import type { Service } from "@/lib/db/types";
 import { HOURLY_RATE_INPUT_CONSTRAINTS } from "@/lib/provider/setup";
+import { cn } from "@/lib/utils";
 
 export type Offering = {
   service_id: string;
@@ -87,7 +88,7 @@ export function ServicesPricingForm({
   return (
     <form action={formAction} className="space-y-4">
       {navigates ? <FormLoader /> : null}
-      <div className="rounded-lg border border-quad-200 bg-quad-50 p-3 text-sm text-quad-800">
+      <div className="rounded-xl bg-honeydew/45 px-4 py-3 text-sm text-viridian">
         Customers pay for at least one hour. After that, billing uses 15-minute
         increments based on the completed job time.
       </div>
@@ -102,9 +103,14 @@ export function ServicesPricingForm({
           return (
             <li
               key={service.id}
-              className="rounded-lg border border-line bg-paper p-4"
+              className={cn(
+                "rounded-xl border p-4 transition-colors",
+                row.offered
+                  ? "border-viridian bg-honeydew/45"
+                  : "border-stone bg-paper hover:border-viridian/45 hover:bg-shell",
+              )}
             >
-              <label className="flex items-center gap-2 text-sm font-semibold">
+              <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold text-ink">
                 <input
                   type="checkbox"
                   name={`offer_${service.id}`}
@@ -112,17 +118,48 @@ export function ServicesPricingForm({
                   onChange={(event) =>
                     update(service.id, { offered: event.target.checked })
                   }
+                  className="peer sr-only"
                 />
+                <span
+                  aria-hidden
+                  className={cn(
+                    "grid size-5 shrink-0 place-items-center rounded-full border-[1.6px] transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-viridian",
+                    row.offered
+                      ? "border-viridian bg-viridian text-shell"
+                      : "border-viridian/40 bg-paper text-transparent",
+                  )}
+                >
+                  {/* Drawn check, same idiom as the brand-select chevron. */}
+                  <svg viewBox="0 0 20 20" fill="none" className="size-3">
+                    <path
+                      d="M4.5 10.5l3.4 3.4L15.5 6.5"
+                      stroke="currentColor"
+                      strokeWidth={2.4}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
                 {service.name}
               </label>
 
               {row.offered ? (
-                <div className="mt-3 max-w-xs">
-                  <div className="flex items-center gap-2">
-                    <span aria-hidden className="font-semibold text-ink-soft">
+                <div className="mt-3 max-w-xs pl-8">
+                  <div
+                    className={cn(
+                      "flex items-center rounded-xl border-[1.4px] bg-paper transition-colors focus-within:border-viridian focus-within:ring-[3px] focus-within:ring-viridian/15",
+                      rowError
+                        ? "border-red-300"
+                        : "border-viridian/25 hover:border-viridian/45",
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      className="pl-3.5 text-sm font-semibold text-ink-soft"
+                    >
                       $
                     </span>
-                    <Input
+                    <input
                       type="number"
                       name={`rate_${service.id}`}
                       aria-label={`${service.name} hourly rate in dollars`}
@@ -136,8 +173,12 @@ export function ServicesPricingForm({
                       }
                       aria-invalid={rowError ? true : undefined}
                       aria-describedby={rowError ? errorId : undefined}
+                      className="w-full bg-transparent px-2 py-2 text-sm text-ink placeholder:text-mist focus:outline-none"
                     />
-                    <span className="shrink-0 text-sm font-semibold text-ink-soft">
+                    <span
+                      aria-hidden
+                      className="shrink-0 pr-3.5 text-sm font-semibold text-ink-soft"
+                    >
                       / hr
                     </span>
                   </div>

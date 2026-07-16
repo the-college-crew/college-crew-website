@@ -159,7 +159,7 @@ export function MonthCalendar({ bookings }: { bookings: CalendarBooking[] }) {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold">
-                    {formatTime(booking.scheduled_at)} — {booking.serviceName}
+                    {formatTime(booking.scheduled_at)} · {booking.serviceName}
                   </span>
                   <StatusPill status={booking.status} />
                 </div>

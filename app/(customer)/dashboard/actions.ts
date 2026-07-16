@@ -118,7 +118,7 @@ export async function submitReview(
     .maybeSingle();
 
   if (bookingError) {
-    return { error: "Could not verify this booking — try again." };
+    return { error: "Could not verify this booking. Try again." };
   }
   if (!booking || booking.status !== "completed") {
     return { error: "Reviews unlock after an eligible job is completed." };
@@ -140,7 +140,7 @@ export async function submitReview(
           ? "You already reviewed this booking."
           : error.code === "42501"
             ? "Reviews unlock after an eligible job is completed."
-          : "Could not save the review — try again.",
+          : "Could not save the review. Try again.",
     };
   }
 

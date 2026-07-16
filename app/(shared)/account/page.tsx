@@ -274,7 +274,7 @@ async function ProviderStorefront({
     <>
       {stripeConnected ? (
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-          Stripe onboarding finished — payouts will land in your bank account.
+          Stripe onboarding finished. Payouts will land in your bank account.
         </div>
       ) : null}
       {stripeIncomplete ? (
@@ -322,7 +322,7 @@ async function ProviderStorefront({
 
       <Section
         title="Availability"
-        description="Set Central Time hours per day — group days that share the same hours, plus private matching details."
+        description="Set Central Time hours per day. Group days that share the same hours, plus private matching details."
       >
         <ProviderAvailabilityForm
           values={{ ...providerProfile, windows }}
@@ -333,7 +333,7 @@ async function ProviderStorefront({
 
       <Section
         title="Services & pricing"
-        description="The source of truth — your public profile and the Jobs page both read from here."
+        description="The source of truth: your public profile and the Jobs page both read from here."
       >
         <ServicesPricingForm
           services={services}
@@ -346,7 +346,7 @@ async function ProviderStorefront({
       <Section title="Payouts">
         {providerProfile.verification_status !== "approved" ? (
           <p className="text-sm text-ink-soft">
-            Stripe unlocks after your ID is approved — hang tight.
+            Stripe unlocks after your ID is approved. Hang tight.
           </p>
         ) : providerProfile.stripe_account_id && payoutsActive ? (
           <div className="flex items-center gap-3">
@@ -382,7 +382,7 @@ async function ProviderStorefront({
               </Button>
             </form>
             <span className="text-xs text-mist">
-              Hosted by Stripe — we never see your bank details.
+              Hosted by Stripe; we never see your bank details.
             </span>
           </div>
         )}
@@ -458,7 +458,7 @@ function ProviderAccountDemo() {
 
       <Section
         title="Services & pricing"
-        description="The source of truth — your public profile and the Jobs page both read from here."
+        description="The source of truth: your public profile and the Jobs page both read from here."
       >
         <ul className="space-y-3">
           {demoServices.map((service) => {
@@ -489,7 +489,7 @@ function ProviderAccountDemo() {
             Connect Stripe
           </Button>
           <span className="text-xs text-mist">
-            Disabled in sample mode — real providers connect after approval.
+            Disabled in sample mode; real providers connect after approval.
           </span>
         </div>
       </Section>

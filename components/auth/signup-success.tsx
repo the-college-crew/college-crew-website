@@ -85,8 +85,8 @@ export function SignupSuccess({
       </form>
 
       <p className="text-xs text-mist">
-        This page updates automatically once you confirm — no need to come back
-        to it.
+        This page updates automatically once you confirm, so no need to come
+        back to it.
       </p>
     </div>
   );

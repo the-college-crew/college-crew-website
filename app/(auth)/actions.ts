@@ -46,7 +46,7 @@ export type AuthFormState = {
 
 const NOT_CONFIGURED: AuthFormState = {
   error:
-    "Supabase isn't configured yet — copy .env.example to .env.local first.",
+    "Supabase isn't configured yet. Copy .env.example to .env.local first.",
 };
 
 const loginSchema = z.object({
@@ -74,7 +74,7 @@ type SignUpData = {
  */
 function friendlyAuthEmailError(error: AuthError): string {
   return error.code === "over_email_send_rate_limit"
-    ? "We just sent you an email — give it a minute to arrive, then try again."
+    ? "We just sent you an email. Give it a minute to arrive, then try again."
     : error.message;
 }
 
@@ -204,7 +204,7 @@ async function signUp(
     });
     if (confirmed) {
       return {
-        success: `${data.email} already has an account — log in with the password you chose when you first signed up.`,
+        success: `${data.email} already has an account. Log in with the password you chose when you first signed up.`,
         email: data.email,
         alreadyConfirmed: true,
       };
@@ -235,7 +235,7 @@ async function signUp(
   if (existedUnconfirmed) {
     return {
       success:
-        "You already started signing up, so we just emailed you a fresh confirmation link. Only this newest email works — links in earlier emails are now dead.",
+        "You already started signing up, so we just emailed you a fresh confirmation link. Only this newest email works; links in earlier emails are now dead.",
       email: data.email,
     };
   }
@@ -243,7 +243,7 @@ async function signUp(
   // Confirmed-duplicate tell when the service-role env isn't available.
   if (signUpResult.user && signUpResult.user.identities?.length === 0) {
     return {
-      success: `${data.email} already has an account — log in with the password you chose when you first signed up.`,
+      success: `${data.email} already has an account. Log in with the password you chose when you first signed up.`,
       email: data.email,
       alreadyConfirmed: true,
     };
@@ -262,7 +262,7 @@ async function signUp(
 
   return {
     success:
-      "Almost there — check your email and click the confirmation link to activate your account.",
+      "Almost there! Check your email and click the confirmation link to activate your account.",
     email: data.email,
   };
 }
@@ -308,7 +308,7 @@ export async function resendConfirmation(
     });
     if (confirmed) {
       return {
-        success: `${parsed.data} is already verified — there's no new email to send. Log in with the password you chose at signup.`,
+        success: `${parsed.data} is already verified. There's no new email to send. Log in with the password you chose at signup.`,
         email: parsed.data,
         alreadyConfirmed: true,
       };
@@ -329,7 +329,7 @@ export async function resendConfirmation(
   }
 
   return {
-    success: `New confirmation email sent to ${parsed.data}. It can take a minute to arrive — and only this newest link works; earlier emails are now dead.`,
+    success: `New confirmation email sent to ${parsed.data}. It can take a minute to arrive, and only this newest link works; earlier emails are now dead.`,
     email: parsed.data,
   };
 }

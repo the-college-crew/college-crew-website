@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { BrowseControls } from "@/components/browse-controls";
@@ -12,6 +13,7 @@ import { getSession } from "@/lib/auth/session";
 import {
   getApprovedProviders,
   getLiveServices,
+  getServiceProviderCounts,
   type ProviderSort,
 } from "@/lib/db/queries";
 import {
@@ -28,10 +30,11 @@ export default async function BrowsePage({
   searchParams: Promise<{ service?: string; sort?: string }>;
 }) {
   const { service, sort: sortParam } = await searchParams;
-  const [services, session, bookingFrom] = await Promise.all([
+  const [services, session, bookingFrom, counts] = await Promise.all([
     getLiveServices(),
     getSession(),
     getBookingFrom(),
+    getServiceProviderCounts(),
   ]);
   const sort: ProviderSort = ["location", "rating", "rate"].includes(
     sortParam ?? "",
@@ -54,7 +57,7 @@ export default async function BrowsePage({
         title={<Editable k="browse.header.title">Browse the crew</Editable>}
         description={
           <Editable k="browse.header.description">
-            Verified student providers in your neighborhood — businesses and
+            Verified student providers in your neighborhood: businesses and
             individuals. Only ID-approved students are listed.
           </Editable>
         }
@@ -64,6 +67,7 @@ export default async function BrowsePage({
         services={services}
         activeSlug={service}
         preserveParams={{ sort: sort === "suggested" ? undefined : sort }}
+        counts={counts}
       />
       <BrowseControls
         activeSort={sort}
@@ -87,7 +91,7 @@ export default async function BrowsePage({
         >
           {service ? (
             <Editable k="browse.empty.filtered">
-              Nobody offers this service yet — try another filter, or check
+              Nobody offers this service yet. Try another filter, or check
               back soon.
             </Editable>
           ) : (
@@ -97,12 +101,58 @@ export default async function BrowsePage({
           )}
         </EmptyState>
       ) : (
-        <div className="mx-auto max-w-3xl space-y-4">
-          {providers.map((provider) => (
-            <ProviderCard key={provider.id} provider={provider} />
-          ))}
-        </div>
+        <>
+          <div className="mx-auto max-w-3xl space-y-4">
+            {providers.map((provider) => (
+              // Same scroll-driven rise-in the landing sections use; static
+              // fallback for reduced motion and older browsers (globals.css).
+              <div key={provider.id} className="reveal-rise">
+                <ProviderCard provider={provider} />
+              </div>
+            ))}
+          </div>
+          {!session ? <JoinCrewBand /> : null}
+        </>
       )}
     </div>
+  );
+}
+
+/**
+ * Closes the roster for logged-out visitors the way the homepage's CTA band
+ * closes the landing page: same viridian surface, ant watermark, and
+ * "Join as a student" label, scaled down to the browse column.
+ */
+function JoinCrewBand() {
+  return (
+    <section className="relative mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl bg-viridian px-6 py-10 text-shell sm:px-10">
+      <Image
+        src="/college-crew-mark-white.png"
+        alt=""
+        width={520}
+        height={478}
+        aria-hidden
+        className="pointer-events-none absolute -bottom-20 -right-16 z-0 w-64 max-w-none rotate-[14deg] opacity-15"
+      />
+      <div className="relative z-10 max-w-md">
+        <h2 className="text-balance font-display text-2xl font-semibold leading-tight tracking-[-0.02em] md:text-[28px]">
+          <Editable k="browse.join.heading">
+            Students, this list has room for you.
+          </Editable>
+        </h2>
+        <p className="mt-3 text-[15px] leading-relaxed text-shell/80">
+          <Editable k="browse.join.body">
+            Get ID-verified, set your services and rates, and start building a
+            reputation a few streets from home.
+          </Editable>
+        </p>
+        <Link
+          href="/provider/onboarding/account"
+          className="mt-6 inline-flex items-center justify-center rounded-full border-[1.6px] border-shell bg-shell px-[26px] py-[13px] text-base font-semibold text-viridian transition duration-200 hover:-translate-y-px hover:bg-[#e7e4dc] active:translate-y-0 active:scale-[0.98]"
+        >
+          Join as a student
+        </Link>
+      </div>
+    </section>
   );
 }

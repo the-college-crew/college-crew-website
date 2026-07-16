@@ -194,7 +194,7 @@ export function ChatThread({
       setError(
         cause instanceof Error
           ? `Message not sent: ${cause.message}`
-          : "Message not sent — try again.",
+          : "Message not sent. Try again.",
       );
     } finally {
       setSending(false);
@@ -215,7 +215,7 @@ export function ChatThread({
 
         {messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-mist">
-            No messages yet. Say hello — job details, photos, and scheduling
+            No messages yet. Say hello: job details, photos, and scheduling
             all belong here.
           </p>
         ) : (

@@ -10,7 +10,7 @@ export function DevBanner() {
 
   return (
     <div className="border-b border-gold-400 bg-gold-100 px-4 py-2 text-center text-xs font-medium text-gold-800">
-      Supabase isn&apos;t configured — copy .env.example to .env.local to
+      Supabase isn&apos;t configured. Copy .env.example to .env.local to
       enable auth and data. Pages render with empty data until then.
     </div>
   );

@@ -239,7 +239,7 @@ export async function ProviderProfile({
         <h2 className="font-display text-2xl font-semibold">Reviews</h2>
         {provider.reviews.length === 0 ? (
           <p className="mt-3 text-sm text-mist">
-            No reviews yet — be their first booking.
+            No reviews yet. Be their first booking.
           </p>
         ) : (
           <ul className="mt-4 space-y-4">

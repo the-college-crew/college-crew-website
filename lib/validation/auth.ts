@@ -23,7 +23,7 @@ export const emailSchema = z
 export const schoolEmailSchema = emailSchema
   .toLowerCase()
   .refine((value) => value.endsWith(".edu"), {
-    message: "Use your school email — it must end in .edu.",
+    message: "Use your school email; it must end in .edu.",
   });
 
 /** Six-digit numeric OTP emailed to the .edu address. */
@@ -40,8 +40,8 @@ export const passwordSchema = z.string().superRefine((value, ctx) => {
   const message = !checks.length
     ? "Use at least 10 characters."
     : !checks.notCommon
-      ? "That password is too common — pick something less guessable."
-      : "Add more variety — mix upper/lowercase, numbers, and symbols.";
+      ? "That password is too common. Pick something less guessable."
+      : "Add more variety: mix upper/lowercase, numbers, and symbols.";
   ctx.addIssue({ code: z.ZodIssueCode.custom, message });
 });
 

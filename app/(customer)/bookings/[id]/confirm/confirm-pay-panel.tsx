@@ -85,7 +85,7 @@ export function ConfirmPayPanel({
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
           <p className="font-semibold">Payments aren&apos;t live yet.</p>
           <p className="mt-1">
-            Stripe isn&apos;t configured in this environment — this button
+            Stripe isn&apos;t configured in this environment. This button
             will run the real (test-mode) payment once it is.
           </p>
           {simulateAllowed ? (
@@ -139,7 +139,7 @@ export function PaymentForm({
 
     // Only validation/card errors land here — success navigates away.
     setError(
-      result.error.message ?? "Payment didn't go through — please try again.",
+      result.error.message ?? "Payment didn't go through. Please try again.",
     );
     setSubmitting(false);
   }
@@ -156,7 +156,7 @@ export function PaymentForm({
         {submitting ? "Paying…" : "Pay now"}
       </Button>
       <p className="text-center text-xs text-mist">
-        Test mode — use card 4242 4242 4242 4242, any future expiry, any CVC.
+        Test mode: use card 4242 4242 4242 4242, any future expiry, any CVC.
       </p>
       <FieldError>{error}</FieldError>
     </form>
