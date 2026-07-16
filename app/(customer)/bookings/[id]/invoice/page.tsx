@@ -107,7 +107,7 @@ export default async function InvoicePage({
       value: `– ${formatMoney(invoice.first_hour_credit_cents)}`,
     },
     {
-      label: "Remaining balance",
+      label: isPaid ? "Balance paid" : "Remaining balance",
       value: formatMoney(invoice.remaining_balance_cents),
       strong: true,
     },
