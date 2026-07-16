@@ -129,12 +129,6 @@ export default async function LandingPage() {
       />
       <Comparison />
       <HowItWorksTabs
-        eyebrow={
-          <>
-            <AntMark />
-            <Editable k="home.how.eyebrow">How it works</Editable>
-          </>
-        }
         heading={
           <Editable k="home.how.heading">
             Simple for families. Rewarding for students.
@@ -391,13 +385,9 @@ function PhoneMock({ services }: { services: Service[] }) {
 function Comparison() {
   return (
     <section className={`${BAND} bg-sky`}>
-      <div className={WRAP}>
+      <div className={`${WRAP} reveal-rise`}>
         <AntRule />
         <div className="mb-[52px]">
-          <div className={EYEBROW}>
-            <AntMark />
-            <Editable k="home.compare.eyebrow">Why College Crew</Editable>
-          </div>
           <h2 className={H2}>
             <Editable k="home.compare.heading">
               A good name in this town should count for something.
@@ -490,10 +480,23 @@ function CompareColumn({
   );
 }
 
+/*
+ * Tile surfaces cycle through the band palette so the grid reads as a
+ * composed set rather than six identical white boxes (bento diversity).
+ */
+const SERVICE_TILE_TONES = [
+  "bg-card",
+  "bg-sky/45",
+  "bg-card",
+  "bg-stone/50",
+  "bg-card",
+  "bg-sky/45",
+];
+
 function ServicesSection({ services }: { services: Service[] }) {
   return (
     <section className={`${BAND} bg-honeydew`}>
-      <div className={WRAP}>
+      <div className={`${WRAP} reveal-rise`}>
         <div className="mb-[52px]">
           <div className={EYEBROW}>
             <AntMark />
@@ -511,11 +514,11 @@ function ServicesSection({ services }: { services: Service[] }) {
               Live services will appear here once the catalog is available.
             </div>
           ) : null}
-          {services.map((service) => (
+          {services.map((service, index) => (
             <Link
               key={service.id}
               href={`/browse?service=${service.slug}`}
-              className={`group flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] ${CARD_LIFT_BORDERED}`}
+              className={`group flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 p-[26px] ${SERVICE_TILE_TONES[index % SERVICE_TILE_TONES.length]} ${CARD_LIFT_BORDERED}`}
             >
               <span
                 className={`flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-honeydew text-viridian ${ICON_TILE_HOVER}`}
@@ -549,37 +552,31 @@ function FeaturesSection() {
         aria-hidden
         className="pointer-events-none absolute right-10 top-16 z-0 w-[300px] rotate-[10deg] opacity-50"
       />
-      <div className={`${WRAP} relative z-10`}>
+      <div className={`${WRAP} reveal-rise relative z-10`}>
         <div className="mb-[52px]">
-          <div className={EYEBROW}>
-            <AntMark />
-            <Editable k="home.features.eyebrow">
-              Why families choose us
-            </Editable>
-          </div>
           <h2 className={H2}>
             <Editable k="home.features.heading">
               Built for trust, front to back.
             </Editable>
           </h2>
         </div>
-        <div className="grid gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
+        {/* Open two-column list: icon tile + copy, no card boxes. */}
+        <div className="grid gap-x-14 gap-y-11 sm:grid-cols-2">
           {FEATURES.map(({ title, body }, index) => (
-            <div
-              key={title}
-              className={`group rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] ${CARD_LIFT_BORDERED}`}
-            >
+            <div key={title} className="group flex items-start gap-5">
               <div
-                className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-honeydew text-viridian ${ICON_TILE_HOVER}`}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-honeydew text-viridian ${ICON_TILE_HOVER}`}
               >
                 <FeatureIcon index={index} className="h-6 w-6" />
               </div>
-              <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
-                <Editable k={`home.features.${index}.title`}>{title}</Editable>
-              </h3>
-              <p className="mt-2 leading-normal text-viridian/65">
-                <Editable k={`home.features.${index}.body`}>{body}</Editable>
-              </p>
+              <div>
+                <h3 className="font-display text-[21px] font-semibold leading-tight text-viridian">
+                  <Editable k={`home.features.${index}.title`}>{title}</Editable>
+                </h3>
+                <p className="mt-2 max-w-[52ch] leading-normal text-viridian/65">
+                  <Editable k={`home.features.${index}.body`}>{body}</Editable>
+                </p>
+              </div>
             </div>
           ))}
         </div>
@@ -605,11 +602,8 @@ function CTASection({
         aria-hidden
         className="pointer-events-none absolute -bottom-[120px] -left-[120px] z-0 w-[520px] max-w-none rotate-[14deg] opacity-15"
       />
-      <div className="relative z-10 mx-auto w-full max-w-[760px] px-5 text-center sm:px-8">
-        <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-shell/60">
-          <Editable k="home.cta.eyebrow">Ready when you are</Editable>
-        </p>
-        <h2 className="mx-auto mt-3.5 max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[42px]">
+      <div className="reveal-rise relative z-10 mx-auto w-full max-w-[760px] px-5 text-center sm:px-8">
+        <h2 className="mx-auto max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[42px]">
           <Editable k="home.cta.heading">Ready to join College Crew?</Editable>
         </h2>
         <p className="mx-auto mt-5 max-w-[52ch] text-[17px] leading-[1.55] text-shell/80 md:text-[19px]">

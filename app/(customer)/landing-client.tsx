@@ -24,12 +24,10 @@ export type Step = {
 };
 
 export function HowItWorksTabs({
-  eyebrow,
   heading,
   parentSteps,
   studentSteps,
 }: {
-  eyebrow: React.ReactNode;
   heading: React.ReactNode;
   parentSteps: Step[];
   studentSteps: Step[];
@@ -46,12 +44,9 @@ export function HowItWorksTabs({
 
   return (
     <section id="how" className={`${BAND} bg-shell`}>
-      <div className="mx-auto w-full max-w-[1140px] px-5 sm:px-8">
-        <div className="mb-[52px] flex flex-wrap items-start justify-between gap-5">
-          <div>
-            <div className={EYEBROW}>{eyebrow}</div>
-            <h2 className={H2}>{heading}</h2>
-          </div>
+      <div className="reveal-rise mx-auto w-full max-w-[1140px] px-5 sm:px-8">
+        <div className="mb-[52px] flex flex-wrap items-end justify-between gap-5">
+          <h2 className={H2}>{heading}</h2>
           <div className="flex gap-2">
             <button
               type="button"
@@ -70,12 +65,11 @@ export function HowItWorksTabs({
           </div>
         </div>
 
-        <div className="grid gap-[22px] md:grid-cols-3">
+        {/* Open layout: the numbered circles and the dashed ant-trail run as
+            one continuous path across the section, no card boxes. */}
+        <div className="grid gap-10 md:grid-cols-3 md:gap-[22px]">
           {steps.map((step, index) => (
-            <div
-              key={step.n}
-              className="group rounded-[22px] border-[1.4px] border-viridian/15 bg-card p-[30px] transition duration-200 hover:-translate-y-[3px] hover:border-viridian/30 hover:shadow-[0_18px_40px_-26px_rgba(52,73,69,0.5)]"
-            >
+            <div key={step.n} className="group">
               {/* Number + a dashed trail the ant "walks" toward the next step. */}
               <div className="flex items-center gap-4">
                 <div className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-viridian font-display text-xl font-bold text-shell transition duration-200 group-hover:scale-105">
@@ -99,7 +93,7 @@ export function HowItWorksTabs({
               <h3 className="mt-5 font-display text-[21px] font-semibold leading-tight text-viridian">
                 {step.title}
               </h3>
-              <p className="mt-2.5 leading-normal text-viridian/65">
+              <p className="mt-2.5 max-w-[40ch] leading-normal text-viridian/65">
                 {step.body}
               </p>
             </div>

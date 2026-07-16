@@ -23,7 +23,7 @@ export function BrowseControls({
   bookingFrom: BookingFromSummary;
 }) {
   return (
-    <div className="grid gap-4 rounded-2xl border border-line bg-court p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+    <div className="grid gap-4 rounded-2xl border-[1.4px] border-viridian/15 bg-court p-4 sm:grid-cols-[1fr_auto] sm:items-center">
       <BookingFrom summary={bookingFrom} />
 
       <nav aria-label="Sort providers" className="flex flex-wrap gap-2">
@@ -32,14 +32,18 @@ export function BrowseControls({
           if (serviceSlug) params.set("service", serviceSlug);
           if (sort.value !== "suggested") params.set("sort", sort.value);
           const query = params.toString();
+          const active = activeSort === sort.value;
           return (
             <Link
               key={sort.value}
               href={query ? `/browse?${query}` : "/browse"}
-              aria-current={activeSort === sort.value ? "page" : undefined}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                buttonClasses({ variant: "ghost", size: "sm" }),
-                activeSort === sort.value && "bg-crew-600 text-white hover:bg-crew-700",
+                buttonClasses({
+                  variant: active ? "primary" : "secondary",
+                  size: "sm",
+                }),
+                !active && "border-viridian/20",
               )}
             >
               {sort.label}
