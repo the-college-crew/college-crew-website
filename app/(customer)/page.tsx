@@ -480,19 +480,6 @@ function CompareColumn({
   );
 }
 
-/*
- * Tile surfaces cycle through the band palette so the grid reads as a
- * composed set rather than six identical white boxes (bento diversity).
- */
-const SERVICE_TILE_TONES = [
-  "bg-card",
-  "bg-sky/45",
-  "bg-card",
-  "bg-stone/50",
-  "bg-card",
-  "bg-sky/45",
-];
-
 function ServicesSection({ services }: { services: Service[] }) {
   return (
     <section className={`${BAND} bg-honeydew`}>
@@ -514,11 +501,11 @@ function ServicesSection({ services }: { services: Service[] }) {
               Live services will appear here once the catalog is available.
             </div>
           ) : null}
-          {services.map((service, index) => (
+          {services.map((service) => (
             <Link
               key={service.id}
               href={`/browse?service=${service.slug}`}
-              className={`group flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 p-[26px] ${SERVICE_TILE_TONES[index % SERVICE_TILE_TONES.length]} ${CARD_LIFT_BORDERED}`}
+              className={`group flex flex-col gap-3.5 rounded-[20px] border-[1.4px] border-viridian/15 bg-card p-[26px] ${CARD_LIFT_BORDERED}`}
             >
               <span
                 className={`flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-honeydew text-viridian ${ICON_TILE_HOVER}`}
