@@ -23,11 +23,14 @@ import { milesBetween } from "@/lib/geo/distance";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import {
+  demoAvailabilityWindows,
   demoBookings,
   demoOfferings,
   demoProviderProfile,
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
+import { getProviderAvailabilityWindows } from "@/lib/db/queries";
+import type { AvailabilityWindow } from "@/lib/provider/setup";
 import type { BookingFlow, BookingStatus } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
@@ -109,6 +112,7 @@ export default async function ProviderDashboardPage({
           hourly_rate_cents: offering.hourly_rate_cents,
           service_is_live: offering.service.is_live,
         }))}
+        windows={demoAvailabilityWindows}
         submitted={submitted}
         stripe={stripe}
         onboardingComplete
@@ -130,7 +134,7 @@ export default async function ProviderDashboardPage({
     Boolean(profile.id_document_back_url);
 
   const supabase = await createClient();
-  const [{ data }, { data: offeringRows }] = await Promise.all([
+  const [{ data }, { data: offeringRows }, windows] = await Promise.all([
     supabase
       .from("bookings")
       .select(
@@ -147,6 +151,7 @@ export default async function ProviderDashboardPage({
       .from("provider_services")
       .select("id, hourly_rate_cents, service:services(name, is_live)")
       .eq("provider_id", profile.id),
+    getProviderAvailabilityWindows(profile.id),
   ]);
 
   const rawBookings = (data ?? []) as ProviderBookingRow[];
@@ -174,6 +179,7 @@ export default async function ProviderDashboardPage({
       profile={profile}
       bookings={bookings}
       offerings={offerings}
+      windows={windows}
       submitted={submitted}
       stripe={stripe}
       onboardingComplete={onboardingComplete}
@@ -185,6 +191,7 @@ function ProviderDashboardView({
   profile,
   bookings,
   offerings,
+  windows,
   submitted,
   stripe,
   onboardingComplete,
@@ -193,6 +200,7 @@ function ProviderDashboardView({
   profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
   bookings: ProviderBookingRow[];
   offerings: ReadinessOffering[];
+  windows: AvailabilityWindow[];
   submitted?: string;
   stripe?: string;
   onboardingComplete: boolean;
@@ -329,7 +337,11 @@ function ProviderDashboardView({
         </div>
       ) : null}
 
-      <ProviderReadinessChecklist profile={profile} offerings={offerings} />
+      <ProviderReadinessChecklist
+        profile={profile}
+        offerings={offerings}
+        windows={windows}
+      />
 
       {/* Earnings summary */}
       <div className="grid grid-cols-3 gap-4">

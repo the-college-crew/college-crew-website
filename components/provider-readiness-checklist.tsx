@@ -1,6 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import type { ProviderProfile } from "@/lib/db/types";
-import { getOfferingReadiness } from "@/lib/provider/setup";
+import {
+  getOfferingReadiness,
+  type AvailabilityWindow,
+} from "@/lib/provider/setup";
 import { formatMoney } from "@/lib/utils";
 
 export type ReadinessOffering = {
@@ -13,6 +16,7 @@ export type ReadinessOffering = {
 export function ProviderReadinessChecklist({
   profile,
   offerings,
+  windows,
   legalAcceptance,
 }: {
   profile: Pick<
@@ -21,12 +25,10 @@ export function ProviderReadinessChecklist({
     | "stripe_account_id"
     | "stripe_transfers_active"
     | "stripe_transfers_checked_at"
-    | "availability_weekdays"
-    | "availability_start_local"
-    | "availability_end_local"
     | "service_zip"
   >;
   offerings: ReadinessOffering[];
+  windows: AvailabilityWindow[];
   legalAcceptance?: { ready: boolean; version: string };
 }) {
   if (offerings.length === 0) {
@@ -40,7 +42,7 @@ export function ProviderReadinessChecklist({
 
   const rows = offerings.map((offering) => ({
     offering,
-    readiness: getOfferingReadiness(profile, offering),
+    readiness: getOfferingReadiness(profile, offering, windows),
   }));
   const allReady =
     rows.every(({ readiness }) => readiness.bookable) &&

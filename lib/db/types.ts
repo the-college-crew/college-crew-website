@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       admin_allowlist: {
@@ -1191,6 +1196,45 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_availability_windows: {
+        Row: {
+          end_local: string
+          id: string
+          provider_id: string
+          start_local: string
+          weekday: number
+        }
+        Insert: {
+          end_local: string
+          id?: string
+          provider_id: string
+          start_local: string
+          weekday: number
+        }
+        Update: {
+          end_local?: string
+          id?: string
+          provider_id?: string
+          start_local?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_availability_windows_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_availability_windows_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "public_provider_directory"
+            referencedColumns: ["provider_id"]
+          },
+        ]
+      }
       provider_email_verifications: {
         Row: {
           attempts: number
@@ -1820,6 +1864,7 @@ export type Database = {
           availability_note: string | null
           availability_start_local: string | null
           availability_weekdays: number[] | null
+          availability_windows: Json | null
           avatar_image_path: string | null
           banner_image_path: string | null
           banner_style: string | null
@@ -1838,6 +1883,7 @@ export type Database = {
           availability_note?: string | null
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
+          availability_windows?: never
           avatar_image_path?: string | null
           banner_image_path?: string | null
           banner_style?: string | null
@@ -1856,6 +1902,7 @@ export type Database = {
           availability_note?: string | null
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
+          availability_windows?: never
           avatar_image_path?: string | null
           banner_image_path?: string | null
           banner_style?: string | null
@@ -2201,6 +2248,15 @@ export type Database = {
           p_terminal?: boolean
         }
         Returns: boolean
+      }
+      save_provider_availability: {
+        Args: {
+          p_availability_note: string
+          p_minimum_notice_hours: number
+          p_service_zip: string
+          p_windows: Json
+        }
+        Returns: undefined
       }
       settle_balance_payment: {
         Args: { p_stripe_payment_intent_id: string; p_succeeded_at?: string }
@@ -2548,6 +2604,7 @@ export type SupportTicketStatus = "new" | "reviewing" | "resolved"
 export type Profile = Tables<"profiles">
 export type Service = Tables<"services">
 export type ProviderProfile = Tables<"provider_profiles">
+export type ProviderAvailabilityWindowRow = Tables<"provider_availability_windows">
 export type ProviderService = Tables<"provider_services">
 export type Booking = Tables<"bookings">
 export type BookingAutomationJob = Tables<"booking_automation_jobs">

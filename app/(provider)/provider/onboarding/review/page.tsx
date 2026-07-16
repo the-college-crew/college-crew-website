@@ -8,9 +8,11 @@ import { Card } from "@/components/ui/card";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import { isHourlyRateValid } from "@/lib/booking/policy";
+import { getProviderAvailabilityWindows } from "@/lib/db/queries";
 import {
   formatAvailabilityDays,
   formatAvailabilityWindow,
+  groupAvailabilityWindows,
   isStructuredAvailabilityComplete,
   verificationLabel,
 } from "@/lib/provider/setup";
@@ -29,12 +31,15 @@ export default async function OnboardingReviewPage() {
   if (!profile) redirect("/provider/onboarding/account");
 
   const supabase = await createClient();
-  const { data: offerings } = await supabase
-    .from("provider_services")
-    .select(
-      "id, price_cents, price_type, unit, hourly_rate_cents, service:services(name, is_live)",
-    )
-    .eq("provider_id", profile.id);
+  const [{ data: offerings }, windows] = await Promise.all([
+    supabase
+      .from("provider_services")
+      .select(
+        "id, price_cents, price_type, unit, hourly_rate_cents, service:services(name, is_live)",
+      )
+      .eq("provider_id", profile.id),
+    getProviderAvailabilityWindows(profile.id),
+  ]);
   const liveOfferings = (offerings ?? []).filter(
     (offered) =>
       offered.service?.is_live &&
@@ -50,12 +55,9 @@ export default async function OnboardingReviewPage() {
     Boolean(schoolEmail) &&
     licenseComplete &&
     liveOfferings.length > 0 &&
-    isStructuredAvailabilityComplete(profile) &&
+    isStructuredAvailabilityComplete(windows) &&
     Boolean(profile.service_zip);
-  const availabilityWindow = formatAvailabilityWindow(
-    profile.availability_start_local,
-    profile.availability_end_local,
-  );
+  const availabilityGroups = groupAvailabilityWindows(windows);
 
   return (
     <div>
@@ -143,12 +145,14 @@ export default async function OnboardingReviewPage() {
           <div>
             <dt className="text-mist">General availability</dt>
             <dd className="mt-1.5 rounded-lg bg-court px-3 py-2">
-              {isStructuredAvailabilityComplete(profile) && availabilityWindow ? (
+              {availabilityGroups.length > 0 ? (
                 <>
-                  <p className="font-medium">
-                    {formatAvailabilityDays(profile.availability_weekdays)} ·{" "}
-                    {availabilityWindow}
-                  </p>
+                  {availabilityGroups.map((group) => (
+                    <p key={`${group.start}-${group.end}`} className="font-medium">
+                      {formatAvailabilityDays(group.weekdays)} ·{" "}
+                      {formatAvailabilityWindow(group.start, group.end)}
+                    </p>
+                  ))}
                   {profile.availability_note ? (
                     <p className="mt-1 text-xs text-ink-soft">
                       {profile.availability_note}

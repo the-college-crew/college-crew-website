@@ -5,7 +5,9 @@ import { createHash, randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import type { AvailabilityFormState } from "@/app/(provider)/provider/_components/provider-availability-form";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { getProviderAvailabilityWindows } from "@/lib/db/queries";
 import {
   claimAccountEmailAsSchool,
   eligibleAccountSchoolEmail,
@@ -167,11 +169,11 @@ export async function saveOnboardingPricing(
   redirect("/provider/onboarding/availability");
 }
 
-/** Availability step: provider-wide schedule, notice, and private service ZIP. */
+/** Availability step: per-day schedule windows, notice, and private service ZIP. */
 export async function saveOnboardingAvailability(
-  _prev: OnboardingFormState,
+  _prev: AvailabilityFormState,
   formData: FormData,
-): Promise<OnboardingFormState> {
+): Promise<AvailabilityFormState> {
   await requireRole("provider");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
@@ -179,11 +181,20 @@ export async function saveOnboardingAvailability(
   const parsed = parseProviderAvailabilityForm(formData);
   if (!parsed.success) return { fieldErrors: parsed.fieldErrors };
 
+  // Atomic replace-all of the windows plus the profile fields — the sole
+  // write path for provider_availability_windows.
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("provider_profiles")
-    .update(parsed.data)
-    .eq("id", profile.id);
+  const { error } = await supabase.rpc("save_provider_availability", {
+    p_windows: parsed.data.windows.map((window) => ({
+      weekday: window.weekday,
+      start: window.start_local,
+      end: window.end_local,
+    })),
+    p_availability_note: parsed.data.availability_note,
+    // The parser guarantees a five-digit ZIP; the fallback only satisfies TS.
+    p_service_zip: parsed.data.service_zip ?? "",
+    p_minimum_notice_hours: parsed.data.minimum_notice_hours,
+  });
   if (error) return { error: "Could not save availability — try again." };
 
   redirect("/provider/onboarding/review");
@@ -394,10 +405,13 @@ export async function submitForReview() {
     redirect("/provider/onboarding/verify");
   }
 
-  const { data: offerings } = await supabase
-    .from("provider_services")
-    .select("hourly_rate_cents, service:services(is_live)")
-    .eq("provider_id", profile.id);
+  const [{ data: offerings }, windows] = await Promise.all([
+    supabase
+      .from("provider_services")
+      .select("hourly_rate_cents, service:services(is_live)")
+      .eq("provider_id", profile.id),
+    getProviderAvailabilityWindows(profile.id),
+  ]);
   const hasReadyRate = (offerings ?? []).some(
     (offering) =>
       offering.service?.is_live &&
@@ -406,7 +420,7 @@ export async function submitForReview() {
   );
   if (!hasReadyRate) redirect("/provider/onboarding/services");
 
-  if (!isStructuredAvailabilityComplete(profile) || !profile.service_zip) {
+  if (!isStructuredAvailabilityComplete(windows) || !profile.service_zip) {
     redirect("/provider/onboarding/availability");
   }
 

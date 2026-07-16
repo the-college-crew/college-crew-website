@@ -168,12 +168,22 @@ test.beforeAll(async () => {
     stripe_transfers_active: true,
     stripe_transfers_checked_at: new Date().toISOString(),
     service_zip: "60615",
-    availability_weekdays: [0, 1, 2, 3, 4, 5, 6],
-    availability_start_local: "00:00",
-    availability_end_local: "23:45",
     minimum_notice_hours: 3,
   });
   if (providerError) throw providerError;
+
+  // Per-day availability: near-24h windows every day (service-role insert).
+  const { error: windowsError } = await admin
+    .from("provider_availability_windows")
+    .insert(
+      [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
+        provider_id: providerProfileId,
+        weekday,
+        start_local: "00:00",
+        end_local: "23:45",
+      })),
+    );
+  if (windowsError) throw windowsError;
 
   const { error: serviceError } = await admin.from("services").insert({
     id: serviceId,

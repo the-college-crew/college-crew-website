@@ -347,12 +347,19 @@ const PILOT_WEEKDAY_INDEX: Record<string, number> = {
   Sun: 6,
 };
 
+/**
+ * TS mirror of the SQL guard: the slot must stay on one local date and fit
+ * fully inside the provider's window for that weekday (one window per day;
+ * days without a window are unbookable).
+ */
 export function doesSlotFitPilotAvailability(input: {
   scheduledAt: DateInput;
   estimatedMinutes: number;
-  weekdays: readonly number[];
-  startLocal: string;
-  endLocal: string;
+  windows: readonly {
+    weekday: number;
+    startLocal: string;
+    endLocal: string;
+  }[];
 }) {
   if (!isDurationValid(input.estimatedMinutes, CUSTOMER_ESTIMATE_MINUTES)) {
     return false;
@@ -362,13 +369,14 @@ export function doesSlotFitPilotAvailability(input: {
   const startParts = getPilotLocalParts(start);
   const endParts = getPilotLocalParts(end);
   const weekday = PILOT_WEEKDAY_INDEX[startParts.weekday];
+  const window = input.windows.find((entry) => entry.weekday === weekday);
+  if (!window) return false;
 
   return (
     startParts.year === endParts.year &&
     startParts.month === endParts.month &&
     startParts.day === endParts.day &&
-    input.weekdays.includes(weekday) &&
-    startParts.hour * 60 + startParts.minute >= clockMinutes(input.startLocal) &&
-    endParts.hour * 60 + endParts.minute <= clockMinutes(input.endLocal)
+    startParts.hour * 60 + startParts.minute >= clockMinutes(window.startLocal) &&
+    endParts.hour * 60 + endParts.minute <= clockMinutes(window.endLocal)
   );
 }

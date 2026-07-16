@@ -7,6 +7,7 @@ import { WizardSteps } from "@/app/(provider)/provider/_components/wizard-steps"
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import { getProviderAvailabilityWindows } from "@/lib/db/queries";
 
 import { saveOnboardingAvailability } from "../actions";
 
@@ -14,11 +15,12 @@ export const metadata: Metadata = {
   title: "Provider onboarding — availability",
 };
 
-/** Wizard step 4: one provider-wide schedule for the hourly pilot. */
+/** Wizard step 4: per-day schedule windows for the hourly pilot. */
 export default async function OnboardingAvailabilityPage() {
   await requireRole("provider", "/provider/onboarding/availability");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
+  const windows = await getProviderAvailabilityWindows(profile.id);
 
   return (
     <div>
@@ -28,13 +30,14 @@ export default async function OnboardingAvailabilityPage() {
           When can neighbors book you?
         </h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Choose your general days and one shared time window. You can update
-          these settings later from Profile &amp; settings.
+          Group the days that share the same hours, and add more windows for
+          days with different hours. You can update these settings later from
+          Profile &amp; settings.
         </p>
 
         <div className="mt-5">
           <ProviderAvailabilityForm
-            values={profile}
+            values={{ ...profile, windows }}
             action={saveOnboardingAvailability}
             submitLabel="Save & continue →"
             navigates

@@ -4,19 +4,33 @@ import {
   HOURLY_RATE_INPUT_CONSTRAINTS,
   buildHourlyOfferingPersistenceRow,
   getOfferingReadiness,
+  groupAvailabilityWindows,
   parseHourlyRateInput,
   parseProviderAvailabilityForm,
+  type AvailabilityWindow,
 } from "./setup";
 
 function validAvailabilityForm() {
   const form = new FormData();
-  form.set("weekday_0", "on");
-  form.set("weekday_4", "on");
-  form.set("availabilityStart", "09:00");
-  form.set("availabilityEnd", "17:00");
+  form.set("windowCount", "1");
+  form.set("windowDay_0_0", "on");
+  form.set("windowDay_0_4", "on");
+  form.set("windowStart_0", "09:00");
+  form.set("windowEnd_0", "17:00");
   form.set("availabilityNote", "Afternoons also work with notice.");
   form.set("serviceZip", "60614");
   form.set("noticeChoice", "24");
+  return form;
+}
+
+function twoGroupAvailabilityForm() {
+  const form = validAvailabilityForm();
+  // Group 0: Mon+Fri 9-5 (from validAvailabilityForm). Group 1: Sat-Sun 12-4.
+  form.set("windowCount", "2");
+  form.set("windowDay_1_5", "on");
+  form.set("windowDay_1_6", "on");
+  form.set("windowStart_1", "12:00");
+  form.set("windowEnd_1", "16:00");
   return form;
 }
 
@@ -87,9 +101,10 @@ describe("structured provider availability", () => {
     expect(preset).toMatchObject({
       success: true,
       data: {
-        availability_weekdays: [0, 4],
-        availability_start_local: "09:00",
-        availability_end_local: "17:00",
+        windows: [
+          { weekday: 0, start_local: "09:00", end_local: "17:00" },
+          { weekday: 4, start_local: "09:00", end_local: "17:00" },
+        ],
         service_zip: "60614",
         minimum_notice_hours: 24,
       },
@@ -106,12 +121,37 @@ describe("structured provider availability", () => {
     }
   });
 
+  it("flattens multiple day-groups into sorted per-weekday windows", () => {
+    const result = parseProviderAvailabilityForm(twoGroupAvailabilityForm());
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        windows: [
+          { weekday: 0, start_local: "09:00", end_local: "17:00" },
+          { weekday: 4, start_local: "09:00", end_local: "17:00" },
+          { weekday: 5, start_local: "12:00", end_local: "16:00" },
+          { weekday: 6, start_local: "12:00", end_local: "16:00" },
+        ],
+      },
+    });
+  });
+
+  it("rejects a weekday claimed by two groups", () => {
+    const form = twoGroupAvailabilityForm();
+    form.set("windowDay_1_0", "on"); // Monday already lives in group 0.
+    const result = parseProviderAvailabilityForm(form);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.fieldErrors.windows?.[1]?.days).toContain("Monday");
+    }
+  });
+
   it("returns every relevant field error in one response", () => {
     const form = validAvailabilityForm();
-    form.delete("weekday_0");
-    form.delete("weekday_4");
-    form.set("availabilityStart", "17:00");
-    form.set("availabilityEnd", "09:00");
+    form.delete("windowDay_0_0");
+    form.delete("windowDay_0_4");
+    form.set("windowStart_0", "17:00");
+    form.set("windowEnd_0", "09:00");
     form.set("serviceZip", "6061");
     form.set("noticeChoice", "custom");
     form.set("customNoticeHours", "169");
@@ -120,11 +160,22 @@ describe("structured provider availability", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.fieldErrors).toMatchObject({
-        weekdays: expect.any(String),
-        availabilityEnd: expect.any(String),
+        windows: {
+          0: { days: expect.any(String), end: expect.any(String) },
+        },
         serviceZip: expect.any(String),
         minimumNoticeHours: expect.any(String),
       });
+    }
+  });
+
+  it("requires at least one window", () => {
+    const form = validAvailabilityForm();
+    form.set("windowCount", "0");
+    const result = parseProviderAvailabilityForm(form);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.fieldErrors.weekdays).toEqual(expect.any(String));
     }
   });
 
@@ -136,24 +187,61 @@ describe("structured provider availability", () => {
   });
 });
 
+describe("availability window grouping", () => {
+  it("groups shared hours and round-trips back to the same windows", () => {
+    const windows: AvailabilityWindow[] = [
+      { weekday: 5, start_local: "12:00:00", end_local: "16:00:00" },
+      { weekday: 0, start_local: "09:00:00", end_local: "17:00:00" },
+      { weekday: 3, start_local: "09:00:00", end_local: "17:00:00" },
+      { weekday: 4, start_local: "12:00:00", end_local: "16:00:00" },
+    ];
+    const groups = groupAvailabilityWindows(windows);
+    expect(groups).toEqual([
+      { weekdays: [0, 3], start: "09:00", end: "17:00" },
+      { weekdays: [4, 5], start: "12:00", end: "16:00" },
+    ]);
+    // Flattening the groups restores the sorted original set (HH:MM precision).
+    const flattened = groups.flatMap((group) =>
+      group.weekdays.map((weekday) => ({
+        weekday,
+        start_local: group.start,
+        end_local: group.end,
+      })),
+    );
+    expect(flattened.map((w) => w.weekday).toSorted((a, b) => a - b)).toEqual([
+      0, 3, 4, 5,
+    ]);
+  });
+
+  it("returns no groups for an empty window set", () => {
+    expect(groupAvailabilityWindows([])).toEqual([]);
+  });
+});
+
 describe("offering readiness", () => {
   const readyProfile = {
     verification_status: "approved" as const,
     stripe_account_id: "acct_test",
     stripe_transfers_active: true,
     stripe_transfers_checked_at: "2026-07-13T20:00:00.000Z",
-    availability_weekdays: [0, 2, 4],
-    availability_start_local: "09:00:00",
-    availability_end_local: "17:00:00",
     service_zip: "60614",
   };
+  const readyWindows: AvailabilityWindow[] = [
+    { weekday: 0, start_local: "09:00:00", end_local: "17:00:00" },
+    { weekday: 2, start_local: "09:00:00", end_local: "17:00:00" },
+    { weekday: 4, start_local: "12:00:00", end_local: "16:00:00" },
+  ];
 
   it("is ready only when every public and private prerequisite passes", () => {
     expect(
-      getOfferingReadiness(readyProfile, {
-        hourly_rate_cents: 4_500,
-        service_is_live: true,
-      }).bookable,
+      getOfferingReadiness(
+        readyProfile,
+        {
+          hourly_rate_cents: 4_500,
+          service_is_live: true,
+        },
+        readyWindows,
+      ).bookable,
     ).toBe(true);
   });
 
@@ -163,10 +251,10 @@ describe("offering readiness", () => {
         ...readyProfile,
         verification_status: "pending",
         stripe_transfers_active: false,
-        availability_weekdays: [],
         service_zip: null,
       },
       { hourly_rate_cents: null, service_is_live: false },
+      [],
     );
 
     expect(readiness.bookable).toBe(false);
