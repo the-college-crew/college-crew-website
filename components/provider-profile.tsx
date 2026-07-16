@@ -71,6 +71,7 @@ export async function ProviderProfile({
               {provider.company_name || provider.display_name || "Student provider"}
             </h1>
             <VerifiedBadge />
+            <Rating rating={provider.rating} />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <Badge tone={provider.provider_type === "business" ? "blue" : "gray"}>
@@ -83,7 +84,6 @@ export async function ProviderProfile({
               distanceMiles={provider.distance_miles}
               className="text-xs text-mist"
             />
-            <Rating rating={provider.rating} />
           </div>
           {provider.bio ? (
             <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-ink-soft">

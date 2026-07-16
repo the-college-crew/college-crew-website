@@ -91,6 +91,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                 {provider.company_name || provider.display_name || "Student provider"}
               </h3>
               <VerifiedCheck />
+              <Rating rating={provider.rating} />
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -99,7 +100,6 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                   ? "Student business"
                   : "Hardworking individual"}
               </Badge>
-              <Rating rating={provider.rating} />
               <LocationLine
                 town={provider.town}
                 distanceMiles={provider.distance_miles}
