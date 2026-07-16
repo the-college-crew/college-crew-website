@@ -4,13 +4,24 @@ import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
+import type { UserRole } from "@/lib/db/types";
 
 import {
   acceptMasterAgreement,
   type MasterAgreementState,
 } from "./actions";
 
-export function MasterAgreementForm({ next }: { next: string }) {
+export function MasterAgreementForm({
+  next,
+  renderedVariant,
+  renderedHash,
+}: {
+  next: string;
+  /** The agreement variant + content hash this page actually rendered; the
+   * action refuses to record an acceptance that doesn't match them. */
+  renderedVariant: UserRole;
+  renderedHash: string;
+}) {
   const [state, formAction, pending] = useActionState<
     MasterAgreementState,
     FormData
@@ -19,6 +30,8 @@ export function MasterAgreementForm({ next }: { next: string }) {
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="next" value={next} />
+      <input type="hidden" name="renderedVariant" value={renderedVariant} />
+      <input type="hidden" name="renderedHash" value={renderedHash} />
 
       <label className="flex gap-3 rounded-xl border border-line bg-court p-4 text-sm text-ink-soft">
         <input

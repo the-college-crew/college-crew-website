@@ -74,10 +74,11 @@ export default async function OnboardingAccountPage() {
             </div>
           </dl>
           <div className="mt-6">
+            {/* DOB is asked whenever the profile lacks one — even with an
+                existing provider row (e.g. created outside this wizard), the
+                18+ gate still has to be satisfied to continue. */}
             <StartProviderForm
-              needsDateOfBirth={
-                !providerProfile && !session.profile.date_of_birth
-              }
+              needsDateOfBirth={!session.profile.date_of_birth}
               askCompanyName={!providerProfile}
             />
           </div>
