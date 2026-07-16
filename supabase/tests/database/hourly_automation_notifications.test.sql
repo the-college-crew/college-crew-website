@@ -64,6 +64,22 @@ select is(
   'Cron invocation safely no-ops before Vault is configured'
 );
 
+-- The local development database can contain due work from manual or browser
+-- testing. Quarantine it inside this transaction so the bounded-claim checks
+-- exercise only the deterministic fixtures below; rollback restores every row.
+update public.booking_automation_jobs
+set next_attempt_at = greatest(next_attempt_at, now() + interval '1 day'),
+    lease_expires_at = case
+      when status = 'processing' then now() + interval '1 day'
+      else lease_expires_at
+    end;
+update public.email_outbox
+set next_attempt_at = greatest(next_attempt_at, now() + interval '1 day'),
+    lease_expires_at = case
+      when status = 'processing' then now() + interval '1 day'
+      else lease_expires_at
+    end;
+
 -- ---------------------------------------------------------------------------
 -- A requested hourly booking transaction creates deterministic jobs + email
 -- ---------------------------------------------------------------------------

@@ -94,12 +94,21 @@ export const demoProviderProfile: ProviderProfile = {
   availability_start_local: "15:00:00",
   availability_end_local: "20:00:00",
   availability_note: "Weekday afternoons after class, Saturdays 9am-4pm.",
+  // (The three columns above are deprecated; per-day windows live below.)
   service_zip: "60614",
   minimum_notice_hours: 24,
   stripe_transfers_active: true,
   stripe_transfers_checked_at: isoAgoDays(2, 10),
   created_at: isoAgoDays(45, 12),
 };
+
+/** Two day-groups so previews show off per-day availability windows. */
+export const demoAvailabilityWindows = [
+  { weekday: 0, start_local: "15:00:00", end_local: "20:00:00" },
+  { weekday: 2, start_local: "15:00:00", end_local: "20:00:00" },
+  { weekday: 4, start_local: "15:00:00", end_local: "20:00:00" },
+  { weekday: 5, start_local: "09:00:00", end_local: "16:00:00" },
+];
 
 export const demoOfferings = [
   {

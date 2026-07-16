@@ -17,8 +17,11 @@ import {
   NOTICE_HOUR_PRESETS,
 } from "@/lib/booking/policy";
 import {
+  MAX_AVAILABILITY_WINDOWS,
   PROVIDER_WEEKDAYS,
   defaultNoticeChoice,
+  groupAvailabilityWindows,
+  type AvailabilityDayGroup,
   type ProviderAvailabilityValues,
   type ProviderSetupFieldErrors,
 } from "@/lib/provider/setup";
@@ -28,6 +31,8 @@ export type AvailabilityFormState = {
   success?: string;
   fieldErrors?: ProviderSetupFieldErrors;
 };
+
+const EMPTY_GROUP: AvailabilityDayGroup = { weekdays: [], start: "", end: "" };
 
 export function ProviderAvailabilityForm({
   values,
@@ -47,13 +52,10 @@ export function ProviderAvailabilityForm({
     AvailabilityFormState,
     FormData
   >(action, {});
-  const [weekdays, setWeekdays] = useState(values.availability_weekdays);
-  const [start, setStart] = useState(
-    values.availability_start_local?.slice(0, 5) ?? "",
-  );
-  const [end, setEnd] = useState(
-    values.availability_end_local?.slice(0, 5) ?? "",
-  );
+  const [groups, setGroups] = useState<AvailabilityDayGroup[]>(() => {
+    const initial = groupAvailabilityWindows(values.windows);
+    return initial.length > 0 ? initial : [EMPTY_GROUP];
+  });
   const [note, setNote] = useState(values.availability_note);
   const [serviceZip, setServiceZip] = useState(values.service_zip ?? "");
   const [noticeChoice, setNoticeChoice] = useState(() =>
@@ -65,74 +67,179 @@ export function ProviderAvailabilityForm({
       : "",
   );
 
-  function toggleWeekday(value: number, checked: boolean) {
-    setWeekdays((current) =>
-      checked
-        ? [...new Set([...current, value])].sort((a, b) => a - b)
-        : current.filter((day) => day !== value),
+  // Which group currently owns each weekday — a day can only live in one
+  // time window, so pills claimed elsewhere render disabled.
+  const claimedBy = new Map<number, number>();
+  groups.forEach((group, index) => {
+    for (const day of group.weekdays) claimedBy.set(day, index);
+  });
+  const allDaysClaimed = claimedBy.size === PROVIDER_WEEKDAYS.length;
+
+  function toggleDay(groupIndex: number, day: number, checked: boolean) {
+    setGroups((current) =>
+      current.map((group, index) =>
+        index === groupIndex
+          ? {
+              ...group,
+              weekdays: checked
+                ? [...new Set([...group.weekdays, day])].sort((a, b) => a - b)
+                : group.weekdays.filter((value) => value !== day),
+            }
+          : group,
+      ),
+    );
+  }
+
+  function setGroupTime(
+    groupIndex: number,
+    field: "start" | "end",
+    value: string,
+  ) {
+    setGroups((current) =>
+      current.map((group, index) =>
+        index === groupIndex ? { ...group, [field]: value } : group,
+      ),
+    );
+  }
+
+  function addGroup() {
+    setGroups((current) =>
+      current.length < MAX_AVAILABILITY_WINDOWS
+        ? [...current, EMPTY_GROUP]
+        : current,
+    );
+  }
+
+  function removeGroup(groupIndex: number) {
+    setGroups((current) =>
+      current.length > 1
+        ? current.filter((_, index) => index !== groupIndex)
+        : current,
     );
   }
 
   return (
     <form action={formAction} className="space-y-5">
       {navigates ? <FormLoader /> : null}
+      <input type="hidden" name="windowCount" value={groups.length} />
+
       <fieldset>
         <legend className="mb-1.5 block text-sm font-medium">
-          Days you generally work
+          Days and hours you work
         </legend>
-        <div className="flex flex-wrap gap-2">
-          {PROVIDER_WEEKDAYS.map(({ value, short, long }) => (
-            <label
-              key={value}
-              className="flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm has-checked:border-quad-500 has-checked:bg-quad-50 has-checked:font-semibold has-checked:text-quad-800"
-            >
-              <input
-                type="checkbox"
-                name={`weekday_${value}`}
-                checked={weekdays.includes(value)}
-                onChange={(event) => toggleWeekday(value, event.target.checked)}
-                className="sr-only"
-              />
-              <span className="sm:hidden">{short}</span>
-              <span className="hidden sm:inline">{long}</span>
-            </label>
-          ))}
+        <div className="space-y-3">
+          {groups.map((group, groupIndex) => {
+            const groupErrors = state.fieldErrors?.windows?.[groupIndex];
+            return (
+              <div
+                key={groupIndex}
+                className="space-y-3 rounded-xl border border-line bg-paper p-4"
+              >
+                <div className="flex flex-wrap gap-2">
+                  {PROVIDER_WEEKDAYS.map(({ value, short, long }) => {
+                    const owner = claimedBy.get(value);
+                    const claimedElsewhere =
+                      owner !== undefined && owner !== groupIndex;
+                    return (
+                      <label
+                        key={value}
+                        title={
+                          claimedElsewhere
+                            ? "Set in another time window"
+                            : undefined
+                        }
+                        className={
+                          claimedElsewhere
+                            ? "flex cursor-not-allowed items-center gap-1.5 rounded-full border border-line bg-stone/30 px-3 py-1.5 text-sm text-mist"
+                            : "flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm has-checked:border-quad-500 has-checked:bg-quad-50 has-checked:font-semibold has-checked:text-quad-800"
+                        }
+                      >
+                        <input
+                          type="checkbox"
+                          name={`windowDay_${groupIndex}_${value}`}
+                          checked={group.weekdays.includes(value)}
+                          disabled={claimedElsewhere}
+                          onChange={(event) =>
+                            toggleDay(groupIndex, value, event.target.checked)
+                          }
+                          className="sr-only"
+                        />
+                        <span className="sm:hidden">{short}</span>
+                        <span className="hidden sm:inline">{long}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <FieldError>{groupErrors?.days}</FieldError>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor={`windowStart_${groupIndex}`}>
+                      Start time
+                    </Label>
+                    <Input
+                      id={`windowStart_${groupIndex}`}
+                      name={`windowStart_${groupIndex}`}
+                      type="time"
+                      value={group.start}
+                      onChange={(event) =>
+                        setGroupTime(groupIndex, "start", event.target.value)
+                      }
+                      aria-invalid={groupErrors?.start ? true : undefined}
+                      required
+                    />
+                    <FieldError>{groupErrors?.start}</FieldError>
+                  </div>
+                  <div>
+                    <Label htmlFor={`windowEnd_${groupIndex}`}>End time</Label>
+                    <Input
+                      id={`windowEnd_${groupIndex}`}
+                      name={`windowEnd_${groupIndex}`}
+                      type="time"
+                      value={group.end}
+                      onChange={(event) =>
+                        setGroupTime(groupIndex, "end", event.target.value)
+                      }
+                      aria-invalid={groupErrors?.end ? true : undefined}
+                      required
+                    />
+                    <FieldError>{groupErrors?.end}</FieldError>
+                  </div>
+                </div>
+
+                {groups.length > 1 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeGroup(groupIndex)}
+                  >
+                    Remove this window
+                  </Button>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
+
+        {!allDaysClaimed && groups.length < MAX_AVAILABILITY_WINDOWS ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-3"
+            onClick={addGroup}
+          >
+            + Add days with different hours
+          </Button>
+        ) : null}
+
         <FieldHint>
-          One shared weekly window keeps scheduling predictable during the pilot.
+          Group the days that share the same hours; add another window for days
+          with different hours. Times are interpreted in Central Time.
         </FieldHint>
         <FieldError>{state.fieldErrors?.weekdays}</FieldError>
       </fieldset>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="availabilityStart">Start time</Label>
-          <Input
-            id="availabilityStart"
-            name="availabilityStart"
-            type="time"
-            value={start}
-            onChange={(event) => setStart(event.target.value)}
-            aria-invalid={state.fieldErrors?.availabilityStart ? true : undefined}
-            required
-          />
-          <FieldError>{state.fieldErrors?.availabilityStart}</FieldError>
-        </div>
-        <div>
-          <Label htmlFor="availabilityEnd">End time</Label>
-          <Input
-            id="availabilityEnd"
-            name="availabilityEnd"
-            type="time"
-            value={end}
-            onChange={(event) => setEnd(event.target.value)}
-            aria-invalid={state.fieldErrors?.availabilityEnd ? true : undefined}
-            required
-          />
-          <FieldError>{state.fieldErrors?.availabilityEnd}</FieldError>
-        </div>
-      </div>
-      <FieldHint>Times are interpreted in Central Time.</FieldHint>
 
       <div>
         <Label htmlFor="availabilityNote">Public availability note</Label>

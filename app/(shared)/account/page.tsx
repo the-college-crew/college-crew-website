@@ -20,8 +20,12 @@ import {
   getSession,
   requireUser,
 } from "@/lib/auth/session";
-import { getLiveServices } from "@/lib/db/queries";
 import {
+  getLiveServices,
+  getProviderAvailabilityWindows,
+} from "@/lib/db/queries";
+import {
+  demoAvailabilityWindows,
   demoOfferings,
   demoProviderProfile,
   demoServices,
@@ -43,6 +47,7 @@ import { toBannerStyle } from "@/lib/media/provider-banners";
 import {
   formatAvailabilityDays,
   formatAvailabilityWindow,
+  groupAvailabilityWindows,
 } from "@/lib/provider/setup";
 
 export const metadata: Metadata = { title: "Account settings" };
@@ -156,7 +161,7 @@ async function ProviderStorefront({
   stripeIncomplete: boolean;
 }) {
   const supabase = await createClient();
-  const [services, { data: offerings }] = await Promise.all([
+  const [services, { data: offerings }, windows] = await Promise.all([
     getLiveServices(),
     supabase
       .from("provider_services")
@@ -164,6 +169,7 @@ async function ProviderStorefront({
         "id, service_id, price_cents, price_type, unit, hourly_rate_cents, service:services(name, is_live)",
       )
       .eq("provider_id", providerProfile.id),
+    getProviderAvailabilityWindows(providerProfile.id),
   ]);
   const readinessOfferings = (offerings ?? []).map((offering) => ({
     id: offering.id,
@@ -191,6 +197,7 @@ async function ProviderStorefront({
       <ProviderReadinessChecklist
         profile={providerProfile}
         offerings={readinessOfferings}
+        windows={windows}
       />
 
       <Section
@@ -221,10 +228,10 @@ async function ProviderStorefront({
 
       <Section
         title="Availability"
-        description="Set one Central Time window for your selected weekdays, plus private matching details."
+        description="Set Central Time hours per day — group days that share the same hours, plus private matching details."
       >
         <ProviderAvailabilityForm
-          values={providerProfile}
+          values={{ ...providerProfile, windows }}
           action={updateAvailability}
           submitLabel="Save availability"
         />
@@ -291,10 +298,7 @@ async function ProviderStorefront({
 }
 
 function ProviderAccountDemo() {
-  const availabilityWindow = formatAvailabilityWindow(
-    demoProviderProfile.availability_start_local,
-    demoProviderProfile.availability_end_local,
-  );
+  const availabilityGroups = groupAvailabilityWindows(demoAvailabilityWindows);
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
@@ -312,6 +316,7 @@ function ProviderAccountDemo() {
           hourly_rate_cents: offering.hourly_rate_cents,
           service_is_live: offering.service.is_live,
         }))}
+        windows={demoAvailabilityWindows}
       />
 
       <Section
@@ -342,10 +347,12 @@ function ProviderAccountDemo() {
         title="Availability"
         description="Shown on your public profile so customers request times that work."
       >
-        <p className="font-medium">
-          {formatAvailabilityDays(demoProviderProfile.availability_weekdays)} ·{" "}
-          {availabilityWindow}
-        </p>
+        {availabilityGroups.map((group) => (
+          <p key={`${group.start}-${group.end}`} className="font-medium">
+            {formatAvailabilityDays(group.weekdays)} ·{" "}
+            {formatAvailabilityWindow(group.start, group.end)}
+          </p>
+        ))}
         <p className="mt-3 text-sm text-ink-soft">
           {demoProviderProfile.availability_note}
         </p>

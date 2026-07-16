@@ -23,7 +23,10 @@ import {
 import { milesBetween, type MaybeCoordinates } from "@/lib/geo/distance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { getOfferingReadiness } from "@/lib/provider/setup";
+import {
+  getOfferingReadiness,
+  type AvailabilityWindow,
+} from "@/lib/provider/setup";
 
 /**
  * Shared read models used across route groups. All helpers degrade to empty
@@ -413,13 +416,49 @@ export type PublicReview = {
 };
 
 export type PublicProviderProfile = ProviderCard & {
-  availability_weekdays: number[];
-  availability_start_local: string | null;
-  availability_end_local: string | null;
+  availability_windows: AvailabilityWindow[];
   availability_note: string;
   minimum_notice_hours: number;
   reviews: PublicReview[];
 };
+
+/**
+ * Parse the jsonb-aggregated availability_windows column exposed on the
+ * public directory view (null when a provider has no windows yet).
+ */
+function mapAvailabilityWindowsJson(value: unknown): AvailabilityWindow[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const { weekday, start_local, end_local } = entry as Record<string, unknown>;
+    if (
+      typeof weekday !== "number" ||
+      typeof start_local !== "string" ||
+      typeof end_local !== "string"
+    ) {
+      return [];
+    }
+    return [{ weekday, start_local, end_local }];
+  });
+}
+
+/**
+ * Flat per-provider windows read (no PostgREST embeds). Uses the cookie-based
+ * server client: RLS grants owners/admins their own rows and everyone the
+ * rows of approved providers.
+ */
+export async function getProviderAvailabilityWindows(
+  providerId: string,
+): Promise<AvailabilityWindow[]> {
+  if (!hasSupabaseEnv()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("provider_availability_windows")
+    .select("weekday, start_local, end_local")
+    .eq("provider_id", providerId)
+    .order("weekday");
+  return data ?? [];
+}
 
 /** Everything the public provider profile page needs, or null if not visible. */
 export async function getPublicProviderProfile(
@@ -485,9 +524,7 @@ export async function getPublicProviderProfile(
     banner_style: toBannerStyle(provider.banner_style),
     services: liveServices,
     rating: mapRating(rating),
-    availability_weekdays: provider.availability_weekdays ?? [],
-    availability_start_local: provider.availability_start_local,
-    availability_end_local: provider.availability_end_local,
+    availability_windows: mapAvailabilityWindowsJson(provider.availability_windows),
     availability_note: provider.availability_note ?? "",
     minimum_notice_hours: provider.minimum_notice_hours ?? 24,
     reviews: mapReviews(reviews ?? [], serviceNameById),
@@ -523,13 +560,18 @@ export async function getAdminProviderProfile(
   if (!hasSupabaseEnv()) return null;
   const supabase = createAdminClient();
 
-  const [{ data: provider }, { data: rating }, { data: reviews }, { data: services }] =
+  const [
+    { data: provider },
+    { data: windows },
+    { data: rating },
+    { data: reviews },
+    { data: services },
+  ] =
     await Promise.all([
       supabase
         .from("provider_profiles")
         .select(
-          `availability, availability_weekdays, availability_start_local,
-           availability_end_local, availability_note, minimum_notice_hours,
+          `availability, availability_note, minimum_notice_hours,
            service_zip, stripe_account_id, stripe_transfers_active,
            stripe_transfers_checked_at, verification_status, id_document_url,
            id_document_back_url, created_at,
@@ -537,6 +579,11 @@ export async function getAdminProviderProfile(
         )
         .eq("id", providerId)
         .maybeSingle(),
+      supabase
+        .from("provider_availability_windows")
+        .select("weekday, start_local, end_local")
+        .eq("provider_id", providerId)
+        .order("weekday"),
       supabase
         .from("provider_ratings")
         .select("*")
@@ -553,14 +600,19 @@ export async function getAdminProviderProfile(
 
   if (!provider) return null;
 
+  const availabilityWindows = windows ?? [];
   const serviceNameById = new Map((services ?? []).map((s) => [s.id, s.name]));
   const adminOfferings: OfferedService[] = provider.provider_services.map(
     (offering) => ({
       ...offering,
-      is_hourly_bookable: getOfferingReadiness(provider, {
-        hourly_rate_cents: offering.hourly_rate_cents,
-        service_is_live: offering.service.is_live,
-      }).bookable,
+      is_hourly_bookable: getOfferingReadiness(
+        provider,
+        {
+          hourly_rate_cents: offering.hourly_rate_cents,
+          service_is_live: offering.service.is_live,
+        },
+        availabilityWindows,
+      ).bookable,
     }),
   );
 
@@ -582,9 +634,7 @@ export async function getAdminProviderProfile(
     // Show every service the provider offers, even ones no longer live.
     services: adminOfferings,
     rating: mapRating(rating),
-    availability_weekdays: provider.availability_weekdays,
-    availability_start_local: provider.availability_start_local,
-    availability_end_local: provider.availability_end_local,
+    availability_windows: availabilityWindows,
     availability_note: provider.availability_note,
     minimum_notice_hours: provider.minimum_notice_hours,
     service_zip: provider.service_zip,

@@ -14,7 +14,10 @@ export type BookingEmailContext = {
   scheduledAt: string | null;
 };
 
-const COPY: Record<string, { subject: string; heading: string; body: string }> = {
+const COPY: Record<
+  string,
+  { subject: string; heading: string; body: string; ctaLabel?: string }
+> = {
   new_provider_request: {
     subject: "New College Crew job request",
     heading: "You have a new request",
@@ -98,7 +101,8 @@ const COPY: Record<string, { subject: string; heading: string; body: string }> =
   final_payment_success: {
     subject: "College Crew final payment complete",
     heading: "The job is complete",
-    body: "The remaining balance was paid successfully and the booking is complete.",
+    body: "The remaining balance was paid successfully. Rate your provider whenever you’re ready — your review helps students build a trusted track record.",
+    ctaLabel: "Rate your provider",
   },
   job_completed_paid: {
     subject: "College Crew job complete",
@@ -165,6 +169,9 @@ function dashboardPath(context: BookingEmailContext) {
   if (context.template === "response_alert" && context.bookingId) {
     return `/bookings/${encodeURIComponent(context.bookingId)}/replace`;
   }
+  if (context.template === "final_payment_success" && context.bookingId) {
+    return `/dashboard#booking-${encodeURIComponent(context.bookingId)}`;
+  }
   if (context.template.endsWith("_admin")) return "/admin/operations";
   if (context.recipientKind === "provider") return "/provider/dashboard";
   return "/dashboard";
@@ -210,7 +217,7 @@ export function sendBookingEmail(context: BookingEmailContext): Promise<SendResu
 <h1 style="margin:0 0 14px;font:700 28px/1.2 Georgia,serif">${escapeHtml(copy.heading)}</h1>
 <p style="margin:0 0 16px;font-size:16px;line-height:1.6">${escapeHtml(copy.body)}</p>
 ${summary ? `<p style="margin:0 0 22px;color:#66736f">${escapeHtml(summary)} CT</p>` : ""}
-<a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 18px;border-radius:8px;background:#344945;color:#fff;text-decoration:none;font-weight:700">Open dashboard</a>
+<a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 18px;border-radius:8px;background:#344945;color:#fff;text-decoration:none;font-weight:700">${escapeHtml(copy.ctaLabel ?? "Open dashboard")}</a>
 </td></tr></table></td></tr></table></body></html>`;
 
   return sendEmail({

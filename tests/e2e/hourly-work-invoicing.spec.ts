@@ -168,12 +168,23 @@ test.beforeAll(async () => {
     stripe_transfers_active: true,
     stripe_transfers_checked_at: new Date().toISOString(),
     service_zip: "60615",
-    availability_weekdays: [0, 1, 2, 3, 4, 5, 6],
-    availability_start_local: "00:00",
-    availability_end_local: "23:45",
     minimum_notice_hours: 3,
+    avatar_image_path: `${providerProfileId}/synthetic-avatar.jpg`,
   });
   if (providerError) throw providerError;
+
+  // Per-day availability: near-24h windows every day (service-role insert).
+  const { error: windowsError } = await admin
+    .from("provider_availability_windows")
+    .insert(
+      [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
+        provider_id: providerProfileId,
+        weekday,
+        start_local: "00:00",
+        end_local: "23:45",
+      })),
+    );
+  if (windowsError) throw windowsError;
 
   const { error: serviceError } = await admin.from("services").insert({
     id: serviceId,
@@ -295,14 +306,53 @@ test("arrive, invoice over/under estimate, review, and settle a balance", async 
   expect(settled).toBe("completed");
   expect(await bookingStatus(bookingA)).toBe("completed");
 
-  // The invoice page now reads paid, and a review is available (RLS gates it).
+  // The invoice page now reads paid. The completed job remains reviewable on
+  // the default dashboard, so a customer does not have to find the Past tab.
   await customerPage.reload();
   await expect(customerPage.getByText("Paid in full")).toBeVisible();
-  await customerPage.goto("/dashboard?tab=past");
+  await customerPage.goto("/dashboard");
+  await expect(
+    customerPage.getByRole("heading", { name: "How did the job go?" }),
+  ).toBeVisible();
+  const completedCard = customerPage.locator(
+    `[data-booking-id="${bookingA}"]`,
+  );
+  await completedCard.getByLabel("5 stars").focus();
+  await completedCard.getByLabel("5 stars").press("Space");
+  await completedCard
+    .getByLabel("Written review (optional)")
+    .fill("Careful work and clear communication.");
+  await completedCard.getByRole("button", { name: "Leave review" }).click();
+  await expect(customerPage).toHaveURL(
+    new RegExp(`/dashboard\\?tab=past&reviewed=${bookingA}`),
+  );
+  await expect(
+    customerPage.getByText("Thanks — your review is live"),
+  ).toBeVisible();
+
+  const { data: savedReview } = await admin
+    .from("reviews")
+    .select("rating, text, provider_id, service_id")
+    .eq("booking_id", bookingA)
+    .single();
+  expect(savedReview).toMatchObject({
+    rating: 5,
+    text: "Careful work and clear communication.",
+    provider_id: providerProfileId,
+    service_id: serviceId,
+  });
+
+  // A later visit shows the immutable reviewed state, while the public profile
+  // immediately includes the rating and review copy.
   await expect(
     customerPage
       .locator(`[data-booking-id="${bookingA}"]`)
-      .getByRole("button", { name: "Leave review" }),
+      .getByText("Reviewed ✓"),
+  ).toBeVisible();
+  await customerPage.goto(`/providers/${providerProfileId}`);
+  await expect(customerPage.getByText("5.0")).toBeVisible();
+  await expect(
+    customerPage.getByText("Careful work and clear communication."),
   ).toBeVisible();
 
   await providerContext.close();
@@ -341,6 +391,27 @@ test("a one-hour job completes with no balance through the UI", async ({
   // Settling a zero balance needs no Stripe call; the page re-renders as paid.
   await expect(customerPage.getByText("Paid in full")).toBeVisible();
   expect(await bookingStatus(bookingB)).toBe("completed");
+
+  // Written feedback is optional; a star-only review still publishes.
+  await customerPage.goto("/dashboard");
+  const completedCard = customerPage.locator(
+    `[data-booking-id="${bookingB}"]`,
+  );
+  await completedCard.getByLabel("4 stars").focus();
+  await completedCard.getByLabel("4 stars").press("Space");
+  await completedCard.getByRole("button", { name: "Leave review" }).click();
+  await expect(customerPage).toHaveURL(
+    new RegExp(`/dashboard\\?tab=past&reviewed=${bookingB}`),
+  );
+  await expect(
+    customerPage.getByText("Thanks — your review is live"),
+  ).toBeVisible();
+  const { data: ratingOnlyReview } = await admin
+    .from("reviews")
+    .select("rating, text")
+    .eq("booking_id", bookingB)
+    .single();
+  expect(ratingOnlyReview).toEqual({ rating: 4, text: "" });
 
   await providerContext.close();
   await customerContext.close();

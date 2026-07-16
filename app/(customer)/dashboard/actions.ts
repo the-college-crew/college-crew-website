@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireRole, requireUser } from "@/lib/auth/session";
@@ -97,7 +98,7 @@ export async function submitReview(
   _prev: ReviewFormState,
   formData: FormData,
 ): Promise<ReviewFormState> {
-  await requireUser();
+  const session = await requireRole("customer", "/dashboard");
 
   const parsed = reviewSchema.safeParse({
     bookingId: formData.get("bookingId"),
@@ -109,6 +110,20 @@ export async function submitReview(
   }
 
   const supabase = await createClient();
+  const { data: booking, error: bookingError } = await supabase
+    .from("bookings")
+    .select("provider_id, status")
+    .eq("id", parsed.data.bookingId)
+    .eq("customer_id", session.user.id)
+    .maybeSingle();
+
+  if (bookingError) {
+    return { error: "Could not verify this booking — try again." };
+  }
+  if (!booking || booking.status !== "completed") {
+    return { error: "Reviews unlock after an eligible job is completed." };
+  }
+
   // RLS: insert allowed only for the customer's own completed booking.
   // provider_id/service_id are required generated row fields but are omitted
   // from the granted insert columns and derived by the database trigger.
@@ -123,10 +138,16 @@ export async function submitReview(
       error:
         error.code === "23505"
           ? "You already reviewed this booking."
+          : error.code === "42501"
+            ? "Reviews unlock after an eligible job is completed."
           : "Could not save the review — try again.",
     };
   }
 
   revalidatePath("/dashboard");
-  return { success: true };
+  revalidatePath("/browse");
+  revalidatePath(`/providers/${booking.provider_id}`);
+  redirect(
+    `/dashboard?tab=past&reviewed=${parsed.data.bookingId}#booking-${parsed.data.bookingId}`,
+  );
 }

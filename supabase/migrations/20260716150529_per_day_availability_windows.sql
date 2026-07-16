@@ -455,4 +455,4 @@ comment on column public.provider_profiles.availability_weekdays is
 comment on column public.provider_profiles.availability_start_local is
   'DEPRECATED: superseded by provider_availability_windows. No longer written; kept during transition and dropped in a later cleanup migration.';
 comment on column public.provider_profiles.availability_end_local is
-  'DEPRECATED: superseded by provider_availability_windows. No longer written; kept during transition and dropped in a later cleanup migration.';;
+  'DEPRECATED: superseded by provider_availability_windows. No longer written; kept during transition and dropped in a later cleanup migration.';

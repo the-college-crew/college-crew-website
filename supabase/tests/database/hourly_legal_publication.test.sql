@@ -50,6 +50,16 @@ values (
   array[0,1,2,3,4,5,6]::smallint[], '09:00', '17:00', '', 3, true, now()
 );
 
+insert into public.provider_availability_windows (
+  provider_id, weekday, start_local, end_local
+)
+select
+  '80000000-0000-0000-0000-000000008201',
+  weekday,
+  '09:00'::time,
+  '17:00'::time
+from generate_series(0, 6) as weekdays(weekday);
+
 insert into public.services (id, name, slug, category, is_live)
 values (
   '80000000-0000-0000-0000-000000008301',

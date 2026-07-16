@@ -1,6 +1,13 @@
 begin;
 
-select plan(15);
+select no_plan();
+
+create function pg_temp.throws_any_ok(statement text, description text)
+returns text
+language sql
+as $$
+  select throws_ok(statement, null, null, description);
+$$;
 
 select is(
   (select reloptions @> array['security_invoker=true']
@@ -60,6 +67,8 @@ insert into auth.users (id, email, raw_user_meta_data)
 values
   ('00000000-0000-0000-0000-000000008001', 'phase8-customer@example.test',
    '{"role":"customer","full_name":"Phase 8 Customer"}'::jsonb),
+  ('00000000-0000-0000-0000-000000008003', 'phase8-other@example.test',
+   '{"role":"customer","full_name":"Other Phase 8 Customer"}'::jsonb),
   ('00000000-0000-0000-0000-000000008002', 'phase8-provider@example.test',
    '{"role":"provider","full_name":"Phase 8 Provider"}'::jsonb);
 
@@ -82,6 +91,30 @@ insert into public.bookings (
   4000, 200, 'legacy'
 from public.services s order by s.id limit 1;
 
+insert into public.bookings (
+  id, customer_id, provider_id, service_id, status, scheduled_at, address,
+  price_cents, platform_fee_cents, booking_flow
+)
+select
+  fixture.id, fixture.customer_id,
+  '00000000-0000-0000-0000-000000008102', s.id,
+  fixture.status::public.booking_status, now() - interval '1 day',
+  'Synthetic test address', 4000, 200, 'legacy'
+from (
+  values
+    ('00000000-0000-0000-0000-000000008202'::uuid,
+     '00000000-0000-0000-0000-000000008003'::uuid, 'completed'),
+    ('00000000-0000-0000-0000-000000008203'::uuid,
+     '00000000-0000-0000-0000-000000008001'::uuid, 'requested'),
+    ('00000000-0000-0000-0000-000000008204'::uuid,
+     '00000000-0000-0000-0000-000000008001'::uuid, 'completed'),
+    ('00000000-0000-0000-0000-000000008205'::uuid,
+     '00000000-0000-0000-0000-000000008001'::uuid, 'completed')
+) as fixture(id, customer_id, status)
+cross join lateral (
+  select id from public.services order by id limit 1
+) s;
+
 set local role authenticated;
 select set_config(
   'request.jwt.claims',
@@ -91,6 +124,32 @@ select set_config(
 
 insert into public.reviews (booking_id, rating, text)
 values ('00000000-0000-0000-0000-000000008201', 5, 'Synthetic rollout review');
+
+select pg_temp.throws_any_ok(
+  $$insert into public.reviews (booking_id, rating, text)
+    values ('00000000-0000-0000-0000-000000008201', 4, 'Duplicate')$$,
+  'a customer cannot review the same completed booking twice'
+);
+select pg_temp.throws_any_ok(
+  $$insert into public.reviews (booking_id, rating, text)
+    values ('00000000-0000-0000-0000-000000008203', 5, 'Too early')$$,
+  'a customer cannot review an incomplete booking'
+);
+select pg_temp.throws_any_ok(
+  $$insert into public.reviews (booking_id, rating, text)
+    values ('00000000-0000-0000-0000-000000008202', 5, 'Not mine')$$,
+  'a customer cannot review another customer booking'
+);
+select pg_temp.throws_any_ok(
+  $$insert into public.reviews (booking_id, rating)
+    values ('00000000-0000-0000-0000-000000008204', 0)$$,
+  'zero means unrated and cannot be submitted'
+);
+select pg_temp.throws_any_ok(
+  $$insert into public.reviews (booking_id, rating)
+    values ('00000000-0000-0000-0000-000000008205', 6)$$,
+  'ratings above five cannot be submitted'
+);
 
 select ok(
   (select review_id is not null from public.get_my_booking_reviews()

@@ -56,4 +56,27 @@ describe("booking outbox templates", () => {
     expect(options.text).not.toContain("Private Customer");
     expect(options.text).not.toContain("customer@example.test");
   });
+
+  it("deep-links completed customers to the persistent review prompt", async () => {
+    const { sendBookingEmail } = await import("./booking");
+    await sendBookingEmail({
+      eventKey: "completed_customer_booking-id",
+      template: "final_payment_success",
+      recipientEmail: "customer@example.test",
+      recipientKind: "customer",
+      bookingId: "00000000-0000-0000-0000-000000000001",
+      customerName: "Private Customer",
+      providerName: "Provider",
+      serviceName: "Dog walking",
+      scheduledAt: null,
+    });
+    const options = sendEmail.mock.calls[0][0] as {
+      text: string;
+      html: string;
+    };
+    expect(options.text).toContain(
+      "https://thecollegecrew.com/dashboard#booking-00000000-0000-0000-0000-000000000001",
+    );
+    expect(options.html).toContain("Rate your provider");
+  });
 });

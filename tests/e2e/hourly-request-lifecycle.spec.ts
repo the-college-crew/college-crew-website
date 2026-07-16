@@ -176,9 +176,6 @@ test.beforeAll(async () => {
       stripe_transfers_active: true,
       stripe_transfers_checked_at: new Date().toISOString(),
       service_zip: "60614",
-      availability_weekdays: [0, 1, 2, 3, 4, 5, 6],
-      availability_start_local: "09:00",
-      availability_end_local: "17:00",
       minimum_notice_hours: 3,
     },
     {
@@ -192,13 +189,26 @@ test.beforeAll(async () => {
       stripe_transfers_active: true,
       stripe_transfers_checked_at: new Date().toISOString(),
       service_zip: "60615",
-      availability_weekdays: [0, 1, 2, 3, 4, 5, 6],
-      availability_start_local: "09:00",
-      availability_end_local: "17:00",
       minimum_notice_hours: 3,
     },
   ]);
   if (providerError) throw providerError;
+
+  // Per-day availability: every day 9-5 for both providers (service-role
+  // insert — browser roles write only through save_provider_availability).
+  const { error: windowsError } = await admin
+    .from("provider_availability_windows")
+    .insert(
+      [providerOneProfileId, providerTwoProfileId].flatMap((providerId) =>
+        [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
+          provider_id: providerId,
+          weekday,
+          start_local: "09:00",
+          end_local: "17:00",
+        })),
+      ),
+    );
+  if (windowsError) throw windowsError;
 
   const { error: serviceError } = await admin.from("services").insert({
     id: serviceId,

@@ -64,19 +64,20 @@ type BookingRow = {
 
 type BookingGroups = {
   attention: BookingRow[];
+  reviewable: BookingRow[];
   upcoming: BookingRow[];
   past: BookingRow[];
 };
 
 /**
- * Split bookings three ways. A provider-declined request whose date is still in
- * the future is pulled into "Needs attention" so it stays visible on the
- * default (Upcoming) view instead of silently dropping into Past — otherwise a
- * decline just looks like the request vanished. Once its date passes it falls
- * into Past like any other closed booking.
+ * Split bookings into their dashboard groups. Completed, unreviewed bookings
+ * remain in Past, but are also surfaced on the default view until the customer
+ * leaves a review. There is deliberately no time cutoff: eligibility comes
+ * from the completed booking, not from how quickly the customer responds.
  */
 function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
   const attention: BookingRow[] = [];
+  const reviewable: BookingRow[] = [];
   const upcoming: BookingRow[] = [];
   const past: BookingRow[] = [];
   for (const source of bookings) {
@@ -94,6 +95,9 @@ function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
         ? { ...source, status: "expired", responseAlertReached: false }
         : { ...source, responseAlertReached };
     if (booking.status === "declined" && booking.dismissed_at) continue;
+    if (booking.status === "completed" && !booking.review) {
+      reviewable.push(booking);
+    }
     const providerCancelledUpcoming =
       booking.status === "cancelled" &&
       booking.cancelled_by_role === "provider" &&
@@ -113,7 +117,7 @@ function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
       past.push(booking);
     }
   }
-  return { attention, upcoming, past };
+  return { attention, reviewable, upcoming, past };
 }
 
 export default async function CustomerDashboardPage({
@@ -124,9 +128,10 @@ export default async function CustomerDashboardPage({
     requested?: string;
     replaced?: string;
     paid?: string;
+    reviewed?: string;
   }>;
 }) {
-  const [{ tab, requested, replaced, paid }, session] = await Promise.all([
+  const [{ tab, requested, replaced, paid, reviewed }, session] = await Promise.all([
     searchParams,
     requireRole("customer", "/dashboard"),
   ]);
@@ -182,6 +187,10 @@ export default async function CustomerDashboardPage({
     ...booking,
     review: reviewByBooking.get(booking.id) ?? null,
   })) as BookingRow[];
+  // Query-string feedback is trusted only when the scoped review RPC confirms
+  // this customer owns the reviewed booking relationship.
+  const confirmedReviewedId =
+    reviewed && reviewByBooking.has(reviewed) ? reviewed : undefined;
   // Release any acceptance whose first-hour payment window has closed, then
   // reflect the new status before partitioning (Phase 7 schedules this too).
   const expiredIds = await releaseExpiredAcceptances(supabase, rows);
@@ -203,6 +212,7 @@ export default async function CustomerDashboardPage({
       requested={requested}
       replaced={replaced}
       paid={paid}
+      reviewed={confirmedReviewedId}
       convoIndex={convoIndex}
       customerId={session.user.id}
     />
@@ -215,6 +225,7 @@ function CustomerDashboardView({
   requested,
   replaced,
   paid,
+  reviewed,
   convoIndex,
   customerId,
   demo = false,
@@ -224,13 +235,15 @@ function CustomerDashboardView({
   requested?: string;
   replaced?: string;
   paid?: string;
+  reviewed?: string;
   convoIndex: Map<string, ConversationEntry>;
   customerId?: string;
   demo?: boolean;
 }) {
-  const { attention, upcoming, past } = groups;
+  const { attention, reviewable, upcoming, past } = groups;
   const list = showPast ? past : upcoming;
   const showAttention = !showPast && attention.length > 0;
+  const showReviewable = !showPast && reviewable.length > 0;
 
   const tabClass = (active: boolean) =>
     cn(
@@ -289,6 +302,14 @@ function CustomerDashboardView({
             : "Booking confirmed — you're on the schedule."}
         </div>
       ) : null}
+      {reviewed ? (
+        <div
+          role="status"
+          className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800"
+        >
+          Thanks — your review is live on the provider&apos;s profile.
+        </div>
+      ) : null}
 
       <div
         role="tablist"
@@ -328,6 +349,31 @@ function CustomerDashboardView({
         </section>
       ) : null}
 
+      {showReviewable ? (
+        <section aria-label="Waiting for your review" className="space-y-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-ink">
+              How did the job go?
+            </h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              Your review helps neighbors choose confidently and helps students
+              build a track record. You can come back and review anytime.
+            </p>
+          </div>
+          <ul className="space-y-4">
+            {reviewable.map((booking) => (
+              <li key={booking.id}>
+                <BookingCard
+                  booking={booking}
+                  demo={demo}
+                  convo={demo ? undefined : convoIndex.get(booking.id)}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {list.length > 0 ? (
         <ul className="space-y-4">
           {list.map((booking) => (
@@ -340,7 +386,7 @@ function CustomerDashboardView({
             </li>
           ))}
         </ul>
-      ) : showPast || !showAttention ? (
+      ) : showPast || (!showAttention && !showReviewable) ? (
         <EmptyState
           title={showPast ? "No past bookings" : "Nothing booked yet"}
           action={
@@ -434,6 +480,7 @@ function BookingCard({
 
   return (
     <Card
+      id={`booking-${booking.id}`}
       data-booking-id={booking.id}
       data-declined-booking={isDeclined || undefined}
       className={cn(

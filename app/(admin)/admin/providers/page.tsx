@@ -70,6 +70,20 @@ export default async function AdminProvidersPage({
     (schoolRows ?? []).map((r) => [r.user_id, r.email]),
   );
 
+  // Per-day availability windows, grouped by provider (flat read, no embeds).
+  const { data: windowRows } = await supabase
+    .from("provider_availability_windows")
+    .select("provider_id, weekday, start_local, end_local");
+  const windowsByProvider = new Map<
+    string,
+    { weekday: number; start_local: string; end_local: string }[]
+  >();
+  for (const row of windowRows ?? []) {
+    const list = windowsByProvider.get(row.provider_id) ?? [];
+    list.push(row);
+    windowsByProvider.set(row.provider_id, list);
+  }
+
   // Live services power the filter chips; slugs match against each row.
   const { data: services } = await supabase
     .from("services")
@@ -95,10 +109,14 @@ export default async function AdminProvidersPage({
     bookingReady: p.provider_services.some(
       (offering) =>
         offering.service &&
-        getOfferingReadiness(p, {
-          hourly_rate_cents: offering.hourly_rate_cents,
-          service_is_live: offering.service.is_live,
-        }).bookable,
+        getOfferingReadiness(
+          p,
+          {
+            hourly_rate_cents: offering.hourly_rate_cents,
+            service_is_live: offering.service.is_live,
+          },
+          windowsByProvider.get(p.id) ?? [],
+        ).bookable,
     ),
     hasCurrentLegalAcceptance: legallyReadyUsers.has(p.user_id),
     serviceSlugs: Array.from(

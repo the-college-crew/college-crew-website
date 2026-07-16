@@ -33,27 +33,43 @@ export const HOURLY_RATE_INPUT_CONSTRAINTS = {
   step: "0.01",
 } as const;
 
+/** One stored availability window: a single weekday's local hours. */
+export type AvailabilityWindow = {
+  weekday: number;
+  start_local: string;
+  end_local: string;
+};
+
+/**
+ * Editor/display grouping of windows that share the same hours
+ * (e.g. Mon-Thu 9-5). Pure UI concept — storage stays one row per weekday.
+ */
+export type AvailabilityDayGroup = {
+  weekdays: number[];
+  start: string;
+  end: string;
+};
+
+export const MAX_AVAILABILITY_WINDOWS = PROVIDER_WEEKDAYS.length;
+
 export type ProviderAvailabilityValues = Pick<
   ProviderProfile,
-  | "availability_weekdays"
-  | "availability_start_local"
-  | "availability_end_local"
-  | "availability_note"
-  | "service_zip"
-  | "minimum_notice_hours"
+  "availability_note" | "service_zip" | "minimum_notice_hours"
+> & { windows: AvailabilityWindow[] };
+
+export type AvailabilityWindowFieldErrors = Partial<
+  Record<"days" | "start" | "end", string>
 >;
 
 export type ProviderSetupFieldErrors = Partial<
   Record<
-    | "weekdays"
-    | "availabilityStart"
-    | "availabilityEnd"
-    | "availabilityNote"
-    | "serviceZip"
-    | "minimumNoticeHours",
+    "weekdays" | "availabilityNote" | "serviceZip" | "minimumNoticeHours",
     string
   >
->;
+> & {
+  /** Per-group errors from the grouped availability editor, keyed by group index. */
+  windows?: Record<number, AvailabilityWindowFieldErrors>;
+};
 
 export type ProviderAvailabilityParseResult =
   | { success: true; data: ProviderAvailabilityValues }
@@ -116,14 +132,37 @@ export function buildHourlyOfferingPersistenceRow(input: {
   };
 }
 
+/**
+ * Group stored windows by shared hours for the editor and display surfaces.
+ * Groups are ordered by their earliest weekday; weekdays within a group are
+ * ascending. Round-trips stably: flatten(group(windows)) === sorted(windows).
+ */
+export function groupAvailabilityWindows(
+  windows: readonly AvailabilityWindow[],
+): AvailabilityDayGroup[] {
+  const groups = new Map<string, AvailabilityDayGroup>();
+  for (const window of [...windows].sort((a, b) => a.weekday - b.weekday)) {
+    const start = window.start_local.slice(0, 5);
+    const end = window.end_local.slice(0, 5);
+    const key = `${start}|${end}`;
+    const group = groups.get(key);
+    if (group) {
+      group.weekdays.push(window.weekday);
+    } else {
+      groups.set(key, { weekdays: [window.weekday], start, end });
+    }
+  }
+  return [...groups.values()];
+}
+
 export function parseProviderAvailabilityForm(
   formData: FormData,
 ): ProviderAvailabilityParseResult {
-  const weekdays = PROVIDER_WEEKDAYS.filter(
-    ({ value }) => formData.get(`weekday_${value}`) === "on",
-  ).map(({ value }) => value);
-  const availabilityStart = String(formData.get("availabilityStart") ?? "").trim();
-  const availabilityEnd = String(formData.get("availabilityEnd") ?? "").trim();
+  const rawCount = Number(String(formData.get("windowCount") ?? ""));
+  const windowCount =
+    Number.isInteger(rawCount) && rawCount > 0
+      ? Math.min(rawCount, MAX_AVAILABILITY_WINDOWS)
+      : 0;
   const availabilityNote = String(formData.get("availabilityNote") ?? "").trim();
   const serviceZip = String(formData.get("serviceZip") ?? "").trim();
   const noticeChoice = String(formData.get("noticeChoice") ?? "");
@@ -133,22 +172,56 @@ export function parseProviderAvailabilityForm(
       : noticeChoice;
   const minimumNoticeHours = Number(noticeRaw);
   const fieldErrors: ProviderSetupFieldErrors = {};
+  const windowErrors: Record<number, AvailabilityWindowFieldErrors> = {};
+  const claimedWeekdays = new Set<number>();
+  const windows: AvailabilityWindow[] = [];
 
-  if (weekdays.length === 0) {
-    fieldErrors.weekdays = "Select at least one day.";
+  if (windowCount === 0) {
+    fieldErrors.weekdays = "Add at least one availability window.";
   }
-  if (!TIME_PATTERN.test(availabilityStart)) {
-    fieldErrors.availabilityStart = "Choose a start time.";
+
+  for (let index = 0; index < windowCount; index += 1) {
+    const groupErrors: AvailabilityWindowFieldErrors = {};
+    const days = PROVIDER_WEEKDAYS.filter(
+      ({ value }) => formData.get(`windowDay_${index}_${value}`) === "on",
+    ).map(({ value }) => value);
+    const start = String(formData.get(`windowStart_${index}`) ?? "").trim();
+    const end = String(formData.get(`windowEnd_${index}`) ?? "").trim();
+
+    if (days.length === 0) {
+      groupErrors.days = "Select at least one day.";
+    } else {
+      // Defense-in-depth: the editor disables pills claimed by other groups.
+      const duplicate = days.find((day) => claimedWeekdays.has(day));
+      if (duplicate !== undefined) {
+        const { long } = PROVIDER_WEEKDAYS[duplicate];
+        groupErrors.days = `${long} is already in another time window.`;
+      }
+    }
+    if (!TIME_PATTERN.test(start)) {
+      groupErrors.start = "Choose a start time.";
+    }
+    if (!TIME_PATTERN.test(end)) {
+      groupErrors.end = "Choose an end time.";
+    } else if (
+      !groupErrors.start &&
+      timeToMinutes(start) >= timeToMinutes(end)
+    ) {
+      groupErrors.end = "End time must be later than start time.";
+    }
+
+    if (Object.keys(groupErrors).length > 0) {
+      windowErrors[index] = groupErrors;
+      continue;
+    }
+    for (const day of days) {
+      claimedWeekdays.add(day);
+      windows.push({ weekday: day, start_local: start, end_local: end });
+    }
   }
-  if (!TIME_PATTERN.test(availabilityEnd)) {
-    fieldErrors.availabilityEnd = "Choose an end time.";
-  }
-  if (
-    !fieldErrors.availabilityStart &&
-    !fieldErrors.availabilityEnd &&
-    timeToMinutes(availabilityStart) >= timeToMinutes(availabilityEnd)
-  ) {
-    fieldErrors.availabilityEnd = "End time must be later than start time.";
+
+  if (Object.keys(windowErrors).length > 0) {
+    fieldErrors.windows = windowErrors;
   }
   if (availabilityNote.length > 1_000) {
     fieldErrors.availabilityNote = "Keep the public note to 1,000 characters or fewer.";
@@ -168,12 +241,11 @@ export function parseProviderAvailabilityForm(
     return { success: false, fieldErrors };
   }
 
+  windows.sort((a, b) => a.weekday - b.weekday);
   return {
     success: true,
     data: {
-      availability_weekdays: weekdays,
-      availability_start_local: availabilityStart,
-      availability_end_local: availabilityEnd,
+      windows,
       availability_note: availabilityNote,
       service_zip: serviceZip,
       minimum_notice_hours: minimumNoticeHours,
@@ -182,20 +254,11 @@ export function parseProviderAvailabilityForm(
 }
 
 export function isStructuredAvailabilityComplete(
-  profile: Pick<
-    ProviderProfile,
-    | "availability_weekdays"
-    | "availability_start_local"
-    | "availability_end_local"
-  >,
+  windows: readonly AvailabilityWindow[],
 ) {
-  return Boolean(
-    profile.availability_weekdays.length > 0 &&
-      profile.availability_start_local &&
-      profile.availability_end_local &&
-      timeToMinutes(profile.availability_start_local.slice(0, 5)) <
-        timeToMinutes(profile.availability_end_local.slice(0, 5)),
-  );
+  // Row shape is constraint-guaranteed (valid weekday, start < end), so
+  // completeness degenerates to "at least one window exists".
+  return windows.length > 0;
 }
 
 export type ProviderReadinessRequirement = {
@@ -218,12 +281,10 @@ export function getOfferingReadiness(
     | "stripe_account_id"
     | "stripe_transfers_active"
     | "stripe_transfers_checked_at"
-    | "availability_weekdays"
-    | "availability_start_local"
-    | "availability_end_local"
     | "service_zip"
   >,
   offering: { hourly_rate_cents: number | null; service_is_live: boolean },
+  windows: readonly AvailabilityWindow[],
 ) {
   const requirements: ProviderReadinessRequirement[] = [
     {
@@ -252,8 +313,8 @@ export function getOfferingReadiness(
     },
     {
       key: "availability",
-      label: "Days and shared hours set",
-      ready: isStructuredAvailabilityComplete(profile),
+      label: "Days and hours set",
+      ready: isStructuredAvailabilityComplete(windows),
       private: false,
     },
     {

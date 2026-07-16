@@ -16,6 +16,7 @@ import { providerAvatarUrl } from "@/lib/media/provider-avatars";
 import {
   PROVIDER_WEEKDAYS,
   formatAvailabilityWindow,
+  groupAvailabilityWindows,
 } from "@/lib/provider/setup";
 import { formatDate, formatOfferedPrice } from "@/lib/utils";
 import {
@@ -30,10 +31,8 @@ export async function ProviderProfile({
 }: {
   provider: PublicProviderProfile;
 }) {
-  const days = provider.availability_weekdays;
-  const availabilityWindow = formatAvailabilityWindow(
-    provider.availability_start_local,
-    provider.availability_end_local,
+  const availabilityGroups = groupAvailabilityWindows(
+    provider.availability_windows,
   );
   const hasBookableOffering = provider.services.some(
     (offering) => offering.is_hourly_bookable,
@@ -197,30 +196,33 @@ export async function ProviderProfile({
 
       <section className="border-t border-line px-6 py-7 sm:px-8">
         <h2 className="font-display text-2xl font-semibold">Availability</h2>
-        {days.length === 0 && !provider.availability_note ? (
+        {availabilityGroups.length === 0 && !provider.availability_note ? (
           <p className="mt-3 text-sm text-mist">
             Ask about availability when you request a booking.
           </p>
         ) : (
           <>
-            {days.length > 0 ? (
-              <ul className="mt-3 flex flex-wrap gap-2">
-                {days.map((day) => (
-                  <li
-                    key={day}
-                    className="rounded-full border border-quad-200 bg-quad-50 px-3 py-1 text-xs font-semibold text-quad-800"
-                  >
-                    {PROVIDER_WEEKDAYS.find(({ value }) => value === day)?.short ??
-                      day}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {availabilityWindow ? (
-              <p className="mt-3 text-sm font-medium text-ink-soft">
-                {availabilityWindow}
-              </p>
-            ) : null}
+            {availabilityGroups.map((group) => (
+              <div
+                key={`${group.start}-${group.end}`}
+                className="mt-3 flex flex-wrap items-center gap-2"
+              >
+                <ul className="flex flex-wrap gap-2">
+                  {group.weekdays.map((day) => (
+                    <li
+                      key={day}
+                      className="rounded-full border border-quad-200 bg-quad-50 px-3 py-1 text-xs font-semibold text-quad-800"
+                    >
+                      {PROVIDER_WEEKDAYS.find(({ value }) => value === day)
+                        ?.short ?? day}
+                    </li>
+                  ))}
+                </ul>
+                <span className="text-sm font-medium text-ink-soft">
+                  {formatAvailabilityWindow(group.start, group.end)}
+                </span>
+              </div>
+            ))}
             {provider.availability_note ? (
               <p className="mt-3 text-sm text-ink-soft">
                 {provider.availability_note}

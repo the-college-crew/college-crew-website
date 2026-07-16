@@ -246,14 +246,14 @@ describe("America/Chicago DST boundaries", () => {
   });
 
   it("requires the full elapsed slot to remain in one availability window", () => {
+    // Wed 9-5 only.
     const base = {
-      weekdays: [2],
-      startLocal: "09:00",
-      endLocal: "17:00",
+      windows: [{ weekday: 2, startLocal: "09:00", endLocal: "17:00" }],
     };
     expect(
       doesSlotFitPilotAvailability({
         ...base,
+        // Wed 2026-07-15 09:00 CT.
         scheduledAt: "2026-07-15T14:00:00.000Z",
         estimatedMinutes: 120,
       }),
@@ -261,7 +261,60 @@ describe("America/Chicago DST boundaries", () => {
     expect(
       doesSlotFitPilotAvailability({
         ...base,
+        // Wed 16:30 CT — the elapsed hour overruns the 17:00 close.
         scheduledAt: "2026-07-15T21:30:00.000Z",
+        estimatedMinutes: 60,
+      }),
+    ).toBe(false);
+  });
+
+  it("enforces each day's own window when hours differ per day", () => {
+    // Mon-Thu 9-5, Fri-Sat 12-4, Sunday closed.
+    const windows = [
+      { weekday: 0, startLocal: "09:00", endLocal: "17:00" },
+      { weekday: 1, startLocal: "09:00", endLocal: "17:00" },
+      { weekday: 2, startLocal: "09:00", endLocal: "17:00" },
+      { weekday: 3, startLocal: "09:00", endLocal: "17:00" },
+      { weekday: 4, startLocal: "12:00", endLocal: "16:00" },
+      { weekday: 5, startLocal: "12:00", endLocal: "16:00" },
+    ];
+    // Mon 2026-07-13 10:00 CT fits Monday's 9-5.
+    expect(
+      doesSlotFitPilotAvailability({
+        windows,
+        scheduledAt: "2026-07-13T15:00:00.000Z",
+        estimatedMinutes: 120,
+      }),
+    ).toBe(true);
+    // Fri 2026-07-17 10:00 CT fits Monday's hours but NOT Friday's 12-4.
+    expect(
+      doesSlotFitPilotAvailability({
+        windows,
+        scheduledAt: "2026-07-17T15:00:00.000Z",
+        estimatedMinutes: 120,
+      }),
+    ).toBe(false);
+    // Fri 13:00 CT fits Friday's 12-4.
+    expect(
+      doesSlotFitPilotAvailability({
+        windows,
+        scheduledAt: "2026-07-17T18:00:00.000Z",
+        estimatedMinutes: 120,
+      }),
+    ).toBe(true);
+    // Sun 2026-07-19 13:00 CT — no Sunday window at all.
+    expect(
+      doesSlotFitPilotAvailability({
+        windows,
+        scheduledAt: "2026-07-19T18:00:00.000Z",
+        estimatedMinutes: 60,
+      }),
+    ).toBe(false);
+    // Sat 15:30 CT crossing local midnight-adjacent close: overruns 16:00.
+    expect(
+      doesSlotFitPilotAvailability({
+        windows,
+        scheduledAt: "2026-07-18T20:30:00.000Z",
         estimatedMinutes: 60,
       }),
     ).toBe(false);

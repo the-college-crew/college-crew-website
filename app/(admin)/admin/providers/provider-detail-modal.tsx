@@ -15,6 +15,7 @@ import { cn, formatDate, formatOfferedPrice } from "@/lib/utils";
 import {
   PROVIDER_WEEKDAYS,
   formatAvailabilityWindow,
+  groupAvailabilityWindows,
 } from "@/lib/provider/setup";
 
 const statusTone = {
@@ -88,13 +89,9 @@ export function ProviderDetailModal({
   }
 
   const profile = detail?.profile;
-  const days = profile?.availability_weekdays ?? [];
-  const availabilityWindow = profile
-    ? formatAvailabilityWindow(
-        profile.availability_start_local,
-        profile.availability_end_local,
-      )
-    : null;
+  const availabilityGroups = groupAvailabilityWindows(
+    profile?.availability_windows ?? [],
+  );
 
   return (
     <div
@@ -312,6 +309,7 @@ export function ProviderDetailModal({
               <section className="border-t border-line px-6 py-5 sm:px-8">
                 <ProviderReadinessChecklist
                   profile={profile}
+                  windows={profile.availability_windows}
                   legalAcceptance={{
                     ready: detail.hasCurrentLegalAcceptance,
                     version: detail.legalContentVersion,
@@ -385,30 +383,33 @@ export function ProviderDetailModal({
                 <h2 className="font-display text-2xl font-semibold">
                   Availability
                 </h2>
-                {days.length === 0 && !profile.availability_note ? (
+                {availabilityGroups.length === 0 && !profile.availability_note ? (
                   <p className="mt-3 text-sm text-mist">
                     No availability set.
                   </p>
                 ) : (
                   <>
-                    {days.length > 0 ? (
-                      <ul className="mt-3 flex flex-wrap gap-2">
-                        {days.map((day) => (
-                          <li
-                            key={day}
-                            className="rounded-full border border-quad-200 bg-quad-50 px-3 py-1 text-xs font-semibold text-quad-800"
-                          >
-                            {PROVIDER_WEEKDAYS.find(({ value }) => value === day)
-                              ?.short ?? day}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    {availabilityWindow ? (
-                      <p className="mt-3 text-sm font-medium text-ink-soft">
-                        {availabilityWindow}
-                      </p>
-                    ) : null}
+                    {availabilityGroups.map((group) => (
+                      <div
+                        key={`${group.start}-${group.end}`}
+                        className="mt-3 flex flex-wrap items-center gap-2"
+                      >
+                        <ul className="flex flex-wrap gap-2">
+                          {group.weekdays.map((day) => (
+                            <li
+                              key={day}
+                              className="rounded-full border border-quad-200 bg-quad-50 px-3 py-1 text-xs font-semibold text-quad-800"
+                            >
+                              {PROVIDER_WEEKDAYS.find(({ value }) => value === day)
+                                ?.short ?? day}
+                            </li>
+                          ))}
+                        </ul>
+                        <span className="text-sm font-medium text-ink-soft">
+                          {formatAvailabilityWindow(group.start, group.end)}
+                        </span>
+                      </div>
+                    ))}
                     {profile.availability_note ? (
                       <p className="mt-3 text-sm text-ink-soft">
                         {profile.availability_note}

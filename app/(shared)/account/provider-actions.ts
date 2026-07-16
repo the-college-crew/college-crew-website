@@ -23,6 +23,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 import { savePricingRows } from "@/app/(provider)/provider/_lib/pricing";
+import type { AvailabilityFormState } from "@/app/(provider)/provider/_components/provider-availability-form";
 
 /**
  * Provider storefront actions for the unified /account page. These mutate the
@@ -132,11 +133,11 @@ export async function updateProviderProfile(
   return { success: "Profile saved." };
 }
 
-/** Structured provider-wide pilot availability and private service area. */
+/** Structured per-day pilot availability and private service area. */
 export async function updateAvailability(
-  _prev: ProviderSettingsFormState,
+  _prev: AvailabilityFormState,
   formData: FormData,
-): Promise<ProviderSettingsFormState> {
+): Promise<AvailabilityFormState> {
   await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
@@ -144,11 +145,20 @@ export async function updateAvailability(
   const parsed = parseProviderAvailabilityForm(formData);
   if (!parsed.success) return { fieldErrors: parsed.fieldErrors };
 
+  // Atomic replace-all of the windows plus the profile fields — the sole
+  // write path for provider_availability_windows.
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("provider_profiles")
-    .update(parsed.data)
-    .eq("id", profile.id);
+  const { error } = await supabase.rpc("save_provider_availability", {
+    p_windows: parsed.data.windows.map((window) => ({
+      weekday: window.weekday,
+      start: window.start_local,
+      end: window.end_local,
+    })),
+    p_availability_note: parsed.data.availability_note,
+    // The parser guarantees a five-digit ZIP; the fallback only satisfies TS.
+    p_service_zip: parsed.data.service_zip ?? "",
+    p_minimum_notice_hours: parsed.data.minimum_notice_hours,
+  });
   if (error) {
     return { error: "Could not save availability — try again." };
   }
