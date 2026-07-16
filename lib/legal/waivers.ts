@@ -1,6 +1,15 @@
 import type { UserRole } from "@/lib/db/types";
 
 export const LEGAL_CONTENT_VERSION = "2026-07-15";
+export const PLATFORM_TERMS_VERSION = "2026-07-15";
+export const CUSTOMER_BOOKING_TERMS_VERSION = "2026-07-15";
+export const PROVIDER_TERMS_VERSION = "2026-07-15";
+export const BOOKING_RISK_VERSION = "2026-07-15";
+
+export type LegalDocumentKind =
+  | "platform_terms"
+  | "customer_booking_terms"
+  | "provider_terms";
 
 export type LegalSource = "pdf" | "drafted";
 
@@ -111,6 +120,15 @@ export const MASTER_SECTIONS: LegalSection[] = [
   },
 ];
 
+/**
+ * Modular terms published after unified accounts. The legacy customer/provider
+ * snapshots below stay byte-for-byte stable so exact prior acceptances remain
+ * provable; new users accept only the document relevant to the action at hand.
+ */
+export const PLATFORM_TERMS_SECTIONS = MASTER_SECTIONS.filter(
+  (section) => section.appliesTo === "all" && section.number !== "5",
+);
+
 export const HOURLY_TERMS_INTRO = [
   "These Hourly Booking Terms and Fee Schedule apply to each booking identified as an hourly booking. They supplement the Master Service Agreement. If these terms conflict with general marketplace copy, these terms control for that hourly booking.",
 ] as const;
@@ -180,6 +198,34 @@ export const HOURLY_TERMS_SECTIONS: HourlyTermsSection[] = [
     body: [
       "Material booking, payment, refund, cancellation, invoice, dispute, and recovery events may be communicated through transactional email and state-based dashboard notices.",
       "Email and dashboard notices are conveniences. Users remain responsible for reviewing their booking and invoice status in the application. SMS, push notifications, and a persistent notification center are not part of the pilot.",
+    ],
+  },
+];
+
+export const CUSTOMER_BOOKING_TERMS_SECTIONS: HourlyTermsSection[] = [
+  {
+    title: "Customer indemnification",
+    body: [MASTER_SECTIONS.find((section) => section.number === "5")!.body[1]],
+  },
+  ...HOURLY_TERMS_SECTIONS.filter((section) => section.title !== "Provider fee"),
+];
+
+export const PROVIDER_TERMS_SECTIONS: HourlyTermsSection[] = [
+  {
+    title: MASTER_SECTIONS.find((section) => section.number === "2")!.title,
+    body: MASTER_SECTIONS.find((section) => section.number === "2")!.body,
+  },
+  {
+    title: "Provider indemnification",
+    body: [MASTER_SECTIONS.find((section) => section.number === "5")!.body[0]],
+  },
+  HOURLY_TERMS_SECTIONS.find((section) => section.title === "Provider fee")!,
+  {
+    title: "Provider booking responsibilities",
+    body: [
+      "The provider may accept or decline a booking request.",
+      "After arriving and completing the work, the provider submits actual billable time and any required over-estimate explanation.",
+      "Before arrival, a provider cancellation returns all captured booking payments to the original payment method.",
     ],
   },
 ];
@@ -290,8 +336,110 @@ export function getMasterAgreementSnapshot(role: UserRole) {
   };
 }
 
+export function getPlatformTermsSnapshot() {
+  return {
+    kind: "platform_terms" as const,
+    version: PLATFORM_TERMS_VERSION,
+    intro: [...MASTER_INTRO],
+    sections: PLATFORM_TERMS_SECTIONS.map((section) => ({
+      number: section.number,
+      title: section.title,
+      body: section.body,
+    })),
+  };
+}
+
+export function getCustomerBookingTermsSnapshot() {
+  return {
+    kind: "customer_booking_terms" as const,
+    version: CUSTOMER_BOOKING_TERMS_VERSION,
+    intro: [...HOURLY_TERMS_INTRO],
+    sections: CUSTOMER_BOOKING_TERMS_SECTIONS.map((section) => ({
+      title: section.title,
+      body: section.body,
+    })),
+  };
+}
+
+export function getProviderTermsSnapshot() {
+  return {
+    kind: "provider_terms" as const,
+    version: PROVIDER_TERMS_VERSION,
+    intro: [
+      "These Provider Terms supplement the Master Service Agreement and apply when a User offers or performs services through College Crew.",
+    ],
+    sections: PROVIDER_TERMS_SECTIONS.map((section) => ({
+      title: section.title,
+      body: section.body,
+    })),
+  };
+}
+
+export function getLegalDocumentSnapshot(kind: LegalDocumentKind) {
+  if (kind === "platform_terms") return getPlatformTermsSnapshot();
+  if (kind === "customer_booking_terms") {
+    return getCustomerBookingTermsSnapshot();
+  }
+  return getProviderTermsSnapshot();
+}
+
 export function getServiceRiskAddendum(serviceSlug: string) {
   return SERVICE_RISK_ADDENDA[serviceSlug] ?? null;
+}
+
+export function getBookingRiskSnapshot(input: {
+  serviceSlug: string;
+  serviceName: string;
+  scheduledAt: string;
+  address: string;
+  providerName: string;
+  customerName: string;
+}) {
+  const risk = getServiceRiskAddendum(input.serviceSlug);
+  if (!risk) return null;
+
+  return {
+    version: BOOKING_RISK_VERSION,
+    fixedScaffold: [...BOOKING_FIXED_SCAFFOLD],
+    variableFields: {
+      serviceType: input.serviceName,
+      dateTime: input.scheduledAt,
+      jobAddress: input.address,
+      student: input.providerName,
+      family: input.customerName,
+    },
+    serviceRisk: {
+      serviceSlug: input.serviceSlug,
+      title: risk.title,
+      source: risk.source,
+      body: risk.body,
+    },
+    generalFamilyDisclosure: [...GENERAL_FAMILY_DISCLOSURE],
+    consentLabel: BOOKING_CONSENT_LABEL,
+  };
+}
+
+export function getPaymentAuthorizationSnapshot(input: {
+  version: string;
+  bookingId: string;
+  firstHourCents: number;
+  estimatedTotalCents: number;
+  estimatedBalanceCents: number;
+  dueAt: string;
+}) {
+  return {
+    kind: "payment_authorization" as const,
+    version: input.version,
+    bookingId: input.bookingId,
+    text: HOURLY_PAYMENT_AUTHORIZATION,
+    amounts: {
+      firstHourCents: input.firstHourCents,
+      estimatedTotalCents: input.estimatedTotalCents,
+      estimatedBalanceCents: input.estimatedBalanceCents,
+    },
+    dueAt: input.dueAt,
+    scope: "booking_only" as const,
+  };
 }
 
 export function getBookingAddendumSnapshot(input: {

@@ -5,11 +5,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import {
   GENERAL_FAMILY_DISCLOSURE,
   HOURLY_PAYMENT_AUTHORIZATION,
-  HOURLY_TERMS_INTRO,
-  HOURLY_TERMS_SECTIONS,
-  LEGAL_CONTENT_VERSION,
-  MASTER_INTRO,
-  MASTER_SECTIONS,
+  CUSTOMER_BOOKING_TERMS_SECTIONS,
+  CUSTOMER_BOOKING_TERMS_VERSION,
+  PLATFORM_TERMS_SECTIONS,
+  PLATFORM_TERMS_VERSION,
+  PROVIDER_TERMS_SECTIONS,
+  PROVIDER_TERMS_VERSION,
   SERVICE_RISK_ADDENDA,
 } from "@/lib/legal/waivers";
 
@@ -19,25 +20,24 @@ export default function LegalOverviewPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <PageHeader
-        title="Master Service Agreement"
-        description={`The agreement customers and students accept when they use College Crew, shown here for reference. Version ${LEGAL_CONTENT_VERSION}.`}
+        title="College Crew legal terms"
+        description="The platform-wide and action-specific agreements, shown here for reference."
       />
 
-      <Card pennant className="p-6">
+      <Card id="platform-terms" pennant className="scroll-mt-24 p-6">
         <div className="space-y-5 text-sm leading-6 text-ink-soft">
-          {MASTER_INTRO.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
+          <h2 className="font-display text-lg font-semibold text-ink">
+            Platform Terms · Version {PLATFORM_TERMS_VERSION}
+          </h2>
+          <p>
+            Every regular account accepts these terms once after email
+            verification.
+          </p>
 
-          {MASTER_SECTIONS.map((section) => (
+          {PLATFORM_TERMS_SECTIONS.map((section) => (
             <section key={section.number} className="border-t border-line pt-5">
               <h2 className="font-display text-lg font-semibold text-ink">
                 {section.number}. {section.title}
-                {section.appliesTo === "provider" ? (
-                  <span className="ml-2 align-middle text-xs font-medium uppercase tracking-wide text-ink-soft">
-                    Students only
-                  </span>
-                ) : null}
               </h2>
               <div className="mt-2 space-y-3">
                 {section.body.map((paragraph) => (
@@ -49,15 +49,15 @@ export default function LegalOverviewPage() {
         </div>
       </Card>
 
-      <Card pennant className="p-6">
+      <Card id="customer-booking-terms" pennant className="scroll-mt-24 p-6">
         <h2 className="font-display text-lg font-semibold text-ink">
-          Hourly Booking Terms &amp; Fee Schedule
+          Customer Booking Terms · Version {CUSTOMER_BOOKING_TERMS_VERSION}
         </h2>
         <div className="mt-3 space-y-5 text-sm leading-6 text-ink-soft">
-          {HOURLY_TERMS_INTRO.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-          {HOURLY_TERMS_SECTIONS.map((section) => (
+          <p>
+            Customers accept these once before their first hourly request.
+          </p>
+          {CUSTOMER_BOOKING_TERMS_SECTIONS.map((section) => (
             <section key={section.title} className="border-t border-line pt-5">
               <h3 className="font-display text-base font-semibold text-ink">
                 {section.title}
@@ -69,14 +69,29 @@ export default function LegalOverviewPage() {
               </div>
             </section>
           ))}
-          <section className="border-t border-line pt-5">
-            <h3 className="font-display text-base font-semibold text-ink">
-              First-hour payment authorization
-            </h3>
-            <p className="mt-2 rounded-lg border border-line bg-court p-4">
-              {HOURLY_PAYMENT_AUTHORIZATION}
-            </p>
-          </section>
+        </div>
+      </Card>
+
+      <Card id="provider-terms" pennant className="scroll-mt-24 p-6">
+        <h2 className="font-display text-lg font-semibold text-ink">
+          Provider Terms · Version {PROVIDER_TERMS_VERSION}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-ink-soft">
+          Providers accept this addendum at the final onboarding review.
+        </p>
+        <div className="mt-3 space-y-5 text-sm leading-6 text-ink-soft">
+          {PROVIDER_TERMS_SECTIONS.map((section) => (
+            <section key={section.title} className="border-t border-line pt-5">
+              <h3 className="font-display text-base font-semibold text-ink">
+                {section.title}
+              </h3>
+              <div className="mt-2 space-y-3">
+                {section.body.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       </Card>
 
@@ -85,8 +100,8 @@ export default function LegalOverviewPage() {
           Booking risk addenda
         </h2>
         <p className="mt-2 text-sm leading-6 text-ink-soft">
-          Shown at the time of booking for the specific service, in addition
-          to the Master Service Agreement above.
+          Accepted for each booking, with the service, date, address, customer,
+          and provider captured in the immutable snapshot.
         </p>
         <div className="mt-5 space-y-5 text-sm leading-6 text-ink-soft">
           {GENERAL_FAMILY_DISCLOSURE.map((paragraph) => (
@@ -109,6 +124,19 @@ export default function LegalOverviewPage() {
             </section>
           ))}
         </div>
+      </Card>
+
+      <Card pennant className="p-6">
+        <h2 className="font-display text-lg font-semibold text-ink">
+          Per-booking payment authorization
+        </h2>
+        <p className="mt-3 rounded-lg border border-line bg-court p-4 text-sm leading-6 text-ink-soft">
+          {HOURLY_PAYMENT_AUTHORIZATION}
+        </p>
+        <p className="mt-3 text-sm leading-6 text-ink-soft">
+          The accepted record also captures that booking&apos;s first-hour amount,
+          estimated total, estimated balance, and payment deadline.
+        </p>
       </Card>
     </div>
   );

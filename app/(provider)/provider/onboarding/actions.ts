@@ -18,10 +18,17 @@ import {
 } from "@/lib/db/school-email";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { sendSchoolOtpEmail } from "@/lib/email/send";
+import type { Json } from "@/lib/db/types";
 import {
-  hasAcceptedCurrentMasterAgreement,
-  masterAgreementPath,
+  hasAcceptedCurrentLegalDocument,
+  legalDocumentPath,
+  requestAuditFields,
+  stableContentHash,
 } from "@/lib/legal/acceptance";
+import {
+  getProviderTermsSnapshot,
+  PROVIDER_TERMS_VERSION,
+} from "@/lib/legal/waivers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -52,8 +59,8 @@ export type OnboardingFormState = {
  * Account step "Continue": turns any regular account into a provider-capable
  * one. Creates the provider_profiles row if missing — after making sure we
  * hold a date of birth (customers never provided one at signup; the 18+ gate
- * is real) — then routes through the provider master agreement before the
- * Verify step when it hasn't been accepted yet.
+ * is real). Provider-specific terms are accepted at final review, when the
+ * services, pricing, and availability they govern are concrete.
  */
 export async function startProviderProfile(
   _prev: OnboardingFormState,
@@ -120,18 +127,6 @@ export async function startProviderProfile(
   const accountEmail = eligibleAccountSchoolEmail(session.user);
   if (accountEmail) {
     await claimAccountEmailAsSchool(session.user.id, accountEmail);
-  }
-
-  // Provider capability comes with the provider variant of the master
-  // agreement (extra sections). Existing provider accounts have already
-  // accepted it; upgrading customers read and accept it now, then continue.
-  const supabase = await createClient();
-  const acceptedProviderTerms = await hasAcceptedCurrentMasterAgreement(
-    supabase,
-    { userId: session.user.id, variant: "provider" },
-  );
-  if (!acceptedProviderTerms) {
-    redirect(masterAgreementPath("/provider/onboarding/verify"));
   }
 
   redirect("/provider/onboarding/verify");
@@ -455,8 +450,11 @@ export async function useAccountEmailAsSchool(
   return { notice: "School email verified ✓" };
 }
 
-/** Review step: onboarding complete; verification is already pending. */
-export async function submitForReview() {
+/** Review step: accept provider-only terms and submit complete onboarding. */
+export async function submitForReview(
+  _previous: OnboardingFormState,
+  formData: FormData,
+): Promise<OnboardingFormState> {
   const session = await requireOnboardingUser();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
@@ -491,6 +489,49 @@ export async function submitForReview() {
 
   if (!isStructuredAvailabilityComplete(windows) || !profile.service_zip) {
     redirect("/provider/onboarding/availability");
+  }
+
+  if (
+    !(await hasAcceptedCurrentLegalDocument(supabase, {
+      userId: session.user.id,
+      kind: "platform_terms",
+    }))
+  ) {
+    redirect(
+      legalDocumentPath("platform_terms", "/provider/onboarding/review"),
+    );
+  }
+
+  const alreadyAccepted = await hasAcceptedCurrentLegalDocument(supabase, {
+    userId: session.user.id,
+    kind: "provider_terms",
+  });
+  if (!alreadyAccepted) {
+    if (formData.get("acceptProviderTerms") !== "on") {
+      return { error: "Review and accept the Provider Addendum." };
+    }
+    const snapshot = getProviderTermsSnapshot();
+    const contentHash = stableContentHash(snapshot);
+    if (formData.get("renderedProviderTermsHash") !== contentHash) {
+      return {
+        error:
+          "The Provider Addendum changed while this page was open. Reload and review it again.",
+      };
+    }
+    const audit = await requestAuditFields();
+    const { error } = await supabase.from("legal_acceptances").insert({
+      user_id: session.user.id,
+      kind: "provider_terms",
+      role: "provider",
+      version: PROVIDER_TERMS_VERSION,
+      content_hash: contentHash,
+      signer_name: session.profile.full_name.trim(),
+      snapshot: snapshot as Json,
+      ...audit,
+    });
+    if (error && error.code !== "23505") {
+      return { error: "Could not save the Provider Addendum. Try again." };
+    }
   }
 
   redirect("/provider/dashboard?submitted=1");

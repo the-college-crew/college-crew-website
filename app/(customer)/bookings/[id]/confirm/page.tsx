@@ -15,6 +15,7 @@ import {
   BOOKING_FIXED_SCAFFOLD,
   GENERAL_FAMILY_DISCLOSURE,
   getBookingAddendumSnapshot,
+  getBookingRiskSnapshot,
 } from "@/lib/legal/waivers";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
@@ -96,7 +97,7 @@ export default async function ConfirmPayPage({
     { label: "Where", value: booking.address },
     { label: "Price", value: formatMoney(booking.price_cents) },
   ];
-  const addendum = getBookingAddendumSnapshot({
+  const addendum = getBookingRiskSnapshot({
     serviceSlug: service.slug,
     serviceName: service.name,
     scheduledAt: formatDateTime(booking.scheduled_at),
@@ -262,7 +263,6 @@ function HourlyConfirmView({
     address: booking.address,
     providerName,
     customerName,
-    includeHourlyTerms: true,
   });
 
   const dueAt = booking.initial_payment_due_at;

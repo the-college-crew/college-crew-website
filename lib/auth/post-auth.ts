@@ -4,9 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, UserRole } from "@/lib/db/types";
 import {
-  hasAcceptedCurrentMasterAgreement,
-  masterAgreementPath,
-  requiredMasterVariant,
+  hasAcceptedCurrentLegalDocument,
+  legalDocumentPath,
 } from "@/lib/legal/acceptance";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,7 +39,7 @@ export async function getAccountShape(
 
 /**
  * Where a user lands once an email link has established their session: `next`,
- * or the master agreement first when they haven't accepted the current one.
+ * or the common Platform Terms first when they have not accepted them.
  * Shared by the callback route and the confirm interstitial.
  */
 export async function postAuthDestination(next: string): Promise<string> {
@@ -51,10 +50,12 @@ export async function postAuthDestination(next: string): Promise<string> {
   if (!user) return next;
 
   const shape = await getAccountShape(supabase, user.id);
-  const accepted = await hasAcceptedCurrentMasterAgreement(supabase, {
+  if (shape.role === "admin") return next;
+
+  const accepted = await hasAcceptedCurrentLegalDocument(supabase, {
     userId: user.id,
-    variant: requiredMasterVariant(shape.role, shape.providerCapable),
+    kind: "platform_terms",
   });
 
-  return accepted ? next : masterAgreementPath(next);
+  return accepted ? next : legalDocumentPath("platform_terms", next);
 }

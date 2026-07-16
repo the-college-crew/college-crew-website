@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       admin_allowlist: {
@@ -2074,10 +2069,7 @@ export type Database = {
         }
         Returns: string
       }
-      current_user_is_adult: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      current_user_is_adult: { Args: never; Returns: boolean }
       decline_booking_request: {
         Args: { p_booking_id: string }
         Returns: string
@@ -2375,7 +2367,13 @@ export type Database = {
         | "expired"
         | "cancelled"
       email_outbox_status: "pending" | "processing" | "sent" | "failed"
-      legal_acceptance_kind: "master_agreement" | "booking_addendum"
+      legal_acceptance_kind:
+        | "master_agreement"
+        | "booking_addendum"
+        | "platform_terms"
+        | "customer_booking_terms"
+        | "provider_terms"
+        | "payment_authorization"
       moderation_status: "clean" | "redacted" | "flagged"
       price_type: "fixed" | "quote"
       price_unit: "per_job" | "per_hour"
@@ -2567,7 +2565,14 @@ export const Constants = {
         "cancelled",
       ],
       email_outbox_status: ["pending", "processing", "sent", "failed"],
-      legal_acceptance_kind: ["master_agreement", "booking_addendum"],
+      legal_acceptance_kind: [
+        "master_agreement",
+        "booking_addendum",
+        "platform_terms",
+        "customer_booking_terms",
+        "provider_terms",
+        "payment_authorization",
+      ],
       moderation_status: ["clean", "redacted", "flagged"],
       price_type: ["fixed", "quote"],
       price_unit: ["per_job", "per_hour"],

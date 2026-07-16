@@ -40,10 +40,10 @@ export function SignupSuccess({
 
     async function poll() {
       if (document.visibilityState !== "visible") return;
-      const signedIn = await checkSignedIn();
-      if (signedIn && !cancelled) {
+      const destination = await checkSignedIn(redirectTo);
+      if (destination && !cancelled) {
         // Full navigation so the server re-renders with the new session.
-        window.location.assign(redirectTo);
+        window.location.assign(destination);
       }
     }
 

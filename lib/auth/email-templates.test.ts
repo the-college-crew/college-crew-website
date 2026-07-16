@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 const ORIGIN = "https://www.thecollegecrew.com";
 const TOKEN_HASH = "pkce_test_token_hash";
 const PROVIDER_NEXT =
-  "{{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Fverify{{ else }}%2Fdashboard{{ end }}";
+  "{{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Faccount{{ else }}%2Fdashboard{{ end }}";
 
 type TemplateCase = {
   file: string;
@@ -26,7 +26,7 @@ function renderLinks(source: string, providerIntent = false) {
     .replaceAll(
       PROVIDER_NEXT,
       providerIntent
-        ? "%2Fprovider%2Fonboarding%2Fverify"
+        ? "%2Fprovider%2Fonboarding%2Faccount"
         : "%2Fdashboard",
     )
     .replaceAll("{{ .RedirectTo }}", ORIGIN)
@@ -69,7 +69,7 @@ describe("Supabase Auth email template links", () => {
       readTemplate("confirmation.html"),
       {
         type: "signup",
-        next: "/provider/onboarding/verify",
+        next: "/provider/onboarding/account",
       },
       true,
     );

@@ -132,12 +132,54 @@ select pg_temp.insert_accepted('20000000-0000-0000-0000-000000002502', now() - i
 select pg_temp.insert_accepted('20000000-0000-0000-0000-000000002503', now() - interval '13 hours', now() + interval '5 hours');
 select pg_temp.insert_accepted('20000000-0000-0000-0000-000000002505', now(), now() + interval '2 days');
 
--- ---------------------------------------------------------------------------
--- begin_first_hour_payment (authenticated customer)
--- ---------------------------------------------------------------------------
+-- Modular publication stores the exact amount-specific authorization apart
+-- from the booking risk acknowledgment. Historical booking policy versions do
+-- not strand an accepted booking: the customer can accept the current payment
+-- authorization for that existing booking.
 select set_config('request.jwt.claim.sub', '20000000-0000-0000-0000-000000002101', true);
 select set_config('request.jwt.claims', '{"sub":"20000000-0000-0000-0000-000000002101","role":"authenticated"}', true);
 set local role authenticated;
+select lives_ok(
+  $$ insert into public.legal_acceptances (
+    user_id, booking_id, kind, role, version, content_hash, signer_name, snapshot
+  )
+  select
+    b.customer_id,
+    b.id,
+    'payment_authorization',
+    'customer',
+    'hourly-v1-saved-method-2026-07-15',
+    repeat('a', 64),
+    'Phase Four Customer',
+    jsonb_build_object(
+      'kind', 'payment_authorization',
+      'version', 'hourly-v1-saved-method-2026-07-15',
+      'bookingId', b.id::text,
+      'text', 'I authorize College Crew to charge the displayed first-hour amount now. I also authorize College Crew and Stripe to save this payment method for this booking only and to charge the remaining approved invoice balance. If I do not confirm or dispute the invoice, College Crew may attempt the remaining balance 24 hours after the provider submits the invoice. The final amount is based on the provider''s hourly rate and submitted billable time, subject to the one-hour minimum, 15-minute billing increments, and the dispute process.',
+      'amounts', jsonb_build_object(
+        'firstHourCents', b.hourly_rate_cents_snapshot,
+        'estimatedTotalCents',
+          ((b.hourly_rate_cents_snapshot::bigint * b.estimated_minutes + 30) / 60)::integer,
+        'estimatedBalanceCents',
+          ((b.hourly_rate_cents_snapshot::bigint * b.estimated_minutes + 30) / 60)::integer
+          - b.hourly_rate_cents_snapshot
+      ),
+      'dueAt', b.initial_payment_due_at,
+      'scope', 'booking_only'
+    )
+  from public.bookings b
+  where b.id in (
+    '20000000-0000-0000-0000-000000002501',
+    '20000000-0000-0000-0000-000000002502',
+    '20000000-0000-0000-0000-000000002503',
+    '20000000-0000-0000-0000-000000002505'
+  ) $$,
+  'the customer can record exact amount-specific authorizations for owned accepted bookings'
+);
+
+-- ---------------------------------------------------------------------------
+-- begin_first_hour_payment (authenticated customer)
+-- ---------------------------------------------------------------------------
 
 select results_eq(
   $$ select amount_cents, application_fee_cents, idempotency_key

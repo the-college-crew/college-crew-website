@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { FormLoader } from "@/components/form-loader";
-import { Button, buttonClasses } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { LegalDocumentContent } from "@/app/(shared)/legal/legal-document-content";
 import {
   getOwnProviderProfile,
   requireOnboardingUser,
@@ -21,9 +21,17 @@ import {
 } from "@/lib/provider/setup";
 import { createClient } from "@/lib/supabase/server";
 import { formatOfferedPrice } from "@/lib/utils";
+import {
+  hasAcceptedCurrentLegalDocument,
+  stableContentHash,
+} from "@/lib/legal/acceptance";
+import {
+  getProviderTermsSnapshot,
+  PROVIDER_TERMS_VERSION,
+} from "@/lib/legal/waivers";
 
 import { WizardSteps } from "../../_components/wizard-steps";
-import { submitForReview } from "../actions";
+import { ReviewSubmitForm } from "./review-submit-form";
 
 export const metadata: Metadata = { title: "Provider onboarding — review" };
 
@@ -51,6 +59,11 @@ export default async function OnboardingReviewPage() {
   );
 
   const schoolEmail = await getVerifiedSchoolEmail(session.user.id);
+  const providerTermsAccepted = await hasAcceptedCurrentLegalDocument(supabase, {
+    userId: session.user.id,
+    kind: "provider_terms",
+  });
+  const providerTerms = getProviderTermsSnapshot();
 
   const licenseComplete =
     Boolean(profile.id_document_url) && Boolean(profile.id_document_back_url);
@@ -217,6 +230,28 @@ export default async function OnboardingReviewPage() {
           dashboard and appear in Browse.
         </div>
 
+        <section className="mt-6 border-t border-line pt-5">
+          <h2 className="font-display text-xl font-semibold">
+            Provider Addendum
+          </h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Version {PROVIDER_TERMS_VERSION}. These are only the additional
+            terms that apply when you provide services.
+          </p>
+          {providerTermsAccepted ? (
+            <p className="mt-4 rounded-lg border border-quad-200 bg-quad-50 p-3 text-sm font-medium text-quad-800">
+              ✓ Current Provider Addendum accepted
+            </p>
+          ) : (
+            <div className="mt-4 rounded-xl border border-line bg-paper p-4">
+              <LegalDocumentContent
+                intro={providerTerms.intro}
+                sections={providerTerms.sections}
+              />
+            </div>
+          )}
+        </section>
+
         <div className="mt-6 flex items-center justify-between border-t border-line pt-4">
           <Link
             href="/provider/onboarding/availability"
@@ -224,12 +259,11 @@ export default async function OnboardingReviewPage() {
           >
             ← Back
           </Link>
-          <form action={submitForReview}>
-            <FormLoader />
-            <Button type="submit" size="lg" disabled={!ready}>
-              Submit for review
-            </Button>
-          </form>
+          <ReviewSubmitForm
+            ready={ready}
+            providerTermsAccepted={providerTermsAccepted}
+            renderedProviderTermsHash={stableContentHash(providerTerms)}
+          />
         </div>
       </Card>
     </div>

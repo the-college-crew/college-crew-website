@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,10 @@ import { requireRole } from "@/lib/auth/session";
 import { eligibleResponseWindowHours } from "@/lib/booking/policy";
 import { getReplacementCandidateIds } from "@/lib/booking/requests";
 import { getApprovedProviders } from "@/lib/db/queries";
+import {
+  hasAcceptedCurrentLegalDocument,
+  legalDocumentPath,
+} from "@/lib/legal/acceptance";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
 
@@ -29,6 +33,19 @@ export default async function ReplacementPage({
     requireRole("customer", "/dashboard"),
   ]);
   const supabase = await createClient();
+  if (
+    !(await hasAcceptedCurrentLegalDocument(supabase, {
+      userId: session.user.id,
+      kind: "customer_booking_terms",
+    }))
+  ) {
+    redirect(
+      legalDocumentPath(
+        "customer_booking_terms",
+        `/bookings/${id}/replace`,
+      ),
+    );
+  }
   const { data: booking } = await supabase
     .from("bookings")
     .select(

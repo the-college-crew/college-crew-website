@@ -10,9 +10,8 @@ import { homePathFor } from "@/lib/auth/session";
 import { hasServiceRoleEnv, hasSupabaseEnv } from "@/lib/env";
 import { geocodeProfileAddress } from "@/lib/geocode/profile";
 import {
-  hasAcceptedCurrentMasterAgreement,
-  masterAgreementPath,
-  requiredMasterVariant,
+  hasAcceptedCurrentLegalDocument,
+  legalDocumentPath,
 } from "@/lib/legal/acceptance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -117,15 +116,17 @@ export async function logIn(
   const next = formData.get("next");
   const destination =
     typeof next === "string" && next.startsWith("/") ? next : home;
-  const accepted = await hasAcceptedCurrentMasterAgreement(supabase, {
-    userId: data.user.id,
-    variant: requiredMasterVariant(shape.role, shape.providerCapable),
-  });
+  const accepted =
+    shape.role === "admin" ||
+    (await hasAcceptedCurrentLegalDocument(supabase, {
+      userId: data.user.id,
+      kind: "platform_terms",
+    }));
 
   redirect(
     accepted || destination.startsWith("/legal/master")
       ? destination
-      : masterAgreementPath(destination),
+      : legalDocumentPath("platform_terms", destination),
   );
 }
 
@@ -410,17 +411,19 @@ export async function resetPassword(
 }
 
 /**
- * Lightweight "is there a session yet?" poll for the post-signup panel. Once
- * the confirmation link (opened in another tab of the same browser) sets the
- * shared session cookie, this returns true and the panel advances the user in.
+ * Lightweight session poll for the post-signup panel. Once the confirmation
+ * link sets the shared cookie, return the legal-aware destination so the
+ * panel advances without skipping Platform Terms.
  */
-export async function checkSignedIn(): Promise<boolean> {
-  if (!hasSupabaseEnv()) return false;
+export async function checkSignedIn(next: string): Promise<string | null> {
+  if (!hasSupabaseEnv()) return null;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return Boolean(user);
+  if (!user) return null;
+  const { postAuthDestination, safeNext } = await import("@/lib/auth/post-auth");
+  return postAuthDestination(safeNext(next));
 }
 
 export async function signOut() {
