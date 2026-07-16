@@ -15,9 +15,8 @@ import {
   toBannerStyle,
   type BannerStyle,
 } from "@/lib/media/provider-banners";
-import { getLocationRankedProviderIds } from "@/lib/booking/requests";
 import {
-  isBeyondServiceRadius,
+  compareDistanceNearestFirst,
   recommendationScore,
   utcDateKey,
 } from "@/lib/browse/ranking";
@@ -360,16 +359,10 @@ export async function getApprovedProviders(
     lowestRate(a) - lowestRate(b) ||
     stableTieBreak(a, b);
 
-  if (options.sort === "location" && /^\d{5}$/.test(options.jobZip ?? "")) {
-    const rankedIds = await getLocationRankedProviderIds({
-      jobZip: options.jobZip!,
-      serviceSlug: options.serviceSlug,
-    });
-    const rank = new Map(rankedIds.map((id, index) => [id, index]));
+  if (options.sort === "location") {
     return filtered.toSorted(
       (a, b) =>
-        (rank.get(a.id) ?? Number.POSITIVE_INFINITY) -
-          (rank.get(b.id) ?? Number.POSITIVE_INFINITY) ||
+        compareDistanceNearestFirst(a.distance_miles, b.distance_miles) ||
         ratingThenRate(a, b),
     );
   }
@@ -384,9 +377,9 @@ export async function getApprovedProviders(
 
   // Default "suggested" sort: the recommendation engine. Quality (smoothed
   // rating, log-scaled completed jobs, profile completeness) with 20% daily
-  // exploration noise, then a distance demotion; providers measured beyond the
-  // service radius are dropped. Distance stays neutral when the viewer has no
-  // origin, so this degrades to pure quality + noise for logged-out browsing.
+  // exploration noise, then a distance demotion. Distance stays neutral when
+  // the viewer has no origin, so this degrades to pure quality + noise for
+  // logged-out browsing.
   const jobCounts = await getProviderCompletedJobCounts(
     supabase,
     filtered.map((card) => card.id),
@@ -407,13 +400,11 @@ export async function getApprovedProviders(
       }),
     ]),
   );
-  return filtered
-    .filter((card) => !isBeyondServiceRadius(card.distance_miles))
-    .toSorted(
-      (a, b) =>
-        (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0) ||
-        stableTieBreak(a, b),
-    );
+  return filtered.toSorted(
+    (a, b) =>
+      (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0) ||
+      stableTieBreak(a, b),
+  );
 }
 
 export type PublicReview = {
