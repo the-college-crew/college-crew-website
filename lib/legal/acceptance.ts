@@ -8,8 +8,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, UserRole } from "@/lib/db/types";
 import {
+  CUSTOMER_BOOKING_TERMS_VERSION,
+  getLegalDocumentSnapshot,
   getMasterAgreementSnapshot,
+  type LegalDocumentKind,
   LEGAL_CONTENT_VERSION,
+  PLATFORM_TERMS_VERSION,
+  PROVIDER_TERMS_VERSION,
 } from "@/lib/legal/waivers";
 
 export function stableContentHash(value: unknown) {
@@ -33,52 +38,91 @@ export async function requestAuditFields() {
 export function safeNextPath(value: FormDataEntryValue | string | null | undefined) {
   if (typeof value !== "string") return "/";
   if (!value.startsWith("/") || value.startsWith("//")) return "/";
-  if (value === "/legal/master" || value.startsWith("/legal/master?")) {
+  if (
+    value === "/legal/master" ||
+    value.startsWith("/legal/master?") ||
+    value === "/legal/customer-booking" ||
+    value.startsWith("/legal/customer-booking?") ||
+    value === "/legal/provider" ||
+    value.startsWith("/legal/provider?")
+  ) {
     return "/";
   }
   return value;
 }
 
-export function masterAgreementPath(next?: string) {
+export function legalDocumentPath(kind: LegalDocumentKind, next?: string) {
   const safeNext = safeNextPath(next);
-  return `/legal/master?next=${encodeURIComponent(safeNext)}`;
+  const pathname =
+    kind === "platform_terms"
+      ? "/legal/master"
+      : kind === "customer_booking_terms"
+        ? "/legal/customer-booking"
+        : "/legal/provider";
+  return `${pathname}?next=${encodeURIComponent(safeNext)}`;
+}
+
+export function legalDocumentVersion(kind: LegalDocumentKind) {
+  if (kind === "platform_terms") return PLATFORM_TERMS_VERSION;
+  if (kind === "customer_booking_terms") {
+    return CUSTOMER_BOOKING_TERMS_VERSION;
+  }
+  return PROVIDER_TERMS_VERSION;
+}
+
+export function legalDocumentRole(kind: LegalDocumentKind): UserRole {
+  return kind === "provider_terms" ? "provider" : "customer";
+}
+
+export type LegalAcceptanceEvidence = {
+  kind: string;
+  role: UserRole;
+  version: string;
+  content_hash: string;
+};
+
+export function acceptanceSatisfiesLegalDocument(
+  row: LegalAcceptanceEvidence,
+  kind: LegalDocumentKind,
+) {
+  if (
+    row.kind === kind &&
+    row.version === legalDocumentVersion(kind) &&
+    row.content_hash === stableContentHash(getLegalDocumentSnapshot(kind))
+  ) {
+    return true;
+  }
+  if (row.kind !== "master_agreement" || row.version !== LEGAL_CONTENT_VERSION) {
+    return false;
+  }
+  if (row.role === "provider") {
+    return (
+      row.content_hash === stableContentHash(getMasterAgreementSnapshot("provider"))
+    );
+  }
+  return (
+    kind !== "provider_terms" &&
+    row.role === "customer" &&
+    row.content_hash === stableContentHash(getMasterAgreementSnapshot("customer"))
+  );
 }
 
 /**
- * Which master-agreement variant (section set) a user must have accepted.
- * `legal_acceptances.role` stores the accepted VARIANT, not the account role:
- * provider-capable accounts owe the provider variant, everyone else the
- * customer one; admins keep their own founder variant.
+ * Exact modular acceptance check with immutable legacy compatibility. No old
+ * row is rewritten: the published customer superset satisfies platform and
+ * customer terms; the provider superset also satisfies provider terms.
  */
-export function requiredMasterVariant(
-  role: UserRole,
-  providerCapable: boolean,
-): UserRole {
-  if (role === "admin") return "admin";
-  return providerCapable ? "provider" : "customer";
-}
-
-export async function hasAcceptedCurrentMasterAgreement(
+export async function hasAcceptedCurrentLegalDocument(
   supabase: SupabaseClient<Database>,
-  input: { userId: string; variant: UserRole },
+  input: { userId: string; kind: LegalDocumentKind },
 ) {
-  // The provider variant contains every customer section plus the provider
-  // ones, so a provider acceptance satisfies customer-level requirements
-  // (mirrors private.has_current_master_agreement in the database).
-  const variants: UserRole[] =
-    input.variant === "customer" ? ["customer", "provider"] : [input.variant];
-
   const { data } = await supabase
     .from("legal_acceptances")
-    .select("role, content_hash")
+    .select("kind, role, version, content_hash")
     .eq("user_id", input.userId)
-    .eq("kind", "master_agreement")
-    .eq("version", LEGAL_CONTENT_VERSION)
-    .in("role", variants);
+    .in("kind", [input.kind, "master_agreement"]);
 
-  return (data ?? []).some(
-    (row) =>
-      row.content_hash ===
-      stableContentHash(getMasterAgreementSnapshot(row.role)),
+  return (data ?? []).some((row) =>
+    acceptanceSatisfiesLegalDocument(row, input.kind),
   );
 }

@@ -32,6 +32,12 @@ import {
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
 import { createClient } from "@/lib/supabase/server";
+import { hasAcceptedCurrentLegalDocument } from "@/lib/legal/acceptance";
+import {
+  CUSTOMER_BOOKING_TERMS_VERSION,
+  PLATFORM_TERMS_VERSION,
+  PROVIDER_TERMS_VERSION,
+} from "@/lib/legal/waivers";
 import { formatOfferedPrice } from "@/lib/utils";
 
 import { AccountPasswordForm, AccountProfileForm } from "./account-forms";
@@ -95,6 +101,26 @@ export default async function AccountPage({
   // providing (owns a provider profile). Everyone gets the personal/security/
   // delete controls below.
   const providerProfile = await getOwnProviderProfile();
+  const supabase = await createClient();
+  const [platformTermsAccepted, customerTermsAccepted, providerTermsAccepted] =
+    profile.role === "admin"
+      ? [true, true, true]
+      : await Promise.all([
+          hasAcceptedCurrentLegalDocument(supabase, {
+            userId: user.id,
+            kind: "platform_terms",
+          }),
+          hasAcceptedCurrentLegalDocument(supabase, {
+            userId: user.id,
+            kind: "customer_booking_terms",
+          }),
+          providerProfile
+            ? hasAcceptedCurrentLegalDocument(supabase, {
+                userId: user.id,
+                kind: "provider_terms",
+              })
+            : Promise.resolve(false),
+        ]);
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
@@ -112,8 +138,70 @@ export default async function AccountPage({
           providerProfile={providerProfile}
           stripeConnected={stripe === "connected"}
           stripeIncomplete={stripe === "incomplete"}
+          providerTermsAccepted={providerTermsAccepted}
         />
       ) : null}
+
+      <Section
+        title="Agreements"
+        description={
+          profile.role === "admin"
+            ? "Founder accounts are exempt from marketplace user agreements."
+            : "Your current account and action-specific legal status."
+        }
+      >
+        <div className="space-y-3 text-sm">
+          {[
+            {
+              label: "Platform Terms",
+              version: PLATFORM_TERMS_VERSION,
+              accepted: platformTermsAccepted,
+              href: "/legal#platform-terms",
+            },
+            {
+              label: "Customer Booking Terms",
+              version: CUSTOMER_BOOKING_TERMS_VERSION,
+              accepted: customerTermsAccepted,
+              href: "/legal#customer-booking-terms",
+            },
+            ...(providerProfile
+              ? [
+                  {
+                    label: "Provider Terms",
+                    version: PROVIDER_TERMS_VERSION,
+                    accepted: providerTermsAccepted,
+                    href: "/legal#provider-terms",
+                  },
+                ]
+              : []),
+          ].map((agreement) => (
+            <div
+              key={agreement.label}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line p-3"
+            >
+              <div>
+                <p className="font-medium">{agreement.label}</p>
+                <p className="text-xs text-mist">Version {agreement.version}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge tone={agreement.accepted ? "green" : "gold"}>
+                  {profile.role === "admin"
+                    ? "Exempt"
+                    : agreement.accepted
+                      ? "Accepted"
+                      : "Required when used"}
+                </Badge>
+                <Link
+                  href={agreement.href}
+                  className={buttonClasses({ size: "sm", variant: "ghost" })}
+                >
+                  View
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
 
       <Section
         title="Personal details"
@@ -155,22 +243,24 @@ async function ProviderStorefront({
   providerProfile,
   stripeConnected,
   stripeIncomplete,
+  providerTermsAccepted,
 }: {
   providerProfile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
   stripeConnected: boolean;
   stripeIncomplete: boolean;
+  providerTermsAccepted: boolean;
 }) {
   const supabase = await createClient();
   const [services, { data: offerings }, windows] = await Promise.all([
-    getLiveServices(),
-    supabase
-      .from("provider_services")
-      .select(
-        "id, service_id, price_cents, price_type, unit, hourly_rate_cents, service:services(name, is_live)",
-      )
-      .eq("provider_id", providerProfile.id),
-    getProviderAvailabilityWindows(providerProfile.id),
-  ]);
+      getLiveServices(),
+      supabase
+        .from("provider_services")
+        .select(
+          "id, service_id, price_cents, price_type, unit, hourly_rate_cents, service:services(name, is_live)",
+        )
+        .eq("provider_id", providerProfile.id),
+      getProviderAvailabilityWindows(providerProfile.id),
+    ]);
   const readinessOfferings = (offerings ?? []).map((offering) => ({
     id: offering.id,
     name: offering.service?.name ?? "Retired service",
@@ -198,6 +288,10 @@ async function ProviderStorefront({
         profile={providerProfile}
         offerings={readinessOfferings}
         windows={windows}
+        legalAcceptance={{
+          ready: providerTermsAccepted,
+          version: PROVIDER_TERMS_VERSION,
+        }}
       />
 
       <Section

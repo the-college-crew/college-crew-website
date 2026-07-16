@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
-import { HOURLY_AUTHORIZATION_VERSION } from "@/lib/booking/policy";
+import {
+  calculateInvoiceAllocation,
+  HOURLY_AUTHORIZATION_VERSION,
+} from "@/lib/booking/policy";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import type { Json } from "@/lib/db/types";
 import {
@@ -13,7 +16,10 @@ import {
   stableContentHash,
 } from "@/lib/legal/acceptance";
 import {
+  BOOKING_RISK_VERSION,
   getBookingAddendumSnapshot,
+  getBookingRiskSnapshot,
+  getPaymentAuthorizationSnapshot,
   LEGAL_CONTENT_VERSION,
 } from "@/lib/legal/waivers";
 import {
@@ -194,6 +200,13 @@ export async function confirmFirstHourPayment(
   ) {
     return { error: "The first-hour payment window has closed for this booking." };
   }
+  if (
+    booking.hourly_rate_cents_snapshot === null ||
+    booking.estimated_minutes === null ||
+    !booking.initial_payment_due_at
+  ) {
+    return { error: "This booking is missing its hourly payment terms." };
+  }
 
   const service = Array.isArray(booking.service)
     ? booking.service[0]
@@ -205,18 +218,17 @@ export async function confirmFirstHourPayment(
     ? booking.customer[0]
     : booking.customer;
 
-  const snapshot = service
-    ? getBookingAddendumSnapshot({
+  const riskSnapshot = service
+    ? getBookingRiskSnapshot({
         serviceSlug: service.slug,
         serviceName: service.name,
         scheduledAt: formatDateTime(booking.scheduled_at),
         address: booking.address,
         providerName: provider?.display_name ?? "Provider",
         customerName: customer?.full_name ?? "Customer",
-        includeHourlyTerms: true,
       })
     : null;
-  if (!service || !snapshot) {
+  if (!service || !riskSnapshot) {
     return {
       error:
         "This service does not have a booking risk addendum yet. Contact College Crew before confirming.",
@@ -231,16 +243,45 @@ export async function confirmFirstHourPayment(
       booking_id: booking.id,
       kind: "booking_addendum",
       role: "customer",
-      version: LEGAL_CONTENT_VERSION,
-      content_hash: stableContentHash(snapshot),
+      version: BOOKING_RISK_VERSION,
+      content_hash: stableContentHash(riskSnapshot),
       signer_name: customer?.full_name ?? "Customer",
       service_slug: service.slug,
       service_name: service.name,
-      snapshot: snapshot as Json,
+      snapshot: riskSnapshot as Json,
       ...audit,
     });
   if (acceptanceError && acceptanceError.code !== "23505") {
     return { error: "Could not save the booking risk acceptance. Try again." };
+  }
+
+  const allocation = calculateInvoiceAllocation(
+    booking.hourly_rate_cents_snapshot,
+    booking.estimated_minutes,
+  );
+  const paymentAuthorization = getPaymentAuthorizationSnapshot({
+    version: HOURLY_AUTHORIZATION_VERSION,
+    bookingId: booking.id,
+    firstHourCents: allocation.firstHourCents,
+    estimatedTotalCents: allocation.subtotalCents,
+    estimatedBalanceCents: allocation.remainingBalanceCents,
+    dueAt: booking.initial_payment_due_at,
+  });
+  const { error: authorizationError } = await supabase
+    .from("legal_acceptances")
+    .insert({
+      user_id: user.id,
+      booking_id: booking.id,
+      kind: "payment_authorization",
+      role: "customer",
+      version: HOURLY_AUTHORIZATION_VERSION,
+      content_hash: stableContentHash(paymentAuthorization),
+      signer_name: customer?.full_name ?? "Customer",
+      snapshot: paymentAuthorization as Json,
+      ...audit,
+    });
+  if (authorizationError && authorizationError.code !== "23505") {
+    return { error: "Could not save the payment authorization. Try again." };
   }
 
   // Persist exactly one first-hour attempt (with the saved-method authorization)

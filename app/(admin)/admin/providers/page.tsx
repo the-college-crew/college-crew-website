@@ -4,11 +4,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
 import type { ProviderProfile } from "@/lib/db/types";
-import { stableContentHash } from "@/lib/legal/acceptance";
-import {
-  getMasterAgreementSnapshot,
-  LEGAL_CONTENT_VERSION,
-} from "@/lib/legal/waivers";
+import { acceptanceSatisfiesLegalDocument } from "@/lib/legal/acceptance";
+import { PROVIDER_TERMS_VERSION } from "@/lib/legal/waivers";
 import { getOfferingReadiness } from "@/lib/provider/setup";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -39,9 +36,6 @@ export default async function AdminProvidersPage({
   // Private provider fields are never browser-role readable. This page performs
   // an explicit role check before using the server-only administrative client.
   const supabase = createAdminClient();
-  const expectedProviderAgreementHash = stableContentHash(
-    getMasterAgreementSnapshot("provider"),
-  );
   const [{ data }, { data: legalRows }] = await Promise.all([
     supabase
       .from("provider_profiles")
@@ -51,16 +45,15 @@ export default async function AdminProvidersPage({
       .order("created_at", { ascending: true }),
     supabase
       .from("legal_acceptances")
-      .select("user_id, content_hash")
-      .eq("kind", "master_agreement")
-      .eq("role", "provider")
-      .eq("version", LEGAL_CONTENT_VERSION),
+      .select("user_id, kind, role, version, content_hash")
+      .in("kind", ["provider_terms", "master_agreement"]),
   ]);
-  const legallyReadyUsers = new Set(
-    (legalRows ?? [])
-      .filter((row) => row.content_hash === expectedProviderAgreementHash)
-      .map((row) => row.user_id),
-  );
+  const legallyReadyUsers = new Set<string>();
+  for (const row of legalRows ?? []) {
+    if (acceptanceSatisfiesLegalDocument(row, "provider_terms")) {
+      legallyReadyUsers.add(row.user_id);
+    }
+  }
 
   // Verified school (.edu) emails, keyed by user (no direct FK to join on).
   const { data: schoolRows } = await supabase
@@ -139,13 +132,18 @@ export default async function AdminProvidersPage({
       />
       <PageHeader
         title="Provider approvals & rollout readiness"
-        description={`Review verification and every Hourly Booking launch requirement. Agreement version ${LEGAL_CONTENT_VERSION} is required in addition to service, schedule, ZIP, and Stripe readiness.`}
+        description={`Review verification and every Hourly Booking launch requirement. Provider Terms version ${PROVIDER_TERMS_VERSION} is required in addition to service, schedule, ZIP, and Stripe readiness.`}
       />
 
       {err === "env" ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           SUPABASE_SERVICE_ROLE_KEY is missing — approvals need it. Add it to
           .env.local.
+        </div>
+      ) : null}
+      {err === "legal" ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          The provider must accept the current Provider Terms before approval.
         </div>
       ) : null}
 

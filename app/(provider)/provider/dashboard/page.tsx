@@ -35,6 +35,8 @@ import {
 import { getProviderAvailabilityWindows } from "@/lib/db/queries";
 import type { AvailabilityWindow } from "@/lib/provider/setup";
 import type { BookingFlow, BookingStatus } from "@/lib/db/types";
+import { hasAcceptedCurrentLegalDocument } from "@/lib/legal/acceptance";
+import { PROVIDER_TERMS_VERSION } from "@/lib/legal/waivers";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
@@ -137,7 +139,8 @@ export default async function ProviderDashboardPage({
     Boolean(profile.id_document_back_url);
 
   const supabase = await createClient();
-  const [{ data }, { data: offeringRows }, windows] = await Promise.all([
+  const [{ data }, { data: offeringRows }, windows, providerTermsAccepted] =
+    await Promise.all([
     supabase
       .from("bookings")
       .select(
@@ -155,6 +158,10 @@ export default async function ProviderDashboardPage({
       .select("id, hourly_rate_cents, service:services(name, is_live)")
       .eq("provider_id", profile.id),
     getProviderAvailabilityWindows(profile.id),
+    hasAcceptedCurrentLegalDocument(supabase, {
+      userId: session.user.id,
+      kind: "provider_terms",
+    }),
   ]);
 
   const rawBookings = (data ?? []) as ProviderBookingRow[];
@@ -186,6 +193,7 @@ export default async function ProviderDashboardPage({
       submitted={submitted}
       stripe={stripe}
       onboardingComplete={onboardingComplete}
+      providerTermsAccepted={providerTermsAccepted}
     />
   );
 }
@@ -198,6 +206,7 @@ function ProviderDashboardView({
   submitted,
   stripe,
   onboardingComplete,
+  providerTermsAccepted = true,
   demo = false,
 }: {
   profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
@@ -207,6 +216,7 @@ function ProviderDashboardView({
   submitted?: string;
   stripe?: string;
   onboardingComplete: boolean;
+  providerTermsAccepted?: boolean;
   demo?: boolean;
 }) {
   const now = new Date();
@@ -344,6 +354,10 @@ function ProviderDashboardView({
         profile={profile}
         offerings={offerings}
         windows={windows}
+        legalAcceptance={{
+          ready: providerTermsAccepted,
+          version: PROVIDER_TERMS_VERSION,
+        }}
       />
 
       {/* Earnings summary */}

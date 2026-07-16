@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { BookingFrom } from "@/components/booking-from";
 import { LocationLine } from "@/components/provider-card";
@@ -19,6 +19,11 @@ import {
   getBookingFrom,
   resolveBookingOrigin,
 } from "@/lib/location/booking-from";
+import {
+  hasAcceptedCurrentLegalDocument,
+  legalDocumentPath,
+} from "@/lib/legal/acceptance";
+import { createClient } from "@/lib/supabase/server";
 
 import { BookingRequestForm } from "./booking-form";
 
@@ -54,6 +59,24 @@ export default async function BookingPage({
   const ownProviderProfile = session ? await getOwnProviderProfile() : null;
   const isOwnListing = ownProviderProfile?.id === provider.id;
   const isAdmin = session?.profile.role === "admin";
+  if (
+    requestsEnabled &&
+    session &&
+    !isAdmin &&
+    !isOwnListing &&
+    bookableServices.length > 0
+  ) {
+    const supabase = await createClient();
+    const accepted = await hasAcceptedCurrentLegalDocument(supabase, {
+      userId: session.user.id,
+      kind: "customer_booking_terms",
+    });
+    if (!accepted) {
+      redirect(
+        legalDocumentPath("customer_booking_terms", `/book/${provider.id}`),
+      );
+    }
+  }
 
   return (
     <div className="mx-auto max-w-xl space-y-6">

@@ -28,7 +28,7 @@ export function ProviderSignupForm() {
         email={state.email}
         message={state.success}
         extra="We'll take you to the next step automatically."
-        redirectTo="/provider/onboarding/verify"
+        redirectTo="/provider/onboarding/account"
       />
     );
   }

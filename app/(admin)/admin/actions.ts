@@ -10,11 +10,8 @@ import {
   type AdminProviderProfile,
 } from "@/lib/db/queries";
 import { hasServiceRoleEnv } from "@/lib/env";
-import { stableContentHash } from "@/lib/legal/acceptance";
-import {
-  getMasterAgreementSnapshot,
-  LEGAL_CONTENT_VERSION,
-} from "@/lib/legal/waivers";
+import { hasAcceptedCurrentLegalDocument } from "@/lib/legal/acceptance";
+import { PROVIDER_TERMS_VERSION } from "@/lib/legal/waivers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -48,13 +45,30 @@ export async function setProviderStatus(formData: FormData) {
       .eq("id", providerId)
       .maybeSingle();
     if (prof) {
-      const { data: school } = await admin
-        .from("provider_school_emails")
-        .select("user_id")
-        .eq("user_id", prof.user_id)
-        .maybeSingle();
+      const [
+        { data: school },
+        platformTermsAccepted,
+        providerTermsAccepted,
+      ] = await Promise.all([
+        admin
+          .from("provider_school_emails")
+          .select("user_id")
+          .eq("user_id", prof.user_id)
+          .maybeSingle(),
+        hasAcceptedCurrentLegalDocument(admin, {
+          userId: prof.user_id,
+          kind: "platform_terms",
+        }),
+        hasAcceptedCurrentLegalDocument(admin, {
+          userId: prof.user_id,
+          kind: "provider_terms",
+        }),
+      ]);
       if (!school) {
         redirect("/admin/providers?err=unverified");
+      }
+      if (!platformTermsAccepted || !providerTermsAccepted) {
+        redirect("/admin/providers?err=legal");
       }
     }
   }
@@ -183,25 +197,19 @@ export async function loadAdminProviderProfile(
       .eq("id", parsedId.data)
       .maybeSingle();
     if (prof) {
-      const [{ data: school }, { data: legal }] = await Promise.all([
+      const [{ data: school }, legalReady] = await Promise.all([
         admin
           .from("provider_school_emails")
           .select("email")
           .eq("user_id", prof.user_id)
           .maybeSingle(),
-        admin
-          .from("legal_acceptances")
-          .select("content_hash")
-          .eq("user_id", prof.user_id)
-          .eq("kind", "master_agreement")
-          .eq("role", "provider")
-          .eq("version", LEGAL_CONTENT_VERSION)
-          .maybeSingle(),
+        hasAcceptedCurrentLegalDocument(admin, {
+          userId: prof.user_id,
+          kind: "provider_terms",
+        }),
       ]);
       schoolEmail = school?.email ?? null;
-      hasCurrentLegalAcceptance =
-        legal?.content_hash ===
-        stableContentHash(getMasterAgreementSnapshot("provider"));
+      hasCurrentLegalAcceptance = legalReady;
     }
 
     const signIdDoc = async (path: string | null) => {
@@ -221,7 +229,7 @@ export async function loadAdminProviderProfile(
     profile,
     schoolEmail,
     hasCurrentLegalAcceptance,
-    legalContentVersion: LEGAL_CONTENT_VERSION,
+    legalContentVersion: PROVIDER_TERMS_VERSION,
     idDocumentUrl,
     idDocumentBackUrl,
   };

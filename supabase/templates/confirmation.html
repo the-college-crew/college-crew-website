@@ -51,13 +51,13 @@
           <tr>
             <td align="center" style="padding:0 40px 8px 40px;">
               <!--[if mso]>
-              <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ .RedirectTo }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next={{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Fverify{{ else }}%2Fdashboard{{ end }}" style="height:46px; v-text-anchor:middle; width:230px;" arcsize="18%" strokecolor="#344945" fillcolor="#344945">
+              <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ .RedirectTo }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next={{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Faccount{{ else }}%2Fdashboard{{ end }}" style="height:46px; v-text-anchor:middle; width:230px;" arcsize="18%" strokecolor="#344945" fillcolor="#344945">
                 <w:anchorlock/>
                 <center style="color:#f7f5f1; font-family:Arial,sans-serif; font-size:16px; font-weight:bold;">Confirm my email</center>
               </v:roundrect>
               <![endif]-->
               <!--[if !mso]><!-- -->
-              <a href="{{ .RedirectTo }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next={{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Fverify{{ else }}%2Fdashboard{{ end }}" target="_blank" style="display:inline-block; background-color:#344945; color:#f7f5f1; font-family:-apple-system,'Segoe UI',Arial,sans-serif; font-size:16px; font-weight:bold; text-decoration:none; padding:14px 32px; border-radius:8px;">Confirm my email</a>
+              <a href="{{ .RedirectTo }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next={{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Faccount{{ else }}%2Fdashboard{{ end }}" target="_blank" style="display:inline-block; background-color:#344945; color:#f7f5f1; font-family:-apple-system,'Segoe UI',Arial,sans-serif; font-size:16px; font-weight:bold; text-decoration:none; padding:14px 32px; border-radius:8px;">Confirm my email</a>
               <!--<![endif]-->
             </td>
           </tr>
@@ -68,7 +68,7 @@
                 Button not working? Paste this link into your browser:
               </p>
               <p style="margin:0; font-family:-apple-system,'Segoe UI',Arial,sans-serif; font-size:13px; line-height:1.5; text-align:center; word-break:break-all;">
-                <a href="{{ .RedirectTo }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next={{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Fverify{{ else }}%2Fdashboard{{ end }}" target="_blank" style="color:#344945; text-decoration:underline;">{{ .RedirectTo }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next={{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Fverify{{ else }}%2Fdashboard{{ end }}</a>
+                <a href="{{ .RedirectTo }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next={{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Faccount{{ else }}%2Fdashboard{{ end }}" target="_blank" style="color:#344945; text-decoration:underline;">{{ .RedirectTo }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next={{ if eq .Data.signup_intent `provider` }}%2Fprovider%2Fonboarding%2Faccount{{ else }}%2Fdashboard{{ end }}</a>
               </p>
             </td>
           </tr>

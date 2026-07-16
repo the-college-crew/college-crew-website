@@ -12,6 +12,10 @@ import {
 import { requestOperationMessage } from "@/lib/booking/requests";
 import type { BookingStatus } from "@/lib/db/types";
 import {
+  hasAcceptedCurrentLegalDocument,
+  legalDocumentPath,
+} from "@/lib/legal/acceptance";
+import {
   getConversationIdForBooking,
   sendModeratedMessage,
 } from "@/lib/messaging/conversation";
@@ -84,9 +88,26 @@ export async function acceptBooking(
   _previous: BookingRequestActionState,
   formData: FormData,
 ): Promise<BookingRequestActionState> {
-  await requireProviderAccess();
+  const session = await requireProviderAccess();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const supabase = await createClient();
+
+  if (
+    !(await hasAcceptedCurrentLegalDocument(supabase, {
+      userId: session.user.id,
+      kind: "platform_terms",
+    }))
+  ) {
+    redirect(legalDocumentPath("platform_terms", "/provider/dashboard"));
+  }
+  if (
+    !(await hasAcceptedCurrentLegalDocument(supabase, {
+      userId: session.user.id,
+      kind: "provider_terms",
+    }))
+  ) {
+    redirect(legalDocumentPath("provider_terms", "/provider/dashboard"));
+  }
 
   const booking = await loadBookingParties(supabase, bookingId);
 
@@ -264,6 +285,23 @@ export async function connectStripe() {
   const profile = await getOwnProviderProfile();
   if (!profile || profile.verification_status !== "approved") {
     redirect("/provider/dashboard");
+  }
+  const supabase = await createClient();
+  if (
+    !(await hasAcceptedCurrentLegalDocument(supabase, {
+      userId: session.user.id,
+      kind: "platform_terms",
+    }))
+  ) {
+    redirect(legalDocumentPath("platform_terms", "/provider/dashboard"));
+  }
+  if (
+    !(await hasAcceptedCurrentLegalDocument(supabase, {
+      userId: session.user.id,
+      kind: "provider_terms",
+    }))
+  ) {
+    redirect(legalDocumentPath("provider_terms", "/provider/dashboard"));
   }
   // v2 requires a contact email to create the recipient account.
   const contactEmail = session.user.email;

@@ -18,6 +18,15 @@ select is(
   false,
   'browser roles cannot read the exact legal acceptance contract table'
 );
+select is(
+  has_table_privilege(
+    'authenticated',
+    'private.current_legal_document_contract',
+    'select'
+  ),
+  false,
+  'browser roles cannot read the modular legal contract registry'
+);
 
 insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data)
 values
@@ -123,6 +132,51 @@ select is(
   'the exact current provider acceptance restores public readiness'
 );
 
+delete from public.legal_acceptances
+where user_id = '80000000-0000-0000-0000-000000008102';
+select set_config(
+  'request.jwt.claim.sub',
+  '80000000-0000-0000-0000-000000008102',
+  true
+);
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"80000000-0000-0000-0000-000000008102","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+select lives_ok(
+  $$ insert into public.legal_acceptances (
+    user_id, kind, role, version, content_hash, signer_name, snapshot
+  ) values (
+    '80000000-0000-0000-0000-000000008102', 'platform_terms',
+    'customer', '2026-07-15',
+    '073db4d8ee14222513c69c85e6b7c25005b568232f6d00492e4a0fbdb1c76073',
+    'Phase Eight Provider Owner', '{}'::jsonb
+  ) $$,
+  'a provider-capable user can accept exact platform terms as a customer'
+);
+select lives_ok(
+  $$ insert into public.legal_acceptances (
+    user_id, kind, role, version, content_hash, signer_name, snapshot
+  ) values (
+    '80000000-0000-0000-0000-000000008102', 'provider_terms',
+    'provider', '2026-07-15',
+    'f0f882fde99647191d17ee6ffa74a33e636ffe6dc8550b0d63cbb6c055973aad',
+    'Phase Eight Provider Owner', '{}'::jsonb
+  ) $$,
+  'a provider-capable user can accept exact provider terms'
+);
+reset role;
+
+select is(
+  public.is_provider_offering_hourly_bookable(
+    '80000000-0000-0000-0000-000000008401'
+  ),
+  true,
+  'separate exact platform and provider terms satisfy readiness'
+);
+
 insert into public.legal_acceptances (
   user_id, kind, role, version, content_hash, signer_name, snapshot
 )
@@ -159,6 +213,60 @@ select pg_temp.throws_any_ok(
 reset role;
 delete from public.legal_acceptances
 where user_id = '80000000-0000-0000-0000-000000008101';
+set local role authenticated;
+select lives_ok(
+  $$ insert into public.legal_acceptances (
+    user_id, kind, role, version, content_hash, signer_name, snapshot
+  ) values (
+    '80000000-0000-0000-0000-000000008101', 'platform_terms',
+    'customer', '2026-07-15',
+    '073db4d8ee14222513c69c85e6b7c25005b568232f6d00492e4a0fbdb1c76073',
+    'Phase Eight Customer', '{}'::jsonb
+  ) $$,
+  'a customer can accept exact platform terms'
+);
+
+select pg_temp.throws_any_ok(
+  $$
+    select public.create_hourly_booking_request(
+      '80000000-0000-0000-0000-000000008401',
+      ((current_date + 10)::date + time '10:00')
+        at time zone 'America/Chicago',
+      120, 1, '800 Test Street, Chicago, IL', '60614', 'Legal gate test'
+    )
+  $$,
+  'platform terms alone cannot create an hourly request'
+);
+
+reset role;
+set local role authenticated;
+select lives_ok(
+  $$ insert into public.legal_acceptances (
+    user_id, kind, role, version, content_hash, signer_name, snapshot
+  ) values (
+    '80000000-0000-0000-0000-000000008101', 'customer_booking_terms',
+    'customer', '2026-07-15',
+    '6c1466f50728eb4208fab6b006df9544219ab253b0690170ded587fdf3093e95',
+    'Phase Eight Customer', '{}'::jsonb
+  ) $$,
+  'a customer can accept exact customer booking terms'
+);
+
+select lives_ok(
+  $$
+    select public.create_hourly_booking_request(
+      '80000000-0000-0000-0000-000000008401',
+      ((current_date + 11)::date + time '10:00')
+        at time zone 'America/Chicago',
+      120, 1, '800 Test Street, Chicago, IL', '60614', 'Modular legal gate test'
+    )
+  $$,
+  'separate platform and customer booking terms can create a request'
+);
+
+reset role;
+delete from public.legal_acceptances
+where user_id = '80000000-0000-0000-0000-000000008101';
 insert into public.legal_acceptances (
   user_id, kind, role, version, content_hash, signer_name, snapshot
 )
@@ -183,18 +291,28 @@ select lives_ok(
 );
 
 reset role;
-select results_eq(
-  $$
-    select terms_version, customer_authorization_version,
-      customer_authorization_snapshot ->> 'version'
+select is(
+  (
+    select count(*)
     from public.bookings
     where customer_id = '80000000-0000-0000-0000-000000008101'
-  $$,
-  $$ values (
-    '2026-07-15',
-    'hourly-v1-saved-method-2026-07-15',
-    'hourly-v1-saved-method-2026-07-15'
-  ) $$,
+  ),
+  2::bigint,
+  'both modular and exact-legacy compatibility paths create requests'
+);
+select ok(
+  not exists (
+    select 1
+    from public.bookings
+    where customer_id = '80000000-0000-0000-0000-000000008101'
+      and (
+        terms_version <> '2026-07-15'
+        or customer_authorization_version <>
+          'hourly-v1-saved-method-2026-07-15'
+        or customer_authorization_snapshot ->> 'version' <>
+          'hourly-v1-saved-method-2026-07-15'
+      )
+  ),
   'new hourly requests snapshot the published legal contract'
 );
 
