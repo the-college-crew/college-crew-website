@@ -96,6 +96,19 @@ async function authConfigRequest(url, accessToken, init = {}) {
   return response;
 }
 
+function configValuesMatch(key, remoteValue, localValue) {
+  if (
+    key.startsWith("mailer_templates_") &&
+    typeof remoteValue === "string" &&
+    typeof localValue === "string"
+  ) {
+    // The hosted Auth config API trims outer template whitespace. Preserve
+    // strict comparison for every substantive character and for all subjects.
+    return remoteValue.trim() === localValue.trim();
+  }
+  return remoteValue === localValue;
+}
+
 async function syncHostedProject(payload) {
   const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
   let linkedProjectRef;
@@ -124,7 +137,7 @@ async function syncHostedProject(payload) {
   const readback = await authConfigRequest(url, accessToken);
   const remote = await readback.json();
   const mismatches = Object.entries(payload)
-    .filter(([key, value]) => remote[key] !== value)
+    .filter(([key, value]) => !configValuesMatch(key, remote[key], value))
     .map(([key]) => key);
 
   if (mismatches.length > 0) {
