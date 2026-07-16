@@ -341,7 +341,7 @@ function PhoneMock({ services }: { services: Service[] }) {
                   123 Maple Street
                 </p>
               </div>
-              <p className="font-display text-[34px] font-bold leading-none tabular-nums text-viridian">
+              <p className="font-display text-[26px] font-bold leading-none tabular-nums text-viridian">
                 $45/hr
               </p>
             </div>
