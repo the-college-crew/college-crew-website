@@ -76,7 +76,21 @@ merge conflicts during parallel work:
   confirm & pay, customer dashboard, about, blog.
 - `app/(provider)/…` and `app/(admin)/…` → **Ari** — onboarding, provider
   dashboard, jobs & pricing, profile & settings; admin approval + curation.
-- `app/(auth)/…` → **shared** — sign up / log in, role selection, 18+ gate.
+- `app/(auth)/…` → **shared** — sign up / log in, 18+ gate.
+
+**Unified accounts (since 2026-07-16):** "provider" is a capability of the
+base account, not an account type. `profiles.role` only distinguishes `admin`
+from regular accounts (all `customer`); a user is a provider iff they own a
+`provider_profiles` row, created when they start onboarding (any signed-in
+regular account can). Providers keep every customer feature (browse, book,
+message — including other providers). Guards: self-booking and self-messaging
+are blocked, admin accounts can't book, and provider capability requires
+accepting the provider variant of the master agreement (a superset of the
+customer one — `legal_acceptances.role` stores the accepted *variant*, not the
+account role). Gate helpers: `requireRole("admin"|"customer")`,
+`requireProviderAccess()` (work surface), `requireOnboardingUser()`
+(onboarding). The `provider` enum value still exists in the DB type but is
+dead — never assign or read it.
 
 Supporting directories:
 

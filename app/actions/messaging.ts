@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { requireUser } from "@/lib/auth/session";
+import { getOwnProviderProfile, requireUser } from "@/lib/auth/session";
 import {
   getConversationIdForBooking,
   getInquiryConversationId,
@@ -50,6 +50,13 @@ export async function openConversationWithProvider(formData: FormData) {
   const providerId = z.string().uuid().parse(formData.get("providerId"));
   const user = await requireUser(`/providers/${providerId}`);
   const supabase = await createClient();
+
+  // Providers can message other providers, but a chat with yourself is never
+  // useful (and would put you on both sides of the moderation flow).
+  const ownProviderProfile = await getOwnProviderProfile();
+  if (ownProviderProfile?.id === providerId) {
+    throw new Error("You can't message your own listing.");
+  }
 
   // Only approved providers are messageable — same bar as booking them.
   const { data: provider } = await supabase

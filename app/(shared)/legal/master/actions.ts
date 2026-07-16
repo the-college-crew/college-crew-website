@@ -2,10 +2,11 @@
 
 import { redirect } from "next/navigation";
 
-import { getSession } from "@/lib/auth/session";
+import { getSession, isProviderCapable } from "@/lib/auth/session";
 import type { Json } from "@/lib/db/types";
 import {
   requestAuditFields,
+  requiredMasterVariant,
   safeNextPath,
   stableContentHash,
 } from "@/lib/legal/acceptance";
@@ -36,14 +37,20 @@ export async function acceptMasterAgreement(
   }
 
   const next = safeNextPath(formData.get("next"));
-  const snapshot = getMasterAgreementSnapshot(session.profile.role);
+  // The accepted variant is derived server-side from capability — the same
+  // rule the page used to render the sections the user actually read.
+  const variant = requiredMasterVariant(
+    session.profile.role,
+    await isProviderCapable(),
+  );
+  const snapshot = getMasterAgreementSnapshot(variant);
   const audit = await requestAuditFields();
   const supabase = await createClient();
 
   const { error } = await supabase.from("legal_acceptances").insert({
     user_id: session.user.id,
     kind: "master_agreement",
-    role: session.profile.role,
+    role: variant,
     version: LEGAL_CONTENT_VERSION,
     content_hash: stableContentHash(snapshot),
     signer_name: signerName,

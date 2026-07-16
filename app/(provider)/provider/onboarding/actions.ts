@@ -5,7 +5,10 @@ import { createHash, randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireOnboardingUser,
+} from "@/lib/auth/session";
 import {
   claimAccountEmailAsSchool,
   eligibleAccountSchoolEmail,
@@ -13,9 +16,17 @@ import {
 } from "@/lib/db/school-email";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { sendSchoolOtpEmail } from "@/lib/email/send";
+import {
+  hasAcceptedCurrentMasterAgreement,
+  masterAgreementPath,
+} from "@/lib/legal/acceptance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { otpCodeSchema, schoolEmailSchema } from "@/lib/validation/auth";
+import {
+  otpCodeSchema,
+  providerStartSchema,
+  schoolEmailSchema,
+} from "@/lib/validation/auth";
 import {
   isStructuredAvailabilityComplete,
   parseProviderAvailabilityForm,
@@ -35,21 +46,63 @@ export type OnboardingFormState = {
   fieldErrors?: Record<string, string>;
 };
 
-/** Account step "Continue": creates the provider_profiles row if missing. */
-export async function startProviderProfile() {
-  const session = await requireRole("provider", "/provider/onboarding/account");
+/**
+ * Account step "Continue": turns any regular account into a provider-capable
+ * one. Creates the provider_profiles row if missing — after making sure we
+ * hold a date of birth (customers never provided one at signup; the 18+ gate
+ * is real) — then routes through the provider master agreement before the
+ * Verify step when it hasn't been accepted yet.
+ */
+export async function startProviderProfile(
+  _prev: OnboardingFormState,
+  formData: FormData,
+): Promise<OnboardingFormState> {
+  const session = await requireOnboardingUser("/provider/onboarding/account");
 
   const existing = await getOwnProviderProfile();
   if (!existing) {
+    const parsed = providerStartSchema.safeParse({
+      dateOfBirth: formData.get("dateOfBirth") || undefined,
+      companyName: formData.get("companyName") || undefined,
+    });
+    if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+    // Provider-intent signups already stored a DOB; upgrading customers
+    // submit one now. date_of_birth is an age-verified field with no client
+    // update grant, so the write goes through the service-role client.
+    if (!session.profile.date_of_birth) {
+      if (!parsed.data.dateOfBirth) {
+        return { error: "Enter your date of birth." };
+      }
+      if (!hasServiceRoleEnv()) {
+        return {
+          error:
+            "Onboarding isn't configured yet — add SUPABASE_SERVICE_ROLE_KEY.",
+        };
+      }
+      const admin = createAdminClient();
+      const { error: dobError } = await admin
+        .from("profiles")
+        .update({ date_of_birth: parsed.data.dateOfBirth })
+        .eq("id", session.user.id);
+      if (dobError) {
+        return { error: "Could not save your date of birth — try again." };
+      }
+    }
+
+    const metadataCompany = session.user.user_metadata.company_name;
+    const companyName =
+      parsed.data.companyName ??
+      (typeof metadataCompany === "string" ? metadataCompany : null);
+
     const supabase = await createClient();
-    const companyName = session.user.user_metadata.company_name;
     const { error } = await supabase.from("provider_profiles").insert({
       user_id: session.user.id,
       display_name: session.profile.full_name,
-      company_name: typeof companyName === "string" ? companyName : null,
+      company_name: companyName || null,
     });
     if (error && error.code !== "23505") {
-      throw new Error(`Could not start onboarding: ${error.message}`);
+      return { error: `Could not start onboarding: ${error.message}` };
     }
   }
 
@@ -61,6 +114,18 @@ export async function startProviderProfile() {
   const accountEmail = eligibleAccountSchoolEmail(session.user);
   if (accountEmail) {
     await claimAccountEmailAsSchool(session.user.id, accountEmail);
+  }
+
+  // Provider capability comes with the provider variant of the master
+  // agreement (extra sections). Existing provider accounts have already
+  // accepted it; upgrading customers read and accept it now, then continue.
+  const supabase = await createClient();
+  const acceptedProviderTerms = await hasAcceptedCurrentMasterAgreement(
+    supabase,
+    { userId: session.user.id, variant: "provider" },
+  );
+  if (!acceptedProviderTerms) {
+    redirect(masterAgreementPath("/provider/onboarding/verify"));
   }
 
   redirect("/provider/onboarding/verify");
@@ -92,7 +157,7 @@ export async function saveIdDocument(
   _prev: OnboardingFormState,
   formData: FormData,
 ): Promise<OnboardingFormState> {
-  const session = await requireRole("provider");
+  const session = await requireOnboardingUser();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -157,7 +222,7 @@ export async function saveOnboardingPricing(
   _prev: OnboardingFormState,
   formData: FormData,
 ): Promise<OnboardingFormState> {
-  await requireRole("provider");
+  await requireOnboardingUser();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -172,7 +237,7 @@ export async function saveOnboardingAvailability(
   _prev: OnboardingFormState,
   formData: FormData,
 ): Promise<OnboardingFormState> {
-  await requireRole("provider");
+  await requireOnboardingUser();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -220,7 +285,7 @@ export async function sendSchoolEmailOtp(
   _prev: SchoolEmailFormState,
   formData: FormData,
 ): Promise<SchoolEmailFormState> {
-  const session = await requireRole("provider");
+  const session = await requireOnboardingUser();
   if (!hasServiceRoleEnv()) return NOT_CONFIGURED;
 
   const parsed = schoolEmailSchema.safeParse(formData.get("email"));
@@ -281,7 +346,7 @@ export async function verifySchoolEmailOtp(
   _prev: SchoolEmailFormState,
   formData: FormData,
 ): Promise<SchoolEmailFormState> {
-  const session = await requireRole("provider");
+  const session = await requireOnboardingUser();
   if (!hasServiceRoleEnv()) return NOT_CONFIGURED;
 
   const parsed = otpCodeSchema.safeParse(formData.get("code"));
@@ -352,7 +417,7 @@ export async function useAccountEmailAsSchool(
 ): Promise<SchoolEmailFormState> {
   void _formData; // no form input; signature required by useActionState
 
-  const session = await requireRole("provider");
+  const session = await requireOnboardingUser();
   if (!hasServiceRoleEnv()) return NOT_CONFIGURED;
 
   const email = eligibleAccountSchoolEmail(session.user);
@@ -377,7 +442,7 @@ export async function useAccountEmailAsSchool(
 
 /** Review step: onboarding complete; verification is already pending. */
 export async function submitForReview() {
-  const session = await requireRole("provider");
+  const session = await requireOnboardingUser();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 

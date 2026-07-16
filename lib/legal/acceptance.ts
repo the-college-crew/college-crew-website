@@ -44,20 +44,41 @@ export function masterAgreementPath(next?: string) {
   return `/legal/master?next=${encodeURIComponent(safeNext)}`;
 }
 
+/**
+ * Which master-agreement variant (section set) a user must have accepted.
+ * `legal_acceptances.role` stores the accepted VARIANT, not the account role:
+ * provider-capable accounts owe the provider variant, everyone else the
+ * customer one; admins keep their own founder variant.
+ */
+export function requiredMasterVariant(
+  role: UserRole,
+  providerCapable: boolean,
+): UserRole {
+  if (role === "admin") return "admin";
+  return providerCapable ? "provider" : "customer";
+}
+
 export async function hasAcceptedCurrentMasterAgreement(
   supabase: SupabaseClient<Database>,
-  input: { userId: string; role: UserRole },
+  input: { userId: string; variant: UserRole },
 ) {
-  const snapshot = getMasterAgreementSnapshot(input.role);
+  // The provider variant contains every customer section plus the provider
+  // ones, so a provider acceptance satisfies customer-level requirements
+  // (mirrors private.has_current_master_agreement in the database).
+  const variants: UserRole[] =
+    input.variant === "customer" ? ["customer", "provider"] : [input.variant];
+
   const { data } = await supabase
     .from("legal_acceptances")
-    .select("id")
+    .select("role, content_hash")
     .eq("user_id", input.userId)
     .eq("kind", "master_agreement")
-    .eq("role", input.role)
     .eq("version", LEGAL_CONTENT_VERSION)
-    .eq("content_hash", stableContentHash(snapshot))
-    .maybeSingle();
+    .in("role", variants);
 
-  return Boolean(data);
+  return (data ?? []).some(
+    (row) =>
+      row.content_hash ===
+      stableContentHash(getMasterAgreementSnapshot(row.role)),
+  );
 }

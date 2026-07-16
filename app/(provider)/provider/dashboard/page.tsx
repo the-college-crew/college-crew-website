@@ -17,7 +17,10 @@ import {
   type ReadinessOffering,
 } from "@/components/provider-readiness-checklist";
 import { LocationLine } from "@/components/provider-card";
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireProviderAccess,
+} from "@/lib/auth/session";
 import { calculatePlatformFeeCents } from "@/lib/booking/policy";
 import { milesBetween } from "@/lib/geo/distance";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
@@ -95,7 +98,7 @@ export default async function ProviderDashboardPage({
 }) {
   const [{ submitted, stripe }, session] = await Promise.all([
     searchParams,
-    requireRole("provider", "/provider/dashboard"),
+    requireProviderAccess("/provider/dashboard"),
   ]);
   const demoPreview = await getDemoPreview("provider");
   if (demoPreview) {

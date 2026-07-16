@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { getSession } from "@/lib/auth/session";
+import { getSession, isProviderCapable } from "@/lib/auth/session";
 import {
   hasAcceptedCurrentMasterAgreement,
+  requiredMasterVariant,
   safeNextPath,
 } from "@/lib/legal/acceptance";
 import {
@@ -37,14 +38,21 @@ export default async function MasterAgreementPage({
     redirect(`/login?next=${encodeURIComponent(legalNext)}`);
   }
 
+  // Provider-capable accounts owe the provider variant (extra sections);
+  // everyone else the customer one. Capability, not account role, decides.
+  const variant = requiredMasterVariant(
+    session.profile.role,
+    await isProviderCapable(),
+  );
+
   const supabase = await createClient();
   const accepted = await hasAcceptedCurrentMasterAgreement(supabase, {
     userId: session.user.id,
-    role: session.profile.role,
+    variant,
   });
   if (accepted) redirect(next);
 
-  const sections = getMasterSections(session.profile.role);
+  const sections = getMasterSections(variant);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">

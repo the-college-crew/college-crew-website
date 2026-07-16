@@ -11,7 +11,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { LocationLine } from "@/components/provider-card";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireProviderAccess,
+} from "@/lib/auth/session";
 import { milesBetween } from "@/lib/geo/distance";
 import {
   demoBookings,
@@ -58,7 +61,7 @@ type JobRow = {
 
 /** Upcoming jobs + read-only pricing (editing lives in Profile & settings). */
 export default async function ProviderJobsPage() {
-  const session = await requireRole("provider", "/provider/jobs");
+  const session = await requireProviderAccess("/provider/jobs");
   const demoPreview = await getDemoPreview("provider");
   if (demoPreview) {
     return (

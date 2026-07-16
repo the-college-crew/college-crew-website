@@ -86,11 +86,10 @@ export default async function AccountPage({
   if (!session) redirect("/login?next=/account");
   const { profile, user } = session;
 
-  // Provider storefront sections render only for a real provider who has
-  // finished creating their provider profile. Mid-onboarding providers still
-  // get the personal/security/delete controls below.
-  const providerProfile =
-    profile.role === "provider" ? await getOwnProviderProfile() : null;
+  // Provider storefront sections render for any account that has started
+  // providing (owns a provider profile). Everyone gets the personal/security/
+  // delete controls below.
+  const providerProfile = await getOwnProviderProfile();
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">

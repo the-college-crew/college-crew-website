@@ -6,7 +6,11 @@ import { FormLoader } from "@/components/form-loader";
 import { LocationLine, Rating } from "@/components/provider-card";
 import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
-import { getEffectiveRole, getSession } from "@/lib/auth/session";
+import {
+  getEffectiveRole,
+  getOwnProviderProfile,
+  getSession,
+} from "@/lib/auth/session";
 import type { PublicProviderProfile } from "@/lib/db/queries";
 import { providerAvatarUrl } from "@/lib/media/provider-avatars";
 import {
@@ -39,11 +43,18 @@ export async function ProviderProfile({
     isHourlyBookingEnabled() &&
     areBookingRequestsEnabled();
 
-  // Pre-booking chat entry point: customers (or visitors, via login) can
-  // message the provider directly; providers and admins browsing don't.
+  // Pre-booking chat entry point. Any regular account can message a provider
+  // (providers included — providing is a capability, not a wall); admins only
+  // while previewing as a customer. Nobody messages or books their own listing.
   const session = await getSession();
   const viewerRole = session ? await getEffectiveRole() : null;
-  const canMessage = !session || viewerRole === "customer";
+  const ownProviderProfile = session ? await getOwnProviderProfile() : null;
+  const isOwnListing = ownProviderProfile?.id === provider.id;
+  const canMessage =
+    !isOwnListing &&
+    (!session ||
+      session.profile.role !== "admin" ||
+      viewerRole === "customer");
   const avatarUrl = providerAvatarUrl(provider.avatar_image_path);
 
   return (
@@ -92,7 +103,17 @@ export async function ProviderProfile({
           ) : null}
           <div className="mt-5">
             <div className="flex flex-wrap items-center gap-2">
-              {canRequest ? (
+              {isOwnListing ? (
+                <span
+                  aria-disabled="true"
+                  className={buttonClasses({
+                    size: "lg",
+                    className: "cursor-not-allowed opacity-55",
+                  })}
+                >
+                  This is your listing
+                </span>
+              ) : canRequest ? (
                 <Link
                   href={`/book/${provider.id}`}
                   className={buttonClasses({ size: "lg" })}

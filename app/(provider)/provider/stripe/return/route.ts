@@ -11,12 +11,13 @@ export async function GET(request: Request) {
       new URL("/login?next=/account", request.url),
     );
   }
-  if (session.profile.role !== "provider") {
+  // Provider capability = owning a provider profile; admins and plain
+  // customers have nothing to sync here.
+  const profile = await getOwnProviderProfile();
+  if (!profile) {
     return NextResponse.redirect(new URL("/", request.url));
   }
-
-  const profile = await getOwnProviderProfile();
-  if (!profile?.stripe_account_id) {
+  if (!profile.stripe_account_id) {
     return NextResponse.redirect(
       new URL("/account?stripe=incomplete", request.url),
     );

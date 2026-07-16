@@ -6,7 +6,10 @@ import { ProviderAvailabilityForm } from "@/app/(provider)/provider/_components/
 import { WizardSteps } from "@/app/(provider)/provider/_components/wizard-steps";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireOnboardingUser,
+} from "@/lib/auth/session";
 
 import { saveOnboardingAvailability } from "../actions";
 
@@ -16,7 +19,7 @@ export const metadata: Metadata = {
 
 /** Wizard step 4: one provider-wide schedule for the hourly pilot. */
 export default async function OnboardingAvailabilityPage() {
-  await requireRole("provider", "/provider/onboarding/availability");
+  await requireOnboardingUser("/provider/onboarding/availability");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 

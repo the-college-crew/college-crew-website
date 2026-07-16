@@ -7,7 +7,10 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireProviderAccess,
+} from "@/lib/auth/session";
 import { PROVIDER_AVATARS_BUCKET } from "@/lib/media/provider-avatars";
 import {
   BANNER_STYLES,
@@ -62,7 +65,7 @@ export async function updateProviderProfile(
   _prev: ProviderSettingsFormState,
   formData: FormData,
 ): Promise<ProviderSettingsFormState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -134,7 +137,7 @@ export async function updateAvailability(
   _prev: ProviderSettingsFormState,
   formData: FormData,
 ): Promise<ProviderSettingsFormState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -160,7 +163,7 @@ export async function saveSettingsPricing(
   _prev: ProviderSettingsFormState,
   formData: FormData,
 ): Promise<ProviderSettingsFormState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -184,7 +187,7 @@ export async function updateProviderBannerStyle(
   _prev: ProviderSettingsFormState,
   formData: FormData,
 ): Promise<ProviderSettingsFormState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -218,7 +221,7 @@ export async function uploadProviderBanner(
   _prev: ProviderSettingsFormState,
   formData: FormData,
 ): Promise<ProviderSettingsFormState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -277,7 +280,7 @@ export async function removeProviderBanner(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _formData: FormData,
 ): Promise<ProviderSettingsFormState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -308,7 +311,7 @@ export async function uploadProviderAvatar(
   _prev: ProviderSettingsFormState,
   formData: FormData,
 ): Promise<ProviderSettingsFormState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
