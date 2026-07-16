@@ -19,6 +19,11 @@ Templates, or update the same fields with the Supabase Management API.
 The templates use `{{ .SiteURL }}/college-crew-mark.png` for the logo, so the
 hosted Supabase Auth Site URL must point at the deployed College Crew app.
 
+Auth actions pass an origin-only `redirectTo`. Each template owns the complete
+`/auth/callback?token_hash=...&type=...&next=...` path so a Supabase fallback
+to the Site URL cannot produce an invalid `https://example.com&token_hash=...`
+link. Keep that contract intact when adding another Auth email type.
+
 ## Hosted Sync
 
 Preview the Supabase Management API payload:
@@ -33,7 +38,10 @@ Sync the hosted project when credentials are available:
 SUPABASE_ACCESS_TOKEN=... PROJECT_REF=... npm run email:sync-supabase
 ```
 
-`PROJECT_REF` may also be provided as `SUPABASE_PROJECT_REF`.
+In a linked checkout, the script reads `supabase/.temp/project-ref`
+automatically. `PROJECT_REF` or `SUPABASE_PROJECT_REF` can override it.
+The sync command validates the callback-link contract before writing, then
+reads the hosted Auth configuration back and fails if it differs from source.
 
 ## Resend
 

@@ -171,9 +171,6 @@ async function signUp(
   // and by manual student-ID review — not by the login address.
 
   const origin = await siteOrigin();
-  const confirmedNext =
-    intent === "provider" ? "/provider/onboarding/verify" : "/dashboard";
-
   // Every account is created equal; signup_intent only routes the
   // confirmation email back to onboarding. Authorization never reads it.
   const metadata: Record<string, string> = {
@@ -224,7 +221,10 @@ async function signUp(
     password: data.password,
     options: {
       data: metadata,
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(confirmedNext)}`,
+      // Auth templates own the callback path + query string. Supplying only
+      // the origin keeps RedirectTo valid even when GoTrue falls back to the
+      // configured Site URL, and prevents `origin&token_hash=...` links.
+      emailRedirectTo: origin,
     },
   });
   if (error) {
@@ -300,10 +300,6 @@ export async function resendConfirmation(
     return { error: "Enter the email you signed up with." };
   }
 
-  // Provider-intent signups should land back in onboarding, not on the
-  // customer dashboard.
-  let confirmedNext = "/dashboard";
-
   if (hasServiceRoleEnv()) {
     const admin = createAdminClient();
     const { data: confirmed } = await admin.rpc("email_is_confirmed", {
@@ -316,13 +312,6 @@ export async function resendConfirmation(
         alreadyConfirmed: true,
       };
     }
-
-    const { data: intent } = await admin.rpc("signup_intent_for_email", {
-      p_email: parsed.data,
-    });
-    if (intent === "provider") {
-      confirmedNext = "/provider/onboarding/verify";
-    }
   }
 
   const origin = await siteOrigin();
@@ -331,7 +320,7 @@ export async function resendConfirmation(
     type: "signup",
     email: parsed.data,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(confirmedNext)}`,
+      emailRedirectTo: origin,
     },
   });
   if (error) {
@@ -366,7 +355,7 @@ export async function requestPasswordReset(
   const origin = await siteOrigin();
   const supabase = await createClient();
   await supabase.auth.resetPasswordForEmail(parsed.data, {
-    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+    redirectTo: origin,
   });
 
   return neutral;
