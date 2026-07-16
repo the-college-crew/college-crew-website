@@ -61,6 +61,8 @@ export type ProviderCard = {
   banner_style: BannerStyle;
   services: OfferedService[];
   rating: { avg: number; count: number } | null;
+  /** Short pull-quote for the Browse card: the best recent 4-5★ review, or null. */
+  quote: string | null;
 };
 
 /** Viewer origin for distance lines. Null → town-only display. */
@@ -267,6 +269,21 @@ function mapReviews(
 }
 
 /**
+ * Best recent positive review line for card pull-quotes: highest rating wins,
+ * recency breaks ties (callers pass rows newest-first). Ratings under 4 never
+ * surface here; a card with no glowing review simply shows no quote.
+ */
+function pickQuote(reviews: { rating: number; text: string }[]): string | null {
+  let best: { rating: number; text: string } | null = null;
+  for (const review of reviews) {
+    const text = review.text.trim();
+    if (review.rating < 4 || !text) continue;
+    if (!best || review.rating > best.rating) best = { rating: review.rating, text };
+  }
+  return best?.text ?? null;
+}
+
+/**
  * Approved providers for Browse and the landing page. RLS already hides
  * unapproved providers (pilot decision); the filter here is for clarity.
  */
@@ -290,13 +307,22 @@ export async function getApprovedProviders(
   if (!safeProviders.length) return [];
 
   const providerIds = safeProviders.map((provider) => provider.provider_id);
-  const [{ data: offeringRows }, { data: ratings }, locationFacts] =
+  const [{ data: offeringRows }, { data: ratings }, { data: reviewRows }, locationFacts] =
     await Promise.all([
       supabase
         .from("public_provider_offerings")
         .select("*")
         .in("provider_id", providerIds),
       supabase.from("provider_ratings").select("*"),
+      // Newest-first so pickQuote's tie-break lands on the most recent review.
+      // The cap keeps the read bounded as history grows; older reviews stop
+      // being quote candidates, which is fine — quotes should feel current.
+      supabase
+        .from("provider_reviews")
+        .select("provider_id, rating, text, created_at")
+        .in("provider_id", providerIds)
+        .order("created_at", { ascending: false })
+        .limit(200),
       getProviderLocationFacts(providerIds),
     ]);
 
@@ -311,6 +337,14 @@ export async function getApprovedProviders(
   for (const rating of ratings ?? []) {
     const mapped = mapRating(rating);
     if (rating.provider_id && mapped) ratingByProvider.set(rating.provider_id, mapped);
+  }
+
+  const reviewsByProvider = new Map<string, { rating: number; text: string }[]>();
+  for (const row of reviewRows ?? []) {
+    if (!row.provider_id || row.rating === null || row.text === null) continue;
+    const list = reviewsByProvider.get(row.provider_id) ?? [];
+    list.push({ rating: row.rating, text: row.text });
+    reviewsByProvider.set(row.provider_id, list);
   }
 
   const cards: ProviderCard[] = safeProviders.map((p) => {
@@ -329,6 +363,7 @@ export async function getApprovedProviders(
       banner_style: toBannerStyle(p.banner_style),
       services: offeringsByProvider.get(p.provider_id) ?? [],
       rating: ratingByProvider.get(p.provider_id) ?? null,
+      quote: pickQuote(reviewsByProvider.get(p.provider_id) ?? []),
     };
   });
 
@@ -405,6 +440,48 @@ export async function getApprovedProviders(
       (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0) ||
       stableTieBreak(a, b),
   );
+}
+
+/** Provider counts for the Browse filter chips (plain object: crosses to a client component). */
+export type ServiceProviderCounts = {
+  /** Distinct listed providers with at least one service. */
+  total: number;
+  /** Distinct listed providers per service slug; missing slug = 0. */
+  bySlug: Record<string, number>;
+};
+
+/**
+ * Distinct approved-provider count per live service, for the Browse chips.
+ * Reads the same public views with the same row guards as
+ * getApprovedProviders, so a chip's number always matches the list the chip
+ * filters to. Duplicates that function's two selects rather than entangling
+ * its return shape — cheap at pilot scale.
+ */
+export async function getServiceProviderCounts(): Promise<ServiceProviderCounts> {
+  if (!hasSupabaseEnv()) return { total: 0, bySlug: {} };
+  const supabase = await createClient();
+
+  const [{ data: providers }, { data: offeringRows }] = await Promise.all([
+    supabase.from("public_provider_directory").select("*"),
+    supabase.from("public_provider_offerings").select("*"),
+  ]);
+
+  const listed = new Set(
+    (providers ?? []).filter(isSafePublicProviderRow).map((p) => p.provider_id),
+  );
+  const all = new Set<string>();
+  const providersBySlug = new Map<string, Set<string>>();
+  for (const row of (offeringRows ?? []).filter(isSafePublicOfferingRow)) {
+    if (!listed.has(row.provider_id)) continue;
+    all.add(row.provider_id);
+    const set = providersBySlug.get(row.service_slug) ?? new Set<string>();
+    set.add(row.provider_id);
+    providersBySlug.set(row.service_slug, set);
+  }
+
+  const bySlug: Record<string, number> = {};
+  for (const [slug, ids] of providersBySlug) bySlug[slug] = ids.size;
+  return { total: all.size, bySlug };
 }
 
 export type PublicReview = {
@@ -510,6 +587,7 @@ export async function getPublicProviderProfile(
   if (liveServices.length === 0) return null;
 
   const facts = locationFacts.get(providerId);
+  const publicReviews = mapReviews(reviews ?? [], serviceNameById);
   return {
     id: provider.provider_id,
     display_name: provider.display_name,
@@ -524,10 +602,11 @@ export async function getPublicProviderProfile(
     banner_style: toBannerStyle(provider.banner_style),
     services: liveServices,
     rating: mapRating(rating),
+    quote: pickQuote(publicReviews),
     availability_windows: mapAvailabilityWindowsJson(provider.availability_windows),
     availability_note: provider.availability_note ?? "",
     minimum_notice_hours: provider.minimum_notice_hours ?? 24,
-    reviews: mapReviews(reviews ?? [], serviceNameById),
+    reviews: publicReviews,
   };
 }
 
@@ -619,6 +698,8 @@ export async function getAdminProviderProfile(
   const locationFacts = await getProviderLocationFacts([providerId]);
   const facts = locationFacts.get(providerId);
 
+  const adminReviews = mapReviews(reviews ?? [], serviceNameById);
+
   return {
     id: provider.id,
     display_name: provider.display_name,
@@ -634,6 +715,7 @@ export async function getAdminProviderProfile(
     // Show every service the provider offers, even ones no longer live.
     services: adminOfferings,
     rating: mapRating(rating),
+    quote: pickQuote(adminReviews),
     availability_windows: availabilityWindows,
     availability_note: provider.availability_note,
     minimum_notice_hours: provider.minimum_notice_hours,
@@ -646,6 +728,6 @@ export async function getAdminProviderProfile(
     id_document_back_url: provider.id_document_back_url,
     created_at: provider.created_at,
     full_name: provider.user?.full_name ?? null,
-    reviews: mapReviews(reviews ?? [], serviceNameById),
+    reviews: adminReviews,
   };
 }

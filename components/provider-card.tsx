@@ -69,10 +69,13 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
           pennant
           className="flex flex-col transition-shadow group-hover/flip:shadow-md group-hover/flip:shadow-viridian/10"
         >
+          {/* Taller than the profile page's strip so Browse gets a real visual
+              beat per card; the slow zoom rides the same group/flip hover as
+              the card lift (clipped by the Card's overflow-hidden). */}
           <ProfileBanner
             imagePath={provider.banner_image_path}
             style={provider.banner_style}
-            className="h-24"
+            className="h-32 transition-transform duration-500 ease-out group-hover/flip:scale-[1.04]"
           />
 
           <div className="flex flex-col gap-2.5 p-5">
@@ -117,6 +120,12 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                   </p>
                 );
               })()
+            ) : null}
+
+            {provider.quote ? (
+              <p className="line-clamp-2 border-l-2 border-gold-400 pl-3 text-sm italic text-ink-soft">
+                &ldquo;{provider.quote}&rdquo;
+              </p>
             ) : null}
 
             <ul className="flex flex-wrap gap-2">
