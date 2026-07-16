@@ -43,8 +43,8 @@ export async function createBookingRequest(
 
   const session = await getSession();
   if (!session) return { error: "Log in to request a booking." };
-  if (session.profile.role !== "customer") {
-    return { error: "Only customer accounts can request bookings." };
+  if (session.profile.role === "admin") {
+    return { error: "Founder accounts can't send booking requests." };
   }
   if (!session.user.email_confirmed_at) {
     return { error: "Confirm your email before requesting a booking." };

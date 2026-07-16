@@ -5,13 +5,14 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { getAccountShape } from "@/lib/auth/post-auth";
 import { homePathFor } from "@/lib/auth/session";
-import type { UserRole } from "@/lib/db/types";
 import { hasServiceRoleEnv, hasSupabaseEnv } from "@/lib/env";
 import { geocodeProfileAddress } from "@/lib/geocode/profile";
 import {
   hasAcceptedCurrentMasterAgreement,
   masterAgreementPath,
+  requiredMasterVariant,
 } from "@/lib/legal/acceptance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -24,9 +25,12 @@ import {
 
 /**
  * Shared auth actions (auth is shared ownership — coordinate changes).
- * Role is passed as signup metadata and clamped to customer|provider by the
- * handle_new_user trigger; admin is only ever assigned manually in the DB.
- * DOB + address also ride in as metadata and are persisted by that trigger.
+ * Unified accounts: every signup creates the same base account (admins come
+ * only from the allowlist inside handle_new_user). "Provider" is a capability
+ * added later by onboarding. signup_intent metadata records which door the
+ * user came in through — used ONLY to route confirmation emails, never for
+ * authorization. DOB + address ride in as metadata and are persisted by the
+ * handle_new_user trigger.
  */
 
 export type AuthFormState = {
@@ -103,21 +107,19 @@ export async function logIn(
     return { error: "Wrong email or password." };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", data.user.id)
-    .single();
+  // Providers land on their work surface, everyone else on their bookings.
+  const shape = await getAccountShape(supabase, data.user.id);
+  const home =
+    shape.role === "admin"
+      ? homePathFor("admin")
+      : homePathFor(shape.providerCapable ? "provider" : "customer");
 
-  const role = (profile?.role ?? "customer") as UserRole;
   const next = formData.get("next");
   const destination =
-    typeof next === "string" && next.startsWith("/")
-      ? next
-      : homePathFor(role);
+    typeof next === "string" && next.startsWith("/") ? next : home;
   const accepted = await hasAcceptedCurrentMasterAgreement(supabase, {
     userId: data.user.id,
-    role,
+    variant: requiredMasterVariant(shape.role, shape.providerCapable),
   });
 
   redirect(
@@ -128,7 +130,7 @@ export async function logIn(
 }
 
 async function signUp(
-  role: Extract<UserRole, "customer" | "provider">,
+  intent: "customer" | "provider",
   formData: FormData,
 ): Promise<AuthFormState> {
   if (!hasSupabaseEnv()) return NOT_CONFIGURED;
@@ -143,7 +145,7 @@ async function signUp(
     city: formData.get("city"),
     state: formData.get("state"),
     postal_code: formData.get("postal_code"),
-    ...(role === "provider"
+    ...(intent === "provider"
       ? {
           dateOfBirth: formData.get("dateOfBirth"),
           companyName: formData.get("companyName") ?? "",
@@ -151,10 +153,10 @@ async function signUp(
       : {}),
   };
 
-  // Parse per role so the output type stays concrete (a union of the two
+  // Parse per intent so the output type stays concrete (a union of the two
   // schemas collapses field types to unknown).
   let data: SignUpData;
-  if (role === "provider") {
+  if (intent === "provider") {
     const parsed = providerSignUpSchema.safeParse(raw);
     if (!parsed.success) return { error: parsed.error.issues[0].message };
     data = parsed.data;
@@ -164,17 +166,19 @@ async function signUp(
     data = parsed.data;
   }
 
-  // Providers sign up with any email (personal is fine). Student status is
-  // proven later in onboarding by verifying a school (.edu) email via OTP and
-  // by manual student-ID review — not by the login address.
+  // Provider-intent signups use any email (personal is fine). Student status
+  // is proven later in onboarding by verifying a school (.edu) email via OTP
+  // and by manual student-ID review — not by the login address.
 
   const origin = await siteOrigin();
   const confirmedNext =
-    role === "provider" ? "/provider/onboarding/verify" : "/dashboard";
+    intent === "provider" ? "/provider/onboarding/verify" : "/dashboard";
 
+  // Every account is created equal; signup_intent only routes the
+  // confirmation email back to onboarding. Authorization never reads it.
   const metadata: Record<string, string> = {
     full_name: data.fullName,
-    role,
+    signup_intent: intent,
     address_line1: data.address_line1,
     address_line2: data.address_line2,
     city: data.city,
@@ -207,10 +211,11 @@ async function signUp(
         alreadyConfirmed: true,
       };
     }
-    const { data: existingRole } = await admin.rpc("signup_role_for_email", {
-      p_email: data.email,
-    });
-    existedUnconfirmed = existingRole !== null;
+    const { data: existingIntent } = await admin.rpc(
+      "signup_intent_for_email",
+      { p_email: data.email },
+    );
+    existedUnconfirmed = existingIntent !== null;
   }
 
   const supabase = await createClient();
@@ -295,7 +300,8 @@ export async function resendConfirmation(
     return { error: "Enter the email you signed up with." };
   }
 
-  // Providers should land back in onboarding, not on the customer dashboard.
+  // Provider-intent signups should land back in onboarding, not on the
+  // customer dashboard.
   let confirmedNext = "/dashboard";
 
   if (hasServiceRoleEnv()) {
@@ -311,10 +317,10 @@ export async function resendConfirmation(
       };
     }
 
-    const { data: role } = await admin.rpc("signup_role_for_email", {
+    const { data: intent } = await admin.rpc("signup_intent_for_email", {
       p_email: parsed.data,
     });
-    if (role === "provider") {
+    if (intent === "provider") {
       confirmedNext = "/provider/onboarding/verify";
     }
   }
@@ -402,13 +408,16 @@ export async function resetPassword(
     return { error: error.message };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  redirect(homePathFor((profile?.role ?? "customer") as UserRole));
+  const shape = await getAccountShape(supabase, user.id);
+  redirect(
+    homePathFor(
+      shape.role === "admin"
+        ? "admin"
+        : shape.providerCapable
+          ? "provider"
+          : "customer",
+    ),
+  );
 }
 
 /**

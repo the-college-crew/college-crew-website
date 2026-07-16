@@ -9,7 +9,8 @@ type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
 const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["AUTHENTICATION_REQUIRED", "Log in to continue."],
-  ["CUSTOMER_ROLE_REQUIRED", "Only customer accounts can request bookings."],
+  ["ADMIN_BOOKING_NOT_ALLOWED", "Founder accounts can't send booking requests."],
+  ["SELF_BOOKING_NOT_ALLOWED", "You can't book your own listing."],
   ["EMAIL_CONFIRMATION_REQUIRED", "Confirm your email before requesting a booking."],
   ["CUSTOMER_NAME_REQUIRED", "Add your name in account settings before booking."],
   ["LEGAL_ACCEPTANCE_REQUIRED", "Review and accept the current agreement before booking."],

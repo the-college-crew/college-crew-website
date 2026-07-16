@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AvatarUploadForm } from "@/app/(shared)/account/avatar-upload-form";
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireOnboardingUser,
+} from "@/lib/auth/session";
 import {
   getPendingSchoolEmail,
   getVerifiedSchoolEmail,
@@ -21,7 +24,7 @@ export const metadata: Metadata = { title: "Provider onboarding — verify" };
 
 /** Wizard step 2: verify school email (.edu OTP) + upload driver's license. */
 export default async function OnboardingVerifyPage() {
-  const session = await requireRole("provider", "/provider/onboarding/verify");
+  const session = await requireOnboardingUser("/provider/onboarding/verify");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 

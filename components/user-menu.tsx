@@ -52,6 +52,7 @@ export function UserMenu({
   homePath,
   realRole,
   currentRole,
+  providerCapable = false,
   accountHref = "/account",
   messagesHref = "/messages",
   supportHref = "/support",
@@ -64,6 +65,8 @@ export function UserMenu({
   homePath: string;
   realRole?: UserRole;
   currentRole?: UserRole;
+  /** Regular accounts with a provider profile get the provider links. */
+  providerCapable?: boolean;
   accountHref?: string;
   messagesHref?: string;
   supportHref?: string;
@@ -198,14 +201,40 @@ export function UserMenu({
             >
               Account settings
             </Link>
-            <Link
-              href={homePath}
-              role="menuitem"
-              className={itemClass}
-              onClick={() => setOpen(false)}
-            >
-              {dashboardLabel}
-            </Link>
+            {realRole === "admin" ? (
+              <Link
+                href={homePath}
+                role="menuitem"
+                className={itemClass}
+                onClick={() => setOpen(false)}
+              >
+                {dashboardLabel}
+              </Link>
+            ) : (
+              // Unified accounts: everyone books; providing is an add-on.
+              <>
+                <Link
+                  href="/dashboard"
+                  role="menuitem"
+                  className={itemClass}
+                  onClick={() => setOpen(false)}
+                >
+                  My Bookings
+                </Link>
+                <Link
+                  href={
+                    providerCapable
+                      ? "/provider/dashboard"
+                      : "/provider/onboarding/account"
+                  }
+                  role="menuitem"
+                  className={itemClass}
+                  onClick={() => setOpen(false)}
+                >
+                  {providerCapable ? "Provider dashboard" : "Become a provider"}
+                </Link>
+              </>
+            )}
             <Link
               href={messagesHref}
               role="menuitem"

@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { FormLoader } from "@/components/form-loader";
-import { Button, buttonClasses } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getSession } from "@/lib/auth/session";
+import { getOwnProviderProfile, getSession } from "@/lib/auth/session";
 
 import { WizardSteps } from "../../_components/wizard-steps";
-import { startProviderProfile } from "../actions";
 import { ProviderSignupForm } from "./provider-signup-form";
+import { StartProviderForm } from "./start-provider-form";
 
 export const metadata: Metadata = { title: "Provider onboarding — account" };
 
 /**
- * Wizard step 1: account (.edu + 18+ + password). Doubles as provider
- * signup when logged out; shows the account summary when logged in.
+ * Wizard step 1: account. Doubles as provider-intent signup when logged out;
+ * signed-in users (including existing customers — providing is a capability
+ * any account can add) continue with the facts signup didn't collect.
  */
 export default async function OnboardingAccountPage() {
   const session = await getSession();
+  const providerProfile = session ? await getOwnProviderProfile() : null;
 
   return (
     <div>
@@ -36,20 +37,26 @@ export default async function OnboardingAccountPage() {
             <ProviderSignupForm />
           </div>
           <p className="mt-4 text-center text-sm text-ink-soft">
-            Already started?{" "}
+            Already have an account (customer accounts count)?{" "}
             <Link
-              href="/login?next=/provider/onboarding/verify"
+              href="/login?next=/provider/onboarding/account"
               className="font-semibold text-crew-700"
             >
               Log in to continue
             </Link>
           </p>
         </Card>
-      ) : session.profile.role === "provider" ? (
+      ) : session.profile.role !== "admin" ? (
         <Card pennant className="p-6">
           <h2 className="font-display text-xl font-semibold">
-            Account ready ✓
+            {providerProfile ? "Account ready ✓" : "Start providing"}
           </h2>
+          {providerProfile ? null : (
+            <p className="mt-1 text-sm text-ink-soft">
+              Your College Crew account works for providing too — finish this
+              step and we&apos;ll verify you as a student provider.
+            </p>
+          )}
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-mist">Name</dt>
@@ -66,20 +73,21 @@ export default async function OnboardingAccountPage() {
               </dd>
             </div>
           </dl>
-          <form action={startProviderProfile} className="mt-6">
-            <FormLoader />
-            <Button type="submit" size="lg" className="w-full">
-              Continue to verification →
-            </Button>
-          </form>
+          <div className="mt-6">
+            <StartProviderForm
+              needsDateOfBirth={
+                !providerProfile && !session.profile.date_of_birth
+              }
+              askCompanyName={!providerProfile}
+            />
+          </div>
         </Card>
       ) : (
         <Card className="p-6 text-sm text-ink-soft">
           <p>
-            You&apos;re signed in as a{" "}
-            {session.profile.role === "admin" ? "founder" : "customer"}.
-            Provider accounts are separate — log out first, then start
-            onboarding.
+            You&apos;re signed in as a founder. Founder accounts don&apos;t
+            offer services — use the view-as switcher to preview the provider
+            experience instead.
           </p>
           <Link
             href="/"

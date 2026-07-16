@@ -6,7 +6,10 @@ import { StatusPill } from "@/components/status-pill";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireProviderAccess,
+} from "@/lib/auth/session";
 import { billableMinutesFromElapsed } from "@/lib/booking/policy";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
@@ -29,7 +32,7 @@ export default async function CompleteJobPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireRole("provider", `/provider/jobs/${id}/complete`);
+  await requireProviderAccess(`/provider/jobs/${id}/complete`);
   const profile = await getOwnProviderProfile();
   if (!profile) notFound();
 

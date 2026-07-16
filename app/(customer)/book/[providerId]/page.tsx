@@ -8,7 +8,7 @@ import { VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { getSession } from "@/lib/auth/session";
+import { getOwnProviderProfile, getSession } from "@/lib/auth/session";
 import { getPublicProviderProfile } from "@/lib/db/queries";
 import {
   areBookingRequestsEnabled,
@@ -48,6 +48,13 @@ export default async function BookingPage({
     (offering) => offering.is_hourly_bookable,
   );
 
+  // Providers can book other providers, but never their own listing; admin
+  // (founder) accounts don't book at all. Both rules are enforced again in
+  // the database — this is just the friendly surface.
+  const ownProviderProfile = session ? await getOwnProviderProfile() : null;
+  const isOwnListing = ownProviderProfile?.id === provider.id;
+  const isAdmin = session?.profile.role === "admin";
+
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
@@ -81,12 +88,18 @@ export default async function BookingPage({
             Log in
           </Link>
         </Card>
-      ) : session.profile.role !== "customer" ? (
+      ) : isAdmin ? (
         <Card className="p-6 text-sm text-ink-soft">
           <p>
-            You&apos;re signed in as a{" "}
-            {session.profile.role === "admin" ? "founder" : "provider"} —
-            booking requests come from customer accounts.
+            You&apos;re signed in as a founder. Founder accounts don&apos;t
+            send booking requests.
+          </p>
+        </Card>
+      ) : isOwnListing ? (
+        <Card className="p-6 text-sm text-ink-soft">
+          <p>
+            This is your own listing. You can book other providers, but not
+            yourself.
           </p>
         </Card>
       ) : bookableServices.length > 0 ? (

@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 import { FormLoader } from "@/components/form-loader";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireOnboardingUser,
+} from "@/lib/auth/session";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import { isHourlyRateValid } from "@/lib/booking/policy";
 import { getProviderAvailabilityWindows } from "@/lib/db/queries";
@@ -26,7 +29,7 @@ export const metadata: Metadata = { title: "Provider onboarding — review" };
 
 /** Wizard step 5: review & submit. Stripe connects later, after approval. */
 export default async function OnboardingReviewPage() {
-  const session = await requireRole("provider", "/provider/onboarding/review");
+  const session = await requireOnboardingUser("/provider/onboarding/review");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 

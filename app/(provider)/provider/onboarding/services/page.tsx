@@ -4,7 +4,10 @@ import { redirect } from "next/navigation";
 
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireOnboardingUser,
+} from "@/lib/auth/session";
 import { getLiveServices } from "@/lib/db/queries";
 import { PROVIDER_FEE_PERCENT } from "@/lib/provider/setup";
 import { createClient } from "@/lib/supabase/server";
@@ -17,7 +20,7 @@ export const metadata: Metadata = { title: "Provider onboarding — services" };
 
 /** Wizard step 3: pick services + explicit hourly rates. */
 export default async function OnboardingServicesPage() {
-  await requireRole("provider", "/provider/onboarding/services");
+  await requireOnboardingUser("/provider/onboarding/services");
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 

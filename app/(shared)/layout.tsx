@@ -5,6 +5,7 @@ import {
   getEffectiveRole,
   getSession,
   homePathFor,
+  isProviderCapable,
 } from "@/lib/auth/session";
 import { getUnreadSummary } from "@/lib/messaging/unread";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +20,7 @@ export default async function SharedLayout({
   const role = session
     ? ((await getEffectiveRole()) ?? session.profile.role)
     : null;
+  const providerCapable = session ? await isProviderCapable() : false;
   const unreadCount = session
     ? (await getUnreadSummary(await createClient())).total
     : 0;
@@ -35,6 +37,7 @@ export default async function SharedLayout({
               homePath={homePathFor(role)}
               realRole={session.profile.role}
               currentRole={role}
+              providerCapable={providerCapable}
               dashboardLabel={dashboardLabelFor(role)}
               unreadCount={unreadCount}
             />

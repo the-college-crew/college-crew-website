@@ -9,6 +9,7 @@ import {
   getEffectiveRole,
   getSession,
   homePathFor,
+  isProviderCapable,
 } from "@/lib/auth/session";
 import { getUnreadSummary } from "@/lib/messaging/unread";
 import { SITE } from "@/lib/site";
@@ -53,6 +54,7 @@ export function Wordmark({ tone = "light" }: { tone?: "light" | "dark" }) {
 export async function SiteHeader() {
   const session = await getSession();
   const effectiveRole = session ? await getEffectiveRole() : null;
+  const providerCapable = session ? await isProviderCapable() : false;
   const unreadCount = session
     ? (await getUnreadSummary(await createClient())).total
     : 0;
@@ -80,6 +82,7 @@ export async function SiteHeader() {
               homePath={homePathFor(effectiveRole ?? session.profile.role)}
               realRole={session.profile.role}
               currentRole={effectiveRole ?? session.profile.role}
+              providerCapable={providerCapable}
               dashboardLabel={dashboardLabelFor(
                 effectiveRole ?? session.profile.role,
               )}

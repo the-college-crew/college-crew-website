@@ -5,7 +5,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { getOwnProviderProfile, requireRole } from "@/lib/auth/session";
+import {
+  getOwnProviderProfile,
+  requireProviderAccess,
+} from "@/lib/auth/session";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import type { BookingStatus } from "@/lib/db/types";
 import {
@@ -30,7 +33,7 @@ async function transitionLegacyBooking(
   formData: FormData,
   status: Extract<BookingStatus, "completed">,
 ) {
-  await requireRole("provider");
+  await requireProviderAccess();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
 
   const supabase = await createClient();
@@ -81,7 +84,7 @@ export async function acceptBooking(
   _previous: BookingRequestActionState,
   formData: FormData,
 ): Promise<BookingRequestActionState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const supabase = await createClient();
 
@@ -113,7 +116,7 @@ export async function declineBooking(
   _previous: BookingRequestActionState,
   formData: FormData,
 ): Promise<BookingRequestActionState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const message = z
     .string()
@@ -165,7 +168,7 @@ export async function cancelBookingAsProvider(
   _previous: BookingRequestActionState,
   formData: FormData,
 ): Promise<BookingRequestActionState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const reason = z
     .string()
@@ -203,7 +206,7 @@ export async function cancelBookingAsProvider(
  * grace and provider authorization are enforced by mark_booking_arrived.
  */
 export async function markArrived(formData: FormData) {
-  await requireRole("provider");
+  await requireProviderAccess();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const supabase = await createClient();
   const { error } = await supabase.rpc("mark_booking_arrived", {
@@ -227,7 +230,7 @@ export async function submitInvoice(
   _previous: BookingRequestActionState,
   formData: FormData,
 ): Promise<BookingRequestActionState> {
-  await requireRole("provider");
+  await requireProviderAccess();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const submittedMinutes = z.coerce
     .number()
@@ -257,7 +260,7 @@ export async function submitInvoice(
  * dashboard with a pending notice.
  */
 export async function connectStripe() {
-  const session = await requireRole("provider");
+  const session = await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile || profile.verification_status !== "approved") {
     redirect("/provider/dashboard");
@@ -299,7 +302,7 @@ export async function connectStripe() {
 
 /** Provider-triggered capability refresh for delayed Stripe requirements. */
 export async function refreshStripeReadiness() {
-  await requireRole("provider");
+  await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile?.stripe_account_id) return;
 

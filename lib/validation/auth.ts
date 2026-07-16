@@ -71,6 +71,35 @@ export const addressSchema = z.object({
     .regex(/^\d{5}$/, "Enter a 5-digit ZIP code."),
 });
 
+/**
+ * Date of birth with a real 18+ gate. Used at provider-intent signup and again
+ * when an existing account starts provider onboarding (customers never provide
+ * one at signup). ID review re-verifies age later.
+ */
+export const dateOfBirthSchema = z
+  .string()
+  .trim()
+  .min(1, "Enter your date of birth.")
+  .refine((value) => !Number.isNaN(Date.parse(value)), {
+    message: "Enter a valid date.",
+  })
+  .refine((value) => ageOnDate(value) >= 18, {
+    message: "You must be 18 or older to offer services.",
+  })
+  .refine((value) => ageOnDate(value) < 120, {
+    message: "Enter a valid date of birth.",
+  });
+
+/**
+ * Starting provider onboarding from an existing account: the only extra facts
+ * we need are a date of birth (when the profile doesn't have one yet) and an
+ * optional company name.
+ */
+export const providerStartSchema = z.object({
+  dateOfBirth: dateOfBirthSchema.optional(),
+  companyName: z.string().trim().max(120).optional(),
+});
+
 /** Customer signup: name + credentials + home address. No date of birth. */
 export const customerSignUpSchema = z
   .object({
@@ -100,19 +129,7 @@ export const providerSignUpSchema = z
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
-    dateOfBirth: z
-      .string()
-      .trim()
-      .min(1, "Enter your date of birth.")
-      .refine((value) => !Number.isNaN(Date.parse(value)), {
-        message: "Enter a valid date.",
-      })
-      .refine((value) => ageOnDate(value) >= 18, {
-        message: "You must be 18 or older to offer services.",
-      })
-      .refine((value) => ageOnDate(value) < 120, {
-        message: "Enter a valid date of birth.",
-      }),
+    dateOfBirth: dateOfBirthSchema,
     address_line1: addressSchema.shape.address_line1,
     address_line2: addressSchema.shape.address_line2,
     city: addressSchema.shape.city,
