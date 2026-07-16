@@ -37,13 +37,26 @@ export async function acceptMasterAgreement(
   }
 
   const next = safeNextPath(formData.get("next"));
-  // The accepted variant is derived server-side from capability — the same
-  // rule the page used to render the sections the user actually read.
+
+  // The acceptance must attest to exactly what the page rendered. The form
+  // carries the rendered variant + content hash; we recompute the required
+  // variant and the hash server-side and refuse on any mismatch — a capability
+  // change in another tab (customer page open, provider onboarding started)
+  // or a content deploy mid-read must never record terms the user didn't see.
   const variant = requiredMasterVariant(
     session.profile.role,
     await isProviderCapable(),
   );
   const snapshot = getMasterAgreementSnapshot(variant);
+  const staleAgreement: MasterAgreementState = {
+    error:
+      "The agreement shown here is no longer the one you need to accept — reload the page to review the current version.",
+  };
+  if (formData.get("renderedVariant") !== variant) return staleAgreement;
+  if (formData.get("renderedHash") !== stableContentHash(snapshot)) {
+    return staleAgreement;
+  }
+
   const audit = await requestAuditFields();
   const supabase = await createClient();
 

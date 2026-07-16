@@ -8,8 +8,10 @@ import {
   hasAcceptedCurrentMasterAgreement,
   requiredMasterVariant,
   safeNextPath,
+  stableContentHash,
 } from "@/lib/legal/acceptance";
 import {
+  getMasterAgreementSnapshot,
   getMasterSections,
   HOURLY_PAYMENT_AUTHORIZATION,
   HOURLY_TERMS_INTRO,
@@ -53,6 +55,9 @@ export default async function MasterAgreementPage({
   if (accepted) redirect(next);
 
   const sections = getMasterSections(variant);
+  // Passed to the form so the acceptance action can verify it records exactly
+  // this rendered agreement (variant and content), nothing newer.
+  const renderedHash = stableContentHash(getMasterAgreementSnapshot(variant));
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -115,7 +120,11 @@ export default async function MasterAgreementPage({
         </div>
 
         <div className="mt-8 border-t border-line pt-6">
-          <MasterAgreementForm next={next} />
+          <MasterAgreementForm
+            next={next}
+            renderedVariant={variant}
+            renderedHash={renderedHash}
+          />
         </div>
       </Card>
     </main>

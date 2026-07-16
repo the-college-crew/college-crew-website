@@ -2074,6 +2074,10 @@ export type Database = {
         }
         Returns: string
       }
+      current_user_is_adult: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       decline_booking_request: {
         Args: { p_booking_id: string }
         Returns: string

@@ -61,37 +61,41 @@ export async function startProviderProfile(
 ): Promise<OnboardingFormState> {
   const session = await requireOnboardingUser("/provider/onboarding/account");
 
+  const parsed = providerStartSchema.safeParse({
+    dateOfBirth: formData.get("dateOfBirth") || undefined,
+    companyName: formData.get("companyName") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  // The 18+ gate holds regardless of how far the account got before: even a
+  // provider_profiles row created outside this action (direct insert, legacy
+  // data) doesn't excuse a missing DOB. Provider-intent signups stored one at
+  // signup; upgrading customers submit it now. date_of_birth is an
+  // age-verified field with no client update grant, so the write goes through
+  // the service-role client. The database enforces the same invariant: the
+  // provider_profiles insert policy requires an adult DOB on the profile.
+  if (!session.profile.date_of_birth) {
+    if (!parsed.data.dateOfBirth) {
+      return { error: "Enter your date of birth." };
+    }
+    if (!hasServiceRoleEnv()) {
+      return {
+        error:
+          "Onboarding isn't configured yet — add SUPABASE_SERVICE_ROLE_KEY.",
+      };
+    }
+    const admin = createAdminClient();
+    const { error: dobError } = await admin
+      .from("profiles")
+      .update({ date_of_birth: parsed.data.dateOfBirth })
+      .eq("id", session.user.id);
+    if (dobError) {
+      return { error: "Could not save your date of birth — try again." };
+    }
+  }
+
   const existing = await getOwnProviderProfile();
   if (!existing) {
-    const parsed = providerStartSchema.safeParse({
-      dateOfBirth: formData.get("dateOfBirth") || undefined,
-      companyName: formData.get("companyName") || undefined,
-    });
-    if (!parsed.success) return { error: parsed.error.issues[0].message };
-
-    // Provider-intent signups already stored a DOB; upgrading customers
-    // submit one now. date_of_birth is an age-verified field with no client
-    // update grant, so the write goes through the service-role client.
-    if (!session.profile.date_of_birth) {
-      if (!parsed.data.dateOfBirth) {
-        return { error: "Enter your date of birth." };
-      }
-      if (!hasServiceRoleEnv()) {
-        return {
-          error:
-            "Onboarding isn't configured yet — add SUPABASE_SERVICE_ROLE_KEY.",
-        };
-      }
-      const admin = createAdminClient();
-      const { error: dobError } = await admin
-        .from("profiles")
-        .update({ date_of_birth: parsed.data.dateOfBirth })
-        .eq("id", session.user.id);
-      if (dobError) {
-        return { error: "Could not save your date of birth — try again." };
-      }
-    }
-
     const metadataCompany = session.user.user_metadata.company_name;
     const companyName =
       parsed.data.companyName ??
