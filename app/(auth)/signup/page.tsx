@@ -34,7 +34,7 @@ export default async function SignupPage({
         Join the crew
       </h1>
       <p className="mt-1 text-sm text-ink-soft">
-        First things first — are you hiring help, or earning as a student?
+        First things first: are you hiring help, or earning as a student?
       </p>
 
       <div
@@ -63,9 +63,9 @@ export default async function SignupPage({
               need:
             </p>
             <ul className="list-inside list-disc space-y-1">
-              <li>Your school (.edu) email — providers are students, 18+</li>
+              <li>Your school (.edu) email. Providers are students, 18+</li>
               <li>
-                Photos of your driver&apos;s license — front and back — for
+                Photos of your driver&apos;s license (front and back) for
                 manual review
               </li>
               <li>The services you want to offer, with your prices</li>

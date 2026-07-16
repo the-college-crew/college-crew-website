@@ -15,7 +15,7 @@ export default async function DeleteAccountPage() {
     <div className="mx-auto w-full max-w-xl space-y-6 px-4 py-8">
       <PageHeader
         title="Delete your account"
-        description="Please read this carefully — it can't be undone."
+        description="Please read this carefully; it can't be undone."
       />
 
       <Card className="border-red-200 p-6">

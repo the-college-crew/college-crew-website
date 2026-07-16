@@ -72,7 +72,7 @@ export default async function DisputePage({
         <PageHeader title="Your dispute" description={heading} />
         {opened ? (
           <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-            Thanks — a founder will review this and follow up. Payment is paused
+            Thanks. A founder will review this and follow up. Payment is paused
             while it’s open.
           </div>
         ) : null}

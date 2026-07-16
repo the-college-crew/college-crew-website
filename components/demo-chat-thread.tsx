@@ -58,7 +58,7 @@ export function DemoChatThread({
           <textarea
             rows={1}
             disabled
-            placeholder="Sample mode — messages are not sent"
+            placeholder="Sample mode: messages are not sent"
             className="block max-h-32 w-full resize-y rounded-lg border border-line bg-paper px-3 py-2 text-sm placeholder:text-mist disabled:opacity-70"
           />
           <Button type="button" disabled>

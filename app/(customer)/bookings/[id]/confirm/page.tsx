@@ -125,7 +125,7 @@ export default async function ConfirmPayPage({
           ))}
         </dl>
         <p className="mt-2 text-xs text-mist">
-          You pay the price shown — College Crew&apos;s platform fee comes out of
+          You pay the price shown; College Crew&apos;s platform fee comes out of
           the provider&apos;s earnings.
         </p>
 
@@ -186,7 +186,7 @@ export default async function ConfirmPayPage({
         <div className="mt-6">
           {booking.status === "accepted" && paidSucceeded ? (
             <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-              Payment received — finalizing your booking. Refresh in a moment.
+              Payment received. Finalizing your booking. Refresh in a moment.
             </div>
           ) : booking.status === "accepted" && addendum ? (
             <ConfirmPayPanel
@@ -204,7 +204,7 @@ export default async function ConfirmPayPage({
             </div>
           ) : booking.status === "requested" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
-              Still waiting on the provider — you&apos;ll be able to confirm and
+              Still waiting on the provider. You&apos;ll be able to confirm and
               pay once they accept.
             </div>
           ) : (
@@ -273,7 +273,7 @@ function HourlyConfirmView({
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
         title="Confirm & pay the first hour"
-        description="Your provider accepted. Pay the first hour to lock in the booking — the rest is billed by actual time after the job."
+        description="Your provider accepted. Pay the first hour to lock in the booking; the rest is billed by actual time after the job."
       />
 
       <Card pennant className="p-6">
@@ -350,7 +350,7 @@ function HourlyConfirmView({
         <div className="mt-6">
           {isAccepted && paidSucceeded ? (
             <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-              Payment received — finalizing your booking. Refresh in a moment.
+              Payment received. Finalizing your booking. Refresh in a moment.
             </div>
           ) : isAccepted && windowClosed ? (
             <div className="rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
@@ -387,7 +387,7 @@ function HourlyConfirmView({
             </div>
           ) : booking.status === "booked" ? (
             <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-              First hour paid — you&apos;re on the schedule. You&apos;ll see the
+              First hour paid. You&apos;re on the schedule. You&apos;ll see the
               final invoice here after the job.
             </div>
           ) : booking.status === "invoice_review" ? (
@@ -409,7 +409,7 @@ function HourlyConfirmView({
             </div>
           ) : booking.status === "requested" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
-              Still waiting on the provider — you&apos;ll pay the first hour once
+              Still waiting on the provider. You&apos;ll pay the first hour once
               they accept.
             </div>
           ) : (

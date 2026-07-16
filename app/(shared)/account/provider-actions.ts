@@ -101,7 +101,7 @@ export async function updateProviderProfile(
     })
     .eq("id", profile.id);
   if (error) {
-    return { error: "Could not save your profile — try again." };
+    return { error: "Could not save your profile. Try again." };
   }
 
   // Moderation is FLAG-ONLY (SPEC §7): the text is saved and live either way.
@@ -160,7 +160,7 @@ export async function updateAvailability(
     p_minimum_notice_hours: parsed.data.minimum_notice_hours,
   });
   if (error) {
-    return { error: "Could not save availability — try again." };
+    return { error: "Could not save availability. Try again." };
   }
 
   revalidateProviderStorefront(profile.id);
@@ -185,7 +185,7 @@ export async function saveSettingsPricing(
   revalidateProviderStorefront(profile.id);
   revalidatePath("/provider/jobs");
   revalidatePath("/provider/dashboard");
-  return { success: "Hourly rates saved — your public profile is updated." };
+  return { success: "Hourly rates saved. Your public profile is updated." };
 }
 
 /**
@@ -215,7 +215,7 @@ export async function updateProviderBannerStyle(
     .update({ banner_style: styleValue })
     .eq("id", profile.id);
   if (error) {
-    return { error: "Could not save your banner theme — try again." };
+    return { error: "Could not save your banner theme. Try again." };
   }
 
   revalidateProviderStorefront(profile.id);
@@ -268,7 +268,7 @@ export async function uploadProviderBanner(
 
   if (updateError) {
     await supabase.storage.from(PROVIDER_BANNERS_BUCKET).remove([path]);
-    return { error: "Could not save that photo — please try again." };
+    return { error: "Could not save that photo. Please try again." };
   }
 
   if (profile.banner_image_path) {
@@ -304,11 +304,11 @@ export async function removeProviderBanner(
     .from("provider_profiles")
     .update({ banner_image_path: null })
     .eq("id", profile.id);
-  if (updateError) return { error: "Could not remove that photo — try again." };
+  if (updateError) return { error: "Could not remove that photo. Try again." };
 
   await supabase.storage.from(PROVIDER_BANNERS_BUCKET).remove([path]);
   revalidateProviderStorefront(profile.id);
-  return { success: "Banner photo removed — your theme is back." };
+  return { success: "Banner photo removed. Your theme is back." };
 }
 
 /**
@@ -358,7 +358,7 @@ export async function uploadProviderAvatar(
 
   if (updateError) {
     await supabase.storage.from(PROVIDER_AVATARS_BUCKET).remove([path]);
-    return { error: "Could not save that photo — please try again." };
+    return { error: "Could not save that photo. Please try again." };
   }
 
   if (profile.avatar_image_path) {

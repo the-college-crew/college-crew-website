@@ -22,7 +22,7 @@ function UnconfiguredNotice({ error }: { error?: string }) {
     <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
       <p className="font-semibold">Payments aren&apos;t live yet.</p>
       <p className="mt-1">
-        Stripe isn&apos;t configured in this environment — this button will run
+        Stripe isn&apos;t configured in this environment. This button will run
         the real (test-mode) payment once it is.
       </p>
       <FieldError>{error}</FieldError>
@@ -68,7 +68,7 @@ export function InvoicePayPanel({
   if (state.settled) {
     return (
       <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-        <p className="font-semibold">All set — the job is complete.</p>
+        <p className="font-semibold">All set! The job is complete.</p>
         <p className="mt-1">You can leave a review from your bookings.</p>
       </div>
     );
@@ -78,7 +78,7 @@ export function InvoicePayPanel({
       <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
         <p className="font-semibold">Payment submitted.</p>
         <p className="mt-1">
-          We&apos;re finishing up — this page updates to Completed once the
+          We&apos;re finishing up. This page updates to Completed once the
           charge settles.
         </p>
       </div>
@@ -97,7 +97,7 @@ export function InvoicePayPanel({
       </Button>
       {isZeroBalance ? (
         <p className="text-center text-xs text-mist">
-          The first hour already covers this invoice — no additional charge.
+          The first hour already covers this invoice; no additional charge.
         </p>
       ) : (
         <p className="text-center text-xs text-mist">

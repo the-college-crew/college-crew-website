@@ -77,7 +77,7 @@ export function DisputeForm({
           placeholder="Describe the problem in your own words. A founder reviews every dispute personally."
         />
         <p className="text-xs text-mist">
-          You can’t change the provider’s hours or trigger a refund here — a
+          You can’t change the provider’s hours or trigger a refund here. A
           founder reviews your report and decides the outcome.
         </p>
       </div>

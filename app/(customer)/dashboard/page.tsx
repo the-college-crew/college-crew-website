@@ -287,7 +287,7 @@ function CustomerDashboardView({
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
           {demo
             ? "Sample request sent. No booking was created, but this is where the confirmation appears."
-            : "Request sent. The provider will accept or decline — once they accept, you'll confirm and pay here."}
+            : "Request sent. The provider will accept or decline; once they accept, you'll confirm and pay here."}
         </div>
       ) : null}
       {replaced ? (
@@ -299,7 +299,7 @@ function CustomerDashboardView({
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
           {demo
             ? "Sample payment confirmed. No payment was created."
-            : "Booking confirmed — you're on the schedule."}
+            : "Booking confirmed. You're on the schedule."}
         </div>
       ) : null}
       {reviewed ? (
@@ -307,7 +307,7 @@ function CustomerDashboardView({
           role="status"
           className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800"
         >
-          Thanks — your review is live on the provider&apos;s profile.
+          Thanks! Your review is live on the provider&apos;s profile.
         </div>
       ) : null}
 
@@ -514,7 +514,7 @@ function BookingCard({
           <p className="font-semibold">{providerName} declined this request.</p>
           {note ? (
             <p className="mt-1 line-clamp-2 text-red-700">
-              “{note.body}” — {providerName}
+              “{note.body}” - {providerName}
             </p>
           ) : (
             <p className="mt-1 text-red-700">
@@ -579,7 +579,7 @@ function BookingCard({
         >
           <p className="font-semibold">Your balance payment needs attention.</p>
           <p className="mt-1">
-            The final charge didn&apos;t go through — review the invoice and
+            The final charge didn&apos;t go through. Review the invoice and
             update your payment method.
           </p>
         </div>

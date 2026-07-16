@@ -20,7 +20,7 @@ export async function submitSupportTicket(
   if (typeof website === "string" && website.trim() !== "") {
     return {
       success: true,
-      message: "Thanks — your message was sent to the College Crew team.",
+      message: "Thanks! Your message was sent to the College Crew team.",
     };
   }
 
@@ -86,7 +86,7 @@ export async function submitSupportTicket(
 
   return {
     success: true,
-    message: "Thanks — your message was sent to the College Crew team.",
+    message: "Thanks! Your message was sent to the College Crew team.",
   };
 }
 

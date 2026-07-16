@@ -22,7 +22,7 @@ const displayFont = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: {
-    default: `${SITE.name} — student help for your home`,
+    default: `${SITE.name} · student help for your home`,
     template: `%s · ${SITE.name}`,
   },
   description: SITE.description,

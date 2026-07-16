@@ -50,7 +50,7 @@ export async function acceptMasterAgreement(
   const snapshot = getMasterAgreementSnapshot(variant);
   const staleAgreement: MasterAgreementState = {
     error:
-      "The agreement shown here is no longer the one you need to accept — reload the page to review the current version.",
+      "The agreement shown here is no longer the one you need to accept. Reload the page to review the current version.",
   };
   if (formData.get("renderedVariant") !== variant) return staleAgreement;
   if (formData.get("renderedHash") !== stableContentHash(snapshot)) {
