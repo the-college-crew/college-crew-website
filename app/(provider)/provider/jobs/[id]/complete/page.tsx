@@ -124,9 +124,12 @@ export default async function CompleteJobPage({
           bookingId={booking.id}
           prefillMinutes={billableMinutesFromElapsed(
             booking.arrived_at
-              ? (new Date().getTime() -
-                  new Date(booking.arrived_at).getTime()) /
-                  60000
+              ? Math.max(
+                  0,
+                  (new Date().getTime() -
+                    new Date(booking.arrived_at).getTime()) /
+                    60000,
+                )
               : estimatedMinutes,
           )}
           estimatedMinutes={estimatedMinutes}
