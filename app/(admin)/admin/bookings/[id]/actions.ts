@@ -7,7 +7,10 @@ import { requireRole } from "@/lib/auth/session";
 import { executePendingRefunds } from "@/lib/booking/refunds";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import { hasServiceRoleEnv } from "@/lib/env";
-import { createBalancePaymentIntent } from "@/lib/stripe/connect";
+import {
+  confirmBalancePaymentIntent,
+  createBalancePaymentIntent,
+} from "@/lib/stripe/connect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -149,6 +152,8 @@ async function chargeResolvedBalance(input: {
     .maybeSingle();
   if (!provider?.stripe_account_id) return true;
 
+  // Create unconfirmed, attach, THEN confirm — the settlement webhook can win
+  // a race against the attach, and an unattached success strands the invoice.
   const intent = await createBalancePaymentIntent({
     invoiceId: input.invoiceId,
     bookingId: input.bookingId,
@@ -158,26 +163,35 @@ async function chargeResolvedBalance(input: {
     stripePaymentMethodId: firstHour.stripe_payment_method_id,
     providerStripeAccountId: provider.stripe_account_id,
     idempotencyKey: input.idempotencyKey,
-    confirm: true,
-    offSession: true,
   });
   if (!intent.configured) return true;
 
-  await admin.rpc("attach_balance_payment_intent", {
-    p_invoice_id: input.invoiceId,
-    p_stripe_payment_intent_id: intent.paymentIntentId,
+  const { error: attachError } = await admin.rpc(
+    "attach_balance_payment_intent",
+    {
+      p_invoice_id: input.invoiceId,
+      p_stripe_payment_intent_id: intent.paymentIntentId,
+    },
+  );
+  // Nothing confirmed yet, so no money moved; retrying reuses this intent.
+  if (attachError) return true;
+
+  const confirmed = await confirmBalancePaymentIntent({
+    paymentIntentId: intent.paymentIntentId,
+    offSession: true,
   });
+  if (!confirmed.configured) return true;
 
   // Success/processing → the webhook completes the booking. Anything else is a
   // recovery state recorded on the payment/invoice for a customer retry.
-  if (intent.status === "succeeded" || intent.status === "processing") {
+  if (confirmed.status === "succeeded" || confirmed.status === "processing") {
     return false;
   }
   await admin.rpc("mark_balance_payment_unsuccessful", {
-    p_stripe_payment_intent_id: intent.paymentIntentId,
+    p_stripe_payment_intent_id: confirmed.paymentIntentId,
     p_target_status:
-      intent.status === "requires_action" ? "requires_action" : "failed",
-    p_failure_code: intent.status,
+      confirmed.status === "requires_action" ? "requires_action" : "failed",
+    p_failure_code: confirmed.status,
     p_failure_message: "The resolution charge needs customer authentication.",
   });
   return true;

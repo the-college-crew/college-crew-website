@@ -1,6 +1,9 @@
 import "server-only";
 
-import { createBalancePaymentIntent } from "@/lib/stripe/connect";
+import {
+  confirmBalancePaymentIntent,
+  createBalancePaymentIntent,
+} from "@/lib/stripe/connect";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -47,6 +50,8 @@ export async function attemptDueInvoiceCharge(
     return "requires_action";
   }
 
+  // Create unconfirmed, attach, THEN confirm — the settlement webhook can win
+  // a race against the attach, and an unattached success strands the invoice.
   let intent: Awaited<ReturnType<typeof createBalancePaymentIntent>>;
   try {
     intent = await createBalancePaymentIntent({
@@ -58,8 +63,6 @@ export async function attemptDueInvoiceCharge(
       stripePaymentMethodId: claim.stripe_payment_method_id,
       providerStripeAccountId: claim.stripe_connected_account_id,
       idempotencyKey: claim.idempotency_key,
-      confirm: true,
-      offSession: true,
     });
   } catch (error) {
     await admin.rpc("release_due_invoice_claim", { p_invoice_id: invoiceId });
@@ -70,18 +73,39 @@ export async function attemptDueInvoiceCharge(
     return "unconfigured";
   }
 
-  await admin.rpc("attach_balance_payment_intent", {
+  const attach = await admin.rpc("attach_balance_payment_intent", {
     p_invoice_id: invoiceId,
     p_stripe_payment_intent_id: intent.paymentIntentId,
   });
+  if (attach.error) {
+    // Nothing was confirmed, so no money moved; the retried claim reuses the
+    // same idempotent intent.
+    await admin.rpc("release_due_invoice_claim", { p_invoice_id: invoiceId });
+    throw attach.error;
+  }
 
-  if (intent.status === "succeeded" || intent.status === "processing") {
+  let confirmed: Awaited<ReturnType<typeof confirmBalancePaymentIntent>>;
+  try {
+    confirmed = await confirmBalancePaymentIntent({
+      paymentIntentId: intent.paymentIntentId,
+      offSession: true,
+    });
+  } catch (error) {
+    await admin.rpc("release_due_invoice_claim", { p_invoice_id: invoiceId });
+    throw error;
+  }
+  if (!confirmed.configured) {
+    await admin.rpc("release_due_invoice_claim", { p_invoice_id: invoiceId });
+    return "unconfigured";
+  }
+
+  if (confirmed.status === "succeeded" || confirmed.status === "processing") {
     // Success/processing settles via the webhook (source of truth).
     return "processing";
   }
-  if (intent.status === "requires_action") {
+  if (confirmed.status === "requires_action") {
     await admin.rpc("mark_balance_payment_unsuccessful", {
-      p_stripe_payment_intent_id: intent.paymentIntentId,
+      p_stripe_payment_intent_id: confirmed.paymentIntentId,
       p_target_status: "requires_action",
       p_failure_code: "authentication_required",
       p_failure_message: "The saved card needs customer authentication.",
@@ -90,9 +114,9 @@ export async function attemptDueInvoiceCharge(
   }
 
   await admin.rpc("mark_balance_payment_unsuccessful", {
-    p_stripe_payment_intent_id: intent.paymentIntentId,
+    p_stripe_payment_intent_id: confirmed.paymentIntentId,
     p_target_status: "failed",
-    p_failure_code: intent.status,
+    p_failure_code: confirmed.status,
     p_failure_message: "The balance charge could not be completed.",
   });
   return "failed";

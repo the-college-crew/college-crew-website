@@ -171,7 +171,16 @@ async function handleEvent(
         typeof charge.payment_intent === "string"
           ? charge.payment_intent
           : (charge.payment_intent?.id ?? null);
-      const refundId = charge.refunds?.data?.[0]?.id ?? undefined;
+      // Current API versions no longer embed the refund list on the event's
+      // charge object, so fall back to listing the intent's newest refund.
+      let refundId = charge.refunds?.data?.[0]?.id ?? undefined;
+      if (!refundId && paymentIntentId) {
+        const refunds = await stripe.refunds.list({
+          payment_intent: paymentIntentId,
+          limit: 1,
+        });
+        refundId = refunds.data[0]?.id;
+      }
       if (paymentIntentId && refundId) {
         // Reconcile any destination-charge refund (first-hour or balance,
         // full or partial) against our booking_refunds ledger. Repairs state

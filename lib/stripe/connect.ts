@@ -187,20 +187,19 @@ export async function createFirstHourPaymentIntent(input: {
  * Hourly Booking v1 (Phase 5): the remaining-balance charge on the same booking.
  * A destination charge for the invoice's remaining balance with the split
  * application fee (total fee minus the first-hour fee, so rounding never
- * drifts). Two shapes:
+ * drifts).
  *
- *   - `confirm: true` with a saved `stripePaymentMethodId` — the customer is
- *     present ("Confirm & pay now", `offSession: false`) or the scheduled
- *     charge runs the saved method off-session (`offSession: true`). Stripe
- *     throws on a hard decline / off-session authentication requirement; we
- *     surface the PaymentIntent from the error so the caller can record it.
- *   - `confirm: false` with no method — recovery: return an unconfirmed
- *     PaymentIntent whose client secret mounts the Payment Element, so the
- *     customer can re-authenticate the saved method or authorize a new one.
+ * Always returns an UNCONFIRMED PaymentIntent. Callers must attach its id to
+ * the payment row BEFORE confirming (`confirmBalancePaymentIntent` for the
+ * saved-method flows; the Payment Element for recovery) — confirming first
+ * races the `payment_intent.succeeded` webhook, and if the webhook wins there
+ * is no attached row to settle and the invoice strands in review.
  *
+ * Pass `stripePaymentMethodId` to stage the saved method on the intent;
+ * omit it in recovery so the Payment Element can collect/re-authenticate one.
  * `payment_method_types` is omitted (dynamic methods); redirects are disabled
  * so the pilot never leaves the app. The webhook is the settlement source of
- * truth — this only creates/confirms the intent.
+ * truth — this only creates the intent.
  */
 export async function createBalancePaymentIntent(input: {
   invoiceId: string;
@@ -210,9 +209,7 @@ export async function createBalancePaymentIntent(input: {
   stripeCustomerId: string;
   providerStripeAccountId: string;
   idempotencyKey: string;
-  confirm: boolean;
   stripePaymentMethodId?: string;
-  offSession?: boolean;
 }): Promise<
   | {
       configured: true;
@@ -238,15 +235,50 @@ export async function createBalancePaymentIntent(input: {
     },
     automatic_payment_methods: { enabled: true, allow_redirects: "never" },
   };
-  if (input.confirm && input.stripePaymentMethodId) {
+  if (input.stripePaymentMethodId) {
     params.payment_method = input.stripePaymentMethodId;
-    params.confirm = true;
-    params.off_session = input.offSession ?? false;
   }
 
+  const intent = await stripe.paymentIntents.create(params, {
+    idempotencyKey: input.idempotencyKey,
+  });
+  return {
+    configured: true,
+    paymentIntentId: intent.id,
+    clientSecret: intent.client_secret,
+    status: intent.status,
+  };
+}
+
+/**
+ * Confirm a balance PaymentIntent whose id is already attached to its payment
+ * row (see `createBalancePaymentIntent`). `offSession: false` is the customer
+ * present ("Confirm & pay now"); `offSession: true` is the scheduled
+ * autocharge on the saved method.
+ *
+ * Stripe throws on a hard decline / off-session authentication requirement
+ * with the PaymentIntent attached; we surface it so the caller records the
+ * outcome. A retry against an already-confirmed intent throws without one —
+ * re-read the intent so retries after a crash stay idempotent.
+ */
+export async function confirmBalancePaymentIntent(input: {
+  paymentIntentId: string;
+  offSession: boolean;
+}): Promise<
+  | {
+      configured: true;
+      paymentIntentId: string;
+      clientSecret: string | null;
+      status: Stripe.PaymentIntent.Status;
+    }
+  | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
   try {
-    const intent = await stripe.paymentIntents.create(params, {
-      idempotencyKey: input.idempotencyKey,
+    const intent = await stripe.paymentIntents.confirm(input.paymentIntentId, {
+      off_session: input.offSession,
     });
     return {
       configured: true,
@@ -255,8 +287,6 @@ export async function createBalancePaymentIntent(input: {
       status: intent.status,
     };
   } catch (error) {
-    // A decline or off-session authentication requirement throws with the
-    // PaymentIntent attached; surface it so the caller records the outcome.
     const pi =
       error && typeof error === "object" && "payment_intent" in error
         ? ((error as { payment_intent?: Stripe.PaymentIntent }).payment_intent ??
@@ -270,7 +300,14 @@ export async function createBalancePaymentIntent(input: {
         status: pi.status,
       };
     }
-    throw error;
+    // e.g. "already succeeded" on a retried confirm — report the live state.
+    const current = await stripe.paymentIntents.retrieve(input.paymentIntentId);
+    return {
+      configured: true,
+      paymentIntentId: current.id,
+      clientSecret: current.client_secret,
+      status: current.status,
+    };
   }
 }
 
