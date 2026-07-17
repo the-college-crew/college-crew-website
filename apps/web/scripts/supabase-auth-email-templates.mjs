@@ -1,4 +1,10 @@
 import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// supabase/ lives at the repo root (shared backend), not in apps/web —
+// resolve from this script's location so cwd doesn't matter.
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 const templates = {
   confirmation: {
@@ -67,7 +73,7 @@ function validateTemplate(name, template, content) {
 function buildPayload() {
   return Object.fromEntries(
     Object.entries(templates).flatMap(([key, template]) => {
-      const content = readFileSync(template.file, "utf8");
+      const content = readFileSync(resolve(REPO_ROOT, template.file), "utf8");
       validateTemplate(key, template, content);
       return [
         [`mailer_subjects_${key}`, template.subject],
@@ -113,7 +119,10 @@ async function syncHostedProject(payload) {
   const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
   let linkedProjectRef;
   try {
-    linkedProjectRef = readFileSync("supabase/.temp/project-ref", "utf8").trim();
+    linkedProjectRef = readFileSync(
+      resolve(REPO_ROOT, "supabase/.temp/project-ref"),
+      "utf8",
+    ).trim();
   } catch {
     linkedProjectRef = undefined;
   }

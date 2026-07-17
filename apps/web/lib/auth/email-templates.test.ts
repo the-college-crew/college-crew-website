@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -14,9 +15,13 @@ type TemplateCase = {
   next: string;
 };
 
+// Templates live in the shared repo-root supabase/ dir (not apps/web), so
+// resolve from this file's location rather than cwd.
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
+
 function readTemplate(file: string) {
   return readFileSync(
-    resolve(process.cwd(), "supabase", "templates", file),
+    resolve(REPO_ROOT, "supabase", "templates", file),
     "utf8",
   );
 }
