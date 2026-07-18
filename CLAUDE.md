@@ -69,6 +69,12 @@ When a request is ambiguous, ask clarifying questions instead of guessing.
 
 ## Architecture / folder layout
 
+**Monorepo (npm workspaces):** the Next.js web app lives in `apps/web/`; the
+iOS app (React Native/Expo) will live in `apps/mobile/`, with shared code in
+`packages/`. `supabase/` and `docs/` stay at the repo root. All paths below
+are relative to `apps/web/`. Root `package.json` scripts (`npm run dev`,
+`build`, `lint`, `typecheck`, …) delegate to the web workspace.
+
 Routes are split into **App Router route groups**, mapped to owners to minimize
 merge conflicts during parallel work:
 
