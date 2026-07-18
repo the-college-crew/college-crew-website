@@ -20,7 +20,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from("services")
         .select("id, name")
-        .eq("active", true)
+        .eq("is_live", true)
         .order("name");
       if (error) throw error;
       return data ?? [];

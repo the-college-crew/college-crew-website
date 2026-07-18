@@ -52,16 +52,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const [profile, provider] = await Promise.all([
         supabase.from("profiles").select("role").eq("id", session.user.id).single(),
-        supabase
-          .from("provider_profiles")
-          .select("user_id", { count: "exact", head: true })
-          .eq("user_id", session.user.id),
+        // provider_profiles.user_id is not browser-readable (column grants),
+        // so capability comes from the is_provider_capable() RPC.
+        supabase.rpc("is_provider_capable"),
       ]);
       if (cancelled) return;
       const dbRole = profile.data?.role;
       // The dead `provider` enum value is never assigned; normalize defensively.
       setRole(dbRole === "admin" ? "admin" : "customer");
-      setIsProvider((provider.count ?? 0) > 0);
+      setIsProvider(provider.data === true);
     })();
     return () => {
       cancelled = true;
