@@ -15,8 +15,10 @@ type TemplateCase = {
 };
 
 function readTemplate(file: string) {
+  // supabase/ lives at the repo root, two levels above the apps/web
+  // workspace that vitest runs from.
   return readFileSync(
-    resolve(process.cwd(), "supabase", "templates", file),
+    resolve(process.cwd(), "..", "..", "supabase", "templates", file),
     "utf8",
   );
 }

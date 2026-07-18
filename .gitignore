@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
+# dependencies (unrooted: covers repo root and every workspace under apps/, packages/)
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,16 +11,17 @@
 !.yarn/versions
 
 # testing
-/coverage
-/playwright-report/
-/test-results/
+coverage/
+playwright-report/
+test-results/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
 /build
+apps/web/build
 
 # misc
 .DS_Store
