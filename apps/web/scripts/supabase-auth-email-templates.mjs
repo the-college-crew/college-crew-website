@@ -12,7 +12,7 @@ const templates = {
     file: "supabase/templates/confirmation.html",
     type: "signup",
     requiredNextFragments: [
-      "%2Fprovider%2Fonboarding%2Fverify",
+      "%2Fprovider%2Fonboarding%2Faccount",
       "%2Fdashboard",
     ],
   },
