@@ -434,3 +434,12 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Server-to-server functions: no Supabase JWT is possible on these requests.
+# stripe-webhook is authenticated by the Stripe signature; booking-scheduler
+# by the BOOKING_CRON_SECRET bearer token from Vault (pg_cron -> pg_net).
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.booking-scheduler]
+verify_jwt = false
