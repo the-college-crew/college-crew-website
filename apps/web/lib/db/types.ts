@@ -1078,6 +1078,55 @@ export type Database = {
           },
         ]
       }
+      moderation_reports: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string | null
+          reason: string
+          reported_user_id: string | null
+          reporter_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          reason: string
+          reported_user_id?: string | null
+          reporter_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          reason?: string
+          reported_user_id?: string | null
+          reporter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_reports_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moderation_reports_reported_user_id_fkey"
+            columns: ["reported_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moderation_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_moderation_events: {
         Row: {
           created_at: string
@@ -1441,6 +1490,38 @@ export type Database = {
           },
         ]
       }
+      push_tokens: {
+        Row: {
+          expo_token: string
+          id: string
+          platform: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          expo_token: string
+          id?: string
+          platform: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          expo_token?: string
+          id?: string
+          platform?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           booking_id: string
@@ -1750,6 +1831,39 @@ export type Database = {
           {
             foreignKeyName: "support_tickets_submitter_id_fkey"
             columns: ["submitter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2631,6 +2745,9 @@ export type Conversation = Tables<"conversations">
 export type ConversationRead = Tables<"conversation_reads">
 export type Message = Tables<"messages">
 export type ModerationEvent = Tables<"moderation_events">
+export type ModerationReport = Tables<"moderation_reports">
+export type PushToken = Tables<"push_tokens">
+export type UserBlock = Tables<"user_blocks">
 export type ProfileModerationEvent = Tables<"profile_moderation_events">
 export type ProviderEmailVerification = Tables<"provider_email_verifications">
 export type ProviderSchoolEmail = Tables<"provider_school_emails">
