@@ -19,6 +19,11 @@ test-results/
 .next/
 out/
 
+# expo
+.expo/
+.expo-export-check/
+expo-env.d.ts
+
 # production
 /build
 apps/web/build
