@@ -1,7 +1,7 @@
 import type { UserRole } from "@/lib/db/types";
 
-export const LEGAL_CONTENT_VERSION = "2026-07-15";
-export const PLATFORM_TERMS_VERSION = "2026-07-15";
+export const LEGAL_CONTENT_VERSION = "2026-07-20";
+export const PLATFORM_TERMS_VERSION = "2026-07-20";
 export const CUSTOMER_BOOKING_TERMS_VERSION = "2026-07-15";
 export const PROVIDER_TERMS_VERSION = "2026-07-15";
 export const BOOKING_RISK_VERSION = "2026-07-15";
@@ -98,7 +98,7 @@ export const MASTER_SECTIONS: LegalSection[] = [
     title: "Dispute Resolution",
     appliesTo: "all",
     body: [
-      "Any dispute arising out of or relating to this Agreement shall be resolved through [VENUE OR FORUM TO BE DETERMINED WITH COUNSEL: binding arbitration under Illinois law, or the courts of Lake County, Illinois]. This Agreement is governed by the laws of the State of Illinois, without regard to conflict-of-law principles. Before initiating a formal claim, the parties agree to attempt informal resolution by providing written notice to the other party at the contact information below.",
+      "Any dispute arising out of or relating to this Agreement shall be resolved through binding arbitration administered by the American Arbitration Association (\"AAA\") under its Consumer Arbitration Rules, conducted in Lake County, Illinois, except that either party may elect to bring an individual claim in small claims court in Lake County, Illinois if the claim qualifies under Illinois's small claims jurisdictional limits. The parties waive any right to bring or participate in a class, collective, or representative action. This Agreement is governed by the laws of the State of Illinois, without regard to conflict-of-law principles. Before initiating a formal claim, the parties agree to attempt informal resolution by providing written notice to the other party at the contact information below.",
     ],
   },
   {
