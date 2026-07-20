@@ -6,6 +6,7 @@ import { StatusPill } from "@/components/status-pill";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatDateTime, formatMoney } from "@/lib/utils";
@@ -90,6 +91,22 @@ export default async function AdminBookingPage({
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresh
+        channel={`admin-booking:${id}`}
+        table="bookings"
+        filter={`id=eq.${id}`}
+      />
+      {[
+        "booking_invoices",
+        "booking_disputes",
+      ].map((table) => (
+        <RealtimeRefresh
+          key={table}
+          channel={`admin-booking:${id}:${table}`}
+          table={table}
+          filter={`booking_id=eq.${id}`}
+        />
+      ))}
       <PageHeader
         title={booking.service_name_snapshot ?? "Booking"}
         description={`${booking.customer_name_snapshot ?? "Customer"} · ${booking.provider_display_name_snapshot ?? "Provider"}`}

@@ -5,7 +5,7 @@ import { Editable } from "@/components/content/editable";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { getSession } from "@/lib/auth/session";
+import { getSession, isProviderCapable } from "@/lib/auth/session";
 import { PLATFORM_FEE_RATE, SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Our mission for students" };
@@ -27,6 +27,9 @@ const PRINCIPLES = [
 
 export default async function StudentMissionPage() {
   const session = await getSession();
+  const showProviderCta =
+    !session ||
+    (session.profile.role !== "admin" && !(await isProviderCapable()));
   const providerFeePercent = Math.round(PLATFORM_FEE_RATE * 100);
 
   return (
@@ -43,7 +46,7 @@ export default async function StudentMissionPage() {
           </Editable>
         }
         actions={
-          !session ? (
+          showProviderCta ? (
             <Link
               href="/provider/onboarding/account"
               className={buttonClasses({ size: "sm" })}

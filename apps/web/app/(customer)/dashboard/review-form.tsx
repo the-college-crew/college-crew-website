@@ -14,14 +14,6 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
   >(submitReview, {});
   const [rating, setRating] = useState(0);
 
-  if (state.success) {
-    return (
-      <p className="text-sm font-medium text-quad-700">
-        Thanks! Your review is live on the provider&apos;s profile.
-      </p>
-    );
-  }
-
   return (
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="bookingId" value={bookingId} />

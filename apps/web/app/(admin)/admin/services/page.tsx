@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { createClient } from "@/lib/supabase/server";
 
@@ -70,9 +70,18 @@ export default async function AdminServicesPage({
                     name="nextLive"
                     value={String(!service.is_live)}
                   />
-                  <Button type="submit" variant="secondary" size="sm">
+                  <ConfirmSubmitButton
+                    type="submit"
+                    variant="secondary"
+                    size="sm"
+                    confirmMessage={
+                      service.is_live
+                        ? `Hide ${service.name}? Customers and providers will no longer see it for new bookings.`
+                        : undefined
+                    }
+                  >
                     {service.is_live ? "Hide" : "Go live"}
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
               </div>
             </div>

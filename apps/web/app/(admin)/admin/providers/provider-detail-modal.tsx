@@ -71,6 +71,16 @@ export function ProviderDetailModal({
 
   const changeStatus = useCallback(
     (providerId: string, status: VerificationStatus) => {
+      if (
+        (status === "approved" || status === "rejected") &&
+        !window.confirm(
+          status === "approved"
+            ? "Approve this provider? If every readiness check passes, they can appear in Browse."
+            : "Reject this provider? They will need to update their verification before approval.",
+        )
+      ) {
+        return;
+      }
       startTransition(async () => {
         const fd = new FormData();
         fd.set("providerId", providerId);
