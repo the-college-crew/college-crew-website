@@ -238,7 +238,7 @@ function Hero({
             </Link>
             {showProviderCta ? (
               <Link href="/provider/onboarding/account" className={BTN_GHOST}>
-                Join as a student
+                Become a provider
               </Link>
             ) : null}
           </div>
@@ -367,11 +367,11 @@ function PhoneMock({ services }: { services: Service[] }) {
           </div>
 
           <Link href="/browse" className={`${BTN_PRIMARY} w-full`}>
-            Request at $45/hour
+            Browse providers
           </Link>
           <p className="mt-3 text-center text-[13px] text-viridian/65">
             <Editable k="home.banner.note">
-              Now booking in Highland Park &amp; Lincoln Park
+              Now booking across the North Shore and Lincoln Park
             </Editable>
           </p>
         </div>
@@ -608,7 +608,7 @@ function CTASection({
               href="/provider/onboarding/account"
               className={BTN_GHOST_ON_DARK}
             >
-              Join as a student
+              Become a provider
             </Link>
           ) : null}
         </div>
