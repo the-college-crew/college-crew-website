@@ -23,8 +23,13 @@ import { SchoolEmailForm } from "./school-email-form";
 export const metadata: Metadata = { title: "Provider onboarding — verify" };
 
 /** Wizard step 2: verify school email (.edu OTP) + upload driver's license. */
-export default async function OnboardingVerifyPage() {
+export default async function OnboardingVerifyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ err?: string }>;
+}) {
   const session = await requireOnboardingUser("/provider/onboarding/verify");
+  const { err } = await searchParams;
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
@@ -76,6 +81,12 @@ export default async function OnboardingVerifyPage() {
         frontUrl={frontUrl}
         backUrl={backUrl}
       />
+
+      {err === "photo" ? (
+        <div className="mt-4 rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-ink">
+          Add a clear profile photo before submitting for review.
+        </div>
+      ) : null}
 
       {approved ? (
         <div className="mt-6 flex flex-wrap gap-3">
