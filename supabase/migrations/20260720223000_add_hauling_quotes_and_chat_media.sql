@@ -107,8 +107,6 @@ grant update (pricing_mode, average_quote_cents)
 -- Quote booking contract and lifecycle
 -- ---------------------------------------------------------------------------
 
-alter type public.booking_flow add value if not exists 'quote_v1';
-
 alter table public.bookings
   add column average_quote_cents_snapshot integer,
   add column quote_sent_at timestamptz,
