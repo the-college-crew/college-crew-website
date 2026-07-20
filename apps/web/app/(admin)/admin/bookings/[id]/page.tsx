@@ -127,7 +127,7 @@ export default async function AdminBookingPage({
           </p>
           <StatusPill status={booking.status} />
         </div>
-        <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-4 text-sm">
+        <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-line pt-4 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-mist">Estimated</dt>
             <dd>{formatMinutes(booking.estimated_minutes)}</dd>

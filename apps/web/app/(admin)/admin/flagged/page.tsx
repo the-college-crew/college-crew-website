@@ -173,7 +173,7 @@ export default async function AdminFlaggedPage() {
       />
       <PageHeader
         title="Flagged"
-        description="Chat messages and provider profile text that the regex scan or gpt-5.4-nano flagged. Moderation is flag-only everywhere: nothing is redacted, blocked, or hidden from users — messages are always delivered in full, and a flagged bio is live on the provider's public profile until you change it. Resolving marks a flag reviewed; it does not alter any text."
+        description="Chat messages and provider bios flagged by the regex scan or gpt-5.4-nano. Flag-only moderation — nothing is redacted, blocked, or hidden; flagged content stays live until you change it. Resolving just marks a flag reviewed, it doesn't edit anything."
       />
 
       <section aria-labelledby="events">
