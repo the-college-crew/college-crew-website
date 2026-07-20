@@ -306,7 +306,7 @@ export async function connectStripe() {
   // v2 requires a contact email to create the recipient account.
   const contactEmail = session.user.email;
   if (!contactEmail) {
-    redirect("/provider/dashboard?stripe=pending");
+    redirect("/provider/dashboard?stripe=noemail");
   }
 
   const headerList = await headers();

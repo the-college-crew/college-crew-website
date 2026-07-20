@@ -463,11 +463,13 @@ export async function submitForReview(
     getVerifiedSchoolEmail(session.user.id),
     createClient(),
   ]);
+  if (!profile.avatar_image_path) {
+    redirect("/provider/onboarding/verify?err=photo");
+  }
   if (
     !schoolEmail ||
     !profile.id_document_url ||
-    !profile.id_document_back_url ||
-    !profile.avatar_image_path
+    !profile.id_document_back_url
   ) {
     redirect("/provider/onboarding/verify");
   }

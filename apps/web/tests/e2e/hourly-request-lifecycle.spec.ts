@@ -362,7 +362,9 @@ test("browse, request, accept, replace, cancel, decline, and expire without Stri
   const acceptedCard = customerPage.locator(
     `[data-booking-id="${requestedBookingId}"]`,
   );
-  await expect(acceptedCard.getByText("Accepted — awaiting payment")).toBeVisible();
+  await expect(
+    acceptedCard.getByText("Accepted · pay the first hour"),
+  ).toBeVisible();
   await expect(
     acceptedCard.getByRole("link", { name: "Pay first hour" }),
   ).toBeVisible();

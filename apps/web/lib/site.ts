@@ -12,11 +12,8 @@ export const SITE = {
     "College Crew is a curated, hyperlocal marketplace connecting neighbors with verified student providers (18+) for everyday home and household services.",
 } as const;
 
-// Placeholder until the launch neighborhood is chosen (pilot is one
-// neighborhood only — SPEC §2).
-export const NEIGHBORHOOD = {
-  name: "Maple Heights",
-  isPlaceholder: true,
+export const PILOT_SERVICE_AREA = {
+  name: "North Shore and Lincoln Park",
 } as const;
 
 export { PLATFORM_FEE_BPS };

@@ -121,7 +121,7 @@ export default async function BrowsePage({
 /**
  * Closes the roster for logged-out visitors the way the homepage's CTA band
  * closes the landing page: same viridian surface, ant watermark, and
- * "Join as a student" label, scaled down to the browse column.
+ * "Become a provider" label, scaled down to the browse column.
  */
 function JoinCrewBand() {
   return (
@@ -150,7 +150,7 @@ function JoinCrewBand() {
           href="/provider/onboarding/account"
           className="mt-6 inline-flex items-center justify-center rounded-full border-[1.6px] border-shell bg-shell px-[26px] py-[13px] text-base font-semibold text-viridian transition duration-200 hover:-translate-y-px hover:bg-[#e7e4dc] active:translate-y-0 active:scale-[0.98]"
         >
-          Join as a student
+          Become a provider
         </Link>
       </div>
     </section>

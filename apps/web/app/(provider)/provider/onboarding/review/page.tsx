@@ -70,6 +70,7 @@ export default async function OnboardingReviewPage() {
   const ready =
     Boolean(schoolEmail) &&
     licenseComplete &&
+    Boolean(profile.avatar_image_path) &&
     liveOfferings.length > 0 &&
     isStructuredAvailabilityComplete(windows) &&
     Boolean(profile.service_zip);
@@ -121,6 +122,21 @@ export default async function OnboardingReviewPage() {
                   {profile.id_document_url || profile.id_document_back_url
                     ? "One side missing — finish it"
                     : "Missing — upload it"}
+                </Link>
+              )}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-mist">Profile photo</dt>
+            <dd className="font-medium">
+              {profile.avatar_image_path ? (
+                "Added ✓"
+              ) : (
+                <Link
+                  href="/provider/onboarding/verify?err=photo"
+                  className="text-crew-700 underline"
+                >
+                  Missing - add it
                 </Link>
               )}
             </dd>

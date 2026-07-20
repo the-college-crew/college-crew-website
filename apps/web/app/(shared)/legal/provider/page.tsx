@@ -43,7 +43,7 @@ export default async function ProviderTermsPage({
 
   const snapshot = getProviderTermsSnapshot();
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <PageHeader
         title="Provider Addendum"
         description={`Only the terms that apply when you provide services. Version ${PROVIDER_TERMS_VERSION}.`}
@@ -58,6 +58,6 @@ export default async function ProviderTermsPage({
           />
         </div>
       </Card>
-    </main>
+    </div>
   );
 }

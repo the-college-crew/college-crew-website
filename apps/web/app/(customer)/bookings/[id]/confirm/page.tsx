@@ -8,7 +8,11 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/session";
-import { calculateInvoiceAllocation } from "@/lib/booking/policy";
+import {
+  BASIS_POINTS_SCALE,
+  calculateInvoiceAllocation,
+  PLATFORM_FEE_BPS,
+} from "@/lib/booking/policy";
 import type { Booking } from "@/lib/db/types";
 import {
   BOOKING_CONSENT_LABEL,
@@ -24,6 +28,9 @@ import { ConfirmPayPanel } from "./confirm-pay-panel";
 import { HourlyPayPanel } from "./hourly-pay-panel";
 
 export const metadata: Metadata = { title: "Confirm & pay" };
+
+const platformFeePercent =
+  (PLATFORM_FEE_BPS / BASIS_POINTS_SCALE) * 100;
 
 type ConfirmBooking = Booking & {
   service: { name: string; slug: string } | { name: string; slug: string }[] | null;
@@ -310,7 +317,10 @@ function HourlyConfirmView({
               cancellation keeps the first hour. Concerns after arrival are
               handled as a dispute.
             </li>
-            <li>College Crew&apos;s 5% fee comes out of the provider&apos;s earnings.</li>
+            <li>
+              College Crew&apos;s {platformFeePercent}% fee comes out of the
+              provider&apos;s earnings.
+            </li>
           </ul>
         </div>
 

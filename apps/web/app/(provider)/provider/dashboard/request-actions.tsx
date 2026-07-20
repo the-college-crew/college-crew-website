@@ -145,10 +145,11 @@ function DeclinePanel({
         rows={3}
         value={note}
         onChange={(event) => setNote(event.target.value)}
-        placeholder="e.g. Can't do that time — could you do Saturday morning instead?"
+        placeholder="e.g. I can't make that time. I could do Saturday morning if you want to send a new request."
       />
       <p className="text-xs text-mist">
-        This starts a chat with {job.customerName} so you can sort out a time.
+        This declines the request and opens a chat with {job.customerName} so
+        you can explain or discuss another time.
       </p>
       <FieldError>{state.error}</FieldError>
       <div className="flex gap-2">
@@ -157,7 +158,7 @@ function DeclinePanel({
           pendingLabel="Sending…"
           disabled={note.trim().length === 0}
         >
-          Send &amp; decline
+          Send note &amp; decline
         </SubmitButton>
         <button
           type="button"

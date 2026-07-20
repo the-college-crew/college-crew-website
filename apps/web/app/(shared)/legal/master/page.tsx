@@ -48,7 +48,7 @@ export default async function MasterAgreementPage({
 
   const snapshot = getPlatformTermsSnapshot();
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <PageHeader
         title="Platform Terms"
         description={`The common College Crew platform terms. Version ${PLATFORM_TERMS_VERSION}.`}
@@ -63,6 +63,6 @@ export default async function MasterAgreementPage({
           />
         </div>
       </Card>
-    </main>
+    </div>
   );
 }
