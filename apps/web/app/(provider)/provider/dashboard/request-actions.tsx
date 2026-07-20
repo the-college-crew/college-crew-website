@@ -3,11 +3,13 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { openConversationForBooking } from "@/app/actions/messaging";
 import { FormLoader } from "@/components/form-loader";
 import { Button, buttonClasses } from "@/components/ui/button";
-import { FieldError, Textarea } from "@/components/ui/field";
+import { FieldError, FieldHint, Input, Textarea } from "@/components/ui/field";
+import type { BookingFlow } from "@/lib/db/types";
 
-import { acceptBooking, declineBooking } from "../actions";
+import { acceptBooking, declineBooking, sendQuote } from "../actions";
 
 type RequestJob = {
   id: string;
@@ -15,6 +17,7 @@ type RequestJob = {
   customerName: string;
   whenLabel: string;
   address: string;
+  bookingFlow: BookingFlow;
 };
 
 /**
@@ -24,7 +27,9 @@ type RequestJob = {
  * render here — the page navigates away.
  */
 export function RequestActions({ job }: { job: RequestJob }) {
-  const [mode, setMode] = useState<"idle" | "accept" | "decline">("idle");
+  const [mode, setMode] = useState<"idle" | "accept" | "quote" | "decline">(
+    "idle",
+  );
 
   if (mode === "accept") {
     return (
@@ -36,6 +41,9 @@ export function RequestActions({ job }: { job: RequestJob }) {
       <DeclinePanel job={job} onCancel={() => setMode("idle")} />
     );
   }
+  if (mode === "quote") {
+    return <SendQuotePanel job={job} onCancel={() => setMode("idle")} />;
+  }
 
   return (
     <div className="mt-3 flex gap-2">
@@ -43,9 +51,11 @@ export function RequestActions({ job }: { job: RequestJob }) {
         type="button"
         variant="success"
         size="sm"
-        onClick={() => setMode("accept")}
+        onClick={() =>
+          setMode(job.bookingFlow === "quote_v1" ? "quote" : "accept")
+        }
       >
-        Accept
+        {job.bookingFlow === "quote_v1" ? "Send quote" : "Accept"}
       </Button>
       <Button
         type="button"
@@ -55,6 +65,83 @@ export function RequestActions({ job }: { job: RequestJob }) {
       >
         Decline
       </Button>
+    </div>
+  );
+}
+
+function SendQuotePanel({
+  job,
+  onCancel,
+}: {
+  job: RequestJob;
+  onCancel: () => void;
+}) {
+  const [state, formAction] = useActionState(sendQuote, {});
+
+  return (
+    <div className="mt-3 rounded-xl border border-viridian/25 bg-honeydew/40 p-3">
+      <p className="font-display text-sm font-semibold text-viridian">
+        Send a final flat quote
+      </p>
+      <p className="mt-1 text-xs leading-5 text-ink-soft">
+        Review the job and any images or video first. Once sent, this price
+        cannot be edited for this request.
+      </p>
+
+      <form action={openConversationForBooking} className="mt-3">
+        <FormLoader />
+        <input type="hidden" name="bookingId" value={job.id} />
+        <button
+          type="submit"
+          className={buttonClasses({ variant: "secondary", size: "sm" })}
+        >
+          Open chat for media
+        </button>
+      </form>
+
+      <form action={formAction} className="mt-4 space-y-2">
+        <FormLoader />
+        <input type="hidden" name="bookingId" value={job.id} />
+        <label
+          htmlFor={`quote-${job.id}`}
+          className="block text-sm font-medium text-ink"
+        >
+          Final quote
+        </label>
+        <div className="flex max-w-xs items-center rounded-xl border border-line bg-paper focus-within:border-viridian focus-within:ring-2 focus-within:ring-viridian/15">
+          <span aria-hidden className="pl-3 text-sm font-semibold text-ink-soft">
+            $
+          </span>
+          <Input
+            id={`quote-${job.id}`}
+            name="quoteAmount"
+            type="number"
+            min={20}
+            max={10_000}
+            step="0.01"
+            inputMode="decimal"
+            required
+            className="border-0 bg-transparent focus:ring-0"
+          />
+        </div>
+        <FieldHint>
+          The customer pays this exact amount. College Crew&apos;s 5% fee comes
+          from your payout.
+        </FieldHint>
+        <FieldError>{state.error}</FieldError>
+        <div className="flex gap-2">
+          <SubmitButton variant="success" pendingLabel="Sending...">
+            Send final quote
+          </SubmitButton>
+          <button
+            type="button"
+            onClick={onCancel}
+            className={buttonClasses({ variant: "ghost", size: "sm" })}
+          >
+            Back
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

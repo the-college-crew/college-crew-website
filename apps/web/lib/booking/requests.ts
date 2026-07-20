@@ -29,6 +29,8 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["OUTSIDE_PROVIDER_AVAILABILITY", "The full job estimate must fit the provider’s availability."],
   ["PROVIDER_SLOT_ALREADY_RESERVED", "That provider just reserved another job during this time."],
   ["PROVIDER_NO_LONGER_READY", "This provider cannot accept new hourly work right now."],
+  ["INVALID_FINAL_QUOTE", "Enter a final quote between $20 and $10,000."],
+  ["FINAL_QUOTE_REQUIRED", "Send a final quote before accepting this request."],
   ["REPLACEMENT_NOT_AVAILABLE_YET", "Replacement suggestions appear after the response deadline."],
   ["REPLACEMENT_SERVICE_MISMATCH", "Choose a replacement offering for the same service."],
   ["REPLACEMENT_PROVIDER_REQUIRED", "Choose a different provider."],
@@ -140,6 +142,37 @@ export async function createHourlyRequest(
   },
 ) {
   return supabase.rpc("create_hourly_booking_request", {
+    p_provider_service_id: input.providerServiceId,
+    p_scheduled_at: input.scheduledAt,
+    p_estimated_minutes: input.estimatedMinutes,
+    p_response_window_hours: input.responseWindowHours,
+    p_address: input.address,
+    p_job_zip: input.jobZip,
+    p_details: input.details,
+    p_address_kind: input.addressKind,
+    p_service_city: input.serviceCity,
+    p_latitude: input.latitude ?? undefined,
+    p_longitude: input.longitude ?? undefined,
+  });
+}
+
+export async function createQuoteRequest(
+  supabase: ServerClient,
+  input: {
+    providerServiceId: string;
+    scheduledAt: string;
+    estimatedMinutes: number;
+    responseWindowHours: number;
+    address: string;
+    jobZip: string;
+    addressKind: "home" | "other";
+    serviceCity: string;
+    latitude: number | null;
+    longitude: number | null;
+    details: string;
+  },
+) {
+  return supabase.rpc("create_quote_booking_request", {
     p_provider_service_id: input.providerServiceId,
     p_scheduled_at: input.scheduledAt,
     p_estimated_minutes: input.estimatedMinutes,

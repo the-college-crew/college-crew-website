@@ -6,12 +6,19 @@ import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint } from "@/components/ui/field";
 import type { Service } from "@/lib/db/types";
-import { HOURLY_RATE_INPUT_CONSTRAINTS } from "@/lib/provider/setup";
+import {
+  HOURLY_RATE_INPUT_CONSTRAINTS,
+  QUOTE_INPUT_CONSTRAINTS,
+  supportsQuotePricing,
+  type PricingMode,
+} from "@/lib/provider/setup";
 import { cn } from "@/lib/utils";
 
 export type Offering = {
   service_id: string;
   hourly_rate_cents: number | null;
+  pricing_mode: string;
+  average_quote_cents: number | null;
 };
 
 type FormState = {
@@ -23,7 +30,9 @@ type FormState = {
 /** One editable row's state — the single source of truth for that service. */
 type Row = {
   offered: boolean;
+  mode: PricingMode;
   rate: string; // dollars per hour, as typed
+  average: string; // optional average quote, in dollars
 };
 
 function initialRows(services: Service[], offerings: Offering[]): Record<string, Row> {
@@ -33,11 +42,17 @@ function initialRows(services: Service[], offerings: Offering[]): Record<string,
       const existing = byServiceId.get(service.id);
       const row: Row = {
         offered: Boolean(existing),
+        mode: existing?.pricing_mode === "quote" ? "quote" : "hourly",
         // Never infer or prefill an hourly rate from legacy fixed/quote data.
         rate:
           existing?.hourly_rate_cents !== null &&
           existing?.hourly_rate_cents !== undefined
             ? String(existing.hourly_rate_cents / 100)
+            : "",
+        average:
+          existing?.average_quote_cents !== null &&
+          existing?.average_quote_cents !== undefined
+            ? String(existing.average_quote_cents / 100)
             : "",
       };
       return [service.id, row];
@@ -46,7 +61,8 @@ function initialRows(services: Service[], offerings: Offering[]): Record<string,
 }
 
 /**
- * One row per live service: offer it or not, at what hourly rate.
+ * One row per live service: offer it or not, with hourly pricing for every
+ * service and an optional flat-quote mode for visual-scope services.
  * Used in onboarding (step 3) and in Profile & settings, which is the
  * pricing source of truth after onboarding (SPEC §3).
  *
@@ -89,12 +105,14 @@ export function ServicesPricingForm({
     <form action={formAction} className="space-y-4">
       {navigates ? <FormLoader /> : null}
       <div className="rounded-xl bg-honeydew/45 px-4 py-3 text-sm text-viridian">
-        Customers pay for at least one hour. After that, billing uses 15-minute
-        increments based on the completed job time.
+        Set an hourly rate for each service. Hauling, pressure washing, and
+        window washing can instead use a flat quote after you review the job
+        details and any requested media.
       </div>
       <ul className="space-y-3">
         {services.map((service) => {
           const row = rows[service.id];
+          const supportsQuotes = supportsQuotePricing(service.slug);
           const rowError = row.offered
             ? state.fieldErrors?.[service.id]
             : undefined;
@@ -144,47 +162,124 @@ export function ServicesPricingForm({
               </label>
 
               {row.offered ? (
-                <div className="mt-3 max-w-xs pl-8">
-                  <div
-                    className={cn(
-                      "flex items-center rounded-xl border-[1.4px] bg-paper transition-colors focus-within:border-viridian focus-within:ring-[3px] focus-within:ring-viridian/15",
-                      rowError
-                        ? "border-red-300"
-                        : "border-viridian/25 hover:border-viridian/45",
-                    )}
-                  >
-                    <span
-                      aria-hidden
-                      className="pl-3.5 text-sm font-semibold text-ink-soft"
-                    >
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      name={`rate_${service.id}`}
-                      aria-label={`${service.name} hourly rate in dollars`}
-                      placeholder="45"
-                      min={HOURLY_RATE_INPUT_CONSTRAINTS.min}
-                      step={HOURLY_RATE_INPUT_CONSTRAINTS.step}
-                      inputMode="decimal"
-                      value={row.rate}
-                      onChange={(event) =>
-                        update(service.id, { rate: event.target.value })
-                      }
-                      aria-invalid={rowError ? true : undefined}
-                      aria-describedby={rowError ? errorId : undefined}
-                      className="w-full bg-transparent px-2 py-2 text-sm text-ink placeholder:text-mist focus:outline-none"
-                    />
-                    <span
-                      aria-hidden
-                      className="shrink-0 pr-3.5 text-sm font-semibold text-ink-soft"
-                    >
-                      / hr
-                    </span>
-                  </div>
-                  <FieldHint>
-                    Your rate before College Crew&apos;s provider fee.
-                  </FieldHint>
+                <div className="mt-4 space-y-4 pl-8">
+                  {supportsQuotes ? (
+                    <fieldset>
+                      <legend className="text-xs font-semibold uppercase tracking-wide text-mist">
+                        Pricing method
+                      </legend>
+                      <div className="mt-2 grid max-w-sm grid-cols-2 gap-2">
+                        {(["hourly", "quote"] as const).map((mode) => (
+                          <label
+                            key={mode}
+                            className={cn(
+                              "cursor-pointer rounded-lg border px-3 py-2 text-center text-sm font-semibold transition-colors",
+                              row.mode === mode
+                                ? "border-viridian bg-paper text-viridian ring-2 ring-viridian/10"
+                                : "border-stone bg-shell text-ink-soft hover:border-viridian/45",
+                            )}
+                          >
+                            <input
+                              type="radio"
+                              name={`mode_${service.id}`}
+                              value={mode}
+                              checked={row.mode === mode}
+                              onChange={() => update(service.id, { mode })}
+                              className="sr-only"
+                            />
+                            {mode === "hourly" ? "Hourly" : "Flat quote"}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  ) : (
+                    <input type="hidden" name={`mode_${service.id}`} value="hourly" />
+                  )}
+
+                  {row.mode === "quote" && supportsQuotes ? (
+                    <div className="max-w-sm">
+                      <label
+                        htmlFor={`average-${service.id}`}
+                        className="block text-sm font-medium text-ink"
+                      >
+                        Average quote <span className="font-normal text-mist">(optional)</span>
+                      </label>
+                      <div
+                        className={cn(
+                          "mt-1.5 flex items-center rounded-xl border-[1.4px] bg-paper transition-colors focus-within:border-viridian focus-within:ring-[3px] focus-within:ring-viridian/15",
+                          rowError ? "border-red-300" : "border-viridian/25",
+                        )}
+                      >
+                        <span aria-hidden className="pl-3.5 text-sm font-semibold text-ink-soft">
+                          $
+                        </span>
+                        <input
+                          id={`average-${service.id}`}
+                          type="number"
+                          name={`average_${service.id}`}
+                          placeholder="150"
+                          min={QUOTE_INPUT_CONSTRAINTS.min}
+                          max={QUOTE_INPUT_CONSTRAINTS.max}
+                          step={QUOTE_INPUT_CONSTRAINTS.step}
+                          inputMode="decimal"
+                          value={row.average}
+                          onChange={(event) =>
+                            update(service.id, { average: event.target.value })
+                          }
+                          aria-invalid={rowError ? true : undefined}
+                          aria-describedby={rowError ? errorId : undefined}
+                          className="w-full bg-transparent px-2 py-2 text-sm text-ink placeholder:text-mist focus:outline-none"
+                        />
+                      </div>
+                      <FieldHint>
+                        A nonbinding guide for customers. You send the final flat
+                        price after reviewing the request.
+                      </FieldHint>
+                    </div>
+                  ) : (
+                    <div className="max-w-xs">
+                      <label
+                        htmlFor={`rate-${service.id}`}
+                        className="block text-sm font-medium text-ink"
+                      >
+                        Hourly rate
+                      </label>
+                      <div
+                        className={cn(
+                          "mt-1.5 flex items-center rounded-xl border-[1.4px] bg-paper transition-colors focus-within:border-viridian focus-within:ring-[3px] focus-within:ring-viridian/15",
+                          rowError
+                            ? "border-red-300"
+                            : "border-viridian/25 hover:border-viridian/45",
+                        )}
+                      >
+                        <span aria-hidden className="pl-3.5 text-sm font-semibold text-ink-soft">
+                          $
+                        </span>
+                        <input
+                          id={`rate-${service.id}`}
+                          type="number"
+                          name={`rate_${service.id}`}
+                          placeholder="45"
+                          min={HOURLY_RATE_INPUT_CONSTRAINTS.min}
+                          step={HOURLY_RATE_INPUT_CONSTRAINTS.step}
+                          inputMode="decimal"
+                          value={row.rate}
+                          onChange={(event) =>
+                            update(service.id, { rate: event.target.value })
+                          }
+                          aria-invalid={rowError ? true : undefined}
+                          aria-describedby={rowError ? errorId : undefined}
+                          className="w-full bg-transparent px-2 py-2 text-sm text-ink placeholder:text-mist focus:outline-none"
+                        />
+                        <span aria-hidden className="shrink-0 pr-3.5 text-sm font-semibold text-ink-soft">
+                          / hr
+                        </span>
+                      </div>
+                      <FieldHint>
+                        Your rate before College Crew&apos;s provider fee.
+                      </FieldHint>
+                    </div>
+                  )}
                   {rowError ? (
                     <p
                       id={errorId}

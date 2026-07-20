@@ -19,8 +19,10 @@ import {
   BOOKING_RISK_VERSION,
   getBookingAddendumSnapshot,
   getBookingRiskSnapshot,
+  getQuoteBookingRiskSnapshot,
   getPaymentAuthorizationSnapshot,
   LEGAL_CONTENT_VERSION,
+  QUOTE_BOOKING_RISK_VERSION,
 } from "@/lib/legal/waivers";
 import {
   createBookingPaymentIntent,
@@ -72,8 +74,11 @@ export async function confirmAndPay(
   if (!booking || booking.customer_id !== user.id) {
     return { error: "Booking not found." };
   }
-  if (booking.booking_flow !== "legacy") {
-    return { error: "Hourly first-hour payment is not available yet." };
+  if (
+    booking.booking_flow !== "legacy" &&
+    booking.booking_flow !== "quote_v1"
+  ) {
+    return { error: "This booking uses the hourly payment flow." };
   }
   if (booking.status !== "accepted") {
     return { error: "This booking isn't awaiting payment." };
@@ -90,7 +95,18 @@ export async function confirmAndPay(
     : booking.customer;
 
   const snapshot = service
-    ? getBookingAddendumSnapshot({
+    ? booking.booking_flow === "quote_v1"
+      ? getQuoteBookingRiskSnapshot({
+          bookingId: booking.id,
+          finalQuoteCents: booking.price_cents,
+          serviceSlug: service.slug,
+          serviceName: service.name,
+          scheduledAt: formatDateTime(booking.scheduled_at),
+          address: booking.address,
+          providerName: provider?.display_name ?? "Provider",
+          customerName: customer?.full_name ?? "Customer",
+        })
+      : getBookingAddendumSnapshot({
         serviceSlug: service.slug,
         serviceName: service.name,
         scheduledAt: formatDateTime(booking.scheduled_at),
@@ -114,7 +130,10 @@ export async function confirmAndPay(
       booking_id: booking.id,
       kind: "booking_addendum",
       role: "customer",
-      version: LEGAL_CONTENT_VERSION,
+      version:
+        booking.booking_flow === "quote_v1"
+          ? QUOTE_BOOKING_RISK_VERSION
+          : LEGAL_CONTENT_VERSION,
       content_hash: stableContentHash(snapshot),
       signer_name: customer?.full_name ?? "Customer",
       service_slug: service.slug,
@@ -386,7 +405,7 @@ export async function simulatePayment(formData: FormData) {
     .eq("id", bookingId)
     .eq("customer_id", user.id)
     .maybeSingle();
-  if (booking?.booking_flow !== "legacy") {
+  if (!booking || booking.booking_flow === "hourly_v1") {
     throw new Error("Hourly payment simulation is not available.");
   }
 

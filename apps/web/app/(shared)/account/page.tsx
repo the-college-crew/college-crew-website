@@ -256,7 +256,7 @@ async function ProviderStorefront({
       supabase
         .from("provider_services")
         .select(
-          "id, service_id, price_cents, price_type, unit, hourly_rate_cents, service:services(name, is_live)",
+          "id, service_id, price_cents, price_type, unit, hourly_rate_cents, pricing_mode, average_quote_cents, service:services(name, slug, is_live)",
         )
         .eq("provider_id", providerProfile.id),
       getProviderAvailabilityWindows(providerProfile.id),
@@ -265,6 +265,11 @@ async function ProviderStorefront({
     id: offering.id,
     name: offering.service?.name ?? "Retired service",
     hourly_rate_cents: offering.hourly_rate_cents,
+    pricing_mode: (offering.pricing_mode === "quote" ? "quote" : "hourly") as
+      | "quote"
+      | "hourly",
+    average_quote_cents: offering.average_quote_cents,
+    service_slug: offering.service?.slug ?? "",
     service_is_live: offering.service?.is_live === true,
   }));
 
@@ -408,6 +413,9 @@ function ProviderAccountDemo() {
           id: offering.id,
           name: offering.service.name,
           hourly_rate_cents: offering.hourly_rate_cents,
+          pricing_mode: offering.pricing_mode,
+          average_quote_cents: offering.average_quote_cents,
+          service_slug: offering.service.slug,
           service_is_live: offering.service.is_live,
         }))}
         windows={demoAvailabilityWindows}

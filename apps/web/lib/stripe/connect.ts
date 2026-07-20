@@ -124,14 +124,17 @@ export async function createBookingPaymentIntent(input: {
   const stripe = getStripe();
   if (!stripe) return UNCONFIGURED;
 
-  const intent = await stripe.paymentIntents.create({
-    amount: input.booking.price_cents,
-    currency: "usd",
-    application_fee_amount: input.booking.platform_fee_cents,
-    transfer_data: { destination: input.providerStripeAccountId },
-    metadata: { booking_id: input.booking.id },
-    automatic_payment_methods: { enabled: true },
-  });
+  const intent = await stripe.paymentIntents.create(
+    {
+      amount: input.booking.price_cents,
+      currency: "usd",
+      application_fee_amount: input.booking.platform_fee_cents,
+      transfer_data: { destination: input.providerStripeAccountId },
+      metadata: { booking_id: input.booking.id },
+      automatic_payment_methods: { enabled: true },
+    },
+    { idempotencyKey: `booking:${input.booking.id}:full-payment` },
+  );
 
   if (!intent.client_secret) return UNCONFIGURED;
   return { configured: true, clientSecret: intent.client_secret };

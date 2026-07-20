@@ -131,7 +131,12 @@ export async function sendModeratedMessage(
   } = await supabase.auth.getSession();
 
   const { error } = await supabase.functions.invoke("moderate-message", {
-    body: { conversation_id: conversationId, body, image_path: null },
+    body: {
+      conversation_id: conversationId,
+      body,
+      image_path: null,
+      attachments: [],
+    },
     headers: session
       ? { Authorization: `Bearer ${session.access_token}` }
       : undefined,

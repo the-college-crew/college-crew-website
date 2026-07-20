@@ -328,6 +328,9 @@ export function ProviderDetailModal({
                     id: offering.id,
                     name: offering.service.name,
                     hourly_rate_cents: offering.hourly_rate_cents,
+                    pricing_mode: offering.pricing_mode,
+                    average_quote_cents: offering.average_quote_cents,
+                    service_slug: offering.service.slug,
                     service_is_live: offering.service.is_live,
                   }))}
                 />

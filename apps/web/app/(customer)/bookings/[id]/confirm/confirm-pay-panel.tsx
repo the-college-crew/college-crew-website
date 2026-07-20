@@ -39,9 +39,11 @@ export const appearance = {
 export function ConfirmPayPanel({
   bookingId,
   simulateAllowed,
+  consentLabel = BOOKING_CONSENT_LABEL,
 }: {
   bookingId: string;
   simulateAllowed: boolean;
+  consentLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState<
     ConfirmPayState,
@@ -75,7 +77,7 @@ export function ConfirmPayPanel({
               name="acceptAddendum"
               className="mt-1 h-4 w-4 rounded border-line"
             />
-            <span>{BOOKING_CONSENT_LABEL}</span>
+            <span>{consentLabel}</span>
           </label>
           <Button type="submit" size="lg" className="w-full" disabled={pending}>
             {pending ? "Preparing payment…" : "Confirm & pay"}

@@ -46,6 +46,7 @@ type BookingRow = {
   price_cents: number;
   estimated_minutes: number | null;
   hourly_rate_cents_snapshot: number | null;
+  average_quote_cents_snapshot: number | null;
   response_alert_at: string | null;
   initial_payment_due_at: string | null;
   en_route_at: string | null;
@@ -166,7 +167,8 @@ export default async function CustomerDashboardPage({
       .from("bookings")
       .select(
         `id, booking_flow, status, scheduled_at, address, price_cents,
-         estimated_minutes, hourly_rate_cents_snapshot, response_alert_at,
+         estimated_minutes, hourly_rate_cents_snapshot,
+         average_quote_cents_snapshot, response_alert_at,
          initial_payment_due_at, en_route_at, dismissed_at, cancelled_by_role,
          service:services(name, slug),
          provider:provider_profiles(display_name),
@@ -288,7 +290,9 @@ function CustomerDashboardView({
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
           {demo
             ? "Sample request sent. No booking was created, but this is where the confirmation appears."
-            : "Request sent. The provider will accept or decline; once they accept, you'll confirm and pay here."}
+            : requested === "quote"
+              ? "Quote requested. Use the private chat to share any images or video the provider needs. You will review the final flat price before paying."
+              : "Request sent. The provider will accept or decline; once they accept, you'll confirm and pay here."}
         </div>
       ) : null}
       {replaced ? (
@@ -433,6 +437,7 @@ function BookingCard({
     booking.cancelled_by_role === "provider";
   const isUpcoming = (UPCOMING as string[]).includes(booking.status);
   const isHourly = booking.booking_flow === "hourly_v1";
+  const isQuote = booking.booking_flow === "quote_v1";
   const responseAlertReached = booking.responseAlertReached === true;
   const note = convo?.latest?.fromOther ? convo.latest : null;
   const hasProviderMessage = Boolean(note);
@@ -501,6 +506,10 @@ function BookingCard({
             {booking.address} ·{" "}
             {isHourly && booking.hourly_rate_cents_snapshot != null
               ? `${formatMoney(booking.hourly_rate_cents_snapshot)}/hr · ${booking.estimated_minutes ?? 60} min estimate`
+              : isQuote && booking.status === "requested"
+                ? booking.average_quote_cents_snapshot == null
+                  ? "Waiting for flat quote"
+                  : `Average shown ${formatMoney(booking.average_quote_cents_snapshot)} · final quote pending`
               : formatMoney(booking.price_cents)}
           </p>
         </div>
@@ -567,6 +576,20 @@ function BookingCard({
             target={booking.response_alert_at}
             label="Response alert"
           />
+        </div>
+      ) : null}
+
+      {isQuote && booking.status === "requested" ? (
+        <div className="mt-3 rounded-lg border border-gold-300 bg-gold-100 p-3 text-xs leading-5 text-gold-900">
+          The provider may ask for images or a short video in the private chat
+          before sending the final flat quote.
+        </div>
+      ) : null}
+
+      {isQuote && booking.status === "accepted" ? (
+        <div className="mt-3 rounded-lg border border-quad-200 bg-quad-50 p-3 text-sm text-quad-800">
+          Final flat quote:{" "}
+          <span className="font-semibold">{formatMoney(booking.price_cents)}</span>
         </div>
       ) : null}
 

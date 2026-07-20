@@ -61,6 +61,7 @@ type ProviderBookingRow = {
   platform_fee_cents: number;
   estimated_minutes: number | null;
   hourly_rate_cents_snapshot: number | null;
+  average_quote_cents_snapshot: number | null;
   response_alert_at: string | null;
   accepted_at: string | null;
   initial_payment_due_at: string | null;
@@ -116,6 +117,9 @@ export default async function ProviderDashboardPage({
           id: offering.id,
           name: offering.service.name,
           hourly_rate_cents: offering.hourly_rate_cents,
+          pricing_mode: offering.pricing_mode,
+          average_quote_cents: offering.average_quote_cents,
+          service_slug: offering.service.slug,
           service_is_live: offering.service.is_live,
         }))}
         windows={demoAvailabilityWindows}
@@ -148,6 +152,7 @@ export default async function ProviderDashboardPage({
         `id, booking_flow, status, scheduled_at, address, service_city,
          latitude, longitude, details, price_cents,
          platform_fee_cents, estimated_minutes, hourly_rate_cents_snapshot,
+         average_quote_cents_snapshot,
          response_alert_at, accepted_at, initial_payment_due_at, service:services(name),
          customer:profiles!bookings_customer_id_fkey(full_name),
          invoice:booking_invoices(subtotal_cents, total_platform_fee_cents, status)`,
@@ -156,7 +161,9 @@ export default async function ProviderDashboardPage({
       .order("scheduled_at", { ascending: true }),
     supabase
       .from("provider_services")
-      .select("id, hourly_rate_cents, service:services(name, is_live)")
+      .select(
+        "id, hourly_rate_cents, pricing_mode, average_quote_cents, service:services(name, slug, is_live)",
+      )
       .eq("provider_id", profile.id),
     getProviderAvailabilityWindows(profile.id),
     hasAcceptedCurrentLegalDocument(supabase, {
@@ -181,6 +188,9 @@ export default async function ProviderDashboardPage({
       id: offering.id,
       name: offering.service?.name ?? "Retired service",
       hourly_rate_cents: offering.hourly_rate_cents,
+      pricing_mode: offering.pricing_mode === "quote" ? "quote" : "hourly",
+      average_quote_cents: offering.average_quote_cents,
+      service_slug: offering.service?.slug ?? "",
       service_is_live: offering.service?.is_live === true,
     }),
   );
@@ -239,7 +249,8 @@ function ProviderDashboardView({
   });
   const awaitingPayment = bookings.filter(
     (booking) =>
-      booking.booking_flow === "hourly_v1" && booking.status === "accepted",
+      booking.status === "accepted" &&
+      ["hourly_v1", "quote_v1"].includes(booking.booking_flow),
   );
   const earnedCents = bookings
     .filter((b) => b.status === "completed")
@@ -441,13 +452,19 @@ function ProviderDashboardView({
                   {formatDateTime(booking.scheduled_at)}
                 </p>
                 <p className="mt-1 text-xs text-mist">
-                  Reserved — the customer must pay the first hour to confirm.
+                  {booking.booking_flow === "quote_v1"
+                    ? `Final quote ${formatMoney(booking.price_cents)} sent. The customer must confirm and pay.`
+                    : "Reserved. The customer must pay the first hour to confirm."}
                 </p>
                 {booking.initial_payment_due_at ? (
                   <div className="mt-2">
                     <DeadlineCountdown
                       target={booking.initial_payment_due_at}
-                      label="First-hour payment due"
+                      label={
+                        booking.booking_flow === "quote_v1"
+                          ? "Quote payment due"
+                          : "First-hour payment due"
+                      }
                     />
                   </div>
                 ) : null}
@@ -525,6 +542,25 @@ function ProviderDashboardView({
                       ) : null}
                     </div>
                   ) : null}
+                  {booking.booking_flow === "quote_v1" ? (
+                    <div className="mt-2 space-y-1 text-xs text-mist">
+                      <p>
+                        Flat quote requested
+                        {booking.average_quote_cents_snapshot == null
+                          ? ""
+                          : ` · ${formatMoney(booking.average_quote_cents_snapshot)} average shown`}
+                        {" · "}
+                        {booking.estimated_minutes ?? 60}-minute scheduling estimate
+                      </p>
+                      <p>Review the private chat for requested images or video.</p>
+                      {booking.response_alert_at ? (
+                        <DeadlineCountdown
+                          target={booking.response_alert_at}
+                          label="Quote requested"
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
                   {demo ? (
                     <div className="mt-3 flex gap-2">
                       <Button type="button" size="sm" disabled>
@@ -547,6 +583,7 @@ function ProviderDashboardView({
                         customerName: booking.customer.full_name,
                         whenLabel: formatDateTime(booking.scheduled_at),
                         address: booking.address,
+                        bookingFlow: booking.booking_flow,
                       }}
                     />
                   )}

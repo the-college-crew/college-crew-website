@@ -526,6 +526,7 @@ export type Database = {
           accepted_at: string | null
           address: string
           address_kind: string
+          average_quote_cents_snapshot: number | null
           arrived_at: string | null
           billing_increment_minutes: number | null
           billing_minimum_minutes: number | null
@@ -561,6 +562,7 @@ export type Database = {
           price_cents: number
           provider_display_name_snapshot: string | null
           provider_id: string
+          quote_sent_at: string | null
           replaced_by_booking_id: string | null
           replacement_for_booking_id: string | null
           response_alert_at: string | null
@@ -582,6 +584,7 @@ export type Database = {
           accepted_at?: string | null
           address: string
           address_kind?: string
+          average_quote_cents_snapshot?: number | null
           arrived_at?: string | null
           billing_increment_minutes?: number | null
           billing_minimum_minutes?: number | null
@@ -617,6 +620,7 @@ export type Database = {
           price_cents: number
           provider_display_name_snapshot?: string | null
           provider_id: string
+          quote_sent_at?: string | null
           replaced_by_booking_id?: string | null
           replacement_for_booking_id?: string | null
           response_alert_at?: string | null
@@ -638,6 +642,7 @@ export type Database = {
           accepted_at?: string | null
           address?: string
           address_kind?: string
+          average_quote_cents_snapshot?: number | null
           arrived_at?: string | null
           billing_increment_minutes?: number | null
           billing_minimum_minutes?: number | null
@@ -673,6 +678,7 @@ export type Database = {
           price_cents?: number
           provider_display_name_snapshot?: string | null
           provider_id?: string
+          quote_sent_at?: string | null
           replaced_by_booking_id?: string | null
           replacement_for_booking_id?: string | null
           response_alert_at?: string | null
@@ -993,6 +999,7 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachments: Json
           body: string
           conversation_id: string
           created_at: string
@@ -1002,6 +1009,7 @@ export type Database = {
           sender_id: string
         }
         Insert: {
+          attachments?: Json
           body?: string
           conversation_id: string
           created_at?: string
@@ -1011,6 +1019,7 @@ export type Database = {
           sender_id: string
         }
         Update: {
+          attachments?: Json
           body?: string
           conversation_id?: string
           created_at?: string
@@ -1440,31 +1449,37 @@ export type Database = {
       }
       provider_services: {
         Row: {
+          average_quote_cents: number | null
           hourly_rate_cents: number | null
           id: string
           preview_image_path: string | null
           price_cents: number
           price_type: Database["public"]["Enums"]["price_type"]
+          pricing_mode: string
           provider_id: string
           service_id: string
           unit: Database["public"]["Enums"]["price_unit"]
         }
         Insert: {
+          average_quote_cents?: number | null
           hourly_rate_cents?: number | null
           id?: string
           preview_image_path?: string | null
           price_cents: number
           price_type?: Database["public"]["Enums"]["price_type"]
+          pricing_mode?: string
           provider_id: string
           service_id: string
           unit?: Database["public"]["Enums"]["price_unit"]
         }
         Update: {
+          average_quote_cents?: number | null
           hourly_rate_cents?: number | null
           id?: string
           preview_image_path?: string | null
           price_cents?: number
           price_type?: Database["public"]["Enums"]["price_type"]
+          pricing_mode?: string
           provider_id?: string
           service_id?: string
           unit?: Database["public"]["Enums"]["price_unit"]
@@ -2031,11 +2046,14 @@ export type Database = {
       }
       public_provider_offerings: {
         Row: {
+          average_quote_cents: number | null
           hourly_rate_cents: number | null
           is_hourly_bookable: boolean | null
+          is_quote_bookable: boolean | null
           preview_image_path: string | null
           price_cents: number | null
           price_type: Database["public"]["Enums"]["price_type"] | null
+          pricing_mode: string | null
           provider_id: string | null
           provider_service_id: string | null
           service_category: string | null
@@ -2199,6 +2217,22 @@ export type Database = {
         }
         Returns: string
       }
+      create_quote_booking_request: {
+        Args: {
+          p_address: string
+          p_address_kind?: string
+          p_details?: string
+          p_estimated_minutes: number
+          p_job_zip: string
+          p_latitude?: number
+          p_longitude?: number
+          p_provider_service_id: string
+          p_response_window_hours: number
+          p_scheduled_at: string
+          p_service_city?: string
+        }
+        Returns: string
+      }
       current_user_is_adult: { Args: never; Returns: boolean }
       decline_booking_request: {
         Args: { p_booking_id: string }
@@ -2229,6 +2263,10 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
+      is_provider_offering_quote_bookable: {
+        Args: { provider_service_id: string }
+        Returns: boolean
+      }
       is_conversation_member:
         | {
             Args: { conv_id: string }
@@ -2431,6 +2469,10 @@ export type Database = {
         }
         Returns: string
       }
+      send_booking_quote: {
+        Args: { p_booking_id: string; p_quote_cents: number }
+        Returns: string
+      }
       transition_legacy_booking: {
         Args: {
           p_booking_id: string
@@ -2461,7 +2503,7 @@ export type Database = {
         | "waive_remaining_balance"
         | "cancel_and_refund"
       booking_dispute_status: "open" | "resolved"
-      booking_flow: "legacy" | "hourly_v1"
+      booking_flow: "legacy" | "hourly_v1" | "quote_v1"
       booking_invoice_status:
         | "draft"
         | "review"
@@ -2655,7 +2697,7 @@ export const Constants = {
         "cancel_and_refund",
       ],
       booking_dispute_status: ["open", "resolved"],
-      booking_flow: ["legacy", "hourly_v1"],
+      booking_flow: ["legacy", "hourly_v1", "quote_v1"],
       booking_invoice_status: [
         "draft",
         "review",

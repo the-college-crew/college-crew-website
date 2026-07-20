@@ -59,6 +59,7 @@ export function BookingRequestForm({
   );
 
   const selected = services.find((service) => service.id === selectedId);
+  const isQuote = selected?.pricing_mode === "quote";
   const scheduled = useMemo(
     () => pilotLocalDateTimeToUtc(scheduledLocal),
     [scheduledLocal],
@@ -133,7 +134,11 @@ export function BookingRequestForm({
               </option>
             ))}
           </Select>
-          <FieldHint>One-hour minimum; billed in 15-minute increments.</FieldHint>
+          <FieldHint>
+            {isQuote
+              ? "Used for scheduling only. Your final price is the provider's flat quote."
+              : "One-hour minimum; billed in 15-minute increments."}
+          </FieldHint>
         </div>
       </div>
 
@@ -170,36 +175,70 @@ export function BookingRequestForm({
           name="details"
           rows={4}
           maxLength={2000}
-          placeholder="Size of the job, access notes, pets, or supplies needed…"
+          placeholder={
+            isQuote
+              ? "Describe the size or quantity, surfaces or items, access, and anything that affects the scope..."
+              : "Size of the job, access notes, pets, or supplies needed..."
+          }
         />
       </div>
 
       <div className="space-y-3 rounded-xl border border-line bg-court p-4 text-sm">
-        <div className="flex items-center justify-between font-semibold">
-          <span>Hourly rate</span>
-          <span className="text-quad-700">
-            {selected ? formatOfferedPrice(selected) : "-"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Estimated subtotal</span>
-          <span>{estimatedSubtotal == null ? "-" : formatMoney(estimatedSubtotal)}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Due after provider accepts</span>
-          <span>
-            {selected?.hourly_rate_cents == null
-              ? "-"
-              : formatMoney(selected.hourly_rate_cents)}
-          </span>
-        </div>
-        <p className="border-t border-line pt-3 text-xs text-mist">
-          The first hour is paid only after acceptance. Final billing uses the
-          provider&apos;s submitted actual time, rounded to 15-minute increments.
-          College Crew&apos;s fee comes from provider earnings. There is no added
-          customer platform fee. Cancel before payment and there is no charge;
-          the 12-hour cancellation policy applies after payment.
-        </p>
+        {isQuote ? (
+          <>
+            <div className="flex items-center justify-between gap-4 font-semibold">
+              <span>Pricing</span>
+              <span className="text-right text-quad-700">
+                {selected ? formatOfferedPrice(selected) : "Quote required"}
+              </span>
+            </div>
+            <div className="rounded-lg border border-gold-300 bg-gold-100 p-3 text-gold-900">
+              <p className="font-semibold">
+                Images or a video may be required for an accurate quote.
+              </p>
+              <p className="mt-1 text-xs leading-5">
+                After you send this request, use the private booking chat to
+                share images or a short video if the provider needs them to
+                prepare an accurate quote.
+              </p>
+            </div>
+            <p className="border-t border-line pt-3 text-xs text-mist">
+              You are not charged when requesting a quote. The provider reviews
+              the job and sends a final flat price. You choose whether to
+              confirm and pay that price. College Crew&apos;s 5% fee comes from
+              provider earnings, with no added customer platform fee.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between font-semibold">
+              <span>Hourly rate</span>
+              <span className="text-quad-700">
+                {selected ? formatOfferedPrice(selected) : "-"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Estimated subtotal</span>
+              <span>{estimatedSubtotal == null ? "-" : formatMoney(estimatedSubtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Due after provider accepts</span>
+              <span>
+                {selected?.hourly_rate_cents == null
+                  ? "-"
+                  : formatMoney(selected.hourly_rate_cents)}
+              </span>
+            </div>
+            <p className="border-t border-line pt-3 text-xs text-mist">
+              The first hour is paid only after acceptance. Final billing uses
+              the provider&apos;s submitted actual time, rounded to 15-minute
+              increments. College Crew&apos;s fee comes from provider earnings.
+              There is no added customer platform fee. Cancel before payment and
+              there is no charge; the 12-hour cancellation policy applies after
+              payment.
+            </p>
+          </>
+        )}
       </div>
 
       <FieldError>{state.error}</FieldError>
@@ -210,7 +249,11 @@ export function BookingRequestForm({
         className="w-full"
         disabled={pending || !effectiveResponseHours || !originReady}
       >
-        {pending ? "Sending request…" : "Send hourly request"}
+        {pending
+          ? "Sending request..."
+          : isQuote
+            ? "Request flat quote"
+            : "Send hourly request"}
       </Button>
     </form>
   );
