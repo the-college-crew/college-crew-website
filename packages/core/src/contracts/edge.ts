@@ -165,11 +165,17 @@ export const verifyEduOtpResponseSchema = z.object({ verified: z.literal(true) }
 export type VerifyEduOtpResponse = z.infer<typeof verifyEduOtpResponseSchema>;
 
 // ---------------------------------------------------------------------------
-// DRAFT contracts — functions not yet built (subject to change when each is
-// implemented; keep this file updated in the same PR that builds them).
+// update-profile-text — the write path for a provider's public storefront text
+// (display_name, bio, company_name). The UPDATE grant on those columns was
+// revoked from `authenticated` (migration 20260713165821) so the browser/mobile
+// cannot write them directly — this function is the only path, exactly like
+// moderate-message owns the messages write path. Moderation is FLAG-ONLY: the
+// text always saves and goes live; a hit just logs profile_moderation_events and
+// emails the founders. `moderation` reports whether any submitted field tripped.
+// Codes: bad_request (400), not_provider (403, caller has no provider profile),
+// save_failed (500), unconfigured (503).
 // ---------------------------------------------------------------------------
 
-/** update-profile-text — moderated (flag-only) provider profile text writes. */
 export const updateProfileTextRequestSchema = z
   .object({
     displayName: z.string().trim().min(1).max(80).optional(),
@@ -183,10 +189,22 @@ export const updateProfileTextRequestSchema = z
       value.companyName !== undefined,
     { message: "Provide at least one field to update." },
   );
+export type UpdateProfileTextRequest = z.infer<
+  typeof updateProfileTextRequestSchema
+>;
+
 export const updateProfileTextResponseSchema = z.object({
   ok: z.literal(true),
   moderation: z.enum(["clean", "flagged"]),
 });
+export type UpdateProfileTextResponse = z.infer<
+  typeof updateProfileTextResponseSchema
+>;
+
+// ---------------------------------------------------------------------------
+// DRAFT contracts — functions not yet built (subject to change when each is
+// implemented; keep this file updated in the same PR that builds them).
+// ---------------------------------------------------------------------------
 
 /** send-push — internal fan-out (DB webhook w/ shared secret; never client-called). */
 export const sendPushRequestSchema = z.object({
