@@ -139,7 +139,7 @@ async function getProviderCompletedJobCounts(
   return counts;
 }
 
-export type ProviderSort = "suggested" | "location" | "rating" | "rate";
+export type ProviderSort = "suggested" | "location" | "rating";
 
 export async function getLiveServices(): Promise<Service[]> {
   if (!hasSupabaseEnv()) return [];
@@ -403,11 +403,6 @@ export async function getApprovedProviders(
   }
   if (options.sort === "rating") {
     return filtered.toSorted(ratingThenRate);
-  }
-  if (options.sort === "rate") {
-    return filtered.toSorted(
-      (a, b) => lowestRate(a) - lowestRate(b) || ratingThenRate(a, b),
-    );
   }
 
   // Default "suggested" sort: the recommendation engine. Quality (smoothed

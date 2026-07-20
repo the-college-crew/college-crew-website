@@ -115,7 +115,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                 const firstParagraph = paragraphs[0];
                 const hasMore = paragraphs.length > 1;
                 return (
-                  <p className="whitespace-pre-line text-sm text-ink-soft">
+                  <p className="line-clamp-3 whitespace-pre-line text-sm text-ink-soft">
                     {hasMore ? `${firstParagraph}…` : firstParagraph}
                   </p>
                 );
