@@ -20,6 +20,8 @@ import {
   GENERAL_FAMILY_DISCLOSURE,
   getBookingAddendumSnapshot,
   getBookingRiskSnapshot,
+  QUOTE_PAYMENT_CONSENT_LABEL,
+  QUOTE_PAYMENT_TERMS,
 } from "@/lib/legal/waivers";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
@@ -96,13 +98,17 @@ export default async function ConfirmPayPage({
     );
   }
 
-  // ---- Legacy full-price flow -------------------------------------------
+  // ---- Full-price flow: legacy fixed bookings and finalized quotes ------
+  const isQuote = booking.booking_flow === "quote_v1";
   const rows = [
     { label: "Service", value: service.name },
     { label: "Provider", value: provider.display_name },
     { label: "When", value: formatDateTime(booking.scheduled_at) },
     { label: "Where", value: booking.address },
-    { label: "Price", value: formatMoney(booking.price_cents) },
+    {
+      label: isQuote ? "Final flat quote" : "Price",
+      value: formatMoney(booking.price_cents),
+    },
   ];
   const addendum = getBookingRiskSnapshot({
     serviceSlug: service.slug,
@@ -117,7 +123,11 @@ export default async function ConfirmPayPage({
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
         title="Confirm & pay"
-        description="The provider accepted your request. Confirm the details below to lock it in."
+        description={
+          isQuote
+            ? "Your provider sent a final flat quote. Review the exact price and booking details before paying."
+            : "The provider accepted your request. Confirm the details below to lock it in."
+        }
       />
 
       <Card pennant className="p-6">
@@ -133,9 +143,22 @@ export default async function ConfirmPayPage({
           ))}
         </dl>
         <p className="mt-2 text-xs text-mist">
-          You pay the price shown; College Crew&apos;s platform fee comes out of
-          the provider&apos;s earnings.
+          You pay the price shown. College Crew&apos;s platform fee comes out of
+          the provider&apos;s earnings, with no added customer platform fee.
         </p>
+
+        {isQuote ? (
+          <section className="mt-4 rounded-xl border border-gold-300 bg-gold-100 p-4 text-sm leading-6 text-gold-900">
+            <h2 className="font-display text-base font-semibold">
+              Flat quote terms
+            </h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {QUOTE_PAYMENT_TERMS.map((term) => (
+                <li key={term}>{term}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {booking.status === "accepted" ? (
           <div className="mt-6 rounded-xl border border-line bg-court p-4 text-sm leading-6 text-ink-soft">
@@ -200,6 +223,9 @@ export default async function ConfirmPayPage({
             <ConfirmPayPanel
               bookingId={booking.id}
               simulateAllowed={process.env.NODE_ENV !== "production"}
+              consentLabel={
+                isQuote ? QUOTE_PAYMENT_CONSENT_LABEL : undefined
+              }
             />
           ) : booking.status === "accepted" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
@@ -212,8 +238,9 @@ export default async function ConfirmPayPage({
             </div>
           ) : booking.status === "requested" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
-              Still waiting on the provider. You&apos;ll be able to confirm and
-              pay once they accept.
+              {isQuote
+                ? "Still waiting on the provider's final quote. They may request images or video in the private chat first."
+                : "Still waiting on the provider. You'll be able to confirm and pay once they accept."}
             </div>
           ) : (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">

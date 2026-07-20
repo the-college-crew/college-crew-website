@@ -33,6 +33,37 @@ export const HOURLY_RATE_INPUT_CONSTRAINTS = {
   step: "0.01",
 } as const;
 
+export const QUOTE_INPUT_CONSTRAINTS = {
+  min: 20,
+  max: 10_000,
+  step: "0.01",
+} as const;
+
+export type PricingMode = "hourly" | "quote";
+
+export const QUOTE_SERVICE_SLUGS = [
+  "hauling",
+  "pressure-washing",
+  "window-washing",
+] as const;
+
+/** Pilot services whose scope commonly needs visual review before pricing. */
+export function supportsQuotePricing(serviceSlug?: string | null) {
+  return QUOTE_SERVICE_SLUGS.some((slug) => slug === serviceSlug);
+}
+
+export function isOfferingPricingReady(offering: {
+  hourly_rate_cents: number | null;
+  pricing_mode?: string;
+  service_slug?: string;
+}) {
+  return offering.pricing_mode === "quote"
+    ? supportsQuotePricing(offering.service_slug) &&
+        offering.hourly_rate_cents === null
+    : offering.hourly_rate_cents !== null &&
+        isHourlyRateValid(offering.hourly_rate_cents);
+}
+
 /** One stored availability window: a single weekday's local hours. */
 export type AvailabilityWindow = {
   weekday: number;
@@ -111,6 +142,34 @@ export function parseHourlyRateInput(value: FormDataEntryValue | null):
   return { success: true, cents };
 }
 
+/** Parse an optional informational average quote without floating-point math. */
+export function parseAverageQuoteInput(value: FormDataEntryValue | null):
+  | { success: true; cents: number | null }
+  | { success: false; error: string } {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return { success: true, cents: null };
+
+  const match = RATE_PATTERN.exec(raw);
+  if (!match) {
+    return { success: false, error: "Enter a dollar amount with up to two decimals." };
+  }
+
+  const [whole] = raw.split(".");
+  const fractional = (match[1] ?? "").padEnd(2, "0");
+  const cents = Number(whole) * 100 + Number(fractional || 0);
+  if (
+    cents < QUOTE_INPUT_CONSTRAINTS.min * 100 ||
+    cents > QUOTE_INPUT_CONSTRAINTS.max * 100
+  ) {
+    return {
+      success: false,
+      error: `Average quote must be between $${QUOTE_INPUT_CONSTRAINTS.min} and $${QUOTE_INPUT_CONSTRAINTS.max.toLocaleString()}.`,
+    };
+  }
+
+  return { success: true, cents };
+}
+
 /** Expand/contract persistence without converting an existing legacy price. */
 export function buildHourlyOfferingPersistenceRow(input: {
   providerId: string;
@@ -129,6 +188,26 @@ export function buildHourlyOfferingPersistenceRow(input: {
     price_type: input.existing?.price_type ?? ("quote" as const),
     unit: input.existing?.unit ?? ("per_hour" as const),
     hourly_rate_cents: input.hourlyRateCents,
+    pricing_mode: "hourly" as const,
+    average_quote_cents: null,
+  };
+}
+
+/** Supported quote persistence. The legacy columns retain valid neutral values. */
+export function buildQuoteOfferingPersistenceRow(input: {
+  providerId: string;
+  serviceId: string;
+  averageQuoteCents: number | null;
+}) {
+  return {
+    provider_id: input.providerId,
+    service_id: input.serviceId,
+    price_cents: 0,
+    price_type: "quote" as const,
+    unit: "per_job" as const,
+    hourly_rate_cents: null,
+    pricing_mode: "quote" as const,
+    average_quote_cents: input.averageQuoteCents,
   };
 }
 
@@ -265,7 +344,7 @@ export type ProviderReadinessRequirement = {
   key:
     | "verification"
     | "payouts"
-    | "hourly_rate"
+    | "pricing"
     | "availability"
     | "service_zip"
     | "live_service";
@@ -283,7 +362,13 @@ export function getOfferingReadiness(
     | "stripe_transfers_checked_at"
     | "service_zip"
   >,
-  offering: { hourly_rate_cents: number | null; service_is_live: boolean },
+  offering: {
+    hourly_rate_cents: number | null;
+    pricing_mode?: PricingMode;
+    average_quote_cents?: number | null;
+    service_slug?: string;
+    service_is_live: boolean;
+  },
   windows: readonly AvailabilityWindow[],
 ) {
   const requirements: ProviderReadinessRequirement[] = [
@@ -304,11 +389,13 @@ export function getOfferingReadiness(
       private: true,
     },
     {
-      key: "hourly_rate",
-      label: "Valid hourly rate",
+      key: "pricing",
+      label:
+        offering.pricing_mode === "quote"
+          ? "Flat quote enabled"
+          : "Valid hourly rate",
       ready:
-        offering.hourly_rate_cents !== null &&
-        isHourlyRateValid(offering.hourly_rate_cents),
+        isOfferingPricingReady(offering),
       private: false,
     },
     {

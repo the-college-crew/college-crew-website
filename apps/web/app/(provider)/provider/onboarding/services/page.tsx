@@ -18,7 +18,7 @@ import { saveOnboardingPricing } from "../actions";
 
 export const metadata: Metadata = { title: "Provider onboarding — services" };
 
-/** Wizard step 3: pick services + explicit hourly rates. */
+/** Wizard step 3: pick services and their customer-facing pricing mode. */
 export default async function OnboardingServicesPage() {
   await requireOnboardingUser("/provider/onboarding/services");
   const profile = await getOwnProviderProfile();
@@ -29,7 +29,9 @@ export default async function OnboardingServicesPage() {
     getLiveServices(),
     supabase
       .from("provider_services")
-      .select("service_id, hourly_rate_cents")
+      .select(
+        "service_id, hourly_rate_cents, pricing_mode, average_quote_cents",
+      )
       .eq("provider_id", profile.id),
   ]);
 
@@ -42,9 +44,11 @@ export default async function OnboardingServicesPage() {
           What do you offer?
         </h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Pick from the curated service list and set a rate per hour. College
+          Pick from the curated service list and set your pricing. Hauling,
+          pressure washing, and window washing can use a flat quote; every
+          other service uses an hourly rate. College
           Crew&apos;s {PROVIDER_FEE_PERCENT}% provider fee comes out of your
-          earnings; customers never pay an added platform fee.
+          earnings, and customers never pay an added platform fee.
         </p>
 
         <div className="mt-5">

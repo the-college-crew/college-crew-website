@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth/session";
 import { pilotLocalDateTimeToUtc } from "@/lib/booking/policy";
 import {
   createHourlyRequest,
+  createQuoteRequest,
   requestOperationMessage,
 } from "@/lib/booking/requests";
 import { areBookingRequestsEnabled, isHourlyBookingEnabled } from "@/lib/env";
@@ -34,7 +35,7 @@ export async function createBookingRequest(
   _prev: BookingFormState,
   formData: FormData,
 ): Promise<BookingFormState> {
-  if (!isHourlyBookingEnabled() || !areBookingRequestsEnabled()) {
+  if (!areBookingRequestsEnabled()) {
     return {
       error:
         "New booking requests are temporarily paused while we update scheduling.",
@@ -84,7 +85,28 @@ export async function createBookingRequest(
   }
 
   const supabase = await createClient();
-  const { data: bookingId, error } = await createHourlyRequest(supabase, {
+  const { data: offering } = await supabase
+    .from("public_provider_offerings")
+    .select("pricing_mode, is_hourly_bookable, is_quote_bookable")
+    .eq("provider_service_id", parsed.data.providerServiceId)
+    .maybeSingle();
+  if (!offering) {
+    return { error: "That service is no longer available to book." };
+  }
+
+  const quoteRequest = offering.pricing_mode === "quote";
+  if (
+    (quoteRequest && offering.is_quote_bookable !== true) ||
+    (!quoteRequest && offering.is_hourly_bookable !== true)
+  ) {
+    return { error: "That service is no longer available to book." };
+  }
+  if (!quoteRequest && !isHourlyBookingEnabled()) {
+    return { error: "Hourly requests are temporarily paused." };
+  }
+
+  const createRequest = quoteRequest ? createQuoteRequest : createHourlyRequest;
+  const { data: bookingId, error } = await createRequest(supabase, {
     providerServiceId: parsed.data.providerServiceId,
     scheduledAt: scheduled.date.toISOString(),
     estimatedMinutes: parsed.data.estimatedMinutes,
@@ -124,5 +146,5 @@ export async function createBookingRequest(
     }
   }
 
-  redirect("/dashboard?requested=1");
+  redirect(`/dashboard?requested=${quoteRequest ? "quote" : "1"}`);
 }

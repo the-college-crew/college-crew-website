@@ -108,7 +108,9 @@ export default async function ProviderJobsPage() {
       .order("scheduled_at", { ascending: true }),
     supabase
       .from("provider_services")
-      .select("id, hourly_rate_cents, service:services(name, is_live)")
+      .select(
+        "id, hourly_rate_cents, pricing_mode, average_quote_cents, service:services(name, is_live)",
+      )
       .eq("provider_id", profile.id),
   ]);
 
@@ -142,6 +144,8 @@ function ProviderJobsView({
   offerings: {
     id?: string;
     hourly_rate_cents: number | null;
+    pricing_mode: string;
+    average_quote_cents: number | null;
     service: { name: string; is_live?: boolean };
   }[];
   demo?: boolean;
@@ -291,7 +295,7 @@ function ProviderJobsView({
             id="pricing"
             className="font-display text-xl font-semibold"
           >
-            Your hourly rates
+            Your pricing
           </h2>
           <Link
             href="/account"
@@ -332,9 +336,9 @@ function ProviderJobsView({
   );
 }
 
-/** Status-driven job actions: legacy completion + the hourly work milestones. */
+/** Status-driven job actions: full-price completion + hourly work milestones. */
 function JobMilestoneActions({ job }: { job: JobRow }) {
-  if (job.booking_flow === "legacy") {
+  if (job.booking_flow !== "hourly_v1") {
     if (job.status === "paid") {
       return (
         <form action={completeBooking}>

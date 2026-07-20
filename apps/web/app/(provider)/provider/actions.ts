@@ -23,6 +23,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createConnectOnboardingLink } from "@/lib/stripe/connect";
 import { syncProviderPayoutSnapshot } from "@/lib/provider/payout-readiness";
+import { parseAverageQuoteInput } from "@/lib/provider/setup";
+import { formatMoney } from "@/lib/utils";
 
 /**
  * Provider-side booking + Stripe actions. Booking updates run as the
@@ -124,6 +126,63 @@ export async function acceptBooking(
 
   revalidatePath("/provider/dashboard");
   revalidatePath("/provider/jobs");
+  redirect(`/messages/${conversationId}`);
+}
+
+/**
+ * Send the assigned request's one final flat quote. The RPC atomically
+ * snapshots the amount, reserves the slot, and moves requested to accepted.
+ * A plain-language chat message is added after commit so both parties can see
+ * the quoted amount in the same thread used for photos and video.
+ */
+export async function sendQuote(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  const session = await requireProviderAccess();
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const parsedQuote = parseAverageQuoteInput(formData.get("quoteAmount"));
+  if (!parsedQuote.success || parsedQuote.cents === null) {
+    return {
+      error: parsedQuote.success
+        ? "Enter the final flat quote."
+        : "Enter a final quote between $20 and $10,000.",
+    };
+  }
+
+  const supabase = await createClient();
+  for (const kind of ["platform_terms", "provider_terms"] as const) {
+    if (
+      !(await hasAcceptedCurrentLegalDocument(supabase, {
+        userId: session.user.id,
+        kind,
+      }))
+    ) {
+      redirect(legalDocumentPath(kind, "/provider/dashboard"));
+    }
+  }
+
+  const booking = await loadBookingParties(supabase, bookingId);
+  const { error } = await supabase.rpc("send_booking_quote", {
+    p_booking_id: bookingId,
+    p_quote_cents: parsedQuote.cents,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not send the quote."),
+    };
+  }
+
+  const conversationId = await conversationIdFor(supabase, booking);
+  await sendModeratedMessage(
+    supabase,
+    conversationId,
+    `Final flat quote: ${formatMoney(parsedQuote.cents)}. Review the full booking details and confirm payment when you are ready.`,
+  );
+
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  revalidatePath("/dashboard");
   redirect(`/messages/${conversationId}`);
 }
 

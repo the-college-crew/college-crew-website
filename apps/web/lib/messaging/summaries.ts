@@ -1,4 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
+import { attachmentPreviewText } from "@/lib/messaging/attachments";
 
 /**
  * Dashboard conversation lookups. There's one thread per booking (schema: unique
@@ -36,13 +37,15 @@ export async function getCustomerConversationIndex(
   >();
   const { data: messages } = await supabase
     .from("messages")
-    .select("conversation_id, sender_id, body, image_path, created_at")
+    .select(
+      "conversation_id, sender_id, body, image_path, attachments, created_at",
+    )
     .in("conversation_id", ids)
     .order("created_at", { ascending: false });
   for (const m of messages ?? []) {
     if (latest.has(m.conversation_id)) continue; // desc order → first is newest
     latest.set(m.conversation_id, {
-      body: m.body || (m.image_path ? "📷 Photo" : ""),
+      body: m.body || attachmentPreviewText(m),
       created_at: m.created_at,
       fromOther: m.sender_id !== customerId,
     });

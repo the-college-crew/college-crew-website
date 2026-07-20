@@ -154,7 +154,7 @@
     <button data-s="landing"><span class="n">01</span>Landing</button>
     <button data-s="browse"><span class="n">02</span>Browse providers</button>
     <button data-s="profile"><span class="n">03</span>Provider profile</button>
-    <button data-s="booking"><span class="n">04</span>Hourly request</button>
+    <button data-s="booking"><span class="n">04</span>Request or quote</button>
     <button data-s="pay"><span class="n">04B</span>First-hour payment</button>
     <button data-s="invoice"><span class="n">04C</span>Invoice &amp; dispute</button>
     <button data-s="cust"><span class="n">05</span>Customer dashboard</button>
@@ -186,7 +186,7 @@
             <div class="node start">Landing</div><span class="arrow">&rarr;</span>
             <div class="node">Browse</div><span class="arrow">&rarr;</span>
             <div class="node">Provider profile</div><span class="arrow">&rarr;</span>
-            <div class="node">Hourly request</div><span class="arrow">&rarr;</span>
+            <div class="node">Hourly or quote request</div><span class="arrow">&rarr;</span>
             <div class="node">Provider accepts</div><span class="arrow">&rarr;</span>
             <div class="node">Pay first hour</div><span class="arrow">&rarr;</span>
             <div class="node">Work + invoice</div><span class="arrow">&rarr;</span>
@@ -198,7 +198,7 @@
           <div class="flow">
             <div class="node start">Sign up (.edu)</div><span class="arrow">&rarr;</span>
             <div class="node">Verify (ID upload)</div><span class="arrow">&rarr;</span>
-            <div class="node">Set hourly rates + availability</div><span class="arrow">&rarr;</span>
+            <div class="node">Set pricing + availability</div><span class="arrow">&rarr;</span>
             <div class="node">Submit</div><span class="arrow">&rarr;</span>
             <div class="node gate">&check; Approved</div><span class="arrow">&rarr;</span>
             <div class="node">Connect Stripe</div><span class="arrow">&rarr;</span>
@@ -218,7 +218,7 @@
       </div>
       <div class="note">
         <h4>What changed in v1</h4>
-        <p>The pilot now uses one locked hourly journey: request, provider acceptance, first-hour payment, arrival, actual-time invoice, final payment, and completion.</p>
+        <p>The pilot keeps the locked hourly journey and adds a flat-quote branch for hauling, pressure washing, and window washing: request, private media if needed, final quote, customer confirmation, full payment, and completion.</p>
         <p>Response alerts offer optional replacements without silently expiring or rebooking the original request. Founders handle disputes and failed automation.</p>
         <span class="q">Pilot economics: 5% comes from the provider payout; customers pay no added platform fee. Stripe stays in test mode until a separate live-mode decision.</span>
       </div>
@@ -289,8 +289,8 @@
       </div></div>
       <div class="note">
         <h4>Browse · the demand side</h4>
-        <p>Only approved providers appear. Cards use hourly rates and can sort by suggested, location, rating, or rate without exposing private service ZIPs.</p>
-        <span class="q">An offering without an explicit hourly rate, complete availability, service ZIP, current agreement, and active Stripe transfers stays visibly unavailable.</span>
+        <p>Only approved providers appear. Cards show hourly rates or an optional average flat quote and can sort without exposing private service ZIPs.</p>
+        <span class="q">An offering without valid pricing, complete availability, service ZIP, current agreement, and active Stripe transfers stays visibly unavailable.</span>
       </div>
     </section>
 
@@ -319,7 +319,7 @@
       <div class="note">
         <h4>Provider profile · public view</h4>
         <p>What customers see. This page is <b>generated from the provider's own Profile &amp; settings</b> (screen 11) — bio, services, availability all flow from there.</p>
-        <span class="q">Rates are hourly only. The public schedule shows selected weekdays, one shared time window, a note, and minimum notice without revealing the private service ZIP.</span>
+        <span class="q">Hauling, pressure washing, and window washing may use a flat quote with an optional nonbinding average. Other services remain hourly. The private service ZIP remains hidden.</span>
       </div>
     </section>
 
@@ -342,9 +342,9 @@
         </div>
       </div></div>
       <div class="note">
-        <h4>Hourly request · no charge yet</h4>
-        <p>The slot must fit the provider's Central-time availability and minimum notice. The response alert does not expire the request; a replacement request atomically withdraws it.</p>
-        <span class="q">The estimate is 60–720 minutes. Customers pay no added platform fee; the provider's 5% fee is snapshotted on the booking.</span>
+        <h4>Hourly or flat quote request · no charge yet</h4>
+        <p>The slot must fit the provider's Central-time availability and minimum notice. Quote checkout says images or a video may be required and sends customers to the private booking chat after the request.</p>
+        <span class="q">The provider sends one final flat quote for customer review and full payment. Customers pay no added platform fee; the provider's 5% fee is snapshotted on the booking.</span>
       </div>
     </section>
 
@@ -581,7 +581,7 @@
                 <div class="muted" style="font-size:12px">Tue Apr 22 · 2pm · Elm St · $90</div></div>
             </div>
             <div class="tabpanel hide" id="job-price">
-              <div class="muted" style="font-size:12px">Read-only here. Edit hourly rates in Profile &amp; settings.</div>
+              <div class="muted" style="font-size:12px">Read-only here. Edit pricing in Profile &amp; settings.</div>
               <div class="card"><div class="sum"><span>Window washing</span><span><b>$40/hr</b></span></div>
                 <div class="sum" style="border-top:1px solid var(--fill)"><span>Power washing</span><span><b>$55/hr</b></span></div></div>
             </div>
@@ -590,7 +590,7 @@
       </div></div>
       <div class="note">
         <h4>Jobs &amp; pricing (new)</h4>
-        <p>Upcoming jobs carry lifecycle actions and hourly snapshots. Pricing is deliberately read-only here; Profile &amp; settings is the single editing source.</p>
+        <p>Upcoming jobs carry hourly lifecycle actions or immutable final quote snapshots. Pricing is deliberately read-only here; Profile &amp; settings is the single editing source.</p>
         <span class="q">After Arrived, Job Complete opens the invoice flow with rounded elapsed-time prefill and an explanation for time above estimate.</span>
       </div>
     </section>
@@ -607,7 +607,7 @@
           <div class="chips"><span class="chip on">Mon</span><span class="chip on">Tue</span><span class="chip">Wed</span><span class="chip on">Thu</span><span class="chip on">Fri</span><span class="chip on">Sat</span><span class="chip">Sun</span></div>
           <div class="row"><div class="field">From 9am</div><div class="field">To 6pm</div></div>
           <div class="field">Service ZIP · private</div><div class="field">Minimum notice · 24 hours</div>
-          <div class="lbl">Services &amp; hourly rates</div>
+          <div class="lbl">Services &amp; pricing</div>
           <div class="card"><div class="sum"><span>Window washing</span><b>$40/hr · edit</b></div></div>
           <div class="lbl">Account</div>
           <div class="field">Username · jordanwindow</div>
@@ -652,8 +652,8 @@
       </div></div>
       <div class="note">
         <h4>Admin · your control panel</h4>
-        <p>Founder readiness adds exact checks for approval, live service, hourly rate, availability, private ZIP, notice, current agreement, and active Stripe transfers.</p>
-        <span class="q">Incomplete providers remain approved for profile review but their incomplete offerings cannot receive hourly requests.</span>
+        <p>Founder readiness adds exact checks for approval, live service, valid hourly or supported flat-quote pricing, availability, private ZIP, notice, current agreement, and active Stripe transfers.</p>
+        <span class="q">Incomplete providers remain approved for profile review but their incomplete offerings cannot receive booking requests.</span>
       </div>
     </section>
 

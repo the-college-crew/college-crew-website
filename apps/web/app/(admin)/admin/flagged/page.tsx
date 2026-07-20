@@ -8,7 +8,8 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
-import type { ProfileTextField } from "@/lib/db/types";
+import type { Json, ProfileTextField } from "@/lib/db/types";
+import { attachmentPreviewText } from "@/lib/messaging/attachments";
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDate, formatTime } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ type ThreadMessage = {
   sender_id: string;
   body: string;
   image_path: string | null;
+  attachments: Json;
   created_at: string;
   sender: { full_name: string } | null;
 };
@@ -128,7 +130,7 @@ export default async function AdminFlaggedPage() {
           supabase
             .from("messages")
             .select(
-              "id, conversation_id, sender_id, body, image_path, created_at, sender:profiles(full_name)",
+              "id, conversation_id, sender_id, body, image_path, attachments, created_at, sender:profiles(full_name)",
             )
             .in("conversation_id", conversationIds)
             .order("created_at", { ascending: true }),
@@ -266,9 +268,9 @@ export default async function AdminFlaggedPage() {
                               </span>{" "}
                               · {formatTime(message.created_at)}
                             </p>
-                            {message.image_path ? (
+                            {attachmentPreviewText(message) ? (
                               <p className="mt-0.5 text-ink-soft">
-                                📷 Photo attachment
+                                {attachmentPreviewText(message)} attachment
                               </p>
                             ) : null}
                             {message.body ? (

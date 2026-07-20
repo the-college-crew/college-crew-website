@@ -1,10 +1,21 @@
 "use client";
 
-import { Paperclip, SendHorizontal, ShieldCheck, X } from "lucide-react";
+import { Paperclip, SendHorizontal, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import * as tus from "tus-js-client";
 
 import { Button } from "@/components/ui/button";
 import type { Message } from "@/lib/db/types";
+import {
+  CHAT_IMAGE_MIME_TYPES,
+  CHAT_MEDIA_BUCKET,
+  CHAT_VIDEO_MIME_TYPES,
+  RESUMABLE_UPLOAD_THRESHOLD_BYTES,
+  messageAttachments,
+  toAttachmentJson,
+  type ChatAttachment,
+  validateChatFiles,
+} from "@/lib/messaging/attachments";
 import {
   announceUnreadChanged,
   markConversationReadClient,
@@ -34,8 +45,9 @@ export function ChatThread({
 }) {
   const [messages, setMessages] = useState<DisplayMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
@@ -121,9 +133,9 @@ export function ChatThread({
 
   async function send() {
     const body = draft.trim();
-    if ((!body && !imageFile) || sending) return;
+    if ((!body && mediaFiles.length === 0) || sending) return;
 
-    const file = imageFile;
+    const files = [...mediaFiles];
     const localId = `local-${crypto.randomUUID()}`;
     const localMessage: DisplayMessage = {
       id: localId,
@@ -131,6 +143,7 @@ export function ChatThread({
       sender_id: currentUserId,
       body,
       image_path: null,
+      attachments: [],
       moderation_status: "clean",
       created_at: new Date().toISOString(),
       optimistic: true,
@@ -140,26 +153,41 @@ export function ChatThread({
     // to the provider until the existing Edge Function finishes moderation.
     setMessages((current) => [...current, localMessage]);
     setDraft("");
-    setImageFile(null);
+    setMediaFiles([]);
     setSending(true);
     setError(null);
     try {
-      let imagePath: string | null = null;
-
-      if (file) {
-        const extension = file.name.split(".").pop() ?? "jpg";
-        imagePath = `${conversationId}/${crypto.randomUUID()}.${extension}`;
-        const { error: uploadError } = await supabase()
-          .storage.from("chat-images")
-          .upload(imagePath, file);
-        if (uploadError) throw new Error(uploadError.message);
-
+      const attachments: ChatAttachment[] = [];
+      for (let index = 0; index < files.length; index += 1) {
+        const attachment = await uploadChatFile(
+          supabase(),
+          conversationId,
+          files[index],
+          (fileProgress) => {
+            setUploadProgress(
+              Math.round(((index + fileProgress) / files.length) * 100),
+            );
+          },
+        );
+        attachments.push(attachment);
         setMessages((current) =>
           current.map((message) =>
-            message.id === localId ? { ...message, image_path: imagePath } : message,
+            message.id === localId
+              ? {
+                  ...message,
+                  image_path:
+                    attachments.find((item) => item.kind === "image")?.path ??
+                    null,
+                  attachments: toAttachmentJson(attachments),
+                }
+              : message,
           ),
         );
       }
+
+      const imagePath =
+        attachments.find((attachment) => attachment.kind === "image")?.path ??
+        null;
 
       const { data, error: invokeError } = await supabase().functions.invoke(
         "moderate-message",
@@ -168,6 +196,7 @@ export function ChatThread({
             conversation_id: conversationId,
             body,
             image_path: imagePath,
+            attachments,
           },
         },
       );
@@ -191,7 +220,7 @@ export function ChatThread({
         ),
       );
       setDraft((current) => current || body);
-      setImageFile(file);
+      setMediaFiles(files);
       setError(
         cause instanceof Error
           ? `Message not sent: ${cause.message}`
@@ -199,6 +228,7 @@ export function ChatThread({
       );
     } finally {
       setSending(false);
+      setUploadProgress(null);
     }
   }
 
@@ -223,8 +253,8 @@ export function ChatThread({
 
         {messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-mist">
-            No messages yet. Say hello: job details, photos, and scheduling
-            all belong here.
+            No messages yet. Job details, images, video, and scheduling all
+            belong here.
           </p>
         ) : (
           messages.map((message) => {
@@ -245,9 +275,7 @@ export function ChatThread({
                       message.failed && "bg-red-700 text-white",
                     )}
                   >
-                    {message.image_path ? (
-                      <ChatImage path={message.image_path} />
-                    ) : null}
+                    <ChatMediaGrid attachments={messageAttachments(message)} />
                     {message.body ? (
                       <p className="whitespace-pre-wrap">{message.body}</p>
                     ) : null}
@@ -276,20 +304,34 @@ export function ChatThread({
 
       <div className="shrink-0 border-t border-line bg-paper p-3">
         {error ? (
-          <p className="mb-2 text-xs font-medium text-red-700">{error}</p>
-        ) : null}
-        {imageFile ? (
-          <p className="mb-2 flex items-center gap-1 text-xs text-ink-soft">
-            Attached: {imageFile.name}
-            <button
-              type="button"
-              className="inline-flex items-center gap-0.5 font-semibold text-viridian"
-              onClick={() => setImageFile(null)}
-            >
-              <X className="size-3.5" strokeWidth={2} />
-              Remove
-            </button>
+          <p role="alert" className="mb-2 text-xs font-medium text-red-700">
+            {error}
           </p>
+        ) : null}
+        {mediaFiles.length > 0 ? (
+          <SelectedMedia
+            files={mediaFiles}
+            disabled={sending}
+            onRemove={(index) =>
+              setMediaFiles((current) =>
+                current.filter((_, fileIndex) => fileIndex !== index),
+              )
+            }
+          />
+        ) : null}
+        {uploadProgress !== null ? (
+          <div className="mb-2" aria-live="polite">
+            <div className="flex justify-between text-[11px] text-mist">
+              <span>Uploading private media</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-court">
+              <div
+                className="h-full rounded-full bg-viridian transition-[width]"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          </div>
         ) : null}
         <form
           className="flex items-end gap-2"
@@ -298,16 +340,27 @@ export function ChatThread({
             void send();
           }}
         >
-          <label className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-line bg-paper text-ink-soft transition-colors hover:bg-honeydew/40 hover:text-viridian">
+          <label className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-line bg-paper text-ink-soft transition-colors hover:bg-honeydew/40 hover:text-viridian focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-viridian">
             <Paperclip className="size-[18px]" strokeWidth={1.75} />
-            <span className="sr-only">Attach a photo (for quotes)</span>
+            <span className="sr-only">Attach images or a video</span>
             <input
               type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(event) =>
-                setImageFile(event.target.files?.[0] ?? null)
-              }
+              accept={[...CHAT_IMAGE_MIME_TYPES, ...CHAT_VIDEO_MIME_TYPES].join(",")}
+              multiple
+              disabled={sending}
+              className="sr-only"
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                const next = [...mediaFiles, ...files];
+                const validationError = validateChatFiles(next);
+                if (validationError) {
+                  setError(validationError);
+                } else {
+                  setMediaFiles(next);
+                  setError(null);
+                }
+                event.target.value = "";
+              }}
             />
           </label>
           <textarea
@@ -327,7 +380,7 @@ export function ChatThread({
           <Button
             type="submit"
             size="sm"
-            disabled={sending}
+            disabled={sending || (!draft.trim() && mediaFiles.length === 0)}
             aria-label={sending ? "Sending…" : "Send message"}
           >
             {sending ? (
@@ -342,34 +395,193 @@ export function ChatThread({
   );
 }
 
-/** Private-bucket image: resolve a short-lived signed URL, then render. */
-function ChatImage({ path }: { path: string }) {
+type BrowserSupabaseClient = ReturnType<typeof createClient>;
+
+const EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+};
+
+async function uploadChatFile(
+  client: BrowserSupabaseClient,
+  conversationId: string,
+  file: File,
+  onProgress: (progress: number) => void,
+): Promise<ChatAttachment> {
+  const kind = file.type.startsWith("video/") ? "video" : "image";
+  const extension = EXTENSION_BY_MIME[file.type];
+  if (!extension) throw new Error("Unsupported media type.");
+
+  const path = `${conversationId}/${crypto.randomUUID()}.${extension}`;
+  const resumable = kind === "video" || file.size > RESUMABLE_UPLOAD_THRESHOLD_BYTES;
+
+  if (resumable) {
+    const {
+      data: { session },
+    } = await client.auth.getSession();
+    if (!session) throw new Error("Your session expired. Log in and try again.");
+
+    const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!projectUrl) throw new Error("Media storage is not configured.");
+    const parsedUrl = new URL(projectUrl);
+    const uploadOrigin = parsedUrl.hostname.endsWith(".supabase.co")
+      ? `${parsedUrl.protocol}//${parsedUrl.hostname.replace(
+          ".supabase.co",
+          ".storage.supabase.co",
+        )}`
+      : parsedUrl.origin;
+    const endpoint = `${uploadOrigin}/storage/v1/upload/resumable`;
+
+    await new Promise<void>((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint,
+        retryDelays: [0, 1_000, 3_000, 5_000],
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+        },
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        chunkSize: 6 * 1024 * 1024,
+        metadata: {
+          bucketName: CHAT_MEDIA_BUCKET,
+          objectName: path,
+          contentType: file.type,
+          cacheControl: "3600",
+        },
+        onError: (uploadError) => reject(uploadError),
+        onProgress: (uploaded, total) =>
+          onProgress(total === 0 ? 0 : uploaded / total),
+        onSuccess: () => resolve(),
+      });
+      upload.start();
+    });
+  } else {
+    const { error: uploadError } = await client.storage
+      .from(CHAT_MEDIA_BUCKET)
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (uploadError) throw new Error(uploadError.message);
+    onProgress(1);
+  }
+
+  return {
+    path,
+    kind,
+    mimeType: file.type,
+    sizeBytes: file.size,
+    name: file.name.slice(0, 160),
+  };
+}
+
+function SelectedMedia({
+  files,
+  disabled,
+  onRemove,
+}: {
+  files: File[];
+  disabled: boolean;
+  onRemove: (index: number) => void;
+}) {
+  return (
+    <ul className="mb-2 flex gap-2 overflow-x-auto pb-1">
+      {files.map((file, index) => (
+        <li
+          key={`${file.name}-${file.lastModified}-${index}`}
+          className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg border border-line bg-court"
+        >
+          <SelectedMediaPreview file={file} />
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onRemove(index)}
+            aria-label={`Remove ${file.name}`}
+            className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-ink/80 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            ×
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SelectedMediaPreview({ file }: { file: File }) {
+  const [url] = useState(() => URL.createObjectURL(file));
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+
+  return file.type.startsWith("video/") ? (
+    <video src={url} muted className="h-full w-full object-cover" />
+  ) : (
+    // Local object URLs do not benefit from Next image optimization.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt="Selected attachment preview"
+      className="h-full w-full object-cover"
+    />
+  );
+}
+
+function ChatMediaGrid({ attachments }: { attachments: ChatAttachment[] }) {
+  if (attachments.length === 0) return null;
+  return (
+    <div
+      className={cn(
+        "mb-2 grid gap-1 overflow-hidden rounded-lg",
+        attachments.length > 1 && "grid-cols-2",
+      )}
+    >
+      {attachments.map((attachment) => (
+        <ChatMedia key={attachment.path} attachment={attachment} />
+      ))}
+    </div>
+  );
+}
+
+/** Private-bucket media: resolve a short-lived signed URL, then render. */
+function ChatMedia({ attachment }: { attachment: ChatAttachment }) {
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     createClient()
-      .storage.from("chat-images")
-      .createSignedUrl(path, 3600)
+      .storage.from(CHAT_MEDIA_BUCKET)
+      .createSignedUrl(attachment.path, 3600)
       .then(({ data }) => {
         if (!cancelled && data?.signedUrl) setUrl(data.signedUrl);
       });
     return () => {
       cancelled = true;
     };
-  }, [path]);
+  }, [attachment.path]);
 
   if (!url) {
+    return <div className="h-32 min-w-40 animate-pulse bg-court" />;
+  }
+  if (attachment.kind === "video") {
     return (
-      <div className="mb-1 h-32 w-48 animate-pulse rounded-xl bg-court/80" />
+      <video
+        src={url}
+        controls
+        preload="metadata"
+        className="max-h-72 w-full bg-black object-contain"
+      >
+        Your browser does not support this video.
+      </video>
     );
   }
   return (
-    <div className="mb-1 overflow-hidden rounded-xl border border-line/50">
-      {/* Signed URLs are short-lived and per-user; next/image optimization
-          would cache/proxy them and break access control. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="Attached photo" className="block max-h-64" />
-    </div>
+    // Signed URLs are short-lived and per-user; next/image optimization
+    // would cache/proxy them and break access control.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={attachment.name || "Attached image"}
+      className="max-h-72 w-full object-cover"
+    />
   );
 }

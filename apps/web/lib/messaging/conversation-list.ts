@@ -1,4 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
+import { attachmentPreviewText } from "@/lib/messaging/attachments";
 import { getUnreadSummary } from "@/lib/messaging/unread";
 import { formatDate } from "@/lib/utils";
 
@@ -59,13 +60,13 @@ export async function getConversationGroups(
   if (ids.length > 0) {
     const { data: messages } = await supabase
       .from("messages")
-      .select("conversation_id, body, image_path, created_at")
+      .select("conversation_id, body, image_path, attachments, created_at")
       .in("conversation_id", ids)
       .order("created_at", { ascending: false });
     for (const m of messages ?? []) {
       if (latest.has(m.conversation_id)) continue; // desc order → first is newest
       latest.set(m.conversation_id, {
-        body: m.body || (m.image_path ? "📷 Photo" : ""),
+        body: m.body || attachmentPreviewText(m),
         created_at: m.created_at,
       });
     }

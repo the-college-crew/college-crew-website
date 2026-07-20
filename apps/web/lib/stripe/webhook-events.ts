@@ -44,7 +44,7 @@ export async function processStripeWebhookEvent(
             .from("bookings")
             .update({ status: "paid", stripe_payment_intent_id: intent.id })
             .eq("id", intent.metadata.booking_id)
-            .eq("booking_flow", "legacy")
+            .in("booking_flow", ["legacy", "quote_v1"])
             .eq("status", "accepted"),
           "settle_legacy_payment",
         );

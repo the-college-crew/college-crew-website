@@ -1,8 +1,12 @@
 import { PROVIDER_SERVICE_IMAGES_BUCKET } from "@/lib/media/provider-service-images";
 import {
   buildHourlyOfferingPersistenceRow,
+  buildQuoteOfferingPersistenceRow,
+  parseAverageQuoteInput,
   parseHourlyRateInput,
+  supportsQuotePricing,
 } from "@/lib/provider/setup";
+import type { TablesInsert } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -10,9 +14,9 @@ import { createClient } from "@/lib/supabase/server";
  * the provider's offerings. Shared by the onboarding wizard and Profile &
  * settings — settings is the pricing source of truth after onboarding.
  *
- * Field convention per service id: offer_<id> (checkbox) and rate_<id>
- * (dollars per hour). Legacy price/type/unit columns are retained only for
- * expand/contract compatibility and are never populated from the hourly UI.
+ * Field convention per service id: offer_<id>, mode_<id>, rate_<id>, and
+ * average_<id>. Quote mode is accepted only for the three approved visual-scope
+ * services; the database repeats that rule so a crafted form cannot broaden it.
  */
 export async function savePricingRows(
   providerId: string,
@@ -22,15 +26,13 @@ export async function savePricingRows(
 
   const { data: services } = await supabase
     .from("services")
-    .select("id")
+    .select("id, slug")
     .eq("is_live", true);
   if (!services || services.length === 0) {
     return { error: "No live services to offer right now." };
   }
 
-  const selected: Array<
-    ReturnType<typeof buildHourlyOfferingPersistenceRow>
-  > = [];
+  const selected: TablesInsert<"provider_services">[] = [];
   // Collect EVERY offending row so the provider fixes them in one pass,
   // rather than resubmitting once per bad service. Keyed by service id so
   // the form can flag the exact row.
@@ -39,7 +41,9 @@ export async function savePricingRows(
   const serviceIds = services.map((service) => service.id);
   const { data: existingRows } = await supabase
     .from("provider_services")
-    .select("service_id, price_cents, price_type, unit")
+    .select(
+      "service_id, price_cents, price_type, unit, pricing_mode, average_quote_cents",
+    )
     .eq("provider_id", providerId)
     .in("service_id", serviceIds);
   const existingByServiceId = new Map(
@@ -48,6 +52,28 @@ export async function savePricingRows(
 
   for (const service of services) {
     if (formData.get(`offer_${service.id}`) !== "on") continue;
+
+    const requestedMode = String(formData.get(`mode_${service.id}`) ?? "hourly");
+    const quoteMode =
+      supportsQuotePricing(service.slug) && requestedMode === "quote";
+
+    if (quoteMode) {
+      const parsedAverage = parseAverageQuoteInput(
+        formData.get(`average_${service.id}`),
+      );
+      if (!parsedAverage.success) {
+        fieldErrors[service.id] = parsedAverage.error;
+        continue;
+      }
+      selected.push(
+        buildQuoteOfferingPersistenceRow({
+          providerId,
+          serviceId: service.id,
+          averageQuoteCents: parsedAverage.cents,
+        }),
+      );
+      continue;
+    }
 
     const parsedRate = parseHourlyRateInput(formData.get(`rate_${service.id}`));
     if (!parsedRate.success) {

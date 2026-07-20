@@ -34,13 +34,16 @@ export async function ProviderProfile({
   const availabilityGroups = groupAvailabilityWindows(
     provider.availability_windows,
   );
-  const hasBookableOffering = provider.services.some(
+  const hasHourlyOffering = provider.services.some(
     (offering) => offering.is_hourly_bookable,
   );
+  const hasQuoteOffering = provider.services.some(
+    (offering) => offering.is_quote_bookable,
+  );
+  const hasBookableOffering = hasHourlyOffering || hasQuoteOffering;
   const canRequest =
-    hasBookableOffering &&
-    isHourlyBookingEnabled() &&
-    areBookingRequestsEnabled();
+    areBookingRequestsEnabled() &&
+    (hasQuoteOffering || (hasHourlyOffering && isHourlyBookingEnabled()));
 
   // Pre-booking chat entry point. Any regular account can message a provider
   // (providers included — providing is a capability, not a wall); admins only
@@ -128,7 +131,7 @@ export async function ProviderProfile({
                   })}
                 >
                   {hasBookableOffering
-                    ? "Hourly booking opens soon"
+                    ? "Booking requests open soon"
                     : "Booking setup in progress"}
                 </span>
               )}
@@ -163,10 +166,12 @@ export async function ProviderProfile({
             </div>
             <p className="mt-2 text-xs text-mist">
               {canRequest
-                ? "One-hour minimum, then billed in 15-minute increments."
+                ? hasQuoteOffering
+                  ? "Flat quotes are finalized after the provider reviews your request."
+                  : "One-hour minimum, then billed in 15-minute increments."
                 : hasBookableOffering
-                  ? "Customer hourly requests remain disabled during setup."
-                  : "This provider is still finishing hourly booking setup."}
+                  ? "Customer requests remain disabled during setup."
+                  : "This provider is still finishing booking setup."}
             </p>
           </div>
         </section>
@@ -186,7 +191,7 @@ export async function ProviderProfile({
               <span className="shrink-0 font-semibold text-quad-700">
                 {formatOfferedPrice(offered)}
               </span>
-              {!offered.is_hourly_bookable ? (
+              {!offered.is_bookable ? (
                 <span className="text-xs text-mist">Not yet bookable</span>
               ) : null}
             </li>
