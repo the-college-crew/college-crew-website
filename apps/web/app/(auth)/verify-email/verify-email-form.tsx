@@ -34,7 +34,7 @@ export function VerifyEmailForm({
       </div>
 
       {state.success ? (
-        <p className="text-sm font-medium text-green-700">{state.success}</p>
+        <p className="text-sm font-medium text-quad-700">{state.success}</p>
       ) : null}
       <FieldError>{state.error}</FieldError>
 

@@ -332,7 +332,7 @@ export default async function AdminFlaggedPage() {
                   >
                     <input type="hidden" name="eventId" value={event.id} />
                     <Button type="submit" variant="success" size="sm">
-                      Resolve
+                      Resolve profile flag
                     </Button>
                   </form>
 
