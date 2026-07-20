@@ -202,14 +202,29 @@ export type UpdateProfileTextResponse = z.infer<
 >;
 
 // ---------------------------------------------------------------------------
-// DRAFT contracts — functions not yet built (subject to change when each is
-// implemented; keep this file updated in the same PR that builds them).
+// send-push — internal push fan-out. NOT client-callable: a trusted caller (a
+// Supabase DB webhook or another function) invokes it with a shared secret in
+// the `x-send-push-secret` header, so it deploys with verify_jwt=false. It loads
+// the user's registered Expo push tokens, delivers one notification, and prunes
+// any token Expo reports as DeviceNotRegistered. `kind` is the notification
+// category the app routes on (delivered inside `data`); `payload` carries the
+// display content (`title`/`body` are lifted when present, and the whole payload
+// plus `kind` is delivered as `data`). Codes: bad_request (400), forbidden (401,
+// bad/absent secret), unconfigured (503, secret unset).
 // ---------------------------------------------------------------------------
 
-/** send-push — internal fan-out (DB webhook w/ shared secret; never client-called). */
 export const sendPushRequestSchema = z.object({
   userId: z.uuid(),
   kind: z.string().min(1).max(60),
   payload: z.record(z.string(), z.unknown()),
 });
+export type SendPushRequest = z.infer<typeof sendPushRequestSchema>;
+
 export const sendPushResponseSchema = z.object({ ok: z.literal(true) });
+export type SendPushResponse = z.infer<typeof sendPushResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// DRAFT contracts — functions not yet built (subject to change when each is
+// implemented; keep this file updated in the same PR that builds them).
+// ---------------------------------------------------------------------------
+// (none — all specced functions now implemented)
