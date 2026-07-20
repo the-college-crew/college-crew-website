@@ -158,6 +158,14 @@ export default async function AdminBookingPage({
               <dd>{formatMoney(invoice.subtotal_cents)}</dd>
             </div>
             <div className="flex justify-between">
+              <dt className="text-mist">Platform fee</dt>
+              <dd>{formatMoney(invoice.total_platform_fee_cents)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-mist">First-hour credit</dt>
+              <dd>{formatMoney(invoice.first_hour_credit_cents)}</dd>
+            </div>
+            <div className="flex justify-between">
               <dt className="text-mist">Remaining balance</dt>
               <dd>{formatMoney(invoice.remaining_balance_cents)}</dd>
             </div>
