@@ -1,0 +1,17 @@
+{
+  "name": "@college-crew/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Platform-neutral domain code shared by web, mobile, and Edge Functions: zod contracts now; booking policy, legal waiver logic, and helpers move here as mobile needs them (arch A-1).",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contracts": "./src/contracts/edge.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}
