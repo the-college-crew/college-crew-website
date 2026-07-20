@@ -82,10 +82,20 @@ export default async function SignupPage({
                 Start provider onboarding
               </Link>
             ) : (
-              <p className="rounded-xl border border-line bg-court p-3 text-sm text-ink-soft">
-                You&apos;re already signed in. Provider accounts are separate,
-                so provider onboarding is hidden for this session.
-              </p>
+              <div className="rounded-xl border border-line bg-court p-3">
+                <p className="text-sm text-ink-soft">
+                  Your current account can also become a provider account.
+                </p>
+                <Link
+                  href="/provider/onboarding/account"
+                  className={buttonClasses({
+                    size: "sm",
+                    className: "mt-3 w-full",
+                  })}
+                >
+                  Become a provider
+                </Link>
+              </div>
             )}
           </div>
         ) : (
