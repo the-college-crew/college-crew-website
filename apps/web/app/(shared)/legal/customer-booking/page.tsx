@@ -46,7 +46,7 @@ export default async function CustomerBookingTermsPage({
 
   const snapshot = getCustomerBookingTermsSnapshot();
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <PageHeader
         title="Customer Booking Terms"
         description={`Review these terms before sending your first request. Version ${CUSTOMER_BOOKING_TERMS_VERSION}.`}
@@ -61,6 +61,6 @@ export default async function CustomerBookingTermsPage({
           />
         </div>
       </Card>
-    </main>
+    </div>
   );
 }
