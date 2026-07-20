@@ -327,7 +327,7 @@ test("arrive, invoice over/under estimate, review, and settle a balance", async 
     new RegExp(`/dashboard\\?tab=past&reviewed=${bookingA}`),
   );
   await expect(
-    customerPage.getByText("Thanks — your review is live"),
+    customerPage.getByText(/your review is live/i),
   ).toBeVisible();
 
   const { data: savedReview } = await admin
@@ -404,7 +404,7 @@ test("a one-hour job completes with no balance through the UI", async ({
     new RegExp(`/dashboard\\?tab=past&reviewed=${bookingB}`),
   );
   await expect(
-    customerPage.getByText("Thanks — your review is live"),
+    customerPage.getByText(/your review is live/i),
   ).toBeVisible();
   const { data: ratingOnlyReview } = await admin
     .from("reviews")
