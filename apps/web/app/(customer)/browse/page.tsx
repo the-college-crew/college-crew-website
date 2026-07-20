@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BrowseControls } from "@/components/browse-controls";
 import { Editable } from "@/components/content/editable";
 import { ProviderCard } from "@/components/provider-card";
-import { ServiceChips } from "@/components/service-chips";
+import { ServiceFilter } from "@/components/service-filter";
 import { buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -36,9 +36,7 @@ export default async function BrowsePage({
     getBookingFrom(),
     getServiceProviderCounts(),
   ]);
-  const sort: ProviderSort = ["location", "rating", "rate"].includes(
-    sortParam ?? "",
-  )
+  const sort: ProviderSort = ["location", "rating"].includes(sortParam ?? "")
     ? (sortParam as ProviderSort)
     : "suggested";
   const origin = resolveBookingOrigin(bookingFrom, session?.profile ?? null);
@@ -53,56 +51,75 @@ export default async function BrowsePage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={<Editable k="browse.header.title">Browse the crew</Editable>}
-        description={
-          <Editable k="browse.header.description">
-            Verified student providers in your neighborhood: businesses and
-            individuals. Only ID-approved students are listed.
-          </Editable>
-        }
-      />
+      <div className="space-y-3">
+        <span className="brand-eyebrow">
+          {counts.total} verified provider{counts.total === 1 ? "" : "s"}{" "}
+          nearby
+        </span>
+        <PageHeader
+          title={<Editable k="browse.header.title">Browse the crew</Editable>}
+          description={
+            <Editable k="browse.header.description">
+              Verified student providers in your neighborhood: businesses and
+              individuals. Only ID-approved students are listed.
+            </Editable>
+          }
+          back={false}
+        />
+      </div>
 
-      <ServiceChips
-        services={services}
-        activeSlug={service}
-        preserveParams={{ sort: sort === "suggested" ? undefined : sort }}
-        counts={counts}
-      />
-      <BrowseControls
-        activeSort={sort}
-        serviceSlug={service}
-        bookingFrom={buildBookingFromSummary(bookingFrom, session?.profile ?? null)}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-x-10 gap-y-4 border-b border-line pb-5">
+        <ServiceFilter
+          services={services}
+          activeSlug={service}
+          preserveParams={{ sort: sort === "suggested" ? undefined : sort }}
+          counts={counts}
+        />
+        <BrowseControls
+          activeSort={sort}
+          serviceSlug={service}
+          bookingFrom={buildBookingFromSummary(
+            bookingFrom,
+            session?.profile ?? null,
+          )}
+        />
+      </div>
 
       {providers.length === 0 ? (
-        <EmptyState
-          title={<Editable k="browse.empty.title">No providers yet</Editable>}
-          action={
-            !session ? (
-              <Link
-                href="/provider/onboarding/account"
-                className={buttonClasses({ variant: "secondary", size: "sm" })}
-              >
-                Become a provider
-              </Link>
-            ) : undefined
-          }
-        >
-          {service ? (
-            <Editable k="browse.empty.filtered">
-              Nobody offers this service yet. Try another filter, or check
-              back soon.
-            </Editable>
-          ) : (
-            <Editable k="browse.empty.default">
-              Approved providers will appear here as the crew grows.
-            </Editable>
-          )}
-        </EmptyState>
+        <div className="mx-auto max-w-xl">
+          <EmptyState
+            title={
+              <Editable k="browse.empty.title">No providers yet</Editable>
+            }
+            action={
+              !session ? (
+                <Link
+                  href="/provider/onboarding/account"
+                  className={buttonClasses({
+                    variant: "secondary",
+                    size: "sm",
+                  })}
+                >
+                  Become a provider
+                </Link>
+              ) : undefined
+            }
+          >
+            {service ? (
+              <Editable k="browse.empty.filtered">
+                Nobody offers this service yet. Try another filter, or check
+                back soon.
+              </Editable>
+            ) : (
+              <Editable k="browse.empty.default">
+                Approved providers will appear here as the crew grows.
+              </Editable>
+            )}
+          </EmptyState>
+        </div>
       ) : (
         <>
-          <div className="mx-auto max-w-3xl space-y-4">
+          <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 xl:grid-cols-3">
             {providers.map((provider) => (
               // Same scroll-driven rise-in the landing sections use; static
               // fallback for reduced motion and older browsers (globals.css).
@@ -125,7 +142,7 @@ export default async function BrowsePage({
  */
 function JoinCrewBand() {
   return (
-    <section className="relative mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl bg-viridian px-6 py-10 text-shell sm:px-10">
+    <section className="relative mt-10 overflow-hidden rounded-2xl bg-viridian px-6 py-10 text-shell sm:px-10">
       <Image
         src="/college-crew-mark-white.png"
         alt=""
