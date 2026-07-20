@@ -544,6 +544,7 @@ export type Database = {
           customer_name_snapshot: string | null
           details: string
           dismissed_at: string | null
+          en_route_at: string | null
           estimated_minutes: number | null
           expired_at: string | null
           fee_policy_version: string | null
@@ -599,6 +600,7 @@ export type Database = {
           customer_name_snapshot?: string | null
           details?: string
           dismissed_at?: string | null
+          en_route_at?: string | null
           estimated_minutes?: number | null
           expired_at?: string | null
           fee_policy_version?: string | null
@@ -654,6 +656,7 @@ export type Database = {
           customer_name_snapshot?: string | null
           details?: string
           dismissed_at?: string | null
+          en_route_at?: string | null
           estimated_minutes?: number | null
           expired_at?: string | null
           fee_policy_version?: string | null
@@ -2230,6 +2233,7 @@ export type Database = {
         Args: { provider_profile_id: string }
         Returns: boolean
       }
+      is_provider_capable: { Args: never; Returns: boolean }
       is_provider_offering_hourly_bookable: {
         Args: { provider_service_id: string }
         Returns: boolean
@@ -2253,6 +2257,7 @@ export type Database = {
         Returns: string
       }
       mark_booking_arrived: { Args: { p_booking_id: string }; Returns: string }
+      mark_booking_en_route: { Args: { p_booking_id: string }; Returns: string }
       mark_first_hour_payment_unsuccessful: {
         Args: {
           p_failure_code?: string
