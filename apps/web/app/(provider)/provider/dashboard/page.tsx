@@ -349,6 +349,12 @@ function ProviderDashboardView({
           still being set up. You&apos;ll be able to connect soon.
         </div>
       ) : null}
+      {stripe === "noemail" && !demo ? (
+        <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
+          Stripe needs an email address for onboarding. Add an email to your
+          account, then try again.
+        </div>
+      ) : null}
 
       <ProviderReadinessChecklist
         profile={profile}
