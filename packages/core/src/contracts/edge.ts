@@ -126,21 +126,48 @@ export type ReconcilePaymentResponse = z.infer<
 >;
 
 // ---------------------------------------------------------------------------
+// issue-edu-otp — send (or resend) the 6-digit .edu verification code for
+// provider onboarding. Caller must be signed in; the address must be a .edu
+// not already verified by another account. The code is emailed and stored only
+// as sha256(`${userId}:${code}`); a 15-minute TTL and 60-second resend
+// cooldown apply.
+// Codes: bad_request (not a .edu), email_taken (409), cooldown (429),
+// send_failed (502), begin_failed (409), unconfigured (503).
+// ---------------------------------------------------------------------------
+
+export const issueEduOtpRequestSchema = z.object({
+  schoolEmail: z
+    .email()
+    .transform((value) => value.trim().toLowerCase())
+    .refine((value) => value.endsWith(".edu"), {
+      message: "Use your school email; it must end in .edu.",
+    }),
+});
+export type IssueEduOtpRequest = z.infer<typeof issueEduOtpRequestSchema>;
+
+export const issueEduOtpResponseSchema = z.object({ ok: z.literal(true) });
+export type IssueEduOtpResponse = z.infer<typeof issueEduOtpResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// verify-edu-otp — redeem the code issued above and record the verified .edu.
+// The expected failure states are typed error envelopes, not a boolean, so the
+// mobile client can act on each: no_pending_code (409), code_expired (409),
+// too_many_attempts (429, ceiling 5), invalid_code (401, attempt consumed),
+// email_taken (409). A 200 always means verified.
+// ---------------------------------------------------------------------------
+
+export const verifyEduOtpRequestSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/),
+});
+export type VerifyEduOtpRequest = z.infer<typeof verifyEduOtpRequestSchema>;
+
+export const verifyEduOtpResponseSchema = z.object({ verified: z.literal(true) });
+export type VerifyEduOtpResponse = z.infer<typeof verifyEduOtpResponseSchema>;
+
+// ---------------------------------------------------------------------------
 // DRAFT contracts — functions not yet built (subject to change when each is
 // implemented; keep this file updated in the same PR that builds them).
 // ---------------------------------------------------------------------------
-
-/** issue-edu-otp — send the 6-digit school-email verification code. */
-export const issueEduOtpRequestSchema = z.object({
-  schoolEmail: z.email(),
-});
-export const issueEduOtpResponseSchema = z.object({ ok: z.literal(true) });
-
-/** verify-edu-otp — redeem the code issued above. */
-export const verifyEduOtpRequestSchema = z.object({
-  code: z.string().regex(/^\d{6}$/),
-});
-export const verifyEduOtpResponseSchema = z.object({ verified: z.boolean() });
 
 /** update-profile-text — moderated (flag-only) provider profile text writes. */
 export const updateProfileTextRequestSchema = z
