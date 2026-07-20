@@ -8,12 +8,19 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/session";
+import {
+  BASIS_POINTS_SCALE,
+  PLATFORM_FEE_BPS,
+} from "@/lib/booking/policy";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
 import { InvoicePayPanel, InvoiceRecoveryPanel } from "./invoice-pay-panel";
 
 export const metadata: Metadata = { title: "Invoice" };
+
+const platformFeePercent =
+  (PLATFORM_FEE_BPS / BASIS_POINTS_SCALE) * 100;
 
 function formatMinutes(minutes: number) {
   const hours = Math.floor(minutes / 60);
@@ -165,8 +172,8 @@ export default async function InvoicePage({
         ) : null}
 
         <p className="mt-4 border-t border-line pt-3 text-xs text-mist">
-          The 5% platform fee comes out of the provider&apos;s payout; the
-          amount above is all you pay.
+          The {platformFeePercent}% platform fee comes out of the
+          provider&apos;s payout; the amount above is all you pay.
         </p>
       </Card>
 
@@ -178,7 +185,7 @@ export default async function InvoicePage({
               href="/dashboard"
               className={buttonClasses({ variant: "secondary", size: "sm" })}
             >
-              Leave a review
+              Back to bookings
             </Link>
           </div>
         ) : isProcessing ? (
