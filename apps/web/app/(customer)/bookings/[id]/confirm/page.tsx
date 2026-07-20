@@ -279,11 +279,13 @@ function HourlyConfirmView({
   const balanceLabel = formatMoney(allocation.remainingBalanceCents);
   const hours = Math.round((estimatedMinutes / 60) * 10) / 10;
 
-  const rows = [
+  const bookingRows = [
     { label: "Service", value: serviceName },
     { label: "Provider", value: providerName },
     { label: "When", value: formatDateTime(booking.scheduled_at) },
     { label: "Where", value: booking.address },
+  ];
+  const paymentRows = [
     { label: "Rate", value: `${formatMoney(rateCents)}/hr` },
     { label: "Estimated time", value: `${estimatedMinutes} min (~${hours} hr)` },
     { label: "First-hour payment now", value: firstHourLabel },
@@ -315,7 +317,18 @@ function HourlyConfirmView({
           <StatusPill status={booking.status} />
         </div>
         <dl className="mt-2 divide-y divide-line text-sm">
-          {rows.map((row) => (
+          {bookingRows.map((row) => (
+            <div key={row.label} className="flex justify-between gap-4 py-3">
+              <dt className="text-mist">{row.label}</dt>
+              <dd className="text-right font-medium">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <h2 className="mt-4 font-display text-xs font-semibold uppercase tracking-wide text-mist">
+          Payment
+        </h2>
+        <dl className="divide-y divide-line text-sm">
+          {paymentRows.map((row) => (
             <div key={row.label} className="flex justify-between gap-4 py-3">
               <dt className="text-mist">{row.label}</dt>
               <dd className="text-right font-medium">{row.value}</dd>
@@ -326,9 +339,9 @@ function HourlyConfirmView({
         <div className="mt-3 rounded-lg border border-line bg-court p-4 text-xs leading-5 text-ink-soft">
           <p>
             You pay <span className="font-semibold">{firstHourLabel}</span> now
-            for the first hour. Your card is saved to charge the remaining
-            balance for <span className="font-semibold">this booking only</span>{" "}
-            after the provider submits the actual time.
+            for the first hour. Your card charges the remaining balance for{" "}
+            <span className="font-semibold">this booking only</span>, once the
+            provider submits actual time.
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-4">
             <li>

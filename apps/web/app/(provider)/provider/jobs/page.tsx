@@ -314,7 +314,7 @@ function ProviderJobsView({
               {offerings.map((offered, index) => (
                 <li
                   key={offered.id ?? `${offered.service.name}-${index}`}
-                  className="flex justify-between gap-4 py-2.5"
+                  className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-2.5"
                 >
                   <span className="font-medium">{offered.service.name}</span>
                   <span className="font-semibold text-quad-700">
@@ -325,10 +325,9 @@ function ProviderJobsView({
             </ul>
           )}
           <p className="mt-3 border-t border-line pt-3 text-xs text-mist">
-            Read-only here on purpose — hourly rates are edited in one place
-            (Profile & settings) so your public profile always matches.
-            Hidden service offerings are preserved and reappear if a founder
-            makes that service live again.
+            Read-only here — rates are edited in Profile & settings so your
+            public profile always matches. Hidden services reappear if a
+            founder relists them.
           </p>
         </Card>
       </section>

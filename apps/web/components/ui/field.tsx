@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 const controlClasses =
-  "block w-full rounded-xl border-[1.4px] border-viridian/25 bg-paper px-3.5 py-2 text-sm text-ink placeholder:text-mist transition-colors hover:border-viridian/45 focus-visible:border-viridian focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-viridian/15 disabled:bg-stone disabled:text-mist disabled:hover:border-viridian/25";
+  "block w-full min-h-11 rounded-xl border-[1.4px] border-viridian/25 bg-paper px-3.5 py-2 text-sm text-ink placeholder:text-mist transition-colors hover:border-viridian/45 focus-visible:border-viridian focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-viridian/15 disabled:bg-stone disabled:text-mist disabled:hover:border-viridian/25";
 
 export function Label({
   className,
