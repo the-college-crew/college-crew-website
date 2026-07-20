@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.redirect(
-      new URL("/login?next=/account", request.url),
+      new URL("/login?next=/provider/dashboard", request.url),
     );
   }
   // Provider capability = owning a provider profile; admins and plain
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   }
   if (!profile.stripe_account_id) {
     return NextResponse.redirect(
-      new URL("/account?stripe=incomplete", request.url),
+      new URL("/provider/dashboard?stripe=incomplete", request.url),
     );
   }
 
@@ -27,10 +27,12 @@ export async function GET(request: Request) {
     const result = await syncProviderPayoutSnapshot(profile);
     const status =
       result.configured && result.transfersActive ? "connected" : "incomplete";
-    return NextResponse.redirect(new URL(`/account?stripe=${status}`, request.url));
+    return NextResponse.redirect(
+      new URL(`/provider/dashboard?stripe=${status}`, request.url),
+    );
   } catch {
     return NextResponse.redirect(
-      new URL("/account?stripe=incomplete", request.url),
+      new URL("/provider/dashboard?stripe=incomplete", request.url),
     );
   }
 }

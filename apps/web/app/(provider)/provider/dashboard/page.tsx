@@ -62,6 +62,7 @@ type ProviderBookingRow = {
   estimated_minutes: number | null;
   hourly_rate_cents_snapshot: number | null;
   response_alert_at: string | null;
+  accepted_at: string | null;
   initial_payment_due_at: string | null;
   service: { name: string };
   customer: { full_name: string };
@@ -147,7 +148,7 @@ export default async function ProviderDashboardPage({
         `id, booking_flow, status, scheduled_at, address, service_city,
          latitude, longitude, details, price_cents,
          platform_fee_cents, estimated_minutes, hourly_rate_cents_snapshot,
-         response_alert_at, initial_payment_due_at, service:services(name),
+         response_alert_at, accepted_at, initial_payment_due_at, service:services(name),
          customer:profiles!bookings_customer_id_fkey(full_name),
          invoice:booking_invoices(subtotal_cents, total_platform_fee_cents, status)`,
       )
@@ -225,6 +226,17 @@ function ProviderDashboardView({
       booking.status === "requested" &&
       (booking.booking_flow === "legacy" || new Date(booking.scheduled_at) > now),
   );
+  const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  const missedRequests = bookings.filter((booking) => {
+    const scheduledAt = new Date(booking.scheduled_at).getTime();
+    return (
+      booking.booking_flow === "hourly_v1" &&
+      booking.accepted_at == null &&
+      ["requested", "expired"].includes(booking.status) &&
+      scheduledAt <= now.getTime() &&
+      scheduledAt >= sevenDaysAgo
+    );
+  });
   const awaitingPayment = bookings.filter(
     (booking) =>
       booking.booking_flow === "hourly_v1" && booking.status === "accepted",
@@ -353,6 +365,31 @@ function ProviderDashboardView({
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
           Stripe needs an email address for onboarding. Add an email to your
           account, then try again.
+        </div>
+      ) : null}
+      {stripe === "refresh" && !demo ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
+          <p>Stripe setup wasn&apos;t finished. Resume when you&apos;re ready.</p>
+          <form action={connectStripe}>
+            <Button type="submit" size="sm" variant="secondary">
+              Resume Stripe setup
+            </Button>
+          </form>
+        </div>
+      ) : null}
+      {stripe === "connected" && !demo ? (
+        <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
+          Stripe is connected. You can now receive payouts for eligible jobs.
+        </div>
+      ) : null}
+      {stripe === "incomplete" && !demo ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
+          <p>Stripe still needs information before payouts can be enabled.</p>
+          <form action={connectStripe}>
+            <Button type="submit" size="sm" variant="secondary">
+              Continue Stripe setup
+            </Button>
+          </form>
         </div>
       ) : null}
 
@@ -532,6 +569,37 @@ function ProviderDashboardView({
           </Card>
         </section>
       </div>
+
+      {missedRequests.length > 0 ? (
+        <section aria-labelledby="missed-requests">
+          <h2
+            id="missed-requests"
+            className="font-display text-xl font-semibold"
+          >
+            Missed requests
+          </h2>
+          <p className="mt-1 text-sm text-mist">
+            Unanswered requests from the past seven days, shown for reference.
+          </p>
+          <div className="mt-3 space-y-3">
+            {missedRequests.map((booking) => (
+              <Card key={booking.id} className="p-4 opacity-80">
+                <p className="font-display text-base font-semibold">
+                  {booking.service.name}
+                </p>
+                <p className="mt-0.5 text-sm text-ink-soft">
+                  {booking.customer.full_name} ·{" "}
+                  {formatDateTime(booking.scheduled_at)}
+                </p>
+                <p className="mt-1 text-xs text-mist">
+                  The start time passed without an acceptance. No action is
+                  available on this request.
+                </p>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
