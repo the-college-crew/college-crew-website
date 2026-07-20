@@ -1,5 +1,6 @@
 "use client";
 
+import { Paperclip, SendHorizontal, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import * as tus from "tus-js-client";
 
@@ -237,10 +238,17 @@ export function ChatThread({
         ref={messagesViewportRef}
         className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4"
       >
-        <div className="mx-auto max-w-md border-b border-line px-2 pb-3 text-center text-[11px] leading-relaxed text-mist">
-          College Crew monitors chats to help stop off-platform contact info.
-          Please don&apos;t send phone numbers, email addresses, social handles,
-          or payment details. Job details and addresses are okay.
+        <div className="mx-auto mb-1 flex max-w-md items-start gap-2 rounded-xl border border-line bg-court/60 px-3 py-2 text-center text-[11px] leading-relaxed text-ink-soft">
+          <ShieldCheck
+            className="mt-0.5 size-3.5 shrink-0 text-mist"
+            strokeWidth={1.75}
+          />
+          <span>
+            College Crew monitors chats to help stop off-platform contact
+            info. Please don&apos;t send phone numbers, email addresses,
+            social handles, or payment details. Job details and addresses are
+            okay.
+          </span>
         </div>
 
         {messages.length === 0 ? (
@@ -261,8 +269,8 @@ export function ChatThread({
                     className={cn(
                       "rounded-2xl px-4 py-2 text-sm",
                       mine
-                        ? "rounded-br-sm bg-crew-600 text-white"
-                        : "rounded-bl-sm border border-line bg-paper text-ink",
+                        ? "rounded-br-md bg-viridian text-shell"
+                        : "rounded-bl-md border border-line bg-paper text-ink",
                       message.optimistic && "message-swoop opacity-90",
                       message.failed && "bg-red-700 text-white",
                     )}
@@ -332,20 +340,8 @@ export function ChatThread({
             void send();
           }}
         >
-          <label className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-lg border border-line bg-paper text-ink-soft transition-colors hover:bg-crew-50 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-viridian">
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              fill="none"
-              className="size-5"
-            >
-              <path
-                d="M12 5v14M5 12h14"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
+          <label className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-line bg-paper text-ink-soft transition-colors hover:bg-honeydew/40 hover:text-viridian focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-viridian">
+            <Paperclip className="size-[18px]" strokeWidth={1.75} />
             <span className="sr-only">Attach images or a video</span>
             <input
               type="file"
@@ -379,13 +375,19 @@ export function ChatThread({
             }}
             rows={1}
             placeholder="Write a message…"
-            className="block w-full resize-none rounded-lg border border-line bg-paper px-3 py-2 text-sm placeholder:text-mist"
+            className="block w-full resize-none rounded-2xl border border-line bg-paper px-4 py-2.5 text-sm placeholder:text-mist"
           />
           <Button
             type="submit"
+            size="sm"
             disabled={sending || (!draft.trim() && mediaFiles.length === 0)}
+            aria-label={sending ? "Sending…" : "Send message"}
           >
-            {sending ? "Sending..." : "Send"}
+            {sending ? (
+              <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <SendHorizontal className="size-4" strokeWidth={2} />
+            )}
           </Button>
         </form>
       </div>
@@ -558,9 +560,7 @@ function ChatMedia({ attachment }: { attachment: ChatAttachment }) {
   }, [attachment.path]);
 
   if (!url) {
-    return (
-      <div className="h-32 min-w-40 animate-pulse bg-court" />
-    );
+    return <div className="h-32 min-w-40 animate-pulse bg-court" />;
   }
   if (attachment.kind === "video") {
     return (
