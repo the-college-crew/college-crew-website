@@ -302,6 +302,7 @@ export function ChatThread({
             />
           </label>
           <textarea
+            aria-label="Message"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
