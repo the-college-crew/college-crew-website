@@ -9,13 +9,21 @@ import { requireRole } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/utils";
 
-import { retryAutomationJob, retryOutboxEmail } from "./actions";
+import {
+  retryAutomationJob,
+  retryBookingRefund,
+  retryOutboxEmail,
+  retryStripeWebhook,
+} from "./actions";
 
 export const metadata: Metadata = { title: "Booking operations" };
 
 export default async function AdminOperationsPage() {
   await requireRole("admin");
   const admin = createAdminClient();
+  const webhookAttentionDate = new Date();
+  webhookAttentionDate.setMinutes(webhookAttentionDate.getMinutes() - 5);
+  const webhookAttentionBefore = webhookAttentionDate.toISOString();
   const [jobsResult, emailResult, refundsResult, webhooksResult] = await Promise.all([
     admin
       .from("booking_automation_jobs")
@@ -38,8 +46,11 @@ export default async function AdminOperationsPage() {
       .limit(100),
     admin
       .from("stripe_webhook_receipts")
-      .select("id, event_type, received_at, attempt_count")
+      .select("id, event_type, received_at, processing_started_at, attempt_count, last_error")
       .is("processed_at", null)
+      .or(
+        `last_error.not.is.null,processing_started_at.lte.${webhookAttentionBefore},and(processing_started_at.is.null,received_at.lte.${webhookAttentionBefore})`,
+      )
       .order("received_at", { ascending: false })
       .limit(100),
   ]);
@@ -98,26 +109,38 @@ export default async function AdminOperationsPage() {
 
       <OperationsSection title="Failed refunds" count={refunds.length}>
         {refunds.map((refund) => (
-          <Card key={refund.id} className="p-4">
+          <Card key={refund.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
             <SafeDetails
               title="Refund requires manual review"
               bookingId={refund.booking_id}
               detail={refund.failure_code ?? "unknown"}
               at={refund.failed_at}
             />
+            <form action={retryBookingRefund}>
+              <input type="hidden" name="refundId" value={refund.id} />
+              <Button type="submit" size="sm" variant="secondary">
+                Retry refund
+              </Button>
+            </form>
           </Card>
         ))}
       </OperationsSection>
 
       <OperationsSection title="Unprocessed Stripe webhooks" count={webhooks.length}>
         {webhooks.map((webhook) => (
-          <Card key={webhook.id} className="p-4">
+          <Card key={webhook.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
             <SafeDetails
               title={webhook.event_type}
               bookingId={null}
-              detail={`${webhook.attempt_count} processing attempt${webhook.attempt_count === 1 ? "" : "s"}`}
-              at={webhook.received_at}
+              detail={`${webhook.last_error ?? "stale processing lease"} · ${webhook.attempt_count} attempt${webhook.attempt_count === 1 ? "" : "s"}`}
+              at={webhook.processing_started_at ?? webhook.received_at}
             />
+            <form action={retryStripeWebhook}>
+              <input type="hidden" name="receiptId" value={webhook.id} />
+              <Button type="submit" size="sm" variant="secondary">
+                Retry webhook
+              </Button>
+            </form>
           </Card>
         ))}
       </OperationsSection>

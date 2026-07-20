@@ -11,10 +11,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * amount (Stripe reverses the whole transfer + fee); a partial passes the amount
  * (Stripe reverses/refunds proportionally).
  *
- * On a Stripe failure the row is intentionally LEFT `created` so it stays a
- * retryable operational record — the charge.refunded webhook + reconcile repair
- * state if Stripe actually succeeded, and a later retry can re-run it. We never
- * mark a refund succeeded unless Stripe returned a refund id.
+ * Failures are settled to `failed` so founder operations can see and explicitly
+ * retry the same ledger row with the same Stripe idempotency key. A later
+ * charge.refunded webhook can still reconcile a success that outlived the
+ * request. We never mark a refund succeeded unless Stripe returned a refund id.
  */
 export async function executePendingRefunds(
   bookingId: string,
@@ -40,6 +40,12 @@ export async function executePendingRefunds(
       .eq("id", refund.payment_id)
       .maybeSingle();
     if (!payment?.stripe_payment_intent_id) {
+      await settleRefundFailure(
+        admin,
+        refund.idempotency_key,
+        "missing_payment_intent",
+        "The payment record has no Stripe PaymentIntent.",
+      );
       failed += 1;
       continue;
     }
@@ -52,22 +58,57 @@ export async function executePendingRefunds(
         idempotencyKey: refund.idempotency_key,
       });
       if (!result.configured) {
-        // Stripe isn't configured in this environment; leave it retryable.
-        return { executed, failed, unconfigured: true };
+        await settleRefundFailure(
+          admin,
+          refund.idempotency_key,
+          "stripe_unconfigured",
+          "Stripe refund processing is not configured.",
+        );
+        return { executed, failed: failed + 1, unconfigured: true };
       }
-      await admin.rpc("settle_booking_refund", {
+      const settlement = await admin.rpc("settle_booking_refund", {
         p_idempotency_key: refund.idempotency_key,
         p_status: "succeeded",
         p_stripe_refund_id: result.refundId,
         p_stripe_transfer_reversal_id: result.transferReversalId ?? undefined,
       });
+      if (settlement.error) throw settlement.error;
       executed += 1;
     } catch (error) {
-      // Retain a retryable record; webhook reconciliation repairs a real success.
-      console.error(`Refund execution failed for booking ${bookingId}:`, error);
+      const code =
+        typeof error === "object" && error && "code" in error
+          ? String(error.code).slice(0, 100)
+          : "stripe_refund_failed";
+      await settleRefundFailure(
+        admin,
+        refund.idempotency_key,
+        code,
+        "The Stripe refund request failed.",
+      );
+      console.error("Refund execution failed", { bookingId, code });
       failed += 1;
     }
   }
 
   return { executed, failed, unconfigured: false };
+}
+
+async function settleRefundFailure(
+  admin: ReturnType<typeof createAdminClient>,
+  idempotencyKey: string,
+  code: string,
+  message: string,
+) {
+  const { error } = await admin.rpc("settle_booking_refund", {
+    p_idempotency_key: idempotencyKey,
+    p_status: "failed",
+    p_failure_code: code.slice(0, 100),
+    p_failure_message: message.slice(0, 500),
+  });
+  if (error) {
+    console.error("Could not record refund failure", {
+      idempotencyKey,
+      code: error.code,
+    });
+  }
 }

@@ -2079,6 +2079,10 @@ export type Database = {
         Args: { p_job_id: string }
         Returns: boolean
       }
+      admin_retry_booking_refund: {
+        Args: { p_refund_id: string }
+        Returns: string
+      }
       admin_retry_email_outbox: {
         Args: { p_outbox_id: string }
         Returns: boolean
@@ -2134,6 +2138,15 @@ export type Database = {
           kind: string
           lease_token: string
           source_id: string
+        }[]
+      }
+      claim_stripe_webhook_receipt: {
+        Args: { p_receipt_id: string; p_stale_seconds?: number }
+        Returns: {
+          attempt_count: number
+          id: string
+          payload: Json
+          stripe_event_id: string
         }[]
       }
       claim_conversation_for_booking: {

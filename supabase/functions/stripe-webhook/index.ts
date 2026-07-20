@@ -91,6 +91,7 @@ Deno.serve(async (request) => {
     processing_started_at: nowIso,
     attempt_count: 1,
   });
+  let eventToProcess = event;
   if (insert.error) {
     if (insert.error.code !== "23505") {
       // Couldn't persist the receipt — ask Stripe to retry.
@@ -98,25 +99,41 @@ Deno.serve(async (request) => {
     }
     const { data: existing } = await admin
       .from("stripe_webhook_receipts")
-      .select("processed_at")
+      .select("id, processed_at")
       .eq("stripe_event_id", event.id)
       .maybeSingle();
+    if (!existing) {
+      return json({ error: "Receipt not found." }, 500);
+    }
     if (existing?.processed_at) {
       return json({ received: true, duplicate: true });
     }
-    // A prior attempt recorded but never finished; reprocess (RPCs are idempotent).
-    await admin
-      .from("stripe_webhook_receipts")
-      .update({ processing_started_at: nowIso })
-      .eq("stripe_event_id", event.id);
+    const claim = await admin.rpc("claim_stripe_webhook_receipt", {
+      p_receipt_id: existing.id,
+      p_stale_seconds: 300,
+    });
+    if (claim.error) {
+      return json({ error: "Could not claim event." }, 500);
+    }
+    const claimed = claim.data?.[0];
+    if (!claimed) {
+      return json(
+        { received: true, duplicate: true, processing: true },
+        202,
+      );
+    }
+    eventToProcess = claimed.payload as unknown as Stripe.Event;
+    if (eventToProcess.id !== event.id) {
+      return json({ error: "Receipt mismatch." }, 500);
+    }
   }
 
   try {
-    await handleEvent(admin, stripe, event);
+    await handleEvent(admin, stripe, eventToProcess);
   } catch (error) {
     await admin
       .from("stripe_webhook_receipts")
-      .update({ last_error: String(error) })
+      .update({ last_error: webhookFailureCode(error) })
       .eq("stripe_event_id", event.id);
     return json({ error: "Processing failed." }, 500);
   }
@@ -128,6 +145,14 @@ Deno.serve(async (request) => {
 
   return json({ received: true });
 });
+
+/** Store a bounded operational code, never a raw Stripe object or secret. */
+function webhookFailureCode(error: unknown) {
+  if (typeof error === "object" && error && "code" in error) {
+    return String(error.code).slice(0, 200);
+  }
+  return "stripe_webhook_processing_failed";
+}
 
 async function handleEvent(
   admin: AdminClient,
