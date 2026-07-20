@@ -5,6 +5,7 @@ import { StatusPill } from "@/components/status-pill";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
 import type { BookingStatus } from "@/lib/db/types";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -42,6 +43,11 @@ export default async function AdminBookingsPage() {
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresh channel="admin-bookings" table="bookings" />
+      <RealtimeRefresh
+        channel="admin-booking-disputes"
+        table="booking_disputes"
+      />
       <PageHeader
         title="Booking oversight"
         description="Active and recently-closed hourly bookings. Open one to review the timeline, money, and any dispute."

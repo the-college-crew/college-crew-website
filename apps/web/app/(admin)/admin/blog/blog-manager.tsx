@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label, Textarea } from "@/components/ui/field";
@@ -30,8 +30,14 @@ function ActionMessage({ state }: { state: BlogActionState }) {
 
 function NewPostForm() {
   const [state, action, pending] = useActionState(createBlogPost, {});
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state.success) formRef.current?.reset();
+  }, [state.success]);
+
   return (
-    <form action={action} className="space-y-4 rounded-2xl border border-stone bg-paper p-5 shadow-sm shadow-viridian/5">
+    <form ref={formRef} action={action} className="space-y-4 rounded-2xl border border-stone bg-paper p-5 shadow-sm shadow-viridian/5">
       <div>
         <h2 className="font-display text-xl font-semibold text-viridian">Write a new post</h2>
         <p className="mt-1 text-sm text-ink-soft">Saving publishes immediately and places it at the top of the blog.</p>
