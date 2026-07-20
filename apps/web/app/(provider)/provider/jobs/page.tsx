@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { LocationLine } from "@/components/provider-card";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
+import { RefreshAt } from "@/components/refresh-at";
 import {
   getOwnProviderProfile,
   requireProviderAccess,
@@ -28,10 +29,12 @@ import { formatDateTime, formatMoney, formatOfferedPrice } from "@/lib/utils";
 
 import { completeBooking, markArrived } from "../actions";
 import { ProviderCancelJob } from "../provider-cancel-job";
+import { OnMyWayButton } from "./on-my-way-button";
 
 export const metadata: Metadata = { title: "Jobs & pricing" };
 
 const ARRIVAL_GRACE_MS = 30 * 60 * 1000;
+const EN_ROUTE_GRACE_MS = 2 * 60 * 60 * 1000;
 
 type JobRow = {
   id: string;
@@ -49,6 +52,7 @@ type JobRow = {
   hourly_rate_cents_snapshot: number | null;
   estimated_minutes: number | null;
   arrived_at: string | null;
+  en_route_at: string | null;
   service: { name: string };
   customer: { full_name: string };
   invoice: {
@@ -87,7 +91,7 @@ export default async function ProviderJobsPage() {
         `id, booking_flow, status, scheduled_at, address, service_city,
          latitude, longitude, price_cents,
          platform_fee_cents, hourly_rate_cents_snapshot, estimated_minutes,
-         arrived_at, service:services(name),
+         arrived_at, en_route_at, service:services(name),
          customer:profiles!bookings_customer_id_fkey(full_name),
          invoice:booking_invoices(subtotal_cents, total_platform_fee_cents,
            remaining_balance_cents, status)`,
@@ -356,23 +360,50 @@ function JobMilestoneActions({ job }: { job: JobRow }) {
         </span>
       );
     case "booked": {
-      const canArrive =
-        new Date().getTime() >=
-        new Date(job.scheduled_at).getTime() - ARRIVAL_GRACE_MS;
-      if (!canArrive) {
-        return (
-          <span className="self-center text-xs text-mist">
-            “Arrived” unlocks 30 min before the start
-          </span>
-        );
-      }
+      const now = new Date().getTime();
+      const start = new Date(job.scheduled_at).getTime();
+      const enRouteUnlock = start - EN_ROUTE_GRACE_MS;
+      const arrivalUnlock = start - ARRIVAL_GRACE_MS;
+      const canSendEnRoute = now >= enRouteUnlock;
+      const canArrive = now >= arrivalUnlock;
       return (
-        <form action={markArrived}>
-          <input type="hidden" name="bookingId" value={job.id} />
-          <Button type="submit" size="sm">
-            Arrived
-          </Button>
-        </form>
+        <div className="flex flex-wrap items-start gap-3">
+          {!canSendEnRoute ? (
+            <>
+              <span className="self-center text-xs text-mist">
+                “On my way” unlocks 2 hours before the start
+              </span>
+              <RefreshAt at={new Date(enRouteUnlock).toISOString()} />
+            </>
+          ) : job.en_route_at ? (
+            <span className="self-center text-xs font-semibold text-quad-700">
+              Customer notified ✓
+            </span>
+          ) : (
+            <OnMyWayButton bookingId={job.id} />
+          )}
+
+          {canArrive ? (
+            <div>
+              <form action={markArrived}>
+                <input type="hidden" name="bookingId" value={job.id} />
+                <Button type="submit" size="sm">
+                  Arrived
+                </Button>
+              </form>
+              <p className="mt-1 max-w-48 text-xs text-mist">
+                Marks work started and opens the invoice screen.
+              </p>
+            </div>
+          ) : (
+            <>
+              <span className="self-center text-xs text-mist">
+                “Arrived” unlocks 30 minutes before the start
+              </span>
+              <RefreshAt at={new Date(arrivalUnlock).toISOString()} />
+            </>
+          )}
+        </div>
       );
     }
     case "in_progress":

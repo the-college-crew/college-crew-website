@@ -48,6 +48,7 @@ type BookingRow = {
   hourly_rate_cents_snapshot: number | null;
   response_alert_at: string | null;
   initial_payment_due_at: string | null;
+  en_route_at: string | null;
   dismissed_at: string | null;
   cancelled_by_role: string | null;
   service: { name: string; slug: string };
@@ -166,7 +167,7 @@ export default async function CustomerDashboardPage({
       .select(
         `id, booking_flow, status, scheduled_at, address, price_cents,
          estimated_minutes, hourly_rate_cents_snapshot, response_alert_at,
-         initial_payment_due_at, dismissed_at, cancelled_by_role,
+         initial_payment_due_at, en_route_at, dismissed_at, cancelled_by_role,
          service:services(name, slug),
          provider:provider_profiles(display_name),
          invoice:booking_invoices(status, remaining_balance_cents, resolved_at),
@@ -521,6 +522,16 @@ function BookingCard({
               Message them for details, or find another provider below.
             </p>
           )}
+        </div>
+      ) : null}
+
+      {isHourly && booking.status === "booked" && booking.en_route_at ? (
+        <div
+          role="status"
+          className="mt-4 rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800"
+        >
+          <p className="font-semibold">{providerName} is on the way.</p>
+          <p className="mt-1">They sent an on-my-way update for this booking.</p>
         </div>
       ) : null}
 

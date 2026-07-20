@@ -241,6 +241,24 @@ export async function markArrived(formData: FormData) {
   redirect(`/provider/jobs/${bookingId}/complete`);
 }
 
+/** Send the customer one immutable on-my-way update without changing status. */
+export async function markEnRoute(formData: FormData) {
+  await requireProviderAccess();
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_booking_en_route", {
+    p_booking_id: bookingId,
+  });
+  if (error) {
+    throw new Error(
+      requestOperationMessage(error, "Could not notify the customer."),
+    );
+  }
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  revalidatePath("/dashboard");
+}
+
 /**
  * Job Complete + invoice submission (Phase 5): records work_completed_at and
  * the actual billable time, computes the invoice from the immutable snapshots,
