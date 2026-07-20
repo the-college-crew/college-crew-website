@@ -48,7 +48,7 @@ export default async function StudentMissionPage() {
               href="/provider/onboarding/account"
               className={buttonClasses({ size: "sm" })}
             >
-              Start earning
+              Become a provider
             </Link>
           ) : null
         }
@@ -63,9 +63,9 @@ export default async function StudentMissionPage() {
         <p>
           <Editable k="about-students.intro.p2">
             The pilot is intentionally curated. We approve student providers
-            manually, keep the service list focused, and start with one local
-            neighborhood so students can serve real demand close to home or
-            campus.
+            manually, keep the service list focused, and start in the North
+            Shore and Lincoln Park so students can serve real demand close to
+            home or campus.
           </Editable>
         </p>
       </section>
