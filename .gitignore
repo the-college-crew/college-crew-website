@@ -58,3 +58,6 @@ docs/SPEC.md
 
 # internal strategy docs (pricing/booking model, roadmaps) — never public
 docs/internal/
+
+# project-level claude instructions (local only)
+CLAUDE.md
