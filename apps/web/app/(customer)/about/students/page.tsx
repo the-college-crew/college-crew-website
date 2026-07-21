@@ -5,7 +5,7 @@ import { Editable } from "@/components/content/editable";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { getSession } from "@/lib/auth/session";
+import { getSession, isProviderCapable } from "@/lib/auth/session";
 import { PLATFORM_FEE_RATE, SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Our mission for students" };
@@ -27,6 +27,9 @@ const PRINCIPLES = [
 
 export default async function StudentMissionPage() {
   const session = await getSession();
+  const showProviderCta =
+    !session ||
+    (session.profile.role !== "admin" && !(await isProviderCapable()));
   const providerFeePercent = Math.round(PLATFORM_FEE_RATE * 100);
 
   return (
@@ -43,12 +46,12 @@ export default async function StudentMissionPage() {
           </Editable>
         }
         actions={
-          !session ? (
+          showProviderCta ? (
             <Link
               href="/provider/onboarding/account"
               className={buttonClasses({ size: "sm" })}
             >
-              Start earning
+              Become a provider
             </Link>
           ) : null
         }
@@ -63,9 +66,9 @@ export default async function StudentMissionPage() {
         <p>
           <Editable k="about-students.intro.p2">
             The pilot is intentionally curated. We approve student providers
-            manually, keep the service list focused, and start with one local
-            neighborhood so students can serve real demand close to home or
-            campus.
+            manually, keep the service list focused, and start in the North
+            Shore and Lincoln Park so students can serve real demand close to
+            home or campus.
           </Editable>
         </p>
       </section>

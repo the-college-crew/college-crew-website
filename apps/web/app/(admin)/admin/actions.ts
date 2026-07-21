@@ -25,8 +25,8 @@ const statusSchema = z.enum(["pending", "approved", "rejected"]);
 
 /**
  * Set a provider's verification status to any state. Approving still requires
- * a verified school (.edu) email (a student proof alongside the manual ID
- * review); re-opening or rejecting has no such gate.
+ * a verified school (.edu) email, both sides of an ID document, and current
+ * legal acceptance; re-opening or rejecting has no such gate.
  */
 export async function setProviderStatus(formData: FormData) {
   await requireRole("admin");
@@ -41,10 +41,13 @@ export async function setProviderStatus(formData: FormData) {
   if (status === "approved") {
     const { data: prof } = await admin
       .from("provider_profiles")
-      .select("user_id")
+      .select("user_id, id_document_url, id_document_back_url")
       .eq("id", providerId)
       .maybeSingle();
     if (prof) {
+      if (!prof.id_document_url || !prof.id_document_back_url) {
+        redirect("/admin/providers?err=identity");
+      }
       const [
         { data: school },
         platformTermsAccepted,

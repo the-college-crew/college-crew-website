@@ -8,7 +8,11 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/session";
-import { calculateInvoiceAllocation } from "@/lib/booking/policy";
+import {
+  BASIS_POINTS_SCALE,
+  calculateInvoiceAllocation,
+  PLATFORM_FEE_BPS,
+} from "@/lib/booking/policy";
 import type { Booking } from "@/lib/db/types";
 import {
   BOOKING_CONSENT_LABEL,
@@ -16,6 +20,8 @@ import {
   GENERAL_FAMILY_DISCLOSURE,
   getBookingAddendumSnapshot,
   getBookingRiskSnapshot,
+  QUOTE_PAYMENT_CONSENT_LABEL,
+  QUOTE_PAYMENT_TERMS,
 } from "@/lib/legal/waivers";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
@@ -24,6 +30,9 @@ import { ConfirmPayPanel } from "./confirm-pay-panel";
 import { HourlyPayPanel } from "./hourly-pay-panel";
 
 export const metadata: Metadata = { title: "Confirm & pay" };
+
+const platformFeePercent =
+  (PLATFORM_FEE_BPS / BASIS_POINTS_SCALE) * 100;
 
 type ConfirmBooking = Booking & {
   service: { name: string; slug: string } | { name: string; slug: string }[] | null;
@@ -89,13 +98,17 @@ export default async function ConfirmPayPage({
     );
   }
 
-  // ---- Legacy full-price flow -------------------------------------------
+  // ---- Full-price flow: legacy fixed bookings and finalized quotes ------
+  const isQuote = booking.booking_flow === "quote_v1";
   const rows = [
     { label: "Service", value: service.name },
     { label: "Provider", value: provider.display_name },
     { label: "When", value: formatDateTime(booking.scheduled_at) },
     { label: "Where", value: booking.address },
-    { label: "Price", value: formatMoney(booking.price_cents) },
+    {
+      label: isQuote ? "Final flat quote" : "Price",
+      value: formatMoney(booking.price_cents),
+    },
   ];
   const addendum = getBookingRiskSnapshot({
     serviceSlug: service.slug,
@@ -110,7 +123,11 @@ export default async function ConfirmPayPage({
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
         title="Confirm & pay"
-        description="The provider accepted your request. Confirm the details below to lock it in."
+        description={
+          isQuote
+            ? "Your provider sent a final flat quote. Review the exact price and booking details before paying."
+            : "The provider accepted your request. Confirm the details below to lock it in."
+        }
       />
 
       <Card pennant className="p-6">
@@ -126,9 +143,22 @@ export default async function ConfirmPayPage({
           ))}
         </dl>
         <p className="mt-2 text-xs text-mist">
-          You pay the price shown; College Crew&apos;s platform fee comes out of
-          the provider&apos;s earnings.
+          You pay the price shown. College Crew&apos;s platform fee comes out of
+          the provider&apos;s earnings, with no added customer platform fee.
         </p>
+
+        {isQuote ? (
+          <section className="mt-4 rounded-xl border border-gold-300 bg-gold-100 p-4 text-sm leading-6 text-gold-900">
+            <h2 className="font-display text-base font-semibold">
+              Flat quote terms
+            </h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {QUOTE_PAYMENT_TERMS.map((term) => (
+                <li key={term}>{term}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {booking.status === "accepted" ? (
           <div className="mt-6 rounded-xl border border-line bg-court p-4 text-sm leading-6 text-ink-soft">
@@ -193,6 +223,9 @@ export default async function ConfirmPayPage({
             <ConfirmPayPanel
               bookingId={booking.id}
               simulateAllowed={process.env.NODE_ENV !== "production"}
+              consentLabel={
+                isQuote ? QUOTE_PAYMENT_CONSENT_LABEL : undefined
+              }
             />
           ) : booking.status === "accepted" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
@@ -205,8 +238,9 @@ export default async function ConfirmPayPage({
             </div>
           ) : booking.status === "requested" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
-              Still waiting on the provider. You&apos;ll be able to confirm and
-              pay once they accept.
+              {isQuote
+                ? "Still waiting on the provider's final quote. They may request images or video in the private chat first."
+                : "Still waiting on the provider. You'll be able to confirm and pay once they accept."}
             </div>
           ) : (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
@@ -245,11 +279,13 @@ function HourlyConfirmView({
   const balanceLabel = formatMoney(allocation.remainingBalanceCents);
   const hours = Math.round((estimatedMinutes / 60) * 10) / 10;
 
-  const rows = [
+  const bookingRows = [
     { label: "Service", value: serviceName },
     { label: "Provider", value: providerName },
     { label: "When", value: formatDateTime(booking.scheduled_at) },
     { label: "Where", value: booking.address },
+  ];
+  const paymentRows = [
     { label: "Rate", value: `${formatMoney(rateCents)}/hr` },
     { label: "Estimated time", value: `${estimatedMinutes} min (~${hours} hr)` },
     { label: "First-hour payment now", value: firstHourLabel },
@@ -281,7 +317,18 @@ function HourlyConfirmView({
           <StatusPill status={booking.status} />
         </div>
         <dl className="mt-2 divide-y divide-line text-sm">
-          {rows.map((row) => (
+          {bookingRows.map((row) => (
+            <div key={row.label} className="flex justify-between gap-4 py-3">
+              <dt className="text-mist">{row.label}</dt>
+              <dd className="text-right font-medium">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <h2 className="mt-4 font-display text-xs font-semibold uppercase tracking-wide text-mist">
+          Payment
+        </h2>
+        <dl className="divide-y divide-line text-sm">
+          {paymentRows.map((row) => (
             <div key={row.label} className="flex justify-between gap-4 py-3">
               <dt className="text-mist">{row.label}</dt>
               <dd className="text-right font-medium">{row.value}</dd>
@@ -292,9 +339,9 @@ function HourlyConfirmView({
         <div className="mt-3 rounded-lg border border-line bg-court p-4 text-xs leading-5 text-ink-soft">
           <p>
             You pay <span className="font-semibold">{firstHourLabel}</span> now
-            for the first hour. Your card is saved to charge the remaining
-            balance for <span className="font-semibold">this booking only</span>{" "}
-            after the provider submits the actual time.
+            for the first hour. Your card charges the remaining balance for{" "}
+            <span className="font-semibold">this booking only</span>, once the
+            provider submits actual time.
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-4">
             <li>
@@ -310,7 +357,10 @@ function HourlyConfirmView({
               cancellation keeps the first hour. Concerns after arrival are
               handled as a dispute.
             </li>
-            <li>College Crew&apos;s 5% fee comes out of the provider&apos;s earnings.</li>
+            <li>
+              College Crew&apos;s {platformFeePercent}% fee comes out of the
+              provider&apos;s earnings.
+            </li>
           </ul>
         </div>
 

@@ -47,10 +47,12 @@ export default async function BookingPage({
       : null,
   );
   if (!provider) notFound();
-  const requestsEnabled =
-    isHourlyBookingEnabled() && areBookingRequestsEnabled();
+  const hourlyEnabled = isHourlyBookingEnabled();
+  const requestsEnabled = areBookingRequestsEnabled();
   const bookableServices = provider.services.filter(
-    (offering) => offering.is_hourly_bookable,
+    (offering) =>
+      offering.is_quote_bookable ||
+      (hourlyEnabled && offering.is_hourly_bookable),
   );
 
   // Providers can book other providers, but never their own listing; admin
@@ -95,10 +97,10 @@ export default async function BookingPage({
 
       {!requestsEnabled ? (
         <Card className="p-6 text-sm text-ink-soft">
-          <p className="font-semibold text-ink">Hourly booking opens soon.</p>
+          <p className="font-semibold text-ink">Booking requests open soon.</p>
           <p className="mt-1">
-            Provider setup is underway, but customer requests remain disabled
-            until the guarded hourly request flow is ready.
+            Provider setup is underway, but customer requests are temporarily
+            paused.
           </p>
         </Card>
       ) : !session ? (
@@ -146,7 +148,7 @@ export default async function BookingPage({
         </Card>
       ) : (
         <Card className="p-6 text-sm text-ink-soft">
-          This provider is still completing hourly booking setup.
+          This provider is still completing booking setup.
         </Card>
       )}
 

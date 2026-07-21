@@ -71,6 +71,16 @@ export function ProviderDetailModal({
 
   const changeStatus = useCallback(
     (providerId: string, status: VerificationStatus) => {
+      if (
+        (status === "approved" || status === "rejected") &&
+        !window.confirm(
+          status === "approved"
+            ? "Approve this provider? If every readiness check passes, they can appear in Browse."
+            : "Reject this provider? They will need to update their verification before approval.",
+        )
+      ) {
+        return;
+      }
       startTransition(async () => {
         const fd = new FormData();
         fd.set("providerId", providerId);
@@ -318,6 +328,9 @@ export function ProviderDetailModal({
                     id: offering.id,
                     name: offering.service.name,
                     hourly_rate_cents: offering.hourly_rate_cents,
+                    pricing_mode: offering.pricing_mode,
+                    average_quote_cents: offering.average_quote_cents,
+                    service_slug: offering.service.slug,
                     service_is_live: offering.service.is_live,
                   }))}
                 />

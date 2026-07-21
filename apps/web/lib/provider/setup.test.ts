@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   HOURLY_RATE_INPUT_CONSTRAINTS,
   buildHourlyOfferingPersistenceRow,
+  buildQuoteOfferingPersistenceRow,
   getOfferingReadiness,
   groupAvailabilityWindows,
+  parseAverageQuoteInput,
   parseHourlyRateInput,
   parseProviderAvailabilityForm,
+  supportsQuotePricing,
   type AvailabilityWindow,
 } from "./setup";
 
@@ -92,6 +95,43 @@ describe("provider hourly rate input", () => {
       unit: "per_hour",
       hourly_rate_cents: 4_000,
     });
+  });
+});
+
+describe("supported service quote input", () => {
+  it("accepts an omitted average or an exact dollar amount", () => {
+    expect(parseAverageQuoteInput("")).toEqual({
+      success: true,
+      cents: null,
+    });
+    expect(parseAverageQuoteInput("175.50")).toEqual({
+      success: true,
+      cents: 17_550,
+    });
+  });
+
+  it("builds a quote row without an hourly rate", () => {
+    expect(
+      buildQuoteOfferingPersistenceRow({
+        providerId: "provider",
+        serviceId: "window-washing",
+        averageQuoteCents: 17_500,
+      }),
+    ).toMatchObject({
+      price_cents: 0,
+      price_type: "quote",
+      unit: "per_job",
+      hourly_rate_cents: null,
+      pricing_mode: "quote",
+      average_quote_cents: 17_500,
+    });
+  });
+
+  it("limits quote mode to the three approved visual-scope services", () => {
+    expect(supportsQuotePricing("hauling")).toBe(true);
+    expect(supportsQuotePricing("pressure-washing")).toBe(true);
+    expect(supportsQuotePricing("window-washing")).toBe(true);
+    expect(supportsQuotePricing("lawn-care")).toBe(false);
   });
 });
 
@@ -245,6 +285,41 @@ describe("offering readiness", () => {
     ).toBe(true);
   });
 
+  it.each(["hauling", "pressure-washing", "window-washing"])(
+    "recognizes a %s quote offering without requiring an average",
+    (serviceSlug) => {
+      expect(
+        getOfferingReadiness(
+          readyProfile,
+          {
+            hourly_rate_cents: null,
+            pricing_mode: "quote",
+            average_quote_cents: null,
+            service_slug: serviceSlug,
+            service_is_live: true,
+          },
+          readyWindows,
+        ).bookable,
+      ).toBe(true);
+    },
+  );
+
+  it("rejects quote mode for an unsupported service", () => {
+    expect(
+      getOfferingReadiness(
+        readyProfile,
+        {
+          hourly_rate_cents: null,
+          pricing_mode: "quote",
+          average_quote_cents: null,
+          service_slug: "lawn-care",
+          service_is_live: true,
+        },
+        readyWindows,
+      ).bookable,
+    ).toBe(false);
+  });
+
   it("identifies all missing prerequisites deterministically", () => {
     const readiness = getOfferingReadiness(
       {
@@ -261,7 +336,7 @@ describe("offering readiness", () => {
     expect(readiness.missing.map(({ key }) => key)).toEqual([
       "verification",
       "payouts",
-      "hourly_rate",
+      "pricing",
       "availability",
       "service_zip",
       "live_service",

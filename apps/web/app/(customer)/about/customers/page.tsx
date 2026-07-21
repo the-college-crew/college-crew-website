@@ -5,7 +5,7 @@ import { Editable } from "@/components/content/editable";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { NEIGHBORHOOD, SITE } from "@/lib/site";
+import { PILOT_SERVICE_AREA, SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Our mission for customers" };
 
@@ -99,7 +99,7 @@ export default function CustomerMissionPage() {
         <div className="mt-3 space-y-3 text-sm leading-relaxed text-ink-soft">
           <p>
             <Editable k="about-customers.flow.p1">
-              {`Customers browse student providers in ${NEIGHBORHOOD.name}, choose a service, request a booking, and share the details needed for the job. The provider accepts or declines the request before payment is collected.`}
+              {`Customers browse student providers across ${PILOT_SERVICE_AREA.name}, choose a service, request a booking, and share the details needed for the job. The provider accepts or declines the request before payment is collected.`}
             </Editable>
           </p>
           <p>

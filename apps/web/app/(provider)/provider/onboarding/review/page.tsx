@@ -10,12 +10,12 @@ import {
   requireOnboardingUser,
 } from "@/lib/auth/session";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
-import { isHourlyRateValid } from "@/lib/booking/policy";
 import { getProviderAvailabilityWindows } from "@/lib/db/queries";
 import {
   formatAvailabilityDays,
   formatAvailabilityWindow,
   groupAvailabilityWindows,
+  isOfferingPricingReady,
   isStructuredAvailabilityComplete,
   verificationLabel,
 } from "@/lib/provider/setup";
@@ -46,7 +46,7 @@ export default async function OnboardingReviewPage() {
     supabase
       .from("provider_services")
       .select(
-        "id, price_cents, price_type, unit, hourly_rate_cents, service:services(name, is_live)",
+        "id, price_cents, price_type, unit, hourly_rate_cents, pricing_mode, average_quote_cents, service:services(name, slug, is_live)",
       )
       .eq("provider_id", profile.id),
     getProviderAvailabilityWindows(profile.id),
@@ -54,8 +54,11 @@ export default async function OnboardingReviewPage() {
   const liveOfferings = (offerings ?? []).filter(
     (offered) =>
       offered.service?.is_live &&
-      offered.hourly_rate_cents !== null &&
-      isHourlyRateValid(offered.hourly_rate_cents),
+      isOfferingPricingReady({
+        hourly_rate_cents: offered.hourly_rate_cents,
+        pricing_mode: offered.pricing_mode,
+        service_slug: offered.service.slug,
+      }),
   );
 
   const schoolEmail = await getVerifiedSchoolEmail(session.user.id);
@@ -70,6 +73,7 @@ export default async function OnboardingReviewPage() {
   const ready =
     Boolean(schoolEmail) &&
     licenseComplete &&
+    Boolean(profile.avatar_image_path) &&
     liveOfferings.length > 0 &&
     isStructuredAvailabilityComplete(windows) &&
     Boolean(profile.service_zip);
@@ -121,6 +125,21 @@ export default async function OnboardingReviewPage() {
                   {profile.id_document_url || profile.id_document_back_url
                     ? "One side missing — finish it"
                     : "Missing — upload it"}
+                </Link>
+              )}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-mist">Profile photo</dt>
+            <dd className="font-medium">
+              {profile.avatar_image_path ? (
+                "Added ✓"
+              ) : (
+                <Link
+                  href="/provider/onboarding/verify?err=photo"
+                  className="text-crew-700 underline"
+                >
+                  Missing - add it
                 </Link>
               )}
             </dd>

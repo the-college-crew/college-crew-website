@@ -154,6 +154,12 @@ export default async function AdminProvidersPage({
         </div>
       ) : null}
 
+      {err === "identity" ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          That provider must upload both sides of their ID before approval.
+        </div>
+      ) : null}
+
       <ProvidersManager rows={rows} serviceOptions={serviceOptions} />
     </div>
   );

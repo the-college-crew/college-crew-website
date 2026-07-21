@@ -61,6 +61,9 @@ export function LocationLine({
 export function ProviderCard({ provider }: { provider: ProviderCardData }) {
   const href = `/providers/${provider.id}`;
   const avatarUrl = providerAvatarUrl(provider.avatar_image_path);
+  const hasQuotePricing = provider.services.some(
+    (offering) => offering.pricing_mode === "quote",
+  );
 
   return (
     <ProviderCardViewTransition href={href} name={`provider-${provider.id}`}>
@@ -115,7 +118,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                 const firstParagraph = paragraphs[0];
                 const hasMore = paragraphs.length > 1;
                 return (
-                  <p className="whitespace-pre-line text-sm text-ink-soft">
+                  <p className="line-clamp-3 whitespace-pre-line text-sm text-ink-soft">
                     {hasMore ? `${firstParagraph}…` : firstParagraph}
                   </p>
                 );
@@ -138,14 +141,16 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                   <span className="ml-1.5 font-semibold text-quad-700">
                     {formatOfferedPrice(offered)}
                   </span>
-                  {!offered.is_hourly_bookable ? (
+                  {!offered.is_bookable ? (
                     <span className="ml-1 text-mist">· setup pending</span>
                   ) : null}
                 </li>
               ))}
             </ul>
             <p className="text-[11px] text-mist">
-              One-hour minimum, then billed in 15-minute increments.
+              {hasQuotePricing
+                ? "Final flat quotes are confirmed before payment."
+                : "One-hour minimum, then billed in 15-minute increments."}
             </p>
           </div>
         </Card>

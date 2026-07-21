@@ -36,9 +36,9 @@ export default function LegalOverviewPage() {
 
           {PLATFORM_TERMS_SECTIONS.map((section) => (
             <section key={section.number} className="border-t border-line pt-5">
-              <h2 className="font-display text-lg font-semibold text-ink">
+              <h3 className="font-display text-base font-semibold text-ink">
                 {section.number}. {section.title}
-              </h2>
+              </h3>
               <div className="mt-2 space-y-3">
                 {section.body.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>

@@ -16,13 +16,13 @@ export const metadata: Metadata = {
 };
 
 const TOPICS = [
-  "Pet care",
-  "House management",
-  "Hauling",
-  "Lawn & yard",
-  "Tutoring",
-  "Coaching",
-];
+  { label: "Pet care", slug: "pet-care" },
+  { label: "House management", slug: "house-management" },
+  { label: "Hauling", slug: "hauling" },
+  { label: "Lawn & yard", slug: "lawn-yard-care" },
+  { label: "Tutoring", slug: "tutoring" },
+  { label: "Coaching", slug: "youth-sports-coaching" },
+] as const;
 
 function postDate(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -140,7 +140,7 @@ export default async function BlogPage() {
           >
             <ul className="flex min-w-max items-center py-5 sm:mx-auto sm:w-max sm:py-6">
               {TOPICS.map((topic, index) => (
-                <li key={topic} className="flex items-center">
+                <li key={topic.slug} className="flex items-center">
                   {index > 0 ? (
                     <span
                       aria-hidden="true"
@@ -148,10 +148,10 @@ export default async function BlogPage() {
                     />
                   ) : null}
                   <Link
-                    href="/browse"
+                    href={`/browse?service=${topic.slug}`}
                     className="whitespace-nowrap text-[13px] font-medium text-viridian/80 transition-colors hover:text-viridian"
                   >
-                    {topic}
+                    {topic.label}
                   </Link>
                 </li>
               ))}
@@ -210,7 +210,7 @@ export default async function BlogPage() {
                 { href: "/browse", label: "Book a Student" },
                 {
                   href: "/provider/onboarding/account",
-                  label: "Join as a Student",
+                  label: "Become a provider",
                 },
                 { href: "/browse", label: "See All Services" },
               ].map((item, index) => (

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Top-right account menu: an initials avatar that opens a dropdown with
- * Account settings, Dashboard, and Sign out. Self-contained styling (a colored
+ * Account settings, Dashboard, and Log out. Self-contained styling (a colored
  * circle + a white overlay panel) so it reads correctly in every header —
  * customer (cream/forest), provider, and admin (crew/ink).
  */
@@ -266,7 +266,7 @@ export function UserMenu({
                 role="menuitem"
                 className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
               >
-                Sign out
+                Log out
               </button>
             </form>
           </div>

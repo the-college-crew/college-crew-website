@@ -32,6 +32,65 @@ const corsHeaders = {
 
 type Pattern = { name: string; regex: RegExp };
 
+type ChatAttachment = {
+  path: string;
+  kind: "image" | "video";
+  mimeType: string;
+  sizeBytes: number;
+  name: string;
+};
+
+const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
+function validateAttachments(
+  raw: unknown,
+  conversationId: string,
+): ChatAttachment[] | null {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw) || raw.length > 4) return null;
+
+  const attachments: ChatAttachment[] = [];
+  for (const value of raw) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const item = value as Record<string, unknown>;
+    if (
+      typeof item.path !== "string" ||
+      !item.path.startsWith(`${conversationId}/`) ||
+      item.path.includes("..") ||
+      typeof item.kind !== "string" ||
+      typeof item.mimeType !== "string" ||
+      typeof item.sizeBytes !== "number" ||
+      !Number.isInteger(item.sizeBytes) ||
+      item.sizeBytes <= 0 ||
+      typeof item.name !== "string" ||
+      item.name.length === 0 ||
+      item.name.length > 160
+    ) return null;
+
+    const image = item.kind === "image" && IMAGE_TYPES.has(item.mimeType);
+    const video = item.kind === "video" && VIDEO_TYPES.has(item.mimeType);
+    if (!image && !video) return null;
+    if (image && item.sizeBytes > MAX_IMAGE_BYTES) return null;
+    if (video && item.sizeBytes > MAX_VIDEO_BYTES) return null;
+
+    attachments.push({
+      path: item.path,
+      kind: item.kind as "image" | "video",
+      mimeType: item.mimeType,
+      sizeBytes: item.sizeBytes,
+      name: item.name,
+    });
+  }
+
+  if (attachments.some((item) => item.kind === "video") && attachments.length !== 1) {
+    return null;
+  }
+  return attachments;
+}
+
 // Layer 1: regex detection. Deliberately conservative so street addresses and
 // job details never match (e.g. phone requires a full 10-digit shape).
 const PATTERNS: Pattern[] = [
@@ -310,10 +369,26 @@ Deno.serve(async (request) => {
     } = await userClient.auth.getUser();
     if (!user) return json({ error: "Not signed in." }, 401);
 
-    const { conversation_id, body, image_path } = await request.json();
+    const { conversation_id, body, image_path, attachments: rawAttachments } =
+      await request.json();
     const text = typeof body === "string" ? body.trim().slice(0, 4000) : "";
     const image = typeof image_path === "string" ? image_path : null;
-    if (!conversation_id || (!text && !image)) {
+    if (!conversation_id || typeof conversation_id !== "string") {
+      return json({ error: "Conversation not found." }, 400);
+    }
+    const attachments = validateAttachments(rawAttachments, conversation_id);
+    if (attachments === null) {
+      return json({ error: "Invalid media attachment." }, 400);
+    }
+    // Keep accepting the original one-image payload while deployed clients
+    // roll forward. New web clients always send the richer manifest.
+    if (
+      image &&
+      (!image.startsWith(`${conversation_id}/`) || image.includes(".."))
+    ) {
+      return json({ error: "Invalid media attachment." }, 400);
+    }
+    if (!text && attachments.length === 0 && !image) {
       return json({ error: "Nothing to send." }, 400);
     }
 
@@ -367,7 +442,10 @@ Deno.serve(async (request) => {
         conversation_id,
         sender_id: user.id,
         body: text,
-        image_path: image,
+        image_path:
+          attachments.find((attachment) => attachment.kind === "image")?.path ??
+          image,
+        attachments,
         moderation_status: moderationStatus,
       })
       .select("*")

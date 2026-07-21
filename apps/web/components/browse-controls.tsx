@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { BookingFrom } from "@/components/booking-from";
-import { buttonClasses } from "@/components/ui/button";
 import type { ProviderSort } from "@/lib/db/queries";
 import type { BookingFromSummary } from "@/lib/location/booking-from";
 import { cn } from "@/lib/utils";
@@ -10,7 +9,6 @@ const SORTS: Array<{ value: ProviderSort; label: string }> = [
   { value: "suggested", label: "Suggested" },
   { value: "location", label: "Location" },
   { value: "rating", label: "Rating" },
-  { value: "rate", label: "Hourly rate" },
 ];
 
 export function BrowseControls({
@@ -23,10 +21,16 @@ export function BrowseControls({
   bookingFrom: BookingFromSummary;
 }) {
   return (
-    <div className="grid gap-4 rounded-2xl border-[1.4px] border-viridian/15 bg-court p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+    <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
       <BookingFrom summary={bookingFrom} />
 
-      <nav aria-label="Sort providers" className="flex flex-wrap gap-2">
+      {/* Underline tabs, same gold-accent treatment as the header's active
+          nav link — text-weight sorting controls, not another row of pills. */}
+      <nav
+        aria-label="Sort providers"
+        className="flex items-center gap-5 text-sm font-medium"
+      >
+        <span className="text-ink-soft/70">Sort</span>
         {SORTS.map((sort) => {
           const params = new URLSearchParams();
           if (serviceSlug) params.set("service", serviceSlug);
@@ -39,11 +43,10 @@ export function BrowseControls({
               href={query ? `/browse?${query}` : "/browse"}
               aria-current={active ? "page" : undefined}
               className={cn(
-                buttonClasses({
-                  variant: active ? "primary" : "secondary",
-                  size: "sm",
-                }),
-                !active && "border-viridian/20",
+                "transition-colors",
+                active
+                  ? "text-viridian underline decoration-gold-400 decoration-[2.5px] underline-offset-[6px]"
+                  : "text-ink-soft hover:text-viridian",
               )}
             >
               {sort.label}

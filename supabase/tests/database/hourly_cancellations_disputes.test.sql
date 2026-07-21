@@ -52,6 +52,22 @@ select is(
   has_table_privilege('authenticated', 'public.stripe_disputes', 'select'),
   false, 'external card disputes are never browser-readable'
 );
+select is(
+  has_function_privilege('authenticated', 'public.admin_retry_booking_refund(uuid)', 'execute'),
+  true, 'the founder refund retry RPC is exposed to authenticated users'
+);
+select is(
+  has_function_privilege('anon', 'public.admin_retry_booking_refund(uuid)', 'execute'),
+  false, 'anonymous users cannot retry refunds'
+);
+select is(
+  has_function_privilege('service_role', 'public.claim_stripe_webhook_receipt(uuid,integer)', 'execute'),
+  true, 'the service role can claim webhook receipts'
+);
+select is(
+  has_function_privilege('anon', 'public.claim_stripe_webhook_receipt(uuid,integer)', 'execute'),
+  false, 'anonymous users cannot claim webhook receipts'
+);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -550,6 +566,92 @@ select is(
 select is(
   (select count(*) from public.booking_disputes where booking_id = '40000000-0000-0000-0000-000000004604')::integer,
   1, 'the external card dispute never merges into internal disputes'
+);
+
+-- ===========================================================================
+-- Founder retries preserve existing ledger/receipt identity
+-- ===========================================================================
+reset role;
+update public.booking_refunds
+set status = 'failed', failure_code = 'test_failure',
+    failure_message = 'Synthetic failure', failed_at = now()
+where idempotency_key = 'refund_admin_fh_40000000-0000-0000-0000-000000004603';
+do $$
+begin
+  perform set_config(
+    'test.retry_refund_id',
+    (select id::text from public.booking_refunds
+     where idempotency_key = 'refund_admin_fh_40000000-0000-0000-0000-000000004603'),
+    true
+  );
+end;
+$$;
+
+select pg_temp.as_user('40000000-0000-0000-0000-000000004103');
+set local role authenticated;
+select is(
+  public.admin_retry_booking_refund(
+    current_setting('test.retry_refund_id')::uuid
+  ),
+  '40000000-0000-0000-0000-000000004603'::uuid,
+  'an admin releases the same failed refund record for retry'
+);
+
+reset role;
+select results_eq(
+  $$ select status::text, failure_code, failed_at
+     from public.booking_refunds
+     where idempotency_key = 'refund_admin_fh_40000000-0000-0000-0000-000000004603' $$,
+  $$ values ('created'::text, null::text, null::timestamptz) $$,
+  'refund retry clears failure state without changing ledger identity'
+);
+
+insert into public.stripe_webhook_receipts (
+  id, stripe_event_id, event_type, livemode, payload, received_at,
+  processing_started_at, attempt_count, last_error
+) values
+  ('40000000-0000-0000-0000-000000004801', 'evt_fresh', 'test.fresh', false,
+   '{"id":"evt_fresh","type":"test.fresh"}'::jsonb, now(), now(), 1, null),
+  ('40000000-0000-0000-0000-000000004802', 'evt_stale', 'test.stale', false,
+   '{"id":"evt_stale","type":"test.stale"}'::jsonb,
+   now() - interval '10 minutes', now() - interval '10 minutes', 1, null),
+  ('40000000-0000-0000-0000-000000004803', 'evt_error', 'test.error', false,
+   '{"id":"evt_error","type":"test.error"}'::jsonb,
+   now(), now(), 1, 'synthetic');
+
+select pg_temp.as_user('40000000-0000-0000-0000-000000004101');
+set local role authenticated;
+select pg_temp.throws_any_ok(
+  $$ select * from public.claim_stripe_webhook_receipt(
+    '40000000-0000-0000-0000-000000004802', 300
+  ) $$,
+  'a non-admin cannot claim a webhook receipt'
+);
+
+reset role;
+select pg_temp.as_user('40000000-0000-0000-0000-000000004103');
+set local role authenticated;
+select is(
+  (select count(*)::integer from public.claim_stripe_webhook_receipt(
+    '40000000-0000-0000-0000-000000004801', 300
+  )),
+  0, 'a fresh in-flight webhook is not claimable'
+);
+select results_eq(
+  $$ select stripe_event_id, attempt_count
+     from public.claim_stripe_webhook_receipt(
+       '40000000-0000-0000-0000-000000004802', 300
+     ) $$,
+  $$ values ('evt_stale'::text, 2) $$,
+  'a stale webhook is atomically claimed and increments its attempt count'
+);
+select results_eq(
+  $$ select stripe_event_id, attempt_count
+     from public.claim_stripe_webhook_receipt(
+       '40000000-0000-0000-0000-000000004803', 300
+     ) $$,
+  $$ values ('evt_error'::text, 2) $$,
+  'an errored webhook is immediately claimable'
 );
 
 reset role;

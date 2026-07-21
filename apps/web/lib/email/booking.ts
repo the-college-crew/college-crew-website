@@ -93,6 +93,11 @@ const COPY: Record<
     heading: "Work has started",
     body: "Your provider marked the job as Arrived. You can follow its status from your dashboard.",
   },
+  provider_en_route: {
+    subject: "Your College Crew provider is on the way",
+    heading: "Your provider is on the way",
+    body: "Your provider sent an on-my-way update. Follow the booking from your dashboard.",
+  },
   invoice_submitted: {
     subject: "Your College Crew invoice is ready",
     heading: "Review your final invoice",

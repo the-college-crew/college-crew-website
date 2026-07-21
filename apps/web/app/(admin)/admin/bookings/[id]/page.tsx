@@ -6,6 +6,7 @@ import { StatusPill } from "@/components/status-pill";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatDateTime, formatMoney } from "@/lib/utils";
@@ -90,6 +91,22 @@ export default async function AdminBookingPage({
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresh
+        channel={`admin-booking:${id}`}
+        table="bookings"
+        filter={`id=eq.${id}`}
+      />
+      {[
+        "booking_invoices",
+        "booking_disputes",
+      ].map((table) => (
+        <RealtimeRefresh
+          key={table}
+          channel={`admin-booking:${id}:${table}`}
+          table={table}
+          filter={`booking_id=eq.${id}`}
+        />
+      ))}
       <PageHeader
         title={booking.service_name_snapshot ?? "Booking"}
         description={`${booking.customer_name_snapshot ?? "Customer"} · ${booking.provider_display_name_snapshot ?? "Provider"}`}
@@ -110,7 +127,7 @@ export default async function AdminBookingPage({
           </p>
           <StatusPill status={booking.status} />
         </div>
-        <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-4 text-sm">
+        <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-line pt-4 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-mist">Estimated</dt>
             <dd>{formatMinutes(booking.estimated_minutes)}</dd>
@@ -156,6 +173,14 @@ export default async function AdminBookingPage({
             <div className="flex justify-between">
               <dt className="text-mist">Invoice subtotal</dt>
               <dd>{formatMoney(invoice.subtotal_cents)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-mist">Platform fee</dt>
+              <dd>{formatMoney(invoice.total_platform_fee_cents)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-mist">First-hour credit</dt>
+              <dd>{formatMoney(invoice.first_hour_credit_cents)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-mist">Remaining balance</dt>

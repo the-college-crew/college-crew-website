@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { Editable } from "@/components/content/editable";
 import { getSession } from "@/lib/auth/session";
-import { NEIGHBORHOOD, SITE } from "@/lib/site";
+import { PILOT_SERVICE_AREA, SITE } from "@/lib/site";
 
 const EXPLORE = [
   { href: "/browse", label: "Browse providers" },
@@ -48,7 +48,7 @@ export async function SiteFooter() {
             </p>
             <p className="mt-4 text-sm text-shell/70">
               <Editable k="footer.pilot-note">
-                {`Now serving ${NEIGHBORHOOD.name}, our pilot neighborhood.`}
+                {`Now serving ${PILOT_SERVICE_AREA.name}.`}
               </Editable>
             </p>
           </div>

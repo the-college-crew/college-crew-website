@@ -37,10 +37,10 @@ import {
   schoolEmailSchema,
 } from "@/lib/validation/auth";
 import {
+  isOfferingPricingReady,
   isStructuredAvailabilityComplete,
   parseProviderAvailabilityForm,
 } from "@/lib/provider/setup";
-import { isHourlyRateValid } from "@/lib/booking/policy";
 
 import { savePricingRows } from "../_lib/pricing";
 
@@ -463,11 +463,13 @@ export async function submitForReview(
     getVerifiedSchoolEmail(session.user.id),
     createClient(),
   ]);
+  if (!profile.avatar_image_path) {
+    redirect("/provider/onboarding/verify?err=photo");
+  }
   if (
     !schoolEmail ||
     !profile.id_document_url ||
-    !profile.id_document_back_url ||
-    !profile.avatar_image_path
+    !profile.id_document_back_url
   ) {
     redirect("/provider/onboarding/verify");
   }
@@ -475,17 +477,22 @@ export async function submitForReview(
   const [{ data: offerings }, windows] = await Promise.all([
     supabase
       .from("provider_services")
-      .select("hourly_rate_cents, service:services(is_live)")
+      .select(
+        "hourly_rate_cents, pricing_mode, service:services(slug, is_live)",
+      )
       .eq("provider_id", profile.id),
     getProviderAvailabilityWindows(profile.id),
   ]);
-  const hasReadyRate = (offerings ?? []).some(
+  const hasReadyPricing = (offerings ?? []).some(
     (offering) =>
       offering.service?.is_live &&
-      offering.hourly_rate_cents !== null &&
-      isHourlyRateValid(offering.hourly_rate_cents),
+      isOfferingPricingReady({
+        hourly_rate_cents: offering.hourly_rate_cents,
+        pricing_mode: offering.pricing_mode,
+        service_slug: offering.service.slug,
+      }),
   );
-  if (!hasReadyRate) redirect("/provider/onboarding/services");
+  if (!hasReadyPricing) redirect("/provider/onboarding/services");
 
   if (!isStructuredAvailabilityComplete(windows) || !profile.service_zip) {
     redirect("/provider/onboarding/availability");

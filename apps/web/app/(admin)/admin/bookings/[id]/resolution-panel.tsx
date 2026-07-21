@@ -62,7 +62,7 @@ export function ResolutionPanel({
         {(Object.keys(RESOLUTION_LABELS) as Resolution[]).map((option) => (
           <label
             key={option}
-            className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm has-[:checked]:border-crew-400 has-[:checked]:bg-crew-50"
+            className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm has-[:checked]:border-crew-400 has-[:checked]:bg-crew-50 has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-stone/40 has-[:disabled]:text-mist has-[:disabled]:opacity-65"
           >
             <input
               type="radio"

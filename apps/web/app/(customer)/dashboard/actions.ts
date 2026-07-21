@@ -86,7 +86,7 @@ export async function dismissDeclinedBooking(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
-export type ReviewFormState = { error?: string; success?: boolean };
+export type ReviewFormState = { error?: string };
 
 const reviewSchema = z.object({
   bookingId: z.string().uuid(),

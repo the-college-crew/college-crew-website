@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,7 +25,12 @@ export default async function AdminServicesPage({
   const { data: services } = await supabase
     .from("services")
     .select("*")
+    .order("category")
     .order("name");
+
+  const categories = Array.from(
+    new Set((services ?? []).map((service) => service.category)),
+  );
 
   return (
     <div className="space-y-6">
@@ -41,44 +46,64 @@ export default async function AdminServicesPage({
         </div>
       ) : null}
 
-      <Card className="divide-y divide-line p-0">
-        {!services || services.length === 0 ? (
-          <p className="p-4 text-sm text-mist">
+      {!services || services.length === 0 ? (
+        <Card className="p-4">
+          <p className="text-sm text-mist">
             No services in the catalog — the seed migration adds the launch
             six.
           </p>
-        ) : (
-          services.map((service) => (
-            <div
-              key={service.id}
-              className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-            >
-              <div>
-                <p className="text-sm font-semibold">{service.name}</p>
-                <p className="text-xs text-mist">
-                  {service.category} · /{service.slug}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Badge tone={service.is_live ? "green" : "gray"}>
-                  {service.is_live ? "Live" : "Hidden"}
-                </Badge>
-                <form action={toggleServiceLive}>
-                  <input type="hidden" name="serviceId" value={service.id} />
-                  <input
-                    type="hidden"
-                    name="nextLive"
-                    value={String(!service.is_live)}
-                  />
-                  <Button type="submit" variant="secondary" size="sm">
-                    {service.is_live ? "Hide" : "Go live"}
-                  </Button>
-                </form>
-              </div>
-            </div>
-          ))
-        )}
-      </Card>
+        </Card>
+      ) : (
+        <div className="space-y-5">
+          {categories.map((category) => (
+            <section key={category}>
+              <h2 className="mb-2 font-display text-xs font-semibold uppercase tracking-wide text-mist">
+                {category}
+              </h2>
+              <Card className="divide-y divide-line p-0">
+                {services
+                  .filter((service) => service.category === category)
+                  .map((service) => (
+                    <div
+                      key={service.id}
+                      className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold">{service.name}</p>
+                        <p className="text-xs text-mist">/{service.slug}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge tone={service.is_live ? "green" : "gray"}>
+                          {service.is_live ? "Live" : "Hidden"}
+                        </Badge>
+                        <form action={toggleServiceLive}>
+                          <input type="hidden" name="serviceId" value={service.id} />
+                          <input
+                            type="hidden"
+                            name="nextLive"
+                            value={String(!service.is_live)}
+                          />
+                          <ConfirmSubmitButton
+                            type="submit"
+                            variant="secondary"
+                            size="sm"
+                            confirmMessage={
+                              service.is_live
+                                ? `Hide ${service.name}? Customers and providers will no longer see it for new bookings.`
+                                : undefined
+                            }
+                          >
+                            {service.is_live ? "Hide" : "Go live"}
+                          </ConfirmSubmitButton>
+                        </form>
+                      </div>
+                    </div>
+                  ))}
+              </Card>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

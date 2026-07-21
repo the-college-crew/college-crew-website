@@ -82,7 +82,7 @@ export function DisputeForm({
         </p>
       </div>
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" size="lg" className="w-full" disabled={pending}>
         {pending ? "Submitting…" : "Submit for review"}
       </Button>
       <FieldError>{state.error}</FieldError>

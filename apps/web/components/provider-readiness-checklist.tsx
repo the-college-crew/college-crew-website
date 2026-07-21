@@ -4,12 +4,15 @@ import {
   getOfferingReadiness,
   type AvailabilityWindow,
 } from "@/lib/provider/setup";
-import { formatMoney } from "@/lib/utils";
+import { formatOfferedPrice } from "@/lib/utils";
 
 export type ReadinessOffering = {
   id: string;
   name: string;
   hourly_rate_cents: number | null;
+  pricing_mode: "hourly" | "quote";
+  average_quote_cents: number | null;
+  service_slug: string;
   service_is_live: boolean;
 };
 
@@ -34,7 +37,7 @@ export function ProviderReadinessChecklist({
   if (offerings.length === 0) {
     return (
       <div className="rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
-        Add at least one live service and hourly rate before customers can book
+        Add at least one live service and its pricing before customers can book
         you.
       </div>
     );
@@ -52,7 +55,7 @@ export function ProviderReadinessChecklist({
     <div className="rounded-lg border border-line bg-court/60 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-base font-semibold">
-          Hourly booking readiness
+          Booking readiness
         </h3>
         <Badge tone={allReady ? "green" : "gold"}>
           {allReady ? "Ready" : "Setup needed"}
@@ -74,14 +77,12 @@ export function ProviderReadinessChecklist({
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="font-semibold">{offering.name}</span>
               <span className="font-medium text-quad-700">
-                {offering.hourly_rate_cents === null
-                  ? "Rate needed"
-                  : `${formatMoney(offering.hourly_rate_cents)}/hr`}
+                {formatOfferedPrice(offering)}
               </span>
             </div>
             {readiness.bookable ? (
               <p className="mt-1 text-xs font-medium text-quad-700">
-                ✓ Ready for hourly requests
+                Ready for {offering.pricing_mode === "quote" ? "quote" : "hourly"} requests
               </p>
             ) : (
               <ul className="mt-2 grid gap-1 text-xs text-ink-soft sm:grid-cols-2">

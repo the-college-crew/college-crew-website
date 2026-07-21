@@ -21,6 +21,14 @@ select is(
   false, 'anonymous users cannot mark arrival'
 );
 select is(
+  has_function_privilege('authenticated', 'public.mark_booking_en_route(uuid)', 'execute'),
+  true, 'providers can mark themselves en route'
+);
+select is(
+  has_function_privilege('anon', 'public.mark_booking_en_route(uuid)', 'execute'),
+  false, 'anonymous users cannot mark themselves en route'
+);
+select is(
   has_function_privilege('authenticated', 'public.submit_job_invoice(uuid,integer,text)', 'execute'),
   true, 'providers can submit an invoice'
 );
@@ -183,6 +191,38 @@ select set_config('request.jwt.claim.sub', '30000000-0000-0000-0000-000000003102
 select set_config('request.jwt.claims', '{"sub":"30000000-0000-0000-0000-000000003102","role":"authenticated"}', true);
 set local role authenticated;
 
+select isnt(
+  public.mark_booking_en_route('30000000-0000-0000-0000-000000003501'),
+  null, 'the provider can send the en-route ping inside the two-hour window'
+);
+select is(
+  public.mark_booking_en_route('30000000-0000-0000-0000-000000003501'),
+  (select en_route_at from public.bookings
+   where id = '30000000-0000-0000-0000-000000003501'),
+  'sending the en-route ping twice is idempotent'
+);
+select pg_temp.throws_any_ok(
+  $$ select public.mark_booking_en_route('30000000-0000-0000-0000-000000003502') $$,
+  'sending the en-route ping more than two hours early is rejected'
+);
+
+reset role;
+select results_eq(
+  $$ select event_key, template from public.email_outbox
+     where event_key = 'en_route_customer_30000000-0000-0000-0000-000000003501' $$,
+  $$ values (
+    'en_route_customer_30000000-0000-0000-0000-000000003501'::text,
+    'provider_en_route'::text
+  ) $$,
+  'the en-route ping queues one deterministic customer email'
+);
+select pg_temp.throws_any_ok(
+  $$ update public.bookings set en_route_at = now() + interval '1 minute'
+     where id = '30000000-0000-0000-0000-000000003501' $$,
+  'the en-route timestamp cannot be rewritten'
+);
+set local role authenticated;
+
 select is(
   public.mark_booking_arrived('30000000-0000-0000-0000-000000003501'),
   'in_progress', 'the provider can mark a booked job arrived'
@@ -204,6 +244,10 @@ select pg_temp.throws_any_ok(
 
 -- A non-provider (the customer) cannot mark arrival.
 select set_config('request.jwt.claim.sub', '30000000-0000-0000-0000-000000003101', true);
+select pg_temp.throws_any_ok(
+  $$ select public.mark_booking_en_route('30000000-0000-0000-0000-000000003503') $$,
+  'a non-owner cannot send the en-route ping'
+);
 select pg_temp.throws_any_ok(
   $$ select public.mark_booking_arrived('30000000-0000-0000-0000-000000003503') $$,
   'a non-owner cannot mark arrival'

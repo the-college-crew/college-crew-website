@@ -13,10 +13,17 @@ export function formatMoney(cents: number) {
   return usd.format(cents / 100);
 }
 
-/** Hourly pilot display. Legacy fixed/quote values are deliberately ignored. */
+/** Public pricing label for hourly services and supported quote offerings. */
 export function formatOfferedPrice(offered: {
   hourly_rate_cents?: number | null;
+  pricing_mode?: string | null;
+  average_quote_cents?: number | null;
 }) {
+  if (offered.pricing_mode === "quote") {
+    return offered.average_quote_cents == null
+      ? "Quote required"
+      : `Average quote ${formatMoney(offered.average_quote_cents)}`;
+  }
   if (offered.hourly_rate_cents === null || offered.hourly_rate_cents === undefined) {
     return "Hourly rate needed";
   }

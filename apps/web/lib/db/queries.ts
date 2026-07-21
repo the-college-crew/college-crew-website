@@ -26,6 +26,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getOfferingReadiness,
   type AvailabilityWindow,
+  type PricingMode,
 } from "@/lib/provider/setup";
 
 /**
@@ -41,7 +42,11 @@ export type OfferedService = {
   unit: PriceUnit;
   preview_image_path: string | null;
   hourly_rate_cents: number | null;
+  pricing_mode: PricingMode;
+  average_quote_cents: number | null;
   is_hourly_bookable: boolean;
+  is_quote_bookable: boolean;
+  is_bookable: boolean;
   service: Pick<Service, "id" | "name" | "slug" | "category" | "is_live">;
 };
 
@@ -139,7 +144,7 @@ async function getProviderCompletedJobCounts(
   return counts;
 }
 
-export type ProviderSort = "suggested" | "location" | "rating" | "rate";
+export type ProviderSort = "suggested" | "location" | "rating";
 
 export async function getLiveServices(): Promise<Service[]> {
   if (!hasSupabaseEnv()) return [];
@@ -159,6 +164,7 @@ const PROVIDER_CARD_SELECT = `
   avatar_image_path, banner_image_path, banner_style,
   provider_services (
     id, price_cents, price_type, unit, preview_image_path, hourly_rate_cents,
+    pricing_mode, average_quote_cents,
     service:services ( id, name, slug, category, is_live )
   )
 ` as const;
@@ -180,11 +186,14 @@ type SafePublicOfferingRow = PublicProviderOfferingRow & {
   unit: PriceUnit;
   preview_image_path: string | null;
   hourly_rate_cents: number | null;
+  pricing_mode: PricingMode;
+  average_quote_cents: number | null;
   service_name: string;
   service_slug: string;
   service_category: string;
   service_is_live: boolean;
   is_hourly_bookable: boolean;
+  is_quote_bookable: boolean;
 };
 
 function isSafePublicProviderRow(
@@ -213,7 +222,9 @@ function isSafePublicOfferingRow(
       row.service_slug !== null &&
       row.service_category !== null &&
       row.service_is_live !== null &&
-      row.is_hourly_bookable !== null,
+      row.is_hourly_bookable !== null &&
+      row.is_quote_bookable !== null &&
+      (row.pricing_mode === "hourly" || row.pricing_mode === "quote"),
   );
 }
 
@@ -225,7 +236,11 @@ function mapPublicOffering(row: SafePublicOfferingRow): OfferedService {
     unit: row.unit,
     preview_image_path: row.preview_image_path,
     hourly_rate_cents: row.hourly_rate_cents,
+    pricing_mode: row.pricing_mode,
+    average_quote_cents: row.average_quote_cents,
     is_hourly_bookable: row.is_hourly_bookable,
+    is_quote_bookable: row.is_quote_bookable,
+    is_bookable: row.is_hourly_bookable || row.is_quote_bookable,
     service: {
       id: row.service_id,
       name: row.service_name,
@@ -377,13 +392,16 @@ export async function getApprovedProviders(
   const relevantOfferings = (card: ProviderCard) =>
     card.services.filter(
       (offering) =>
-        offering.is_hourly_bookable &&
+        offering.is_bookable &&
         (!options.serviceSlug || offering.service.slug === options.serviceSlug),
     );
   const lowestRate = (card: ProviderCard) =>
     Math.min(
       ...relevantOfferings(card).map(
-        (offering) => offering.hourly_rate_cents ?? Number.POSITIVE_INFINITY,
+        (offering) =>
+          offering.pricing_mode === "quote"
+            ? (offering.average_quote_cents ?? Number.POSITIVE_INFINITY)
+            : (offering.hourly_rate_cents ?? Number.POSITIVE_INFINITY),
       ),
       Number.POSITIVE_INFINITY,
     );
@@ -403,11 +421,6 @@ export async function getApprovedProviders(
   }
   if (options.sort === "rating") {
     return filtered.toSorted(ratingThenRate);
-  }
-  if (options.sort === "rate") {
-    return filtered.toSorted(
-      (a, b) => lowestRate(a) - lowestRate(b) || ratingThenRate(a, b),
-    );
   }
 
   // Default "suggested" sort: the recommendation engine. Quality (smoothed
@@ -682,17 +695,28 @@ export async function getAdminProviderProfile(
   const availabilityWindows = windows ?? [];
   const serviceNameById = new Map((services ?? []).map((s) => [s.id, s.name]));
   const adminOfferings: OfferedService[] = provider.provider_services.map(
-    (offering) => ({
-      ...offering,
-      is_hourly_bookable: getOfferingReadiness(
+    (offering) => {
+      const readiness = getOfferingReadiness(
         provider,
         {
           hourly_rate_cents: offering.hourly_rate_cents,
+          pricing_mode:
+            offering.pricing_mode === "quote" ? "quote" : "hourly",
+          average_quote_cents: offering.average_quote_cents,
+          service_slug: offering.service.slug,
           service_is_live: offering.service.is_live,
         },
         availabilityWindows,
-      ).bookable,
-    }),
+      ).bookable;
+      const isQuote = offering.pricing_mode === "quote";
+      return {
+        ...offering,
+        pricing_mode: isQuote ? "quote" : "hourly",
+        is_hourly_bookable: !isQuote && readiness,
+        is_quote_bookable: isQuote && readiness,
+        is_bookable: readiness,
+      };
+    },
   );
 
   const locationFacts = await getProviderLocationFacts([providerId]);

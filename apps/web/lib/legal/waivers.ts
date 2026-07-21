@@ -1,10 +1,11 @@
 import type { UserRole } from "@/lib/db/types";
 
-export const LEGAL_CONTENT_VERSION = "2026-07-15";
-export const PLATFORM_TERMS_VERSION = "2026-07-15";
+export const LEGAL_CONTENT_VERSION = "2026-07-20";
+export const PLATFORM_TERMS_VERSION = "2026-07-20";
 export const CUSTOMER_BOOKING_TERMS_VERSION = "2026-07-15";
 export const PROVIDER_TERMS_VERSION = "2026-07-15";
 export const BOOKING_RISK_VERSION = "2026-07-15";
+export const QUOTE_BOOKING_RISK_VERSION = "quote-v1-2026-07-20";
 
 export type LegalDocumentKind =
   | "platform_terms"
@@ -98,7 +99,7 @@ export const MASTER_SECTIONS: LegalSection[] = [
     title: "Dispute Resolution",
     appliesTo: "all",
     body: [
-      "Any dispute arising out of or relating to this Agreement shall be resolved through [VENUE OR FORUM TO BE DETERMINED WITH COUNSEL: binding arbitration under Illinois law, or the courts of Lake County, Illinois]. This Agreement is governed by the laws of the State of Illinois, without regard to conflict-of-law principles. Before initiating a formal claim, the parties agree to attempt informal resolution by providing written notice to the other party at the contact information below.",
+      "Any dispute arising out of or relating to this Agreement shall be resolved through binding arbitration administered by the American Arbitration Association (\"AAA\") under its Consumer Arbitration Rules, conducted in Lake County, Illinois, except that either party may elect to bring an individual claim in small claims court in Lake County, Illinois if the claim qualifies under Illinois's small claims jurisdictional limits. The parties waive any right to bring or participate in a class, collective, or representative action. This Agreement is governed by the laws of the State of Illinois, without regard to conflict-of-law principles. Before initiating a formal claim, the parties agree to attempt informal resolution by providing written notice to the other party at the contact information below.",
     ],
   },
   {
@@ -239,6 +240,15 @@ export const BOOKING_FIXED_SCAFFOLD = [
 
 export const BOOKING_CONSENT_LABEL =
   "I have read and accept these risks for this booking.";
+
+export const QUOTE_PAYMENT_CONSENT_LABEL =
+  "I accept the booking risks and authorize the displayed final flat quote for this booking.";
+
+export const QUOTE_PAYMENT_TERMS = [
+  "The provider's optional average quote is informational and is not a price promise.",
+  "The final flat quote shown at checkout is the complete service price authorized for this booking. College Crew does not add a separate customer platform fee.",
+  "Images or a video shared in the private booking chat may be used by the provider to prepare the quote. Sending a quote request does not create a charge.",
+] as const;
 
 export const GENERAL_FAMILY_DISCLOSURE = [
   "In addition to the category-specific representations above, Family agrees to disclose, prior to each booking, any condition on the property or within the household that a reasonable person would consider relevant to Student's safety.",
@@ -416,6 +426,32 @@ export function getBookingRiskSnapshot(input: {
     },
     generalFamilyDisclosure: [...GENERAL_FAMILY_DISCLOSURE],
     consentLabel: BOOKING_CONSENT_LABEL,
+  };
+}
+
+export function getQuoteBookingRiskSnapshot(input: {
+  bookingId: string;
+  finalQuoteCents: number;
+  serviceSlug: string;
+  serviceName: string;
+  scheduledAt: string;
+  address: string;
+  providerName: string;
+  customerName: string;
+}) {
+  const base = getBookingRiskSnapshot(input);
+  if (!base) return null;
+
+  return {
+    ...base,
+    version: QUOTE_BOOKING_RISK_VERSION,
+    quoteTerms: {
+      bookingId: input.bookingId,
+      finalQuoteCents: input.finalQuoteCents,
+      pricing: "final_flat_quote" as const,
+      body: [...QUOTE_PAYMENT_TERMS],
+    },
+    consentLabel: QUOTE_PAYMENT_CONSENT_LABEL,
   };
 }
 

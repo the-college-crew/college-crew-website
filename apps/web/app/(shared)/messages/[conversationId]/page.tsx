@@ -6,6 +6,7 @@ import { ChatThread } from "@/components/chat/chat-thread";
 import { DemoChatThread } from "@/components/demo-chat-thread";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { StatusPill } from "@/components/status-pill";
+import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -38,6 +39,11 @@ type ConversationRow = {
  * it's about, since the same two people may have several. A booking-less thread
  * is the pre-booking inquiry opened from a provider's profile. RLS decides
  * membership — non-members simply see a 404.
+ *
+ * On desktop this page is the right pane of the two-pane layout in
+ * layout.tsx (sidebar always visible, so it fills the pane rather than
+ * centering as its own column); on mobile it's the full-width thread screen
+ * reached by tapping a conversation.
  */
 export default async function ConversationPage({
   params,
@@ -58,13 +64,16 @@ export default async function ConversationPage({
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col px-4 py-4 sm:py-6">
         <div className="mb-3 shrink-0 flex items-start justify-between gap-4">
-          <div>
-            <p className="font-display text-xs font-semibold text-mist">
-              Sample conversation
-            </p>
-            <h1 className="font-display text-2xl font-semibold">
-              {otherName}
-            </h1>
+          <div className="flex items-center gap-3">
+            <Avatar name={otherName} size="lg" />
+            <div>
+              <p className="font-display text-xs font-semibold uppercase tracking-wide text-mist">
+                Sample conversation
+              </p>
+              <h1 className="font-display text-xl font-semibold text-ink lg:text-2xl">
+                {otherName}
+              </h1>
+            </div>
           </div>
           <BackButton />
         </div>
@@ -117,25 +126,30 @@ export default async function ConversationPage({
   const booking = conversation.booking;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col px-4 py-4 sm:py-6">
+    <div className="flex h-full min-h-0 w-full flex-col px-4 py-4 sm:py-6 lg:px-6">
       <div className="mb-3 shrink-0 flex items-start justify-between gap-4">
-        <div>
-          <p className="font-display text-xs font-semibold text-mist">
-            {booking
-              ? `${booking.service?.name ?? "Booking"} · ${formatDateTime(booking.scheduled_at)}`
-              : "General inquiry (no booking yet)"}
-          </p>
-          <h1 className="font-display text-2xl font-semibold">
-            {otherName || "Conversation"}
-          </h1>
+        <div className="flex items-center gap-3">
+          <Avatar name={otherName || "Conversation"} size="lg" />
+          <div>
+            <p className="font-display text-xs font-semibold uppercase tracking-wide text-mist">
+              {booking
+                ? `${booking.service?.name ?? "Booking"} · ${formatDateTime(booking.scheduled_at)}`
+                : "General inquiry (no booking yet)"}
+            </p>
+            <h1 className="font-display text-xl font-semibold text-ink lg:text-2xl">
+              {otherName || "Conversation"}
+            </h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {booking ? <StatusPill status={booking.status} /> : null}
-          <BackButton />
+          <div className="lg:hidden">
+            <BackButton />
+          </div>
         </div>
       </div>
 
-      <Card pennant className="flex h-[min(34rem,calc(100dvh-10rem))] min-h-0 flex-col p-0">
+      <Card pennant className="flex h-[min(34rem,calc(100dvh-10rem))] min-h-0 flex-col p-0 lg:h-full">
         <ChatThread
           conversationId={conversation.id}
           currentUserId={user.id}

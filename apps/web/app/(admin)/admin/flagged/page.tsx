@@ -8,7 +8,8 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
-import type { ProfileTextField } from "@/lib/db/types";
+import type { Json, ProfileTextField } from "@/lib/db/types";
+import { attachmentPreviewText } from "@/lib/messaging/attachments";
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDate, formatTime } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ type ThreadMessage = {
   sender_id: string;
   body: string;
   image_path: string | null;
+  attachments: Json;
   created_at: string;
   sender: { full_name: string } | null;
 };
@@ -128,7 +130,7 @@ export default async function AdminFlaggedPage() {
           supabase
             .from("messages")
             .select(
-              "id, conversation_id, sender_id, body, image_path, created_at, sender:profiles(full_name)",
+              "id, conversation_id, sender_id, body, image_path, attachments, created_at, sender:profiles(full_name)",
             )
             .in("conversation_id", conversationIds)
             .order("created_at", { ascending: true }),
@@ -171,7 +173,7 @@ export default async function AdminFlaggedPage() {
       />
       <PageHeader
         title="Flagged"
-        description="Chat messages and provider profile text that the regex scan or gpt-5.4-nano flagged. Moderation is flag-only everywhere: nothing is redacted, blocked, or hidden from users — messages are always delivered in full, and a flagged bio is live on the provider's public profile until you change it. Resolving marks a flag reviewed; it does not alter any text."
+        description="Chat messages and provider bios flagged by the regex scan or gpt-5.4-nano. Flag-only moderation — nothing is redacted, blocked, or hidden; flagged content stays live until you change it. Resolving just marks a flag reviewed, it doesn't edit anything."
       />
 
       <section aria-labelledby="events">
@@ -266,9 +268,9 @@ export default async function AdminFlaggedPage() {
                               </span>{" "}
                               · {formatTime(message.created_at)}
                             </p>
-                            {message.image_path ? (
+                            {attachmentPreviewText(message) ? (
                               <p className="mt-0.5 text-ink-soft">
-                                📷 Photo attachment
+                                {attachmentPreviewText(message)} attachment
                               </p>
                             ) : null}
                             {message.body ? (
@@ -332,7 +334,7 @@ export default async function AdminFlaggedPage() {
                   >
                     <input type="hidden" name="eventId" value={event.id} />
                     <Button type="submit" variant="success" size="sm">
-                      Resolve
+                      Resolve profile flag
                     </Button>
                   </form>
 
