@@ -30,11 +30,20 @@ export function formatOfferedPrice(offered: {
   return `${formatMoney(offered.hourly_rate_cents)}/hr`;
 }
 
+/**
+ * The pilot serves one Central-time neighborhood, and booking times are captured
+ * and stored as Central (see PILOT_TIME_ZONE in lib/booking/policy.ts). Server
+ * components render in the runtime's default zone (UTC on Vercel), so every
+ * date/time formatter must pin the zone or times display ~5-6h off.
+ */
+const APP_TIME_ZONE = "America/Chicago";
+
 export function formatDate(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
+    timeZone: APP_TIME_ZONE,
   }).format(new Date(iso));
 }
 
@@ -45,6 +54,7 @@ export function formatDateTime(iso: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: APP_TIME_ZONE,
   }).format(new Date(iso));
 }
 
@@ -52,5 +62,6 @@ export function formatTime(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: APP_TIME_ZONE,
   }).format(new Date(iso));
 }
