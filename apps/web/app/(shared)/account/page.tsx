@@ -304,6 +304,7 @@ async function ProviderStorefront({
         description="Your public headshot on Browse and your profile. Required to stay visible to neighbors."
       >
         <AvatarUploadForm
+          userId={providerProfile.user_id}
           imageUrl={providerAvatarUrl(providerProfile.avatar_image_path)}
         />
       </Section>
@@ -313,6 +314,7 @@ async function ProviderStorefront({
         description="The wide banner behind your headshot on Browse and your profile. Pick a theme or upload your own photo."
       >
         <BannerUploadForm
+          userId={providerProfile.user_id}
           imagePath={providerProfile.banner_image_path}
           activeStyle={toBannerStyle(providerProfile.banner_style)}
         />

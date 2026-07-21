@@ -1,24 +1,83 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
-
+import { PROVIDER_AVATARS_BUCKET } from "@/lib/media/provider-avatars";
 import {
-  uploadProviderAvatar,
-  type ProviderSettingsFormState,
-} from "./provider-actions";
+  PROVIDER_PHOTO_ACCEPT,
+  providerPhotoPath,
+  validateProviderPhoto,
+} from "@/lib/media/provider-photos";
+import { createClient } from "@/lib/supabase/client";
+
+import { uploadProviderAvatar } from "./provider-actions";
 
 /**
  * Upload/replace the provider's single required profile photo. There is no
  * "remove" — the photo must stay set for the provider to be publicly visible.
+ *
+ * The file goes browser -> Supabase Storage directly and only the object key
+ * reaches the Server Action, which keeps a 5 MB photo clear of the host's
+ * ~4.5 MB Server-Action body cap.
  */
-export function AvatarUploadForm({ imageUrl }: { imageUrl: string | null }) {
-  const [state, formAction, uploading] = useActionState<
-    ProviderSettingsFormState,
-    FormData
-  >(uploadProviderAvatar, {});
+export function AvatarUploadForm({
+  userId,
+  imageUrl,
+}: {
+  userId: string;
+  imageUrl: string | null;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [saving, startSaving] = useTransition();
+
+  const busy = uploading || saving;
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    const form = event.currentTarget;
+    const value = new FormData(form).get("image");
+    if (!(value instanceof File) || value.size === 0) {
+      setError("Choose a photo to upload.");
+      return;
+    }
+    const invalid = validateProviderPhoto(value);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
+
+    setUploading(true);
+    const path = providerPhotoPath(userId, value);
+    const { error: uploadError } = await createClient()
+      .storage.from(PROVIDER_AVATARS_BUCKET)
+      .upload(path, value, {
+        cacheControl: "31536000",
+        contentType: value.type,
+        upsert: false,
+      });
+    setUploading(false);
+
+    if (uploadError) {
+      setError(`Photo upload failed: ${uploadError.message}`);
+      return;
+    }
+
+    startSaving(async () => {
+      const result = await uploadProviderAvatar(path);
+      if (result.error) setError(result.error);
+      if (result.success) {
+        setSuccess(result.success);
+        form.reset();
+      }
+    });
+  }
 
   return (
     <div className="flex gap-4">
@@ -39,7 +98,7 @@ export function AvatarUploadForm({ imageUrl }: { imageUrl: string | null }) {
         )}
       </div>
 
-      <form action={formAction} className="min-w-0 flex-1 space-y-3">
+      <form onSubmit={handleSubmit} className="min-w-0 flex-1 space-y-3">
         <div>
           <Label htmlFor="provider-avatar">
             {imageUrl ? "Replace photo" : "Upload photo"}
@@ -48,7 +107,12 @@ export function AvatarUploadForm({ imageUrl }: { imageUrl: string | null }) {
             id="provider-avatar"
             name="image"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={PROVIDER_PHOTO_ACCEPT}
+            disabled={busy}
+            onChange={() => {
+              setError(null);
+              setSuccess(null);
+            }}
             className="cursor-pointer file:mr-3 file:rounded-lg file:border-0 file:bg-honeydew file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-viridian"
           />
           <FieldHint>
@@ -57,15 +121,15 @@ export function AvatarUploadForm({ imageUrl }: { imageUrl: string | null }) {
           </FieldHint>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={uploading}>
-            {uploading ? "Uploading…" : imageUrl ? "Replace photo" : "Upload photo"}
+          <Button type="submit" size="sm" disabled={busy}>
+            {busy ? "Uploading…" : imageUrl ? "Replace photo" : "Upload photo"}
           </Button>
-          {state.success ? (
-            <span className="text-sm font-medium text-quad-700">
-              {state.success}
+          {success ? (
+            <span aria-live="polite" className="text-sm font-medium text-quad-700">
+              {success}
             </span>
           ) : null}
-          <FieldError>{state.error}</FieldError>
+          <FieldError>{error}</FieldError>
         </div>
       </form>
     </div>

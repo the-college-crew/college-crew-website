@@ -43,8 +43,17 @@ yarn-error.log*
 .env.local
 !.env.example
 
-# personal claude code settings
-.claude/settings.local.json
+# claude code & ruflo local state (all except example config)
+.claude/
+.claude-flow/
+.playwright-mcp/
+.swarm/
+claude-flow.config.json
+agentdb.rvf*
+ruvector.db*
+data/
+DONOTREAD.md
+tsconfig.json
 
 # vercel
 .vercel

@@ -1,6 +1,9 @@
 /** Public bucket that holds each provider's required profile photo. */
 export const PROVIDER_AVATARS_BUCKET = "provider-avatars";
 
+// Size/MIME rules, path building, and the server-side path guard are shared
+// with the banner photo: see lib/media/provider-photos.ts.
+
 /**
  * Build a public object URL without instantiating a fourth Supabase client.
  * The path is encoded segment-by-segment so an uploaded filename can never

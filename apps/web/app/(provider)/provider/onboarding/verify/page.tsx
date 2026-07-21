@@ -142,7 +142,11 @@ export default async function OnboardingVerifyPage({
             ) : null}
 
             <div className="mt-5">
-              <IdUploadForm hasFront={hasFront} hasBack={hasBack} />
+              <IdUploadForm
+                userId={session.user.id}
+                hasFront={hasFront}
+                hasBack={hasBack}
+              />
             </div>
           </Card>
 
@@ -157,7 +161,7 @@ export default async function OnboardingVerifyPage({
             </p>
 
             <div className="mt-5">
-              <AvatarUploadForm imageUrl={avatarUrl} />
+              <AvatarUploadForm userId={session.user.id} imageUrl={avatarUrl} />
             </div>
           </Card>
 
