@@ -33,9 +33,19 @@ export const color = {
   // gold: dark-surface accent only (contrast fails on cream)
   gold: "#c5c27d",
   goldDeep: "#5f6535",
+  goldStar: "#8a7a2a",
+
+  // status/badge surfaces — mirror apps/web status-pill + badge tones so the
+  // booking-state vocabulary reads identically to the website.
+  honeydew: "#e4e3bc",
+  sky: "#d5e3e8",
+  stone: "#e0dcd1",
+  amber: "#f2e7c6",
+  amberInk: "#6b5411",
 
   // feedback
   danger: "#9a3b2e",
+  dangerSoft: "#f4e6e2",
   success: "#3f6b4f",
 
   onViridian: "#fffdf8",
