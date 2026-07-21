@@ -304,6 +304,7 @@ async function ProviderStorefront({
         description="Your public headshot on Browse and your profile. Required to stay visible to neighbors."
       >
         <AvatarUploadForm
+          userId={providerProfile.user_id}
           imageUrl={providerAvatarUrl(providerProfile.avatar_image_path)}
         />
       </Section>

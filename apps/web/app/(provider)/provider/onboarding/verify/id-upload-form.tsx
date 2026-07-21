@@ -1,85 +1,127 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useTopLoader } from "nextjs-toploader";
+import { useState, useTransition } from "react";
 
-import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
+import {
+  ID_DOCUMENT_ACCEPT,
+  ID_DOCUMENTS_BUCKET,
+  idDocumentPath,
+  LICENSE_SIDE_LABEL,
+  validateLicenseFile,
+  type LicenseSide,
+} from "@/lib/media/id-documents";
+import { createClient } from "@/lib/supabase/client";
 
-import { saveIdDocument, type OnboardingFormState } from "../actions";
+import { saveIdDocument } from "../actions";
 
-const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
-
-/** Mirror the server-side accept list so the messages stay in sync. */
-function validateFile(file: File): string | null {
-  const isImage = file.type.startsWith("image/");
-  const isPdf = file.type === "application/pdf";
-  if (!isImage && !isPdf) {
-    return "That file type isn't supported — upload a photo (JPG, PNG, HEIC) or a PDF.";
-  }
-  if (file.size > MAX_DOCUMENT_BYTES) {
-    return "That file is over 10 MB — use a smaller photo or PDF.";
-  }
-  return null;
-}
-
+/**
+ * License photos go browser -> Supabase Storage directly, then a Server Action
+ * records the two object keys. Routing the bytes through the action instead
+ * would put them against the host's ~4.5 MB request-body cap, which a pair of
+ * phone photos blows past with no useful error.
+ */
 export function IdUploadForm({
+  userId,
   hasFront,
   hasBack,
 }: {
+  userId: string;
   hasFront: boolean;
   hasBack: boolean;
 }) {
-  const [state, formAction, pending] = useActionState<
-    OnboardingFormState,
-    FormData
-  >(saveIdDocument, {});
-  const [clientError, setClientError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [saving, startSaving] = useTransition();
+  const loader = useTopLoader();
 
-  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    setClientError(file ? validateFile(file) : null);
+  const busy = uploading || saving;
+  const bothUploaded = hasFront && hasBack;
+
+  function pickFile(data: FormData, side: LicenseSide): File | null {
+    const value = data.get(side);
+    return value instanceof File && value.size > 0 ? value : null;
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    const data = new FormData(event.currentTarget);
-    const front = data.get("front");
-    const back = data.get("back");
-    const frontFile = front instanceof File && front.size > 0 ? front : null;
-    const backFile = back instanceof File && back.size > 0 ? back : null;
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
 
-    // Each side is only required if it isn't already on record. Block submit
-    // for a missing-but-required side, or an unsupported/oversized file, so the
-    // Server Action never trips a raw framework error.
-    if (!frontFile && !hasFront) {
-      event.preventDefault();
-      setClientError("Choose a photo of the front of your license.");
+    const data = new FormData(event.currentTarget);
+    const front = pickFile(data, "front");
+    const back = pickFile(data, "back");
+
+    // Each side is only required if it isn't already on record.
+    if (!front && !hasFront) {
+      setError("Choose a photo of the front of your license.");
       return;
     }
-    if (!backFile && !hasBack) {
-      event.preventDefault();
-      setClientError("Choose a photo of the back (barcode side) of your license.");
+    if (!back && !hasBack) {
+      setError("Choose a photo of the back (barcode side) of your license.");
       return;
     }
-    for (const file of [frontFile, backFile]) {
-      if (!file) continue;
-      const error = validateFile(file);
-      if (error) {
-        event.preventDefault();
-        setClientError(error);
+    if (!front && !back) {
+      setError("Choose a photo to upload.");
+      return;
+    }
+
+    const chosen = ([["front", front], ["back", back]] as const).filter(
+      (entry): entry is [LicenseSide, File] => entry[1] !== null,
+    );
+    for (const [side, file] of chosen) {
+      const invalid = validateLicenseFile(file, side);
+      if (invalid) {
+        setError(invalid);
         return;
       }
     }
+
+    setUploading(true);
+    loader.start();
+    const supabase = createClient();
+    const uploaded: { frontPath?: string; backPath?: string } = {};
+
+    for (const [side, file] of chosen) {
+      setStatus(`Uploading the ${LICENSE_SIDE_LABEL[side]}…`);
+      const path = idDocumentPath(userId, side, file);
+      const { error: uploadError } = await supabase.storage
+        .from(ID_DOCUMENTS_BUCKET)
+        .upload(path, file, {
+          contentType: file.type || undefined,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        setError(`Upload failed: ${uploadError.message}`);
+        setStatus(null);
+        setUploading(false);
+        loader.done();
+        return;
+      }
+      // A side that lands is kept even if the other one fails: the action
+      // saves each column independently.
+      if (side === "front") uploaded.frontPath = path;
+      else uploaded.backPath = path;
+    }
+
+    setStatus("Saving…");
+    setUploading(false);
+    startSaving(async () => {
+      const result = await saveIdDocument(uploaded);
+      // Success redirects, so reaching here means the save was rejected.
+      if (result?.error) {
+        setError(result.error);
+        setStatus(null);
+        loader.done();
+      }
+    });
   }
 
-  // Show the instant client-side message when present; otherwise fall back to
-  // whatever the server returned.
-  const error = clientError ?? state.error;
-  const bothUploaded = hasFront && hasBack;
-
   return (
-    <form action={formAction} onSubmit={handleSubmit} className="space-y-4">
-      <FormLoader />
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="front">
           {hasFront ? "Replace the front of your license" : "Front of license"}
@@ -88,8 +130,9 @@ export function IdUploadForm({
           id="front"
           name="front"
           type="file"
-          accept="image/*,application/pdf"
-          onChange={handleChange}
+          accept={ID_DOCUMENT_ACCEPT}
+          disabled={busy}
+          onChange={() => setError(null)}
           required={!hasFront}
         />
         <FieldHint>
@@ -109,8 +152,9 @@ export function IdUploadForm({
           id="back"
           name="back"
           type="file"
-          accept="image/*,application/pdf"
-          onChange={handleChange}
+          accept={ID_DOCUMENT_ACCEPT}
+          disabled={busy}
+          onChange={() => setError(null)}
           required={!hasBack}
         />
         <FieldHint>
@@ -127,13 +171,20 @@ export function IdUploadForm({
 
       <FieldError>{error}</FieldError>
 
-      <Button type="submit" size="lg" disabled={pending || clientError !== null}>
-        {pending
-          ? "Uploading…"
-          : bothUploaded
-            ? "Replace license photos"
-            : "Upload license photos"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" size="lg" disabled={busy}>
+          {busy
+            ? "Uploading…"
+            : bothUploaded
+              ? "Replace license photos"
+              : "Upload license photos"}
+        </Button>
+        {busy && status ? (
+          <span aria-live="polite" className="text-sm text-ink-soft">
+            {status}
+          </span>
+        ) : null}
+      </div>
     </form>
   );
 }

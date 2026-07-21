@@ -11,7 +11,11 @@ import {
   getOwnProviderProfile,
   requireProviderAccess,
 } from "@/lib/auth/session";
-import { PROVIDER_AVATARS_BUCKET } from "@/lib/media/provider-avatars";
+import {
+  isOwnAvatarPath,
+  PROVIDER_AVATARS_BUCKET,
+} from "@/lib/media/provider-avatars";
+import { uploadedObjectExists } from "@/lib/media/uploaded-object";
 import {
   BANNER_STYLES,
   PROVIDER_BANNERS_BUCKET,
@@ -318,39 +322,22 @@ export async function removeProviderBanner(
  * counterpart on purpose — the photo is required to stay publicly visible.
  */
 export async function uploadProviderAvatar(
-  _prev: ProviderSettingsFormState,
-  formData: FormData,
+  path: string,
 ): Promise<ProviderSettingsFormState> {
   await requireProviderAccess();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
-  const image = formData.get("image");
-  if (!(image instanceof File) || image.size === 0) {
-    return { error: "Choose a photo to upload." };
+  // The browser uploads the bytes and sends only the object key, so validate
+  // the key is this user's own and points at an object that actually landed.
+  if (!isOwnAvatarPath(path, profile.user_id)) {
+    return { error: "That upload didn't go through. Please try again." };
   }
-  if (image.size > MAX_IMAGE_UPLOAD_BYTES) {
-    return { error: "Choose an image smaller than 5 MB." };
-  }
-  const extension = IMAGE_UPLOAD_EXTENSION[image.type];
-  if (!extension) {
-    return { error: "Use a JPG, PNG, or WebP image." };
+  if (!(await uploadedObjectExists(PROVIDER_AVATARS_BUCKET, path))) {
+    return { error: "That photo didn't finish uploading. Please try again." };
   }
 
   const supabase = await createClient();
-  const path = `${profile.user_id}/${randomUUID()}.${extension}`;
-  const { error: uploadError } = await supabase.storage
-    .from(PROVIDER_AVATARS_BUCKET)
-    .upload(path, image, {
-      cacheControl: "31536000",
-      contentType: image.type,
-      upsert: false,
-    });
-
-  if (uploadError) {
-    return { error: `Photo upload failed: ${uploadError.message}` };
-  }
-
   const { error: updateError } = await supabase
     .from("provider_profiles")
     .update({ avatar_image_path: path })

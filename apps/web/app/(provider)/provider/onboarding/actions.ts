@@ -29,6 +29,12 @@ import {
   getProviderTermsSnapshot,
   PROVIDER_TERMS_VERSION,
 } from "@/lib/legal/waivers";
+import {
+  ID_DOCUMENTS_BUCKET,
+  isOwnIdDocumentPath,
+  LICENSE_SIDE_LABEL,
+} from "@/lib/media/id-documents";
+import { uploadedObjectExists } from "@/lib/media/uploaded-object";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -132,84 +138,67 @@ export async function startProviderProfile(
   redirect("/provider/onboarding/verify");
 }
 
-const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
-
-/** Label a driver's-license side for error copy. */
-const SIDE_LABEL = { front: "front", back: "back (barcode side)" } as const;
-
-/** Validate one uploaded license image; null when it passes. */
-function validateLicenseFile(file: File, side: "front" | "back"): string | null {
-  if (file.size > MAX_DOCUMENT_BYTES) {
-    return `The ${SIDE_LABEL[side]} image is over 10 MB — use a smaller photo.`;
-  }
-  if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
-    return `Upload a photo or PDF for the ${SIDE_LABEL[side]} of your license.`;
-  }
-  return null;
-}
-
 /**
- * Verify step: uploads the two driver's-license images (front + back barcode)
- * to the private id-documents bucket. Each side is optional per submit so a
- * provider can re-upload just one — but the step only counts as complete once
- * BOTH columns are set (enforced by the page-level Next gate).
+ * Verify step: records the two driver's-license images (front + back barcode)
+ * after the browser has uploaded them straight to the private id-documents
+ * bucket. The bytes deliberately never pass through this action - a Server
+ * Action body is capped at ~4.5 MB by the host, which two phone photos clear
+ * easily. Each side is optional per submit so a provider can replace just one,
+ * but the step only counts as complete once BOTH columns are set (enforced by
+ * the page-level Next gate).
  */
-export async function saveIdDocument(
-  _prev: OnboardingFormState,
-  formData: FormData,
-): Promise<OnboardingFormState> {
+export async function saveIdDocument({
+  frontPath,
+  backPath,
+}: {
+  frontPath?: string;
+  backPath?: string;
+}): Promise<OnboardingFormState> {
   const session = await requireOnboardingUser();
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
-  const front = formData.get("front");
-  const back = formData.get("back");
-  const hasFront = front instanceof File && front.size > 0;
-  const hasBack = back instanceof File && back.size > 0;
-
-  // Require a file only for a side that isn't already on record.
-  if (!hasFront && !profile.id_document_url) {
+  // Require an upload only for a side that isn't already on record.
+  if (!frontPath && !profile.id_document_url) {
     return { error: "Upload a photo of the front of your driver's license." };
   }
-  if (!hasBack && !profile.id_document_back_url) {
+  if (!backPath && !profile.id_document_back_url) {
     return {
       error: "Upload a photo of the back (barcode side) of your license.",
     };
   }
-  if (!hasFront && !hasBack) {
+  if (!frontPath && !backPath) {
     return { error: "Choose a photo to upload." };
   }
 
-  const supabase = await createClient();
   const update: { id_document_url?: string; id_document_back_url?: string } = {};
 
-  for (const [side, file, provided] of [
-    ["front", front, hasFront],
-    ["back", back, hasBack],
+  // The client picks the storage key, so never trust it: it has to be shaped
+  // like this user's own key AND point at an object that actually landed.
+  for (const [side, path] of [
+    ["front", frontPath],
+    ["back", backPath],
   ] as const) {
-    if (!provided) continue;
-    const image = file as File;
-    const error = validateLicenseFile(image, side);
-    if (error) return { error };
-
-    const extension = image.name.split(".").pop() ?? "jpg";
-    const path = `${session.user.id}/license-${side}-${Date.now()}.${extension}`;
-    const { error: uploadError } = await supabase.storage
-      .from("id-documents")
-      .upload(path, image);
-    if (uploadError) {
-      return { error: `Upload failed: ${uploadError.message}` };
+    if (!path) continue;
+    if (!isOwnIdDocumentPath(path, session.user.id, side)) {
+      return { error: "That upload didn't go through - try again." };
+    }
+    if (!(await uploadedObjectExists(ID_DOCUMENTS_BUCKET, path))) {
+      return {
+        error: `The ${LICENSE_SIDE_LABEL[side]} image didn't finish uploading - try again.`,
+      };
     }
     if (side === "front") update.id_document_url = path;
     else update.id_document_back_url = path;
   }
 
+  const supabase = await createClient();
   const { error: saveError } = await supabase
     .from("provider_profiles")
     .update(update)
     .eq("id", profile.id);
   if (saveError) {
-    return { error: "Could not save the images — try again." };
+    return { error: "Could not save the images - try again." };
   }
 
   // Stay on the Verify step: progression to services is gated on BOTH license
