@@ -66,8 +66,10 @@ export function ChatThread({
       // Realtime enforces RLS, and messages are readable only `to
       // authenticated`. Without the user's JWT on the socket, the channel
       // joins but never delivers a row — messages appear only on reload.
-      // Set the token before subscribing so inserts stream in live.
-      await client.realtime.setAuth();
+      // Pass the session token explicitly (a no-arg setAuth() does not reliably
+      // pick up the session across supabase-js versions) before subscribing.
+      const { data: sessionData } = await client.auth.getSession();
+      await client.realtime.setAuth(sessionData.session?.access_token ?? null);
       if (!active) return;
 
       channel = client

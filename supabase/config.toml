@@ -443,3 +443,10 @@ verify_jwt = false
 
 [functions.booking-scheduler]
 verify_jwt = false
+
+# send-push is invoked server-to-server by a DB webhook (pg_net), which sends no
+# Supabase JWT; it authenticates via the SEND_PUSH_SECRET bearer (x-send-push-secret).
+# Recorded here so a config-driven redeploy can't silently flip it back to true
+# and break the caller (it was originally set via the --no-verify-jwt deploy flag).
+[functions.send-push]
+verify_jwt = false
