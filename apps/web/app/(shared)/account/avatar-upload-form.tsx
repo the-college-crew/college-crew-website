@@ -4,12 +4,12 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
+import { PROVIDER_AVATARS_BUCKET } from "@/lib/media/provider-avatars";
 import {
-  AVATAR_ACCEPT,
-  PROVIDER_AVATARS_BUCKET,
-  providerAvatarPath,
-  validateAvatarFile,
-} from "@/lib/media/provider-avatars";
+  PROVIDER_PHOTO_ACCEPT,
+  providerPhotoPath,
+  validateProviderPhoto,
+} from "@/lib/media/provider-photos";
 import { createClient } from "@/lib/supabase/client";
 
 import { uploadProviderAvatar } from "./provider-actions";
@@ -47,14 +47,14 @@ export function AvatarUploadForm({
       setError("Choose a photo to upload.");
       return;
     }
-    const invalid = validateAvatarFile(value);
+    const invalid = validateProviderPhoto(value);
     if (invalid) {
       setError(invalid);
       return;
     }
 
     setUploading(true);
-    const path = providerAvatarPath(userId, value);
+    const path = providerPhotoPath(userId, value);
     const { error: uploadError } = await createClient()
       .storage.from(PROVIDER_AVATARS_BUCKET)
       .upload(path, value, {
@@ -107,7 +107,7 @@ export function AvatarUploadForm({
             id="provider-avatar"
             name="image"
             type="file"
-            accept={AVATAR_ACCEPT}
+            accept={PROVIDER_PHOTO_ACCEPT}
             disabled={busy}
             onChange={() => {
               setError(null);

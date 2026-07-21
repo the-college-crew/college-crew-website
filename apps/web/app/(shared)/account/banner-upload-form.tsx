@@ -1,14 +1,21 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 
 import { ProfileBanner } from "@/components/profile-banner";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
 import {
   BANNER_STYLES,
+  PROVIDER_BANNERS_BUCKET,
   type BannerStyle,
 } from "@/lib/media/provider-banners";
+import {
+  PROVIDER_PHOTO_ACCEPT,
+  providerPhotoPath,
+  validateProviderPhoto,
+} from "@/lib/media/provider-photos";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 import {
@@ -28,11 +35,18 @@ const THEME_LABEL: Record<BannerStyle, string> = {
  * Provider banner controls: pick one of three built-in themes and/or upload a
  * photo that overrides the theme. The chosen theme is remembered under any
  * photo, so removing the photo reverts to it.
+ *
+ * The photo goes browser -> Supabase Storage directly and only the object key
+ * reaches the Server Action, which keeps a 5 MB photo clear of the host's
+ * ~4.5 MB Server-Action body cap. The theme and remove forms carry no file, so
+ * they stay plain Server-Action submits.
  */
 export function BannerUploadForm({
+  userId,
   imagePath,
   activeStyle,
 }: {
+  userId: string;
   imagePath: string | null;
   activeStyle: BannerStyle;
 }) {
@@ -40,16 +54,61 @@ export function BannerUploadForm({
     ProviderSettingsFormState,
     FormData
   >(updateProviderBannerStyle, {});
-  const [uploadState, uploadAction, uploading] = useActionState<
-    ProviderSettingsFormState,
-    FormData
-  >(uploadProviderBanner, {});
   const [removeState, removeAction, removing] = useActionState<
     ProviderSettingsFormState,
     FormData
   >(removeProviderBanner, {});
 
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [saving, startSaving] = useTransition();
+
+  const uploading = sending || saving;
   const hasPhoto = Boolean(imagePath);
+
+  async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    const form = event.currentTarget;
+    const value = new FormData(form).get("image");
+    if (!(value instanceof File) || value.size === 0) {
+      setUploadError("Choose a photo to upload.");
+      return;
+    }
+    const invalid = validateProviderPhoto(value);
+    if (invalid) {
+      setUploadError(invalid);
+      return;
+    }
+
+    setSending(true);
+    const path = providerPhotoPath(userId, value);
+    const { error } = await createClient()
+      .storage.from(PROVIDER_BANNERS_BUCKET)
+      .upload(path, value, {
+        cacheControl: "31536000",
+        contentType: value.type,
+        upsert: false,
+      });
+    setSending(false);
+
+    if (error) {
+      setUploadError(`Photo upload failed: ${error.message}`);
+      return;
+    }
+
+    startSaving(async () => {
+      const result = await uploadProviderBanner(path);
+      if (result.error) setUploadError(result.error);
+      if (result.success) {
+        setUploadSuccess(result.success);
+        form.reset();
+      }
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -110,7 +169,7 @@ export function BannerUploadForm({
       </div>
 
       {/* Photo upload — overrides the theme while set. */}
-      <form action={uploadAction} className="space-y-3 border-t border-line pt-5">
+      <form onSubmit={handleUpload} className="space-y-3 border-t border-line pt-5">
         <div>
           <Label htmlFor="provider-banner">
             {hasPhoto ? "Replace banner photo" : "Upload a banner photo"}
@@ -119,7 +178,12 @@ export function BannerUploadForm({
             id="provider-banner"
             name="image"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={PROVIDER_PHOTO_ACCEPT}
+            disabled={uploading || removing}
+            onChange={() => {
+              setUploadError(null);
+              setUploadSuccess(null);
+            }}
             className="cursor-pointer file:mr-3 file:rounded-lg file:border-0 file:bg-honeydew file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-viridian"
           />
           <FieldHint>
@@ -135,12 +199,12 @@ export function BannerUploadForm({
                 ? "Replace photo"
                 : "Upload photo"}
           </Button>
-          {uploadState.success ? (
-            <span className="text-sm font-medium text-quad-700">
-              {uploadState.success}
+          {uploadSuccess ? (
+            <span aria-live="polite" className="text-sm font-medium text-quad-700">
+              {uploadSuccess}
             </span>
           ) : null}
-          <FieldError>{uploadState.error}</FieldError>
+          <FieldError>{uploadError}</FieldError>
         </div>
       </form>
 
