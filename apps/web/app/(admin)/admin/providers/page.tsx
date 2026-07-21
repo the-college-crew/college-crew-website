@@ -40,7 +40,7 @@ export default async function AdminProvidersPage({
     supabase
       .from("provider_profiles")
       .select(
-        "*, user:profiles(full_name), provider_services(hourly_rate_cents, service:services(slug, is_live))",
+        "*, user:profiles!provider_profiles_user_id_fkey(full_name), provider_services(hourly_rate_cents, service:services(slug, is_live))",
       )
       .order("created_at", { ascending: true }),
     supabase

@@ -1352,6 +1352,9 @@ export type Database = {
           stripe_transfers_active: boolean
           stripe_transfers_checked_at: string | null
           user_id: string
+          verification_bypassed: boolean
+          verification_bypassed_at: string | null
+          verification_bypassed_by: string | null
           verification_status: Database["public"]["Enums"]["verification_status"]
         }
         Insert: {
@@ -1379,6 +1382,9 @@ export type Database = {
           stripe_transfers_active?: boolean
           stripe_transfers_checked_at?: string | null
           user_id: string
+          verification_bypassed?: boolean
+          verification_bypassed_at?: string | null
+          verification_bypassed_by?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
         }
         Update: {
@@ -1406,6 +1412,9 @@ export type Database = {
           stripe_transfers_active?: boolean
           stripe_transfers_checked_at?: string | null
           user_id?: string
+          verification_bypassed?: boolean
+          verification_bypassed_at?: string | null
+          verification_bypassed_by?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
         }
         Relationships: [
@@ -1413,6 +1422,13 @@ export type Database = {
             foreignKeyName: "provider_profiles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_profiles_verification_bypassed_by_fkey"
+            columns: ["verification_bypassed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

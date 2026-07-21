@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 
-import { setProviderStatus } from "@/app/(admin)/admin/actions";
+import {
+  bypassProviderVerification,
+  setProviderStatus,
+} from "@/app/(admin)/admin/actions";
 import type { AdminProviderDetail } from "@/app/(admin)/admin/actions";
 import { EditableProviderField } from "@/components/admin/editable-provider-field";
 import { Rating } from "@/components/provider-card";
@@ -53,6 +56,7 @@ export function ProviderDetailModal({
   onClose: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [confirmingBypass, setConfirmingBypass] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -88,6 +92,18 @@ export function ProviderDetailModal({
         // Resolves after revalidating the underlying list; redirects on the
         // env/.edu guards (which close this view anyway).
         await setProviderStatus(fd);
+        onClose();
+      });
+    },
+    [onClose],
+  );
+
+  const confirmBypass = useCallback(
+    (providerId: string) => {
+      startTransition(async () => {
+        const fd = new FormData();
+        fd.set("providerId", providerId);
+        await bypassProviderVerification(fd);
         onClose();
       });
     },
@@ -270,6 +286,20 @@ export function ProviderDetailModal({
                       )}
                     </dd>
                   </div>
+                  {profile.verification_bypassed ? (
+                    <div className="flex justify-between gap-3 sm:block">
+                      <dt className="text-mist">Verification</dt>
+                      <dd className="font-medium text-red-700">
+                        Bypassed by admin
+                        {profile.verification_bypassed_by_name
+                          ? ` (${profile.verification_bypassed_by_name})`
+                          : ""}
+                        {profile.verification_bypassed_at
+                          ? ` on ${formatDate(profile.verification_bypassed_at)}`
+                          : ""}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between gap-3 sm:block">
                     <dt className="text-mist">Profile photo</dt>
                     <dd className="font-medium">
@@ -356,6 +386,49 @@ export function ProviderDetailModal({
                     </Button>
                   ))}
                 </div>
+
+                {profile.verification_status !== "approved" ? (
+                  <div className="mt-4 border-t border-line pt-4">
+                    {!confirmingBypass ? (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => setConfirmingBypass(true)}
+                      >
+                        Bypass verification
+                      </Button>
+                    ) : (
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                        <p className="text-sm font-medium text-red-800">
+                          This skips ID document and .edu email verification
+                          for this provider. They will still be shown as
+                          &ldquo;✓ Verified student&rdquo; on the site. Only
+                          use this if you&apos;ve personally confirmed
+                          they&apos;re a real student.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            disabled={pending}
+                            onClick={() => confirmBypass(profile.id)}
+                          >
+                            Confirm bypass
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={pending}
+                            onClick={() => setConfirmingBypass(false)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </section>
 
               {/* Services & pricing */}
