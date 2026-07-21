@@ -88,6 +88,63 @@ export async function setProviderStatus(formData: FormData) {
   revalidatePath("/browse");
 }
 
+/**
+ * Admin override that approves a provider without a verified school email or
+ * ID document — for a founder personally vouching for someone the automated
+ * checks can't clear. Legal acceptance is still required: this bypasses
+ * identity proof only, not the provider agreement. Records who bypassed and
+ * when so it's auditable later; the public site shows this provider exactly
+ * like any other approved provider (no separate public badge/label).
+ */
+export async function bypassProviderVerification(formData: FormData) {
+  const session = await requireRole("admin");
+  if (!hasServiceRoleEnv()) {
+    redirect("/admin/providers?err=env");
+  }
+
+  const providerId = z.string().uuid().parse(formData.get("providerId"));
+  const admin = createAdminClient();
+
+  const { data: prof } = await admin
+    .from("provider_profiles")
+    .select("user_id")
+    .eq("id", providerId)
+    .maybeSingle();
+  if (!prof) {
+    redirect("/admin/providers?err=notfound");
+  }
+
+  const [platformTermsAccepted, providerTermsAccepted] = await Promise.all([
+    hasAcceptedCurrentLegalDocument(admin, {
+      userId: prof.user_id,
+      kind: "platform_terms",
+    }),
+    hasAcceptedCurrentLegalDocument(admin, {
+      userId: prof.user_id,
+      kind: "provider_terms",
+    }),
+  ]);
+  if (!platformTermsAccepted || !providerTermsAccepted) {
+    redirect("/admin/providers?err=legal");
+  }
+
+  const { error } = await admin
+    .from("provider_profiles")
+    .update({
+      verification_status: "approved",
+      verification_bypassed: true,
+      verification_bypassed_at: new Date().toISOString(),
+      verification_bypassed_by: session.profile.id,
+    })
+    .eq("id", providerId);
+  if (error) {
+    throw new Error(`Could not bypass verification: ${error.message}`);
+  }
+
+  revalidatePath("/admin/providers");
+  revalidatePath("/browse");
+}
+
 /** Service curation: toggle what's offered platform-wide (SPEC §8). */
 export async function toggleServiceLive(formData: FormData) {
   await requireRole("admin");

@@ -93,7 +93,9 @@ async function getProviderLocationFacts(
   const admin = createAdminClient();
   const { data } = await admin
     .from("provider_profiles")
-    .select("id, user:profiles ( city, latitude, longitude )")
+    .select(
+      "id, user:profiles!provider_profiles_user_id_fkey ( city, latitude, longitude )",
+    )
     .in("id", providerIds);
 
   for (const row of data ?? []) {
@@ -634,6 +636,9 @@ export type AdminProviderProfile = PublicProviderProfile &
   verification_status: VerificationStatus;
   id_document_url: string | null;
   id_document_back_url: string | null;
+  verification_bypassed: boolean;
+  verification_bypassed_at: string | null;
+  verification_bypassed_by_name: string | null;
   created_at: string;
   full_name: string | null;
   };
@@ -666,8 +671,11 @@ export async function getAdminProviderProfile(
           `availability, availability_note, minimum_notice_hours,
            service_zip, stripe_account_id, stripe_transfers_active,
            stripe_transfers_checked_at, verification_status, id_document_url,
-           id_document_back_url, created_at,
-           user:profiles ( full_name ), ${PROVIDER_CARD_SELECT}`,
+           id_document_back_url, verification_bypassed, verification_bypassed_at,
+           created_at,
+           user:profiles!provider_profiles_user_id_fkey ( full_name ),
+           bypassed_by_admin:profiles!provider_profiles_verification_bypassed_by_fkey ( full_name ),
+           ${PROVIDER_CARD_SELECT}`,
         )
         .eq("id", providerId)
         .maybeSingle(),
@@ -750,6 +758,9 @@ export async function getAdminProviderProfile(
     verification_status: provider.verification_status,
     id_document_url: provider.id_document_url,
     id_document_back_url: provider.id_document_back_url,
+    verification_bypassed: provider.verification_bypassed,
+    verification_bypassed_at: provider.verification_bypassed_at,
+    verification_bypassed_by_name: provider.bypassed_by_admin?.full_name ?? null,
     created_at: provider.created_at,
     full_name: provider.user?.full_name ?? null,
     reviews: adminReviews,
