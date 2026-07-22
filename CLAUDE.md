@@ -152,6 +152,25 @@ yet** — build it plan-first when ready, test mode only regardless.
   `robots: { index: false, follow: false }` so Google doesn't index thin,
   unfinished pages. **On launch day, REMOVE that `robots` block** (and add a
   sitemap) so the finished site can be indexed. Don't leave it on by accident.
+- **Test/synthetic data hygiene.** There is no separate staging Supabase
+  project — dev and prod point at the same database, so any script or test
+  that inserts rows there is live the instant it runs. This has already let a
+  synthetic "provider" account leak onto the real Browse page twice (once via
+  an agent-written E2E test whose cleanup didn't run). To prevent a repeat:
+  - Never rely on a bare `afterAll`/happy-path teardown to delete synthetic
+    rows. Wrap setup + teardown so cleanup runs even if an assertion fails or
+    the run is interrupted (try/finally or the framework's equivalent).
+  - Tag synthetic rows unambiguously (e.g. an `@example.test` email, a
+    `synthetic-`/`test-` name or slug prefix) so orphaned rows are easy to
+    find and sweep with a query if cleanup ever fails.
+  - Before ending a task that created synthetic data in the shared project,
+    query the affected table(s) back and confirm zero synthetic rows remain
+    — don't just trust that the teardown code ran.
+  - A one-off verification script (an E2E test written to check a single
+    feature once, not meant to join the standing suite) must say so in a
+    comment, and should be deleted once it's served its purpose — don't
+    leave it in the repo where a later run (by either of us, or another
+    agent) can re-trigger the same leak.
 
 ## Claude Code integrations
 
