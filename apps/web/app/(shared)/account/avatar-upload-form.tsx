@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 
+import { PhotoRepositioner } from "@/components/photo-repositioner";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
 import { PROVIDER_AVATARS_BUCKET } from "@/lib/media/provider-avatars";
@@ -12,7 +13,11 @@ import {
 } from "@/lib/media/provider-photos";
 import { createClient } from "@/lib/supabase/client";
 
-import { uploadProviderAvatar } from "./provider-actions";
+import {
+  updateProviderAvatarFocalPoint,
+  uploadProviderAvatar,
+  type ProviderSettingsFormState,
+} from "./provider-actions";
 
 /**
  * Upload/replace the provider's single required profile photo. There is no
@@ -25,16 +30,35 @@ import { uploadProviderAvatar } from "./provider-actions";
 export function AvatarUploadForm({
   userId,
   imageUrl,
+  focalX,
+  focalY,
 }: {
   userId: string;
   imageUrl: string | null;
+  focalX: number;
+  focalY: number;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, startSaving] = useTransition();
+  const [focalState, focalAction, savingFocal] = useActionState<
+    ProviderSettingsFormState,
+    FormData
+  >(updateProviderAvatarFocalPoint, {});
 
   const busy = uploading || saving;
+
+  // Local drag position, bridging the gap until a save round-trips back
+  // through revalidation (or a new upload resets the server value to 50/50
+  // underneath this open form).
+  const [position, setPosition] = useState({ x: focalX, y: focalY });
+  const [seenFocal, setSeenFocal] = useState({ x: focalX, y: focalY });
+  if (focalX !== seenFocal.x || focalY !== seenFocal.y) {
+    setSeenFocal({ x: focalX, y: focalY });
+    setPosition({ x: focalX, y: focalY });
+  }
+  const hasUnsavedPosition = position.x !== focalX || position.y !== focalY;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,13 +107,14 @@ export function AvatarUploadForm({
     <div className="flex gap-4">
       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-sky">
         {imageUrl ? (
-          // Public asset; a plain image avoids cached optimizer copies after
-          // the provider replaces it with a new object URL.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageUrl}
+          <PhotoRepositioner
+            imageUrl={imageUrl}
+            shape="circle"
+            focalX={position.x}
+            focalY={position.y}
+            onChange={(x, y) => setPosition({ x, y })}
             alt="Your profile photo"
-            className="h-full w-full object-cover"
+            className="h-full w-full"
           />
         ) : (
           <div className="flex h-full items-center justify-center px-2 text-center text-xs font-semibold text-viridian/60">
@@ -98,40 +123,63 @@ export function AvatarUploadForm({
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="min-w-0 flex-1 space-y-3">
-        <div>
-          <Label htmlFor="provider-avatar">
-            {imageUrl ? "Replace photo" : "Upload photo"}
-          </Label>
-          <Input
-            id="provider-avatar"
-            name="image"
-            type="file"
-            accept={PROVIDER_PHOTO_ACCEPT}
-            disabled={busy}
-            onChange={() => {
-              setError(null);
-              setSuccess(null);
-            }}
-            className="cursor-pointer file:mr-3 file:rounded-lg file:border-0 file:bg-honeydew file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-viridian"
-          />
-          <FieldHint>
-            A clear headshot. This is the face customers see on Browse and your
-            profile. JPG, PNG, or WebP, up to 5 MB.
-          </FieldHint>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={busy}>
-            {busy ? "Uploading…" : imageUrl ? "Replace photo" : "Upload photo"}
-          </Button>
-          {success ? (
-            <span aria-live="polite" className="text-sm font-medium text-quad-700">
-              {success}
-            </span>
-          ) : null}
-          <FieldError>{error}</FieldError>
-        </div>
-      </form>
+      <div className="min-w-0 flex-1 space-y-3">
+        {imageUrl ? (
+          <form action={focalAction} className="flex items-center gap-3">
+            <input type="hidden" name="x" value={position.x} />
+            <input type="hidden" name="y" value={position.y} />
+            <p className="text-xs text-mist">
+              Drag your photo above to recenter it.
+            </p>
+            {hasUnsavedPosition ? (
+              <Button type="submit" size="sm" variant="ghost" disabled={savingFocal}>
+                {savingFocal ? "Saving…" : "Save position"}
+              </Button>
+            ) : null}
+            {focalState.success && !hasUnsavedPosition ? (
+              <span className="text-xs font-medium text-quad-700">
+                {focalState.success}
+              </span>
+            ) : null}
+            <FieldError>{focalState.error}</FieldError>
+          </form>
+        ) : null}
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <Label htmlFor="provider-avatar">
+              {imageUrl ? "Replace photo" : "Upload photo"}
+            </Label>
+            <Input
+              id="provider-avatar"
+              name="image"
+              type="file"
+              accept={PROVIDER_PHOTO_ACCEPT}
+              disabled={busy}
+              onChange={() => {
+                setError(null);
+                setSuccess(null);
+              }}
+              className="cursor-pointer file:mr-3 file:rounded-lg file:border-0 file:bg-honeydew file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-viridian"
+            />
+            <FieldHint>
+              A clear headshot. This is the face customers see on Browse and
+              your profile. JPG, PNG, or WebP, up to 5 MB.
+            </FieldHint>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" size="sm" disabled={busy}>
+              {busy ? "Uploading…" : imageUrl ? "Replace photo" : "Upload photo"}
+            </Button>
+            {success ? (
+              <span aria-live="polite" className="text-sm font-medium text-quad-700">
+                {success}
+              </span>
+            ) : null}
+            <FieldError>{error}</FieldError>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

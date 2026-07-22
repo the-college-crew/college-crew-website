@@ -2,12 +2,14 @@
 
 import { useActionState, useState, useTransition } from "react";
 
+import { PhotoRepositioner } from "@/components/photo-repositioner";
 import { ProfileBanner } from "@/components/profile-banner";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
 import {
   BANNER_STYLES,
   PROVIDER_BANNERS_BUCKET,
+  providerBannerUrl,
   type BannerStyle,
 } from "@/lib/media/provider-banners";
 import {
@@ -20,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 import {
   removeProviderBanner,
+  updateProviderBannerFocalPoint,
   updateProviderBannerStyle,
   uploadProviderBanner,
   type ProviderSettingsFormState,
@@ -45,10 +48,14 @@ export function BannerUploadForm({
   userId,
   imagePath,
   activeStyle,
+  focalX,
+  focalY,
 }: {
   userId: string;
   imagePath: string | null;
   activeStyle: BannerStyle;
+  focalX: number;
+  focalY: number;
 }) {
   const [styleState, styleAction, savingStyle] = useActionState<
     ProviderSettingsFormState,
@@ -58,6 +65,10 @@ export function BannerUploadForm({
     ProviderSettingsFormState,
     FormData
   >(removeProviderBanner, {});
+  const [focalState, focalAction, savingFocal] = useActionState<
+    ProviderSettingsFormState,
+    FormData
+  >(updateProviderBannerFocalPoint, {});
 
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
@@ -66,6 +77,18 @@ export function BannerUploadForm({
 
   const uploading = sending || saving;
   const hasPhoto = Boolean(imagePath);
+  const bannerUrl = providerBannerUrl(imagePath);
+
+  // Local drag position, bridging the gap until a save round-trips back
+  // through revalidation (or a new upload resets the server value to 50/50
+  // underneath this open form).
+  const [position, setPosition] = useState({ x: focalX, y: focalY });
+  const [seenFocal, setSeenFocal] = useState({ x: focalX, y: focalY });
+  if (focalX !== seenFocal.x || focalY !== seenFocal.y) {
+    setSeenFocal({ x: focalX, y: focalY });
+    setPosition({ x: focalX, y: focalY });
+  }
+  const hasUnsavedPosition = position.x !== focalX || position.y !== focalY;
 
   async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -112,12 +135,45 @@ export function BannerUploadForm({
 
   return (
     <div className="space-y-6">
-      {/* Live preview of what neighbors see. */}
-      <ProfileBanner
-        imagePath={imagePath}
-        style={activeStyle}
-        className="h-28 rounded-xl border border-line"
-      />
+      {/* Live preview of what neighbors see. Draggable to reposition when a
+          photo is set -- otherwise a CSS theme renders and there's nothing to
+          drag. */}
+      {hasPhoto && bannerUrl ? (
+        <div className="space-y-2">
+          <PhotoRepositioner
+            imageUrl={bannerUrl}
+            shape="banner"
+            focalX={position.x}
+            focalY={position.y}
+            onChange={(x, y) => setPosition({ x, y })}
+            className="h-28 w-full rounded-xl border border-line"
+          />
+          <form action={focalAction} className="flex items-center gap-3">
+            <input type="hidden" name="x" value={position.x} />
+            <input type="hidden" name="y" value={position.y} />
+            <p className="text-xs text-mist">
+              Drag your banner above to recenter it.
+            </p>
+            {hasUnsavedPosition ? (
+              <Button type="submit" size="sm" variant="ghost" disabled={savingFocal}>
+                {savingFocal ? "Saving…" : "Save position"}
+              </Button>
+            ) : null}
+            {focalState.success && !hasUnsavedPosition ? (
+              <span className="text-xs font-medium text-quad-700">
+                {focalState.success}
+              </span>
+            ) : null}
+            <FieldError>{focalState.error}</FieldError>
+          </form>
+        </div>
+      ) : (
+        <ProfileBanner
+          imagePath={imagePath}
+          style={activeStyle}
+          className="h-28 rounded-xl border border-line"
+        />
+      )}
 
       {/* Theme picker — each swatch submits its choice. */}
       <div>

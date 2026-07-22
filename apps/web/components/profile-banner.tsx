@@ -38,10 +38,14 @@ const THEME_BACKGROUND: Record<BannerStyle, CSSProperties> = {
 export function ProfileBanner({
   imagePath,
   style,
+  focalX,
+  focalY,
   className,
 }: {
   imagePath: string | null | undefined;
   style: string | null | undefined;
+  focalX?: number | null;
+  focalY?: number | null;
   className?: string;
 }) {
   const imageUrl = providerBannerUrl(imagePath);
@@ -57,7 +61,12 @@ export function ProfileBanner({
         // User-uploaded banner from our public Storage bucket. `img` avoids
         // Next's remote optimizer caching a stale replacement at its old URL.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        <img
+          src={imageUrl}
+          alt=""
+          className="h-full w-full object-cover"
+          style={{ objectPosition: `${focalX ?? 50}% ${focalY ?? 50}%` }}
+        />
       ) : null}
     </div>
   );
