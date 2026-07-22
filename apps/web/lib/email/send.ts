@@ -229,5 +229,10 @@ export function sendSchoolOtpEmail(to: string, code: string): Promise<SendResult
       "This code expires in 15 minutes. If you didn't request it, ignore this email.",
     ].join("\n"),
     html: schoolOtpHtml(code),
+    // Prod must fail loudly if Resend is unconfigured — otherwise the action
+    // records a code and shows "we sent it" while nothing was emailed. Dev
+    // keeps the stub (code logged to console) so onboarding stays testable
+    // without a Resend key.
+    requireProvider: process.env.NODE_ENV === "production",
   });
 }
