@@ -70,3 +70,36 @@ docs/internal/
 
 # project-level claude instructions (local only)
 CLAUDE.md
+
+# ruflo (claude-flow) — installed locally, runtime kept out of the repo
+# (.claude/ itself is already blanket-ignored above; these lines are kept as
+# an explicit record of what ruflo's init writes, plus .agents/, which is a
+# separate top-level dir not covered by the .claude/ rule)
+.claude-flow/
+.swarm/
+.agents/
+.claude/settings.json
+.claude/proven-config.json
+.claude/.proven-config-version
+.claude/agents/
+.claude/commands/
+.claude/helpers/
+# ruflo-added skills (the tracked project skills are unaffected)
+.claude/skills/agentdb-*/
+.claude/skills/reasoningbank-*/
+.claude/skills/v3-*/
+.claude/skills/swarm-advanced/
+.claude/skills/swarm-orchestration/
+.claude/skills/github-code-review/
+.claude/skills/github-multi-repo/
+.claude/skills/github-project-management/
+.claude/skills/github-release-management/
+.claude/skills/github-workflow-automation/
+.claude/skills/browser/
+.claude/skills/hooks-automation/
+.claude/skills/pair-programming/
+.claude/skills/skill-builder/
+.claude/skills/sparc-methodology/
+.claude/skills/stream-chain/
+.claude/skills/verification-quality/
+.claude/skills/ruflo
