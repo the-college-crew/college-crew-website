@@ -26,7 +26,7 @@ export default async function MessagesLayout({
   const groups = await getConversationGroups(supabase, user.id);
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-none overflow-y-auto lg:overflow-hidden">
       <aside className="hidden w-[22rem] shrink-0 flex-col border-r border-line lg:flex">
         <div className="shrink-0 border-b border-line px-4 py-4">
           <h1 className="font-display text-lg font-semibold text-ink">

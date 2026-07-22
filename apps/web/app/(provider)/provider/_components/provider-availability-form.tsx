@@ -150,8 +150,8 @@ export function ProviderAvailabilityForm({
                         }
                         className={
                           claimedElsewhere
-                            ? "flex cursor-not-allowed items-center gap-1.5 rounded-full border border-line bg-stone/30 px-3 py-1.5 text-sm text-mist"
-                            : "flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm has-checked:border-quad-500 has-checked:bg-quad-50 has-checked:font-semibold has-checked:text-quad-800"
+                            ? "relative flex cursor-not-allowed items-center gap-1.5 rounded-full border border-line bg-stone/30 px-3 py-1.5 text-sm text-mist"
+                            : "relative flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm has-checked:border-quad-500 has-checked:bg-quad-50 has-checked:font-semibold has-checked:text-quad-800 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-viridian"
                         }
                       >
                         <input
@@ -162,7 +162,7 @@ export function ProviderAvailabilityForm({
                           onChange={(event) =>
                             toggleDay(groupIndex, value, event.target.checked)
                           }
-                          className="sr-only"
+                          className="absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none rounded-full opacity-0 disabled:cursor-not-allowed"
                         />
                         <span className="sm:hidden">{short}</span>
                         <span className="hidden sm:inline">{long}</span>
