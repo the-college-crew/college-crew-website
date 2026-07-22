@@ -32,7 +32,10 @@ import {
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
 import { createClient } from "@/lib/supabase/server";
-import { hasAcceptedCurrentLegalDocument } from "@/lib/legal/acceptance";
+import {
+  hasAcceptedCurrentLegalDocument,
+  legalDocumentPath,
+} from "@/lib/legal/acceptance";
 import {
   CUSTOMER_BOOKING_TERMS_VERSION,
   PLATFORM_TERMS_VERSION,
@@ -157,12 +160,17 @@ export default async function AccountPage({
               version: PLATFORM_TERMS_VERSION,
               accepted: platformTermsAccepted,
               href: "/legal#platform-terms",
+              acceptHref: legalDocumentPath("platform_terms", "/account"),
             },
             {
               label: "Customer Booking Terms",
               version: CUSTOMER_BOOKING_TERMS_VERSION,
               accepted: customerTermsAccepted,
               href: "/legal#customer-booking-terms",
+              acceptHref: legalDocumentPath(
+                "customer_booking_terms",
+                "/account",
+              ),
             },
             ...(providerProfile
               ? [
@@ -171,6 +179,7 @@ export default async function AccountPage({
                     version: PROVIDER_TERMS_VERSION,
                     accepted: providerTermsAccepted,
                     href: "/legal#provider-terms",
+                    acceptHref: legalDocumentPath("provider_terms", "/account"),
                   },
                 ]
               : []),
@@ -191,12 +200,21 @@ export default async function AccountPage({
                       ? "Accepted"
                       : "Required when used"}
                 </Badge>
-                <Link
-                  href={agreement.href}
-                  className={buttonClasses({ size: "sm", variant: "ghost" })}
-                >
-                  View
-                </Link>
+                {agreement.accepted || profile.role === "admin" ? (
+                  <Link
+                    href={agreement.href}
+                    className={buttonClasses({ size: "sm", variant: "ghost" })}
+                  >
+                    View
+                  </Link>
+                ) : (
+                  <Link
+                    href={agreement.acceptHref}
+                    className={buttonClasses({ size: "sm" })}
+                  >
+                    Review &amp; accept
+                  </Link>
+                )}
               </div>
             </div>
           ))}
@@ -297,6 +315,7 @@ async function ProviderStorefront({
           ready: providerTermsAccepted,
           version: PROVIDER_TERMS_VERSION,
         }}
+        acceptHref={legalDocumentPath("provider_terms", "/account")}
       />
 
       <Section
