@@ -171,7 +171,12 @@ export default async function OnboardingVerifyPage({
             </p>
 
             <div className="mt-5">
-              <AvatarUploadForm userId={session.user.id} imageUrl={avatarUrl} />
+              <AvatarUploadForm
+                userId={session.user.id}
+                imageUrl={avatarUrl}
+                focalX={profile.avatar_focal_x}
+                focalY={profile.avatar_focal_y}
+              />
             </div>
           </Card>
 

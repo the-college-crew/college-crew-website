@@ -325,6 +325,8 @@ async function ProviderStorefront({
         <AvatarUploadForm
           userId={providerProfile.user_id}
           imageUrl={providerAvatarUrl(providerProfile.avatar_image_path)}
+          focalX={providerProfile.avatar_focal_x}
+          focalY={providerProfile.avatar_focal_y}
         />
       </Section>
 
@@ -336,6 +338,8 @@ async function ProviderStorefront({
           userId={providerProfile.user_id}
           imagePath={providerProfile.banner_image_path}
           activeStyle={toBannerStyle(providerProfile.banner_style)}
+          focalX={providerProfile.banner_focal_x}
+          focalY={providerProfile.banner_focal_y}
         />
       </Section>
 

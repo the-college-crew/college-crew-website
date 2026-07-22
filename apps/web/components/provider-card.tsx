@@ -78,6 +78,8 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
           <ProfileBanner
             imagePath={provider.banner_image_path}
             style={provider.banner_style}
+            focalX={provider.banner_focal_x}
+            focalY={provider.banner_focal_y}
             className="h-32 transition-transform duration-500 ease-out group-hover/flip:scale-[1.04]"
           />
 
@@ -90,6 +92,9 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
                 src={avatarUrl}
                 alt=""
                 className="-mt-12 relative z-10 h-16 w-16 rounded-full border-4 border-paper object-cover shadow-sm"
+                style={{
+                  objectPosition: `${provider.avatar_focal_x}% ${provider.avatar_focal_y}%`,
+                }}
               />
             ) : null}
             <div className="flex flex-wrap items-center gap-2">

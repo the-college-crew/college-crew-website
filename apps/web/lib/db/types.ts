@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       admin_allowlist: {
@@ -526,8 +531,8 @@ export type Database = {
           accepted_at: string | null
           address: string
           address_kind: string
-          average_quote_cents_snapshot: number | null
           arrived_at: string | null
+          average_quote_cents_snapshot: number | null
           billing_increment_minutes: number | null
           billing_minimum_minutes: number | null
           booking_flow: Database["public"]["Enums"]["booking_flow"]
@@ -584,8 +589,8 @@ export type Database = {
           accepted_at?: string | null
           address: string
           address_kind?: string
-          average_quote_cents_snapshot?: number | null
           arrived_at?: string | null
+          average_quote_cents_snapshot?: number | null
           billing_increment_minutes?: number | null
           billing_minimum_minutes?: number | null
           booking_flow?: Database["public"]["Enums"]["booking_flow"]
@@ -642,8 +647,8 @@ export type Database = {
           accepted_at?: string | null
           address?: string
           address_kind?: string
-          average_quote_cents_snapshot?: number | null
           arrived_at?: string | null
+          average_quote_cents_snapshot?: number | null
           billing_increment_minutes?: number | null
           billing_minimum_minutes?: number | null
           booking_flow?: Database["public"]["Enums"]["booking_flow"]
@@ -1333,8 +1338,12 @@ export type Database = {
           availability_note: string
           availability_start_local: string | null
           availability_weekdays: number[]
+          avatar_focal_x: number
+          avatar_focal_y: number
           avatar_image_path: string | null
           background_check_status: Database["public"]["Enums"]["background_check_status"]
+          banner_focal_x: number
+          banner_focal_y: number
           banner_image_path: string | null
           banner_style: string
           bio: string
@@ -1363,8 +1372,12 @@ export type Database = {
           availability_note?: string
           availability_start_local?: string | null
           availability_weekdays?: number[]
+          avatar_focal_x?: number
+          avatar_focal_y?: number
           avatar_image_path?: string | null
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
+          banner_focal_x?: number
+          banner_focal_y?: number
           banner_image_path?: string | null
           banner_style?: string
           bio?: string
@@ -1393,8 +1406,12 @@ export type Database = {
           availability_note?: string
           availability_start_local?: string | null
           availability_weekdays?: number[]
+          avatar_focal_x?: number
+          avatar_focal_y?: number
           avatar_image_path?: string | null
           background_check_status?: Database["public"]["Enums"]["background_check_status"]
+          banner_focal_x?: number
+          banner_focal_y?: number
           banner_image_path?: string | null
           banner_style?: string
           bio?: string
@@ -2008,7 +2025,11 @@ export type Database = {
           availability_start_local: string | null
           availability_weekdays: number[] | null
           availability_windows: Json | null
+          avatar_focal_x: number | null
+          avatar_focal_y: number | null
           avatar_image_path: string | null
+          banner_focal_x: number | null
+          banner_focal_y: number | null
           banner_image_path: string | null
           banner_style: string | null
           bio: string | null
@@ -2027,7 +2048,11 @@ export type Database = {
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
           availability_windows?: never
+          avatar_focal_x?: number | null
+          avatar_focal_y?: number | null
           avatar_image_path?: string | null
+          banner_focal_x?: number | null
+          banner_focal_y?: number | null
           banner_image_path?: string | null
           banner_style?: string | null
           bio?: string | null
@@ -2046,7 +2071,11 @@ export type Database = {
           availability_start_local?: string | null
           availability_weekdays?: number[] | null
           availability_windows?: never
+          avatar_focal_x?: number | null
+          avatar_focal_y?: number | null
           avatar_image_path?: string | null
+          banner_focal_x?: number | null
+          banner_focal_y?: number | null
           banner_image_path?: string | null
           banner_style?: string | null
           bio?: string | null
@@ -2174,15 +2203,6 @@ export type Database = {
           source_id: string
         }[]
       }
-      claim_stripe_webhook_receipt: {
-        Args: { p_receipt_id: string; p_stale_seconds?: number }
-        Returns: {
-          attempt_count: number
-          id: string
-          payload: Json
-          stripe_event_id: string
-        }[]
-      }
       claim_conversation_for_booking: {
         Args: { target_booking_id: string }
         Returns: string
@@ -2211,6 +2231,15 @@ export type Database = {
           payload: Json
           recipient_email: string
           template: string
+        }[]
+      }
+      claim_stripe_webhook_receipt: {
+        Args: { p_receipt_id: string; p_stale_seconds?: number }
+        Returns: {
+          attempt_count: number
+          id: string
+          payload: Json
+          stripe_event_id: string
         }[]
       }
       complete_booking_automation_job: {
@@ -2279,10 +2308,6 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
-      is_provider_offering_quote_bookable: {
-        Args: { provider_service_id: string }
-        Returns: boolean
-      }
       is_conversation_member:
         | {
             Args: { conv_id: string }
@@ -2302,6 +2327,10 @@ export type Database = {
       }
       is_provider_capable: { Args: never; Returns: boolean }
       is_provider_offering_hourly_bookable: {
+        Args: { provider_service_id: string }
+        Returns: boolean
+      }
+      is_provider_offering_quote_bookable: {
         Args: { provider_service_id: string }
         Returns: boolean
       }
@@ -2440,6 +2469,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      send_booking_quote: {
+        Args: { p_booking_id: string; p_quote_cents: number }
+        Returns: string
+      }
       settle_balance_payment: {
         Args: { p_stripe_payment_intent_id: string; p_succeeded_at?: string }
         Returns: string
@@ -2483,10 +2516,6 @@ export type Database = {
           p_provider_explanation: string
           p_submitted_minutes: number
         }
-        Returns: string
-      }
-      send_booking_quote: {
-        Args: { p_booking_id: string; p_quote_cents: number }
         Returns: string
       }
       transition_legacy_booking: {

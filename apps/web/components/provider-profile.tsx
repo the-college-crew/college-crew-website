@@ -64,6 +64,8 @@ export async function ProviderProfile({
       <ProfileBanner
         imagePath={provider.banner_image_path}
         style={provider.banner_style}
+        focalX={provider.banner_focal_x}
+        focalY={provider.banner_focal_y}
         className="h-52 border-b border-line"
       />
       {/* Identity — morph target for the Browse card's ViewTransition. */}
@@ -77,6 +79,9 @@ export async function ProviderProfile({
               src={avatarUrl}
               alt=""
               className="-mt-[4.5rem] relative z-10 mb-3 h-24 w-24 rounded-full border-4 border-paper object-cover shadow-md"
+              style={{
+                objectPosition: `${provider.avatar_focal_x}% ${provider.avatar_focal_y}%`,
+              }}
             />
           ) : null}
           <div className="flex flex-wrap items-center gap-2">

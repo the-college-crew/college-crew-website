@@ -62,8 +62,12 @@ export type ProviderCard = {
   /** Straight-line miles from the viewer's "booking from" origin, if both sides geocoded. */
   distance_miles: number | null;
   avatar_image_path: string | null;
+  avatar_focal_x: number;
+  avatar_focal_y: number;
   banner_image_path: string | null;
   banner_style: BannerStyle;
+  banner_focal_x: number;
+  banner_focal_y: number;
   services: OfferedService[];
   rating: { avg: number; count: number } | null;
   /** Short pull-quote for the Browse card: the best recent 4-5★ review, or null. */
@@ -164,6 +168,7 @@ export async function getLiveServices(): Promise<Service[]> {
 const PROVIDER_CARD_SELECT = `
   id, display_name, company_name, bio, provider_type, neighborhood,
   avatar_image_path, banner_image_path, banner_style,
+  avatar_focal_x, avatar_focal_y, banner_focal_x, banner_focal_y,
   provider_services (
     id, price_cents, price_type, unit, preview_image_path, hourly_rate_cents,
     pricing_mode, average_quote_cents,
@@ -376,8 +381,12 @@ export async function getApprovedProviders(
       town: facts?.city || p.neighborhood,
       distance_miles: milesBetween(options.origin, facts),
       avatar_image_path: p.avatar_image_path,
+      avatar_focal_x: p.avatar_focal_x ?? 50,
+      avatar_focal_y: p.avatar_focal_y ?? 50,
       banner_image_path: p.banner_image_path,
       banner_style: toBannerStyle(p.banner_style),
+      banner_focal_x: p.banner_focal_x ?? 50,
+      banner_focal_y: p.banner_focal_y ?? 50,
       services: offeringsByProvider.get(p.provider_id) ?? [],
       rating: ratingByProvider.get(p.provider_id) ?? null,
       quote: pickQuote(reviewsByProvider.get(p.provider_id) ?? []),
@@ -613,8 +622,12 @@ export async function getPublicProviderProfile(
     town: facts?.city || provider.neighborhood,
     distance_miles: milesBetween(origin, facts),
     avatar_image_path: provider.avatar_image_path,
+    avatar_focal_x: provider.avatar_focal_x ?? 50,
+    avatar_focal_y: provider.avatar_focal_y ?? 50,
     banner_image_path: provider.banner_image_path,
     banner_style: toBannerStyle(provider.banner_style),
+    banner_focal_x: provider.banner_focal_x ?? 50,
+    banner_focal_y: provider.banner_focal_y ?? 50,
     services: liveServices,
     rating: mapRating(rating),
     quote: pickQuote(publicReviews),
@@ -742,8 +755,12 @@ export async function getAdminProviderProfile(
     town: facts?.city || provider.neighborhood,
     distance_miles: null,
     avatar_image_path: provider.avatar_image_path,
+    avatar_focal_x: provider.avatar_focal_x,
+    avatar_focal_y: provider.avatar_focal_y,
     banner_image_path: provider.banner_image_path,
     banner_style: toBannerStyle(provider.banner_style),
+    banner_focal_x: provider.banner_focal_x,
+    banner_focal_y: provider.banner_focal_y,
     // Show every service the provider offers, even ones no longer live.
     services: adminOfferings,
     rating: mapRating(rating),
