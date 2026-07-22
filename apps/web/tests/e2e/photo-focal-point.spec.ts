@@ -135,8 +135,15 @@ test.afterAll(async () => {
   await admin.from("provider_services").delete().eq("service_id", serviceId);
   await admin.from("services").delete().eq("id", serviceId);
   await admin.from("provider_profiles").delete().eq("id", providerProfileId);
-  await admin.storage.from(AVATAR_BUCKET).remove([avatarPath]);
-  await admin.storage.from(BANNER_BUCKET).remove([bannerPath]);
+
+  // The upload-through-the-UI test replaces both photos with a fresh
+  // browser-generated UUID name, so sweep the whole user folder rather than
+  // tracking the exact new path.
+  for (const bucket of [AVATAR_BUCKET, BANNER_BUCKET]) {
+    const { data: objects } = await admin.storage.from(bucket).list(providerUserId);
+    const paths = (objects ?? []).map((o) => `${providerUserId}/${o.name}`);
+    if (paths.length) await admin.storage.from(bucket).remove(paths);
+  }
   await admin.auth.admin.deleteUser(providerUserId);
 });
 
@@ -274,4 +281,194 @@ test("drag-to-reposition avatar and banner persists and renders everywhere", asy
     await profileBanner.getAttribute("style"),
   );
   expect(profileBannerY).toBeCloseTo(afterBannerSave!.banner_focal_y, 0);
+});
+
+// Runs after the drag test above, so this provider already has a non-center
+// saved focal point on both photos -- exercises the actual browser-direct
+// upload flow (choose file -> upload straight to Storage -> Server Action
+// records the key) end to end with the reset-on-upload + reposition logic
+// layered on top of it, rather than seeding storage via the admin fixture.
+test("replacing a photo through the real upload UI resets its focal point, and it's immediately draggable again", async ({
+  page,
+}) => {
+  await login(page, providerEmail);
+  await page.goto("/account");
+
+  const repositioners = page.locator(".touch-none.select-none");
+  const avatarFrame = repositioners.nth(0);
+  const bannerFrame = repositioners.nth(1);
+  await expect(avatarFrame).toBeVisible();
+  await expect(bannerFrame).toBeVisible();
+
+  // Sanity: coming into this test, the previous test's drag+save left both
+  // photos off-center.
+  const [, avatarYBefore] = objectPositionOf(
+    await avatarFrame.locator("img").getAttribute("style"),
+  );
+  expect(avatarYBefore).not.toBe(50);
+
+  // --- Avatar: real upload through the file input + "Replace photo" ------
+  // Scoped to the file input's own <form>: page-wide, "Replace photo" also
+  // matches the file input itself (implicit button role, name from its
+  // <label>) AND the banner form's identically-labeled submit button.
+  const newAvatarFile = path.join(__dirname, "../../public/about/gianna.jpg");
+  const avatarUploadForm = page.locator("#provider-avatar").locator("../..");
+  await avatarUploadForm.locator("#provider-avatar").setInputFiles(newAvatarFile);
+  await avatarUploadForm
+    .getByRole("button", { name: "Replace photo" })
+    .last()
+    .click();
+  await expect(page.getByText("Profile photo saved.")).toBeVisible({
+    timeout: 15_000,
+  });
+
+  let afterAvatarUpload: { avatar_focal_x: number; avatar_focal_y: number } | null =
+    null;
+  await expect
+    .poll(
+      async () => {
+        const { data } = await admin
+          .from("provider_profiles")
+          .select("avatar_focal_x, avatar_focal_y")
+          .eq("id", providerProfileId)
+          .single();
+        afterAvatarUpload = data;
+        return data?.avatar_focal_y ?? -1;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(50);
+  expect(afterAvatarUpload!.avatar_focal_x).toBe(50);
+
+  // The new object's <img> reflects the reset without a manual reload. The
+  // DB write is already confirmed above; the client still needs a moment to
+  // receive the revalidated props and re-render, so poll rather than assume
+  // it's landed the instant the "saved" toast appears (that toast comes from
+  // local state set off the action's own return value, not the revalidated
+  // RSC payload).
+  const newAvatarImg = repositioners.nth(0).locator("img");
+  await waitForImageLoaded(newAvatarImg);
+  await expect
+    .poll(async () => objectPositionOf(await newAvatarImg.getAttribute("style")), {
+      timeout: 10_000,
+    })
+    .toEqual([50, 50]);
+  // The style update (from revalidated props) can land before the <img>'s
+  // src has actually swapped to the new object and finished loading -- the
+  // repositioner ignores drags until ITS onLoad fires, so wait again here,
+  // now that the swap has had a chance to start.
+  await waitForImageLoaded(newAvatarImg);
+
+  // It's draggable right away -- not stuck until a reload.
+  const freshAvatarFrame = repositioners.nth(0);
+  await freshAvatarFrame.scrollIntoViewIfNeeded();
+  const freshAvatarBox = await freshAvatarFrame.boundingBox();
+  if (!freshAvatarBox) throw new Error("Avatar frame not visible.");
+  const freshAvatarCenterX = freshAvatarBox.x + freshAvatarBox.width / 2;
+  const freshAvatarCenterY = freshAvatarBox.y + freshAvatarBox.height / 2;
+
+  await page.mouse.move(freshAvatarCenterX, freshAvatarCenterY);
+  await page.mouse.down();
+  await page.mouse.move(freshAvatarCenterX, freshAvatarCenterY - 15, { steps: 8 });
+  await page.mouse.up();
+
+  const [, avatarYAfterFreshDrag] = objectPositionOf(
+    await newAvatarImg.getAttribute("style"),
+  );
+  expect(avatarYAfterFreshDrag).not.toBe(50);
+
+  await freshAvatarFrame
+    .locator("../..")
+    .getByRole("button", { name: "Save position" })
+    .click();
+  await expect
+    .poll(
+      async () => {
+        const { data } = await admin
+          .from("provider_profiles")
+          .select("avatar_focal_y")
+          .eq("id", providerProfileId)
+          .single();
+        return data?.avatar_focal_y ?? 50;
+      },
+      { timeout: 10_000 },
+    )
+    .not.toBe(50);
+
+  // --- Banner: same flow ---------------------------------------------------
+  const newBannerFile = path.join(
+    __dirname,
+    "../../public/blog/evening-dog-walk.jpg",
+  );
+  const bannerUploadForm = page.locator("#provider-banner").locator("../..");
+  await bannerUploadForm.locator("#provider-banner").setInputFiles(newBannerFile);
+  await bannerUploadForm
+    .getByRole("button", { name: "Replace photo" })
+    .last()
+    .click();
+  await expect(page.getByText("Banner photo saved.")).toBeVisible({
+    timeout: 15_000,
+  });
+
+  let afterBannerUpload: { banner_focal_x: number; banner_focal_y: number } | null =
+    null;
+  await expect
+    .poll(
+      async () => {
+        const { data } = await admin
+          .from("provider_profiles")
+          .select("banner_focal_x, banner_focal_y")
+          .eq("id", providerProfileId)
+          .single();
+        afterBannerUpload = data;
+        return data?.banner_focal_y ?? -1;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(50);
+  expect(afterBannerUpload!.banner_focal_x).toBe(50);
+
+  const freshBannerFrame = repositioners.nth(1);
+  const newBannerImg = freshBannerFrame.locator("img");
+  await waitForImageLoaded(newBannerImg);
+  await expect
+    .poll(async () => objectPositionOf(await newBannerImg.getAttribute("style")), {
+      timeout: 10_000,
+    })
+    .toEqual([50, 50]);
+  await waitForImageLoaded(newBannerImg);
+
+  await freshBannerFrame.scrollIntoViewIfNeeded();
+  const freshBannerBox = await freshBannerFrame.boundingBox();
+  if (!freshBannerBox) throw new Error("Banner frame not visible.");
+  const freshBannerCenterX = freshBannerBox.x + freshBannerBox.width / 2;
+  const freshBannerCenterY = freshBannerBox.y + freshBannerBox.height / 2;
+
+  await page.mouse.move(freshBannerCenterX, freshBannerCenterY);
+  await page.mouse.down();
+  await page.mouse.move(freshBannerCenterX, freshBannerCenterY - 15, { steps: 8 });
+  await page.mouse.up();
+
+  const [, bannerYAfterFreshDrag] = objectPositionOf(
+    await newBannerImg.getAttribute("style"),
+  );
+  expect(bannerYAfterFreshDrag).not.toBe(50);
+
+  await freshBannerFrame
+    .locator("..")
+    .getByRole("button", { name: "Save position" })
+    .click();
+  await expect
+    .poll(
+      async () => {
+        const { data } = await admin
+          .from("provider_profiles")
+          .select("banner_focal_y")
+          .eq("id", providerProfileId)
+          .single();
+        return data?.banner_focal_y ?? 50;
+      },
+      { timeout: 10_000 },
+    )
+    .not.toBe(50);
 });
