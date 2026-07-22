@@ -78,7 +78,7 @@ export function ProviderCard({
       <ProviderCardLink href={href}>
         <Card
           pennant
-          className="flex flex-col transition-shadow group-hover/flip:shadow-md group-hover/flip:shadow-viridian/10"
+          className="flex h-full flex-col transition-shadow group-hover/flip:shadow-md group-hover/flip:shadow-viridian/10"
         >
           {/* Taller than the profile page's strip so Browse gets a real visual
               beat per card; the slow zoom rides the same group/flip hover as
@@ -91,7 +91,7 @@ export function ProviderCard({
             className="h-32 transition-transform duration-500 ease-out group-hover/flip:scale-[1.04]"
           />
 
-          <div className="flex flex-col gap-2.5 p-5">
+          <div className="flex flex-1 flex-col gap-2.5 p-5">
             {/* Round headshot lifted to overlap the banner above. Public asset,
                 so a plain <img> avoids stale optimizer copies after replace. */}
             {avatarUrl ? (
@@ -105,12 +105,17 @@ export function ProviderCard({
                 }}
               />
             ) : null}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Name on its own line; the verified check + rating sit on a
+                consistent second row so a long name can't push the rating to
+                wrap only on some cards. */}
+            <div className="flex flex-col gap-1">
               <h3 className="font-display text-xl font-semibold">
                 {provider.company_name || provider.display_name || "Student provider"}
               </h3>
-              <VerifiedCheck />
-              <Rating rating={provider.rating} />
+              <div className="flex flex-wrap items-center gap-2">
+                <VerifiedCheck />
+                <Rating rating={provider.rating} />
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -131,7 +136,7 @@ export function ProviderCard({
                 const firstParagraph = paragraphs[0];
                 const hasMore = paragraphs.length > 1;
                 return (
-                  <p className="line-clamp-3 whitespace-pre-line text-sm text-ink-soft">
+                  <p className="line-clamp-3 min-h-[3.75rem] whitespace-pre-line text-sm text-ink-soft">
                     {hasMore ? `${firstParagraph}…` : firstParagraph}
                   </p>
                 );
@@ -165,7 +170,7 @@ export function ProviderCard({
                 ) : null}
               </ul>
             ) : null}
-            <p className="text-[11px] text-mist">
+            <p className="mt-auto text-[11px] text-mist">
               {hasQuotePricing
                 ? "Final flat quotes are confirmed before payment."
                 : "One-hour minimum, then billed in 15-minute increments."}

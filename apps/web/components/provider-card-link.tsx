@@ -84,15 +84,15 @@ export function ProviderCardLink({
     <Link
       href={href}
       onClick={handleClick}
-      className="group/flip block transition-transform duration-200 hover:-translate-y-0.5 [perspective:1200px]"
+      className="group/flip block h-full transition-transform duration-200 hover:-translate-y-0.5 [perspective:1200px]"
     >
       <div
         className={cn(
-          "relative transition-transform duration-300 [transform-style:preserve-3d]",
+          "relative h-full transition-transform duration-300 [transform-style:preserve-3d]",
           flipped && "[transform:rotateY(180deg)]",
         )}
       >
-        <div className="[backface-visibility:hidden]">{children}</div>
+        <div className="h-full [backface-visibility:hidden]">{children}</div>
         <div
           aria-hidden
           className="pennant absolute inset-0 flex items-center justify-center overflow-hidden rounded-2xl border border-stone bg-viridian [backface-visibility:hidden] [transform:rotateY(180deg)]"
