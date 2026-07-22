@@ -127,11 +127,13 @@ export default async function BrowsePage({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 xl:grid-cols-3">
             {providers.map((provider) => (
               // Same scroll-driven rise-in the landing sections use; static
               // fallback for reduced motion and older browsers (globals.css).
-              <div key={provider.id} className="reveal-rise">
+              // h-full lets the card fill the stretched grid track so every
+              // card in a row ends at the same bottom edge.
+              <div key={provider.id} className="reveal-rise h-full">
                 <ProviderCard
                   provider={provider}
                   featuredOfferingId={featuredOfferingIds.get(provider.id)}
