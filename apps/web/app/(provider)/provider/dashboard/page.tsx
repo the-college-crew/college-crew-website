@@ -35,11 +35,15 @@ import {
 import { getProviderAvailabilityWindows } from "@/lib/db/queries";
 import type { AvailabilityWindow } from "@/lib/provider/setup";
 import type { BookingFlow, BookingStatus } from "@/lib/db/types";
-import { hasAcceptedCurrentLegalDocument } from "@/lib/legal/acceptance";
+import {
+  hasAcceptedCurrentLegalDocument,
+  legalDocumentPath,
+} from "@/lib/legal/acceptance";
 import { PROVIDER_TERMS_VERSION } from "@/lib/legal/waivers";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
+import { ProviderAgreementBanner } from "../_components/provider-agreement-banner";
 import { connectStripe, refreshStripeReadiness } from "../actions";
 import { RequestActions } from "./request-actions";
 
@@ -404,6 +408,13 @@ function ProviderDashboardView({
         </div>
       ) : null}
 
+      {!providerTermsAccepted && !demo ? (
+        <ProviderAgreementBanner
+          version={PROVIDER_TERMS_VERSION}
+          acceptHref={legalDocumentPath("provider_terms", "/provider/dashboard")}
+        />
+      ) : null}
+
       <ProviderReadinessChecklist
         profile={profile}
         offerings={offerings}
@@ -412,6 +423,11 @@ function ProviderDashboardView({
           ready: providerTermsAccepted,
           version: PROVIDER_TERMS_VERSION,
         }}
+        acceptHref={
+          demo
+            ? undefined
+            : legalDocumentPath("provider_terms", "/provider/dashboard")
+        }
       />
 
       {/* Earnings summary */}

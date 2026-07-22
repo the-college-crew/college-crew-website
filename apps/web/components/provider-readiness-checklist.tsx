@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import type { ProviderProfile } from "@/lib/db/types";
 import {
@@ -21,6 +23,7 @@ export function ProviderReadinessChecklist({
   offerings,
   windows,
   legalAcceptance,
+  acceptHref,
 }: {
   profile: Pick<
     ProviderProfile,
@@ -33,6 +36,12 @@ export function ProviderReadinessChecklist({
   offerings: ReadinessOffering[];
   windows: AvailabilityWindow[];
   legalAcceptance?: { ready: boolean; version: string };
+  /**
+   * Where an unsigned provider goes to accept the addendum. Omitted on the
+   * admin review modal, where the founder is looking at someone else's status
+   * and has nothing to sign.
+   */
+  acceptHref?: string;
 }) {
   if (offerings.length === 0) {
     return (
@@ -69,6 +78,14 @@ export function ProviderReadinessChecklist({
         >
           {legalAcceptance.ready ? "✓" : "○"} Provider agreement version{" "}
           {legalAcceptance.version}{legalAcceptance.ready ? " accepted" : " required"}
+          {!legalAcceptance.ready && acceptHref ? (
+            <>
+              {" · "}
+              <Link href={acceptHref} className="underline underline-offset-2">
+                Review &amp; accept it
+              </Link>
+            </>
+          ) : null}
         </p>
       ) : null}
       <ul className="mt-3 space-y-3">
