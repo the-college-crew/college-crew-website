@@ -159,9 +159,10 @@ export function ProviderCard({
                   <span className="ml-1.5 font-semibold text-quad-700">
                     {formatOfferedPrice(featuredOffering)}
                   </span>
-                  {!featuredOffering.is_bookable ? (
-                    <span className="ml-1 text-mist">· setup pending</span>
-                  ) : null}
+                  {/* No "setup pending" tag on Browse mini cards — the profile
+                      page shows booking-setup status. At real-Stripe launch,
+                      gate Browse on Stripe onboarding instead (see memory
+                      stripe-onboarding-gate-browse-at-launch). */}
                 </li>
                 {remainingServiceCount > 0 ? (
                   <li className="whitespace-nowrap py-1 text-xs font-semibold text-viridian">
