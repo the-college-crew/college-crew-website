@@ -91,10 +91,10 @@ export async function setProviderStatus(formData: FormData) {
 /**
  * Admin override that approves a provider without a verified school email or
  * ID document — for a founder personally vouching for someone the automated
- * checks can't clear. Legal acceptance is still required: this bypasses
- * identity proof only, not the provider agreement. Records who bypassed and
- * when so it's auditable later; the public site shows this provider exactly
- * like any other approved provider (no separate public badge/label).
+ * checks can't clear. This approves identity only; it never records or waives
+ * legal acceptance. Stripe, booking actions, and public bookability continue
+ * to enforce the current provider agreement independently. Records who
+ * bypassed and when so the decision remains auditable.
  */
 export async function bypassProviderVerification(formData: FormData) {
   const session = await requireRole("admin");
@@ -107,25 +107,11 @@ export async function bypassProviderVerification(formData: FormData) {
 
   const { data: prof } = await admin
     .from("provider_profiles")
-    .select("user_id")
+    .select("id")
     .eq("id", providerId)
     .maybeSingle();
   if (!prof) {
     redirect("/admin/providers?err=notfound");
-  }
-
-  const [platformTermsAccepted, providerTermsAccepted] = await Promise.all([
-    hasAcceptedCurrentLegalDocument(admin, {
-      userId: prof.user_id,
-      kind: "platform_terms",
-    }),
-    hasAcceptedCurrentLegalDocument(admin, {
-      userId: prof.user_id,
-      kind: "provider_terms",
-    }),
-  ]);
-  if (!platformTermsAccepted || !providerTermsAccepted) {
-    redirect("/admin/providers?err=legal");
   }
 
   const { error } = await admin
@@ -142,6 +128,10 @@ export async function bypassProviderVerification(formData: FormData) {
   }
 
   revalidatePath("/admin/providers");
+  revalidatePath("/provider/onboarding/verify");
+  revalidatePath("/provider/onboarding/review");
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/account");
   revalidatePath("/browse");
 }
 

@@ -34,6 +34,7 @@ import {
 } from "@/lib/demo/sample-preview";
 import { getProviderAvailabilityWindows } from "@/lib/db/queries";
 import type { AvailabilityWindow } from "@/lib/provider/setup";
+import { isProviderIdentityVerificationSatisfied } from "@/lib/provider/verification";
 import type { BookingFlow, BookingStatus } from "@/lib/db/types";
 import {
   hasAcceptedCurrentLegalDocument,
@@ -138,14 +139,13 @@ export default async function ProviderDashboardPage({
   const profile = await getOwnProviderProfile();
   if (!profile) redirect("/provider/onboarding/account");
 
-  // Onboarding is complete only once the .edu is verified and both license
-  // images are on record — otherwise the "under review" banner is misleading
-  // and the layout's verify banner points them back to finish.
+  // Identity onboarding is complete through either the normal .edu +
+  // two-sided ID path or an active founder bypass.
   const schoolEmail = await getVerifiedSchoolEmail(session.user.id);
-  const onboardingComplete =
-    Boolean(schoolEmail) &&
-    Boolean(profile.id_document_url) &&
-    Boolean(profile.id_document_back_url);
+  const onboardingComplete = isProviderIdentityVerificationSatisfied(
+    profile,
+    Boolean(schoolEmail),
+  );
 
   const supabase = await createClient();
   const [{ data }, { data: offeringRows }, windows, providerTermsAccepted] =

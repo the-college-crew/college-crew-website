@@ -29,6 +29,10 @@ import {
   getProviderTermsSnapshot,
   PROVIDER_TERMS_VERSION,
 } from "@/lib/legal/waivers";
+import {
+  hasActiveProviderVerificationBypass,
+  isProviderIdentityVerificationSatisfied,
+} from "@/lib/provider/verification";
 
 import { WizardSteps } from "../../_components/wizard-steps";
 import { ReviewSubmitForm } from "./review-submit-form";
@@ -70,9 +74,13 @@ export default async function OnboardingReviewPage() {
 
   const licenseComplete =
     Boolean(profile.id_document_url) && Boolean(profile.id_document_back_url);
+  const verificationBypassed = hasActiveProviderVerificationBypass(profile);
+  const identitySatisfied = isProviderIdentityVerificationSatisfied(
+    profile,
+    Boolean(schoolEmail),
+  );
   const ready =
-    Boolean(schoolEmail) &&
-    licenseComplete &&
+    identitySatisfied &&
     Boolean(profile.avatar_image_path) &&
     liveOfferings.length > 0 &&
     isStructuredAvailabilityComplete(windows) &&
@@ -102,6 +110,8 @@ export default async function OnboardingReviewPage() {
             <dd className="font-medium">
               {schoolEmail ? (
                 `${schoolEmail.email} ✓`
+              ) : verificationBypassed ? (
+                "Waived by founder ✓"
               ) : (
                 <Link
                   href="/provider/onboarding/verify"
@@ -117,6 +127,8 @@ export default async function OnboardingReviewPage() {
             <dd className="font-medium">
               {licenseComplete ? (
                 "Front & back uploaded ✓"
+              ) : verificationBypassed ? (
+                "Waived by founder ✓"
               ) : (
                 <Link
                   href="/provider/onboarding/verify"
@@ -244,9 +256,9 @@ export default async function OnboardingReviewPage() {
         </dl>
 
         <div className="mt-5 rounded-lg border border-line bg-court p-3 text-xs text-ink-soft">
-          What happens next: a founder reviews your license. Once approved,
-          you&apos;ll connect a bank account through Stripe from your
-          dashboard and appear in Browse.
+          {verificationBypassed
+            ? "Your verification was approved by a founder. Finish the remaining setup and accept the Provider Addendum, then connect Stripe from your dashboard."
+            : "What happens next: a founder reviews your license. Once approved, you’ll connect a bank account through Stripe from your dashboard and appear in Browse."}
         </div>
 
         <section className="mt-6 border-t border-line pt-5">

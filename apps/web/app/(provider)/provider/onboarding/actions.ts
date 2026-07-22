@@ -47,6 +47,7 @@ import {
   isStructuredAvailabilityComplete,
   parseProviderAvailabilityForm,
 } from "@/lib/provider/setup";
+import { isProviderIdentityVerificationSatisfied } from "@/lib/provider/verification";
 
 import { savePricingRows } from "../_lib/pricing";
 
@@ -456,9 +457,7 @@ export async function submitForReview(
     redirect("/provider/onboarding/verify?err=photo");
   }
   if (
-    !schoolEmail ||
-    !profile.id_document_url ||
-    !profile.id_document_back_url
+    !isProviderIdentityVerificationSatisfied(profile, Boolean(schoolEmail))
   ) {
     redirect("/provider/onboarding/verify");
   }

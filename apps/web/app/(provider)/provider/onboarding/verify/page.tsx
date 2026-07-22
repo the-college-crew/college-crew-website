@@ -14,6 +14,10 @@ import {
   getVerifiedSchoolEmail,
 } from "@/lib/db/school-email";
 import { providerAvatarUrl } from "@/lib/media/provider-avatars";
+import {
+  hasActiveProviderVerificationBypass,
+  isProviderIdentityVerificationSatisfied,
+} from "@/lib/provider/verification";
 import { createClient } from "@/lib/supabase/server";
 
 import { WizardSteps } from "../../_components/wizard-steps";
@@ -51,7 +55,12 @@ export default async function OnboardingVerifyPage({
   const idUploaded = hasFront && hasBack;
   const hasAvatar = Boolean(profile.avatar_image_path);
   const avatarUrl = providerAvatarUrl(profile.avatar_image_path);
-  const readyForNext = schoolVerified && idUploaded && hasAvatar;
+  const verificationBypassed = hasActiveProviderVerificationBypass(profile);
+  const identitySatisfied = isProviderIdentityVerificationSatisfied(
+    profile,
+    schoolVerified,
+  );
+  const readyForNext = identitySatisfied && hasAvatar;
   const supabase = await createClient();
   const signDocument = async (path: string | null) => {
     if (!path) return null;
@@ -74,6 +83,7 @@ export default async function OnboardingVerifyPage({
       <VerificationStatusCard
         approved={approved}
         rejected={rejected}
+        bypassed={verificationBypassed}
         schoolVerified={schoolVerified}
         hasFront={hasFront}
         hasBack={hasBack}
@@ -195,6 +205,7 @@ export default async function OnboardingVerifyPage({
 function VerificationStatusCard({
   approved,
   rejected,
+  bypassed,
   schoolVerified,
   hasFront,
   hasBack,
@@ -204,6 +215,7 @@ function VerificationStatusCard({
 }: {
   approved: boolean;
   rejected: boolean;
+  bypassed: boolean;
   schoolVerified: boolean;
   hasFront: boolean;
   hasBack: boolean;
@@ -211,16 +223,21 @@ function VerificationStatusCard({
   frontUrl: string | null;
   backUrl: string | null;
 }) {
-  const complete = schoolVerified && hasFront && hasBack && hasAvatar;
+  const complete =
+    (bypassed || (schoolVerified && hasFront && hasBack)) && hasAvatar;
   const title = approved
-    ? "You’re verified"
+    ? bypassed
+      ? "A founder approved your verification"
+      : "You’re verified"
     : rejected
       ? "Verification needs attention"
       : complete
         ? "Your documents are ready"
         : "Finish your verification";
   const description = approved
-    ? "Your school email and ID are approved. Your provider profile can appear in Browse."
+    ? bypassed
+      ? "Your student verification was approved by a founder. Continue from your dashboard; the Provider Addendum and remaining launch requirements still apply."
+      : "Your school email and ID are approved. Your provider profile can appear in Browse."
     : rejected
       ? "A founder needs an updated document before your profile can go live."
       : complete
@@ -248,19 +265,31 @@ function VerificationStatusCard({
         <li className="rounded-lg border border-line bg-paper/70 px-3 py-2">
           <span className="block text-xs text-mist">School email</span>
           <span className="font-semibold text-ink">
-            {schoolVerified ? "Verified ✓" : "Not verified"}
+            {schoolVerified
+              ? "Verified ✓"
+              : bypassed
+                ? "Waived by founder ✓"
+                : "Not verified"}
           </span>
         </li>
         <li className="rounded-lg border border-line bg-paper/70 px-3 py-2">
           <span className="block text-xs text-mist">License front</span>
           <span className="font-semibold text-ink">
-            {hasFront ? "Uploaded ✓" : "Missing"}
+            {hasFront
+              ? "Uploaded ✓"
+              : bypassed
+                ? "Waived by founder ✓"
+                : "Missing"}
           </span>
         </li>
         <li className="rounded-lg border border-line bg-paper/70 px-3 py-2">
           <span className="block text-xs text-mist">License back</span>
           <span className="font-semibold text-ink">
-            {hasBack ? "Uploaded ✓" : "Missing"}
+            {hasBack
+              ? "Uploaded ✓"
+              : bypassed
+                ? "Waived by founder ✓"
+                : "Missing"}
           </span>
         </li>
         <li className="rounded-lg border border-line bg-paper/70 px-3 py-2">
