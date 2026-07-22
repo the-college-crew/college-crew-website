@@ -11,6 +11,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSession } from "@/lib/auth/session";
 import {
+  selectFeaturedOfferingIds,
+  utcDateKey,
+} from "@/lib/browse/ranking";
+import {
   getApprovedProviders,
   getLiveServices,
   getServiceProviderCounts,
@@ -47,6 +51,10 @@ export default async function BrowsePage({
     origin: origin.isSet
       ? { latitude: origin.latitude, longitude: origin.longitude }
       : null,
+  });
+  const featuredOfferingIds = selectFeaturedOfferingIds(providers, {
+    activeServiceSlug: service,
+    dateKey: utcDateKey(),
   });
 
   return (
@@ -124,7 +132,10 @@ export default async function BrowsePage({
               // Same scroll-driven rise-in the landing sections use; static
               // fallback for reduced motion and older browsers (globals.css).
               <div key={provider.id} className="reveal-rise">
-                <ProviderCard provider={provider} />
+                <ProviderCard
+                  provider={provider}
+                  featuredOfferingId={featuredOfferingIds.get(provider.id)}
+                />
               </div>
             ))}
           </div>

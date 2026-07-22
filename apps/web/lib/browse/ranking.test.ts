@@ -7,9 +7,24 @@ import {
   distanceMultiplier,
   jobsScore,
   recommendationScore,
+  selectFeaturedOfferingIds,
   smoothedRatingScore,
   type RankingInput,
 } from "./ranking";
+
+type TestOffering = {
+  id: string;
+  is_bookable: boolean;
+  service: { slug: string };
+};
+
+function offering(
+  id: string,
+  slug: string,
+  isBookable = true,
+): TestOffering {
+  return { id, is_bookable: isBookable, service: { slug } };
+}
 
 describe("smoothedRatingScore", () => {
   it("returns the prior mean for a provider with no reviews", () => {
@@ -79,6 +94,108 @@ describe("dailySeed", () => {
       expect(v).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThan(1);
     }
+  });
+});
+
+describe("selectFeaturedOfferingIds", () => {
+  it("always shows the matching service when a filter is active", () => {
+    const selected = selectFeaturedOfferingIds(
+      [
+        {
+          id: "provider-1",
+          services: [
+            offering("tutoring", "tutoring"),
+            offering("walking", "dog-walking", false),
+          ],
+        },
+      ],
+      { activeServiceSlug: "dog-walking", dateKey: "2026-07-21" },
+    );
+
+    expect(selected.get("provider-1")).toBe("walking");
+  });
+
+  it("spreads previews across services that have appeared less often", () => {
+    const selected = selectFeaturedOfferingIds(
+      [
+        {
+          id: "provider-1",
+          services: [offering("cleaning-1", "cleaning")],
+        },
+        {
+          id: "provider-2",
+          services: [
+            offering("cleaning-2", "cleaning"),
+            offering("tutoring-2", "tutoring"),
+          ],
+        },
+        {
+          id: "provider-3",
+          services: [
+            offering("tutoring-3", "tutoring"),
+            offering("walking-3", "dog-walking"),
+          ],
+        },
+      ],
+      { dateKey: "2026-07-21" },
+    );
+
+    expect([...selected.values()]).toEqual([
+      "cleaning-1",
+      "tutoring-2",
+      "walking-3",
+    ]);
+  });
+
+  it("prefers bookable offerings and falls back when none are bookable", () => {
+    const selected = selectFeaturedOfferingIds(
+      [
+        {
+          id: "provider-1",
+          services: [
+            offering("pending", "cleaning", false),
+            offering("ready", "tutoring"),
+          ],
+        },
+        {
+          id: "provider-2",
+          services: [offering("pending-only", "hauling", false)],
+        },
+      ],
+      { dateKey: "2026-07-21" },
+    );
+
+    expect(selected.get("provider-1")).toBe("ready");
+    expect(selected.get("provider-2")).toBe("pending-only");
+  });
+
+  it("is stable during a day and rotates tied choices across days", () => {
+    const providers = [
+      {
+        id: "provider-1",
+        services: [
+          offering("cleaning", "cleaning"),
+          offering("tutoring", "tutoring"),
+          offering("walking", "dog-walking"),
+        ],
+      },
+    ];
+    const today = selectFeaturedOfferingIds(providers, {
+      dateKey: "2026-07-21",
+    });
+    const repeated = selectFeaturedOfferingIds(providers, {
+      dateKey: "2026-07-21",
+    });
+    const monthOfSelections = new Set(
+      Array.from({ length: 31 }, (_, day) =>
+        selectFeaturedOfferingIds(providers, {
+          dateKey: `2026-07-${String(day + 1).padStart(2, "0")}`,
+        }).get("provider-1"),
+      ),
+    );
+
+    expect(repeated).toEqual(today);
+    expect(monthOfSelections.size).toBeGreaterThan(1);
   });
 });
 
