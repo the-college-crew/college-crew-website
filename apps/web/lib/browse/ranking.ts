@@ -87,6 +87,69 @@ export function dailySeed(providerId: string, dateKey: string): number {
   return hashToUnitInterval(`${providerId}:${dateKey}`);
 }
 
+export type FeaturedServiceProvider = {
+  id: string;
+  services: ReadonlyArray<{
+    id: string;
+    is_bookable: boolean;
+    service: { slug: string };
+  }>;
+};
+
+/**
+ * Pick one Browse-card offering per provider without turning the page into a
+ * full service catalog. A service filter always wins. On the unfiltered page,
+ * the least-used service slugs win first and the daily seed only breaks ties.
+ * This keeps the mix broad while remaining stable across refreshes.
+ */
+export function selectFeaturedOfferingIds(
+  providers: readonly FeaturedServiceProvider[],
+  options: { activeServiceSlug?: string; dateKey: string },
+): Map<string, string> {
+  const selectedByProvider = new Map<string, string>();
+  const appearancesByService = new Map<string, number>();
+
+  for (const provider of providers) {
+    if (options.activeServiceSlug) {
+      const matching = provider.services.find(
+        (offering) => offering.service.slug === options.activeServiceSlug,
+      );
+      if (matching) selectedByProvider.set(provider.id, matching.id);
+      continue;
+    }
+
+    const bookable = provider.services.filter(
+      (offering) => offering.is_bookable,
+    );
+    const candidates = bookable.length > 0 ? bookable : provider.services;
+    if (candidates.length === 0) continue;
+
+    const fewestAppearances = Math.min(
+      ...candidates.map(
+        (offering) => appearancesByService.get(offering.service.slug) ?? 0,
+      ),
+    );
+    const leastSeen = candidates.filter(
+      (offering) =>
+        (appearancesByService.get(offering.service.slug) ?? 0) ===
+        fewestAppearances,
+    );
+    const selected = leastSeen.toSorted(
+      (a, b) =>
+        dailySeed(`${provider.id}:${b.id}`, options.dateKey) -
+        dailySeed(`${provider.id}:${a.id}`, options.dateKey),
+    )[0];
+
+    selectedByProvider.set(provider.id, selected.id);
+    appearancesByService.set(
+      selected.service.slug,
+      (appearancesByService.get(selected.service.slug) ?? 0) + 1,
+    );
+  }
+
+  return selectedByProvider;
+}
+
 /**
  * Distance demotion multiplier by measured straight-line miles:
  *   ≤3 → 1.0, ≤5 → 0.8, ≤8 → 0.6, >8 → 0.5.

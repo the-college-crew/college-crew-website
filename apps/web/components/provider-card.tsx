@@ -58,12 +58,20 @@ export function LocationLine({
  * The whole card links to the profile (flip + morph via ProviderCardLink);
  * the ViewTransition name pairs with the profile page's identity card.
  */
-export function ProviderCard({ provider }: { provider: ProviderCardData }) {
+export function ProviderCard({
+  provider,
+  featuredOfferingId,
+}: {
+  provider: ProviderCardData;
+  featuredOfferingId?: string;
+}) {
   const href = `/providers/${provider.id}`;
   const avatarUrl = providerAvatarUrl(provider.avatar_image_path);
-  const hasQuotePricing = provider.services.some(
-    (offering) => offering.pricing_mode === "quote",
-  );
+  const featuredOffering =
+    provider.services.find((offering) => offering.id === featuredOfferingId) ??
+    provider.services[0];
+  const remainingServiceCount = Math.max(0, provider.services.length - 1);
+  const hasQuotePricing = featuredOffering?.pricing_mode === "quote";
 
   return (
     <ProviderCardViewTransition href={href} name={`provider-${provider.id}`}>
@@ -136,22 +144,27 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
               </p>
             ) : null}
 
-            <ul className="flex flex-wrap gap-2">
-              {provider.services.map((offered) => (
+            {featuredOffering ? (
+              <ul className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                 <li
-                  key={offered.id}
-                  className="rounded-full border border-line bg-court px-3 py-1 text-xs font-medium text-ink-soft"
+                  key={featuredOffering.id}
+                  className="w-fit max-w-full rounded-full border border-line bg-court px-3 py-1 text-xs font-medium text-ink-soft"
                 >
-                  {offered.service.name}
+                  {featuredOffering.service.name}
                   <span className="ml-1.5 font-semibold text-quad-700">
-                    {formatOfferedPrice(offered)}
+                    {formatOfferedPrice(featuredOffering)}
                   </span>
-                  {!offered.is_bookable ? (
+                  {!featuredOffering.is_bookable ? (
                     <span className="ml-1 text-mist">· setup pending</span>
                   ) : null}
                 </li>
-              ))}
-            </ul>
+                {remainingServiceCount > 0 ? (
+                  <li className="whitespace-nowrap py-1 text-xs font-semibold text-viridian">
+                    +{remainingServiceCount} more
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
             <p className="text-[11px] text-mist">
               {hasQuotePricing
                 ? "Final flat quotes are confirmed before payment."
