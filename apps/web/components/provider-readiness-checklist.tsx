@@ -52,7 +52,7 @@ export function ProviderReadinessChecklist({
 }) {
   if (offerings.length === 0) {
     return (
-      <div className="rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
+      <div className="flex flex-col gap-3 rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800 sm:flex-row sm:items-center sm:justify-between">
         <p>
           Add at least one live service and its pricing before customers can
           book you.
@@ -60,7 +60,7 @@ export function ProviderReadinessChecklist({
         {offeringsHref ? (
           <Link
             href={offeringsHref}
-            className="mt-3 inline-flex items-center rounded-md border border-gold-400 bg-gold-200 px-3 py-1.5 text-sm font-medium text-gold-900 hover:bg-gold-300"
+            className="inline-flex shrink-0 items-center self-start rounded-md border border-gold-400 bg-gold-200 px-3 py-1.5 text-sm font-medium text-gold-900 hover:bg-gold-300 sm:self-auto"
           >
             Add a service
           </Link>
