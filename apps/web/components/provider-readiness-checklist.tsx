@@ -24,6 +24,7 @@ export function ProviderReadinessChecklist({
   windows,
   legalAcceptance,
   acceptHref,
+  offeringsHref,
 }: {
   profile: Pick<
     ProviderProfile,
@@ -42,12 +43,28 @@ export function ProviderReadinessChecklist({
    * and has nothing to sign.
    */
   acceptHref?: string;
+  /**
+   * Where a provider goes to add services/pricing. Omitted on the admin
+   * review modal, where the founder can't edit someone else's business
+   * profile from this view.
+   */
+  offeringsHref?: string;
 }) {
   if (offerings.length === 0) {
     return (
       <div className="rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
-        Add at least one live service and its pricing before customers can book
-        you.
+        <p>
+          Add at least one live service and its pricing before customers can
+          book you.
+        </p>
+        {offeringsHref ? (
+          <Link
+            href={offeringsHref}
+            className="mt-3 inline-flex items-center rounded-md border border-gold-400 bg-gold-200 px-3 py-1.5 text-sm font-medium text-gold-900 hover:bg-gold-300"
+          >
+            Add a service
+          </Link>
+        ) : null}
       </div>
     );
   }
