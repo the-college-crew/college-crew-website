@@ -33,6 +33,7 @@ export function ProviderReadinessChecklist({
     | "stripe_transfers_active"
     | "stripe_transfers_checked_at"
     | "service_zip"
+    | "school_name"
   >;
   offerings: ReadinessOffering[];
   windows: AvailabilityWindow[];
@@ -74,6 +75,7 @@ export function ProviderReadinessChecklist({
     readiness: getOfferingReadiness(profile, offering, windows),
   }));
   const allReady =
+    Boolean(profile.school_name.trim()) &&
     rows.every(({ readiness }) => readiness.bookable) &&
     (legalAcceptance?.ready ?? true);
 
@@ -105,6 +107,14 @@ export function ProviderReadinessChecklist({
           ) : null}
         </p>
       ) : null}
+      <p
+        className={`mt-3 text-xs font-medium ${
+          profile.school_name.trim() ? "text-quad-700" : "text-gold-700"
+        }`}
+      >
+        {profile.school_name.trim() ? "✓" : "○"} College or university{" "}
+        {profile.school_name.trim() ? "added" : "required in Public profile"}
+      </p>
       <ul className="mt-3 space-y-3">
         {rows.map(({ offering, readiness }) => (
           <li key={offering.id} className="rounded-lg border border-line bg-paper p-3">

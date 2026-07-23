@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { evaluatePassword } from "@/lib/auth/password-strength";
 import { normalizeState } from "@/lib/constants/us-states";
+import { schoolProfileInputSchema } from "@/lib/education/schools";
 
 /**
  * Shared auth validation schemas (auth is shared ownership — coordinate
@@ -98,7 +99,7 @@ export const dateOfBirthSchema = z
 export const providerStartSchema = z.object({
   dateOfBirth: dateOfBirthSchema.optional(),
   companyName: z.string().trim().max(120).optional(),
-});
+}).and(schoolProfileInputSchema);
 
 /** Customer signup: name + credentials + home address. No date of birth. */
 export const customerSignUpSchema = z

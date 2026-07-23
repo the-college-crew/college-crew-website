@@ -16,6 +16,10 @@ import {
   eligibleAccountSchoolEmail,
   getVerifiedSchoolEmail,
 } from "@/lib/db/school-email";
+import {
+  resolveSchoolProfileInput,
+  SchoolDirectoryError,
+} from "@/lib/education/schools";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { sendSchoolOtpEmail } from "@/lib/email/send";
 import type { Json } from "@/lib/db/types";
@@ -78,8 +82,32 @@ export async function startProviderProfile(
   const parsed = providerStartSchema.safeParse({
     dateOfBirth: formData.get("dateOfBirth") || undefined,
     companyName: formData.get("companyName") || undefined,
+    schoolName: formData.get("schoolName"),
+    schoolId: formData.get("schoolId") ?? "",
+    greekOrganization: formData.get("greekOrganization") ?? "",
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const existing = await getOwnProviderProfile();
+  let school;
+  try {
+    school = await resolveSchoolProfileInput(parsed.data, existing ?? undefined);
+  } catch (error) {
+    return {
+      error:
+        error instanceof SchoolDirectoryError
+          ? error.message
+          : "Could not save your school — try again.",
+    };
+  }
+
+  if (!hasServiceRoleEnv()) {
+    return {
+      error:
+        "Onboarding isn't configured yet — add SUPABASE_SERVICE_ROLE_KEY.",
+    };
+  }
+  const admin = createAdminClient();
 
   // The 18+ gate holds regardless of how far the account got before: even a
   // provider_profiles row created outside this action (direct insert, legacy
@@ -92,13 +120,6 @@ export async function startProviderProfile(
     if (!parsed.data.dateOfBirth) {
       return { error: "Enter your date of birth." };
     }
-    if (!hasServiceRoleEnv()) {
-      return {
-        error:
-          "Onboarding isn't configured yet — add SUPABASE_SERVICE_ROLE_KEY.",
-      };
-    }
-    const admin = createAdminClient();
     const { error: dobError } = await admin
       .from("profiles")
       .update({ date_of_birth: parsed.data.dateOfBirth })
@@ -108,21 +129,31 @@ export async function startProviderProfile(
     }
   }
 
-  const existing = await getOwnProviderProfile();
   if (!existing) {
     const metadataCompany = session.user.user_metadata.company_name;
     const companyName =
       parsed.data.companyName ??
       (typeof metadataCompany === "string" ? metadataCompany : null);
 
-    const supabase = await createClient();
-    const { error } = await supabase.from("provider_profiles").insert({
+    // Recognition fields are server-canonicalized and deliberately have no
+    // browser INSERT grant. This authorized server write keeps a forged UnitID
+    // or logo domain out of public profiles.
+    const { error } = await admin.from("provider_profiles").insert({
       user_id: session.user.id,
       display_name: session.profile.full_name,
       company_name: companyName || null,
+      ...school,
     });
     if (error && error.code !== "23505") {
       return { error: `Could not start onboarding: ${error.message}` };
+    }
+  } else {
+    const { error } = await admin
+      .from("provider_profiles")
+      .update(school)
+      .eq("id", existing.id);
+    if (error) {
+      return { error: "Could not save your school — try again." };
     }
   }
 

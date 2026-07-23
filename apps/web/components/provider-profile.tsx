@@ -4,6 +4,7 @@ import { ViewTransition } from "react";
 import { openConversationWithProvider } from "@/app/actions/messaging";
 import { FormLoader } from "@/components/form-loader";
 import { LocationLine, Rating } from "@/components/provider-card";
+import { SchoolIdentity } from "@/components/school-identity";
 import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import {
@@ -103,6 +104,12 @@ export async function ProviderProfile({
               className="text-xs text-mist"
             />
           </div>
+          <SchoolIdentity
+            name={provider.school_name}
+            domain={provider.school_domain}
+            greekOrganization={provider.greek_organization}
+            className="mt-4"
+          />
           {provider.bio ? (
             <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-ink-soft">
               {provider.bio}

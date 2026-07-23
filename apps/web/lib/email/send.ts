@@ -191,6 +191,8 @@ const FIELD_LABEL: Record<ProfileTextField, string> = {
   display_name: "display name",
   bio: "bio",
   company_name: "company name",
+  school_name: "school name",
+  greek_organization: "Greek-life organization",
 };
 
 export function sendProfileFlagEmail(opts: {
