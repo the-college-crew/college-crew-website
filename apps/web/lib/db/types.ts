@@ -281,6 +281,94 @@ export type Database = {
           },
         ]
       }
+      booking_drafts: {
+        Row: {
+          address: string
+          address_kind: string
+          booking_id: string
+          created_at: string
+          customer_id: string
+          details: string
+          estimated_minutes: number
+          expires_at: string
+          hourly_rate_cents: number
+          id: string
+          job_zip: string
+          latitude: number | null
+          longitude: number | null
+          on_decline_preference: Database["public"]["Enums"]["booking_decline_preference"]
+          provider_service_id: string
+          scheduled_at: string
+          service_city: string
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string
+        }
+        Insert: {
+          address: string
+          address_kind?: string
+          booking_id: string
+          created_at?: string
+          customer_id: string
+          details?: string
+          estimated_minutes: number
+          expires_at: string
+          hourly_rate_cents: number
+          id?: string
+          job_zip: string
+          latitude?: number | null
+          longitude?: number | null
+          on_decline_preference?: Database["public"]["Enums"]["booking_decline_preference"]
+          provider_service_id: string
+          scheduled_at: string
+          service_city?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id: string
+        }
+        Update: {
+          address?: string
+          address_kind?: string
+          booking_id?: string
+          created_at?: string
+          customer_id?: string
+          details?: string
+          estimated_minutes?: number
+          expires_at?: string
+          hourly_rate_cents?: number
+          id?: string
+          job_zip?: string
+          latitude?: number | null
+          longitude?: number | null
+          on_decline_preference?: Database["public"]["Enums"]["booking_decline_preference"]
+          provider_service_id?: string
+          scheduled_at?: string
+          service_city?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_drafts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_drafts_provider_service_id_fkey"
+            columns: ["provider_service_id"]
+            isOneToOne: false
+            referencedRelation: "provider_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_drafts_provider_service_id_fkey"
+            columns: ["provider_service_id"]
+            isOneToOne: false
+            referencedRelation: "public_provider_offerings"
+            referencedColumns: ["provider_service_id"]
+          },
+        ]
+      }
       booking_invoices: {
         Row: {
           autocharge_at: string | null
@@ -560,6 +648,7 @@ export type Database = {
           job_zip: string | null
           latitude: number | null
           longitude: number | null
+          on_decline_preference: Database["public"]["Enums"]["booking_decline_preference"]
           pilot_timezone: string
           platform_fee_bps: number | null
           platform_fee_cents: number
@@ -618,6 +707,7 @@ export type Database = {
           job_zip?: string | null
           latitude?: number | null
           longitude?: number | null
+          on_decline_preference?: Database["public"]["Enums"]["booking_decline_preference"]
           pilot_timezone?: string
           platform_fee_bps?: number | null
           platform_fee_cents: number
@@ -676,6 +766,7 @@ export type Database = {
           job_zip?: string | null
           latitude?: number | null
           longitude?: number | null
+          on_decline_preference?: Database["public"]["Enums"]["booking_decline_preference"]
           pilot_timezone?: string
           platform_fee_bps?: number | null
           platform_fee_cents?: number
@@ -2246,6 +2337,26 @@ export type Database = {
         Args: { p_job_id: string; p_lease_token: string }
         Returns: boolean
       }
+      create_booking_draft: {
+        Args: {
+          p_address: string
+          p_address_kind: string
+          p_booking_id: string
+          p_details: string
+          p_estimated_minutes: number
+          p_hourly_rate_cents: number
+          p_job_zip: string
+          p_latitude?: number
+          p_longitude?: number
+          p_on_decline_preference: Database["public"]["Enums"]["booking_decline_preference"]
+          p_provider_service_id: string
+          p_scheduled_at: string
+          p_service_city: string
+          p_stripe_customer_id: string
+          p_stripe_payment_intent_id: string
+        }
+        Returns: undefined
+      }
       create_hourly_booking_request: {
         Args: {
           p_address: string
@@ -2291,6 +2402,10 @@ export type Database = {
       }
       expire_unpaid_acceptance: {
         Args: { p_booking_id: string }
+        Returns: string
+      }
+      finalize_hourly_booking: {
+        Args: { p_stripe_payment_intent_id: string }
         Returns: string
       }
       get_my_booking_reviews: {
@@ -2376,6 +2491,20 @@ export type Database = {
         Returns: string
       }
       owns_provider_profile: { Args: { pp_id: string }; Returns: boolean }
+      quote_hourly_offering_slot: {
+        Args: {
+          p_estimated_minutes: number
+          p_provider_service_id: string
+          p_scheduled_at: string
+        }
+        Returns: {
+          hourly_rate_cents: number
+          provider_display_name: string
+          provider_id: string
+          service_id: string
+          service_name: string
+        }[]
+      }
       rank_hourly_provider_ids: {
         Args: { p_job_zip: string; p_service_slug?: string }
         Returns: {
@@ -2535,6 +2664,7 @@ export type Database = {
     }
     Enums: {
       background_check_status: "none" | "pending" | "passed"
+      booking_decline_preference: "auto_rematch" | "keep_control"
       booking_dispute_category:
         | "provider_no_show"
         | "hours"
@@ -2566,6 +2696,7 @@ export type Database = {
         | "failed"
         | "cancelled"
         | "refunded"
+        | "authorized"
       booking_refund_status:
         | "created"
         | "processing"
@@ -2727,6 +2858,7 @@ export const Constants = {
   public: {
     Enums: {
       background_check_status: ["none", "pending", "passed"],
+      booking_decline_preference: ["auto_rematch", "keep_control"],
       booking_dispute_category: [
         "provider_no_show",
         "hours",
@@ -2761,6 +2893,7 @@ export const Constants = {
         "failed",
         "cancelled",
         "refunded",
+        "authorized",
       ],
       booking_refund_status: [
         "created",
@@ -2802,8 +2935,6 @@ export const Constants = {
   },
 } as const
 
-// App-facing aliases derived from the generated schema. Keep aliases here;
-// never hand-edit generated table/view row definitions above.
 export type UserRole = Database["public"]["Enums"]["user_role"]
 export type ProviderType = Database["public"]["Enums"]["provider_type"]
 export type VerificationStatus = Database["public"]["Enums"]["verification_status"]
@@ -2876,3 +3007,6 @@ export type ProviderRating = Tables<"provider_ratings">
 export type ProviderReview = Tables<"provider_reviews">
 export type PublicProviderDirectoryRow = Tables<"public_provider_directory">
 export type PublicProviderOfferingRow = Tables<"public_provider_offerings">
+export type BookingDeclinePreference =
+  Database["public"]["Enums"]["booking_decline_preference"]
+export type BookingDraft = Tables<"booking_drafts">

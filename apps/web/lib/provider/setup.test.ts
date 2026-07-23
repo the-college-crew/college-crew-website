@@ -136,7 +136,7 @@ describe("supported service quote input", () => {
 });
 
 describe("structured provider availability", () => {
-  it("parses valid preset and custom notice boundaries", () => {
+  it("pins minimum notice to the fixed 12h pilot value", () => {
     const preset = parseProviderAvailabilityForm(validAvailabilityForm());
     expect(preset).toMatchObject({
       success: true,
@@ -146,17 +146,19 @@ describe("structured provider availability", () => {
           { weekday: 4, start_local: "09:00", end_local: "17:00" },
         ],
         service_zip: "60614",
-        minimum_notice_hours: 24,
+        minimum_notice_hours: 12,
       },
     });
 
-    for (const hours of [3, 168]) {
+    // The pilot fixes notice platform-wide, so any submitted value — including
+    // one outside the old 3-168h bounds — is ignored rather than rejected.
+    for (const hours of [2, 3, 24, 168, 999]) {
       const custom = validAvailabilityForm();
       custom.set("noticeChoice", "custom");
       custom.set("customNoticeHours", String(hours));
       expect(parseProviderAvailabilityForm(custom)).toMatchObject({
         success: true,
-        data: { minimum_notice_hours: hours },
+        data: { minimum_notice_hours: 12 },
       });
     }
   });
@@ -193,8 +195,6 @@ describe("structured provider availability", () => {
     form.set("windowStart_0", "17:00");
     form.set("windowEnd_0", "09:00");
     form.set("serviceZip", "6061");
-    form.set("noticeChoice", "custom");
-    form.set("customNoticeHours", "169");
 
     const result = parseProviderAvailabilityForm(form);
     expect(result.success).toBe(false);
@@ -204,7 +204,6 @@ describe("structured provider availability", () => {
           0: { days: expect.any(String), end: expect.any(String) },
         },
         serviceZip: expect.any(String),
-        minimumNoticeHours: expect.any(String),
       });
     }
   });
@@ -217,13 +216,6 @@ describe("structured provider availability", () => {
     if (!result.success) {
       expect(result.fieldErrors.weekdays).toEqual(expect.any(String));
     }
-  });
-
-  it("rejects the lower custom notice boundary minus one", () => {
-    const form = validAvailabilityForm();
-    form.set("noticeChoice", "custom");
-    form.set("customNoticeHours", "2");
-    expect(parseProviderAvailabilityForm(form).success).toBe(false);
   });
 });
 

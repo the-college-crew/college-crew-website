@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import {
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
+import { useActionState, useMemo, useState, useTransition } from "react";
 
 import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
@@ -23,7 +30,13 @@ import {
 import type { OfferedService } from "@/lib/db/queries";
 import { formatMoney, formatOfferedPrice } from "@/lib/utils";
 
-import { createBookingRequest, type BookingFormState } from "./actions";
+import {
+  createBookingRequest,
+  finalizeBooking,
+  startBookingAuthorization,
+  type AuthorizeState,
+  type BookingFormState,
+} from "./actions";
 
 const DURATION_OPTIONS = Array.from(
   {
@@ -32,6 +45,33 @@ const DURATION_OPTIONS = Array.from(
   },
   (_, index) => CUSTOMER_ESTIMATE_MINUTES.min + index * 15,
 );
+
+/**
+ * Stripe.js is loaded lazily on first use, and deliberately NOT imported from
+ * the confirm route's panel. That module calls `loadStripe()` at module scope;
+ * importing it from a second route pulls it into a shared chunk, so it runs on
+ * pages that never render a Payment Element and breaks their hydration.
+ */
+let stripeJs: Promise<StripeJs | null> | null | undefined;
+
+function getStripePromise() {
+  if (stripeJs === undefined) {
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    stripeJs = key ? loadStripe(key) : null;
+  }
+  return stripeJs;
+}
+
+/** Match the Payment Element to the cream/forest theme. */
+const appearance = {
+  variables: {
+    colorPrimary: "#344945",
+    colorBackground: "#fffdf8",
+    colorText: "#344945",
+    colorDanger: "#b3261e",
+    borderRadius: "8px",
+  },
+} as const;
 
 function durationLabel(minutes: number) {
   const hours = Math.floor(minutes / 60);
@@ -47,10 +87,15 @@ export function BookingRequestForm({
   /** False until "Booking from" resolves to a usable service address. */
   originReady: boolean;
 }) {
-  const [state, formAction, pending] = useActionState<
+  const [quoteState, quoteAction, quotePending] = useActionState<
     BookingFormState,
     FormData
   >(createBookingRequest, {});
+  const [authState, authAction, authPending] = useActionState<
+    AuthorizeState,
+    FormData
+  >(startBookingAuthorization, {});
+
   const [selectedId, setSelectedId] = useState(services[0]?.id ?? "");
   const [scheduledLocal, setScheduledLocal] = useState("");
   const [estimatedMinutes, setEstimatedMinutes] = useState(60);
@@ -80,14 +125,40 @@ export function BookingRequestForm({
       : responseOptions[0];
   const estimatedSubtotal =
     selected?.hourly_rate_cents != null
-      ? calculateHourlySubtotalCents(
-          selected.hourly_rate_cents,
-          estimatedMinutes,
-        )
+      ? calculateHourlySubtotalCents(selected.hourly_rate_cents, estimatedMinutes)
       : null;
 
+  // Instant-book pay step: the hold is authorized, mount the Payment Element.
+  const stripePromise = authState.clientSecret ? getStripePromise() : null;
+  const unconfigured =
+    authState.unconfigured ||
+    Boolean(authState.clientSecret && !stripePromise);
+
+  if (!isQuote && authState.clientSecret && stripePromise) {
+    return (
+      <Elements
+        stripe={stripePromise}
+        options={{ clientSecret: authState.clientSecret, appearance }}
+      >
+        <AuthorizeHoldForm
+          paymentIntentId={authState.paymentIntentId ?? ""}
+          clientSecret={authState.clientSecret}
+          holdLabel={
+            selected?.hourly_rate_cents != null
+              ? formatMoney(selected.hourly_rate_cents)
+              : ""
+          }
+        />
+      </Elements>
+    );
+  }
+
+  const action = isQuote ? quoteAction : authAction;
+  const pending = isQuote ? quotePending : authPending;
+  const error = isQuote ? quoteState.error : authState.error;
+
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={action} className="space-y-5">
       <FormLoader />
 
       <div>
@@ -118,7 +189,11 @@ export function BookingRequestForm({
             onChange={(event) => setScheduledLocal(event.target.value)}
             required
           />
-          <FieldHint>Central Time</FieldHint>
+          <FieldHint>
+            {isQuote
+              ? "Central Time"
+              : "Central Time · book at least 12 hours ahead"}
+          </FieldHint>
         </div>
         <div>
           <Label htmlFor="estimatedMinutes">Estimated duration</Label>
@@ -142,31 +217,73 @@ export function BookingRequestForm({
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="responseWindowHours">Provider response window</Label>
-        <Select
-          id="responseWindowHours"
-          name="responseWindowHours"
-          value={effectiveResponseHours ?? ""}
-          onChange={(event) => setResponseWindowHours(Number(event.target.value))}
-          disabled={responseOptions.length === 0}
-          required
-        >
-          {responseOptions.length === 0 ? (
-            <option value="">Choose an eligible start time first</option>
-          ) : (
-            responseOptions.map((hours) => (
-              <option key={hours} value={hours}>
-                {hours} hour{hours === 1 ? "" : "s"}
-              </option>
-            ))
-          )}
-        </Select>
-        <FieldHint>
-          If there is no response by then, your request stays open and we show
-          optional replacements.
-        </FieldHint>
-      </div>
+      {isQuote ? (
+        <div>
+          <Label htmlFor="responseWindowHours">Provider response window</Label>
+          <Select
+            id="responseWindowHours"
+            name="responseWindowHours"
+            value={effectiveResponseHours ?? ""}
+            onChange={(event) => setResponseWindowHours(Number(event.target.value))}
+            disabled={responseOptions.length === 0}
+            required
+          >
+            {responseOptions.length === 0 ? (
+              <option value="">Choose an eligible start time first</option>
+            ) : (
+              responseOptions.map((hours) => (
+                <option key={hours} value={hours}>
+                  {hours} hour{hours === 1 ? "" : "s"}
+                </option>
+              ))
+            )}
+          </Select>
+          <FieldHint>
+            If there is no response by then, your request stays open and we show
+            optional replacements.
+          </FieldHint>
+        </div>
+      ) : (
+        <fieldset>
+          <legend className="mb-2 block text-sm font-medium text-ink">
+            If your student can&apos;t make it
+          </legend>
+          <div className="space-y-2">
+            <label className="flex gap-3 rounded-xl border border-line bg-court p-3 text-sm text-ink-soft">
+              <input
+                type="radio"
+                name="onDeclinePreference"
+                value="keep_control"
+                defaultChecked
+                className="mt-1 h-4 w-4 border-line"
+              />
+              <span>
+                <span className="font-medium text-ink">
+                  Let me choose a replacement
+                </span>
+                <br />
+                We free your hold and show other available students to pick from.
+              </span>
+            </label>
+            <label className="flex gap-3 rounded-xl border border-line bg-court p-3 text-sm text-ink-soft">
+              <input
+                type="radio"
+                name="onDeclinePreference"
+                value="auto_rematch"
+                className="mt-1 h-4 w-4 border-line"
+              />
+              <span>
+                <span className="font-medium text-ink">
+                  Suggest the best match automatically
+                </span>
+                <br />
+                We free your hold and surface the top available student to
+                re-book in one step.
+              </span>
+            </label>
+          </div>
+        </fieldset>
+      )}
 
       <div>
         <Label htmlFor="details">Job details</Label>
@@ -222,7 +339,7 @@ export function BookingRequestForm({
               <span>{estimatedSubtotal == null ? "-" : formatMoney(estimatedSubtotal)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Due after provider accepts</span>
+              <span>Held now (first hour)</span>
               <span>
                 {selected?.hourly_rate_cents == null
                   ? "-"
@@ -230,31 +347,136 @@ export function BookingRequestForm({
               </span>
             </div>
             <p className="border-t border-line pt-3 text-xs text-mist">
-              The first hour is paid only after acceptance. Final billing uses
-              the provider&apos;s submitted actual time, rounded to 15-minute
-              increments. College Crew&apos;s fee comes from provider earnings.
-              There is no added customer platform fee. Cancel before payment and
-              there is no charge; the 12-hour cancellation policy applies after
-              payment.
+              We place a hold for the first hour now. Your student has 2 hours to
+              accept — if they accept, the hold is charged; if they decline or
+              time out, the hold is released and you&apos;re never charged. Final
+              billing uses the provider&apos;s submitted actual time, rounded to
+              15-minute increments. College Crew&apos;s fee comes from provider
+              earnings; there is no added customer platform fee.
             </p>
           </>
         )}
       </div>
 
-      <FieldError>{state.error}</FieldError>
+      <FieldError>{error}</FieldError>
+
+      {unconfigured ? (
+        <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
+          <p className="font-semibold">Payments aren&apos;t live yet.</p>
+          <p className="mt-1">
+            Stripe isn&apos;t configured in this environment. This will run the
+            real (test-mode) authorization once it is.
+          </p>
+        </div>
+      ) : null}
 
       <Button
         type="submit"
         size="lg"
         className="w-full"
-        disabled={pending || !effectiveResponseHours || !originReady}
+        disabled={
+          pending ||
+          !originReady ||
+          (isQuote && !effectiveResponseHours) ||
+          !scheduledLocal
+        }
       >
         {pending
-          ? "Sending request..."
+          ? isQuote
+            ? "Sending request..."
+            : "Preparing hold..."
           : isQuote
             ? "Request flat quote"
-            : "Send hourly request"}
+            : selected?.hourly_rate_cents != null
+              ? `Continue to hold ${formatMoney(selected.hourly_rate_cents)}`
+              : "Continue"}
       </Button>
+    </form>
+  );
+}
+
+/**
+ * Instant-book pay step. Confirms the manual-capture PaymentIntent (which places
+ * the hold — no charge), then finalizes the booking, which creates it and
+ * notifies the student. Must be a child of <Elements>.
+ */
+function AuthorizeHoldForm({
+  paymentIntentId,
+  clientSecret,
+  holdLabel,
+}: {
+  paymentIntentId: string;
+  clientSecret: string;
+  holdLabel: string;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string>();
+  const [, startFinalize] = useTransition();
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!stripe || !elements) return;
+
+    setSubmitting(true);
+    setError(undefined);
+
+    // If the hold is already in place — a previous attempt authorized the card
+    // but failed to create the booking — don't confirm again: Stripe rejects
+    // re-confirming an authorized intent, which would strand the hold with no
+    // way forward. Retry the booking creation directly instead.
+    const existing = await stripe.retrievePaymentIntent(clientSecret);
+    const alreadyHeld = existing.paymentIntent?.status === "requires_capture";
+
+    if (!alreadyHeld) {
+      const result = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+        confirmParams: {
+          return_url: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (result.error) {
+        setError(
+          result.error.message ?? "Card hold didn't go through. Please try again.",
+        );
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // Manual-capture intents land in `requires_capture` (authorized, not
+    // charged). Create the booking; the action redirects on success.
+    startFinalize(async () => {
+      const finalizeResult = await finalizeBooking(paymentIntentId);
+      if (finalizeResult?.error) {
+        setError(finalizeResult.error);
+        setSubmitting(false);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <p className="text-sm text-ink-soft">
+        We&apos;ll place a {holdLabel} hold for the first hour. You&apos;re only
+        charged if your student accepts.
+      </p>
+      <PaymentElement />
+      <Button
+        type="submit"
+        size="lg"
+        className="w-full"
+        disabled={!stripe || !elements || submitting}
+      >
+        {submitting ? "Placing hold…" : `Place ${holdLabel} hold & request`}
+      </Button>
+      <p className="text-center text-xs text-mist">
+        Test mode: use card 4242 4242 4242 4242, any future expiry, any CVC.
+      </p>
+      <FieldError>{error}</FieldError>
     </form>
   );
 }

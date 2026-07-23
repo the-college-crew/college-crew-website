@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
+import { sweepInstantBookHolds } from "@/lib/booking/first-hour-hold";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { demoBookings, getDemoPreview } from "@/lib/demo/sample-preview";
 import type { BookingFlow, BookingStatus } from "@/lib/db/types";
@@ -194,9 +195,15 @@ export default async function CustomerDashboardPage({
   // this customer owns the reviewed booking relationship.
   const confirmedReviewedId =
     reviewed && reviewByBooking.has(reviewed) ? reviewed : undefined;
-  // Release any acceptance whose first-hour payment window has closed, then
-  // reflect the new status before partitioning (Phase 7 schedules this too).
-  const expiredIds = await releaseExpiredAcceptances(supabase, rows);
+  // Instant-book: expire any request past its 2h window and release the held
+  // first hour for requests that ended without acceptance, then reflect the new
+  // status before partitioning (the scheduler does this too; this is the
+  // opportunistic backstop, with Stripe's 7-day hold expiry as the final one).
+  const [staleAcceptances, expiredRequests] = await Promise.all([
+    releaseExpiredAcceptances(supabase, rows),
+    sweepInstantBookHolds(supabase, rows),
+  ]);
+  const expiredIds = new Set([...staleAcceptances, ...expiredRequests]);
   const groups = partitionBookings(
     rows.map((row) =>
       expiredIds.has(row.id) ? { ...row, status: "expired" } : row,

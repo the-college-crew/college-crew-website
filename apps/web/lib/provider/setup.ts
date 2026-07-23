@@ -1,7 +1,6 @@
 import {
   HOURLY_RATE_MAX_CENTS,
   HOURLY_RATE_MIN_CENTS,
-  MINIMUM_NOTICE_HOURS,
   NOTICE_HOUR_PRESETS,
   PLATFORM_FEE_BPS,
   BASIS_POINTS_SCALE,
@@ -244,12 +243,10 @@ export function parseProviderAvailabilityForm(
       : 0;
   const availabilityNote = String(formData.get("availabilityNote") ?? "").trim();
   const serviceZip = String(formData.get("serviceZip") ?? "").trim();
-  const noticeChoice = String(formData.get("noticeChoice") ?? "");
-  const noticeRaw =
-    noticeChoice === "custom"
-      ? String(formData.get("customNoticeHours") ?? "").trim()
-      : noticeChoice;
-  const minimumNoticeHours = Number(noticeRaw);
+  // Pilot: minimum notice is fixed at 12h platform-wide (no per-provider
+  // control). The save_provider_availability RPC forces this value regardless;
+  // we send 12 so the payload stays well-formed.
+  const minimumNoticeHours = 12;
   const fieldErrors: ProviderSetupFieldErrors = {};
   const windowErrors: Record<number, AvailabilityWindowFieldErrors> = {};
   const claimedWeekdays = new Set<number>();
@@ -307,13 +304,6 @@ export function parseProviderAvailabilityForm(
   }
   if (!ZIP_PATTERN.test(serviceZip)) {
     fieldErrors.serviceZip = "Enter a five-digit service ZIP.";
-  }
-  if (
-    !Number.isInteger(minimumNoticeHours) ||
-    minimumNoticeHours < MINIMUM_NOTICE_HOURS.min ||
-    minimumNoticeHours > MINIMUM_NOTICE_HOURS.max
-  ) {
-    fieldErrors.minimumNoticeHours = `Enter a whole number from ${MINIMUM_NOTICE_HOURS.min} to ${MINIMUM_NOTICE_HOURS.max} hours.`;
   }
 
   if (Object.keys(fieldErrors).length > 0) {

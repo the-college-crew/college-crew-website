@@ -172,6 +172,10 @@ export async function createFirstHourPaymentIntent(input: {
       application_fee_amount: input.applicationFeeCents,
       transfer_data: { destination: input.providerStripeAccountId },
       metadata: { booking_id: input.bookingId, payment_kind: "first_hour" },
+      // Instant-book: the first hour is AUTHORIZED at request time and captured
+      // only when the provider accepts (released, never charged, on
+      // decline/timeout). Manual capture turns the confirmed intent into a hold.
+      capture_method: "manual",
       setup_future_usage: "off_session",
       automatic_payment_methods: { enabled: true },
     },
@@ -184,6 +188,51 @@ export async function createFirstHourPaymentIntent(input: {
     paymentIntentId: intent.id,
     clientSecret: intent.client_secret,
   };
+}
+
+/**
+ * Capture a first-hour authorization when the provider accepts. Turns the hold
+ * into an actual charge; the `payment_intent.succeeded` webhook then advances
+ * the booking accepted → booked. Idempotent via the passed key.
+ */
+export async function captureFirstHourPayment(input: {
+  paymentIntentId: string;
+  idempotencyKey: string;
+}): Promise<
+  { configured: true; status: Stripe.PaymentIntent.Status } | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const intent = await stripe.paymentIntents.capture(
+    input.paymentIntentId,
+    {},
+    { idempotencyKey: input.idempotencyKey },
+  );
+  return { configured: true, status: intent.status };
+}
+
+/**
+ * Release a first-hour authorization on decline or a lapsed response window.
+ * Cancelling a still-held intent drops the hold with no charge and no refund —
+ * the customer's money never left. Safe to call on an already
+ * cancelled/captured intent: we re-read and report the live state.
+ */
+export async function cancelFirstHourAuthorization(input: {
+  paymentIntentId: string;
+}): Promise<
+  { configured: true; status: Stripe.PaymentIntent.Status } | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  try {
+    const intent = await stripe.paymentIntents.cancel(input.paymentIntentId);
+    return { configured: true, status: intent.status };
+  } catch {
+    const current = await stripe.paymentIntents.retrieve(input.paymentIntentId);
+    return { configured: true, status: current.status };
+  }
 }
 
 /**
