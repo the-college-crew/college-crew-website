@@ -142,6 +142,7 @@ export function BookingRequestForm({
       >
         <AuthorizeHoldForm
           paymentIntentId={authState.paymentIntentId ?? ""}
+          clientSecret={authState.clientSecret}
           holdLabel={
             selected?.hourly_rate_cents != null
               ? formatMoney(selected.hourly_rate_cents)
@@ -401,9 +402,11 @@ export function BookingRequestForm({
  */
 function AuthorizeHoldForm({
   paymentIntentId,
+  clientSecret,
   holdLabel,
 }: {
   paymentIntentId: string;
+  clientSecret: string;
   holdLabel: string;
 }) {
   const stripe = useStripe();
@@ -419,20 +422,29 @@ function AuthorizeHoldForm({
     setSubmitting(true);
     setError(undefined);
 
-    const result = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-      confirmParams: {
-        return_url: `${window.location.origin}/dashboard`,
-      },
-    });
+    // If the hold is already in place — a previous attempt authorized the card
+    // but failed to create the booking — don't confirm again: Stripe rejects
+    // re-confirming an authorized intent, which would strand the hold with no
+    // way forward. Retry the booking creation directly instead.
+    const existing = await stripe.retrievePaymentIntent(clientSecret);
+    const alreadyHeld = existing.paymentIntent?.status === "requires_capture";
 
-    if (result.error) {
-      setError(
-        result.error.message ?? "Card hold didn't go through. Please try again.",
-      );
-      setSubmitting(false);
-      return;
+    if (!alreadyHeld) {
+      const result = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+        confirmParams: {
+          return_url: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (result.error) {
+        setError(
+          result.error.message ?? "Card hold didn't go through. Please try again.",
+        );
+        setSubmitting(false);
+        return;
+      }
     }
 
     // Manual-capture intents land in `requires_capture` (authorized, not
