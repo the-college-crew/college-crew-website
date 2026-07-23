@@ -60,6 +60,10 @@ async function processJob(kind: string, bookingId: string, sourceId: string) {
       p_booking_id: bookingId,
     });
     if (result.error) throw result.error;
+    // Release the first-hour hold so a timed-out request never charges the
+    // customer. Idempotent; the payment_intent.canceled webhook reconciles.
+    const { releaseFirstHourHold } = await import("@/lib/booking/first-hour-hold");
+    await releaseFirstHourHold(bookingId);
     return;
   }
   if (kind === "payment_expiration") {

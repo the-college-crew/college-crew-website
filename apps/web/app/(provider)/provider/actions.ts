@@ -9,6 +9,10 @@ import {
   getOwnProviderProfile,
   requireProviderAccess,
 } from "@/lib/auth/session";
+import {
+  captureFirstHourHold,
+  releaseFirstHourHold,
+} from "@/lib/booking/first-hour-hold";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import type { BookingStatus } from "@/lib/db/types";
 import {
@@ -122,6 +126,15 @@ export async function acceptBooking(
     };
   }
 
+  // Capture the first-hour hold placed at request time. The webhook advances
+  // accepted → booked once Stripe confirms the capture; a rare failure is
+  // reconciled there, so never block the acceptance on it.
+  try {
+    await captureFirstHourHold(bookingId);
+  } catch (captureError) {
+    console.error("[accept] first-hour capture failed", captureError);
+  }
+
   const conversationId = await conversationIdFor(supabase, booking);
 
   revalidatePath("/provider/dashboard");
@@ -215,6 +228,14 @@ export async function declineBooking(
     return {
       error: requestOperationMessage(error, "Could not decline the request."),
     };
+  }
+
+  // Release the first-hour hold so the customer is never charged for a declined
+  // request. Best-effort — the payment_intent.canceled webhook reconciles it.
+  try {
+    await releaseFirstHourHold(bookingId);
+  } catch (releaseError) {
+    console.error("[decline] first-hour release failed", releaseError);
   }
 
   const conversationId = await conversationIdFor(supabase, booking);

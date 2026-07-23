@@ -9,17 +9,11 @@ import {
   FieldHint,
   Input,
   Label,
-  Select,
   Textarea,
 } from "@/components/ui/field";
 import {
-  MINIMUM_NOTICE_HOURS,
-  NOTICE_HOUR_PRESETS,
-} from "@/lib/booking/policy";
-import {
   MAX_AVAILABILITY_WINDOWS,
   PROVIDER_WEEKDAYS,
-  defaultNoticeChoice,
   groupAvailabilityWindows,
   type AvailabilityDayGroup,
   type ProviderAvailabilityValues,
@@ -58,14 +52,6 @@ export function ProviderAvailabilityForm({
   });
   const [note, setNote] = useState(values.availability_note);
   const [serviceZip, setServiceZip] = useState(values.service_zip ?? "");
-  const [noticeChoice, setNoticeChoice] = useState(() =>
-    defaultNoticeChoice(values.minimum_notice_hours),
-  );
-  const [customNotice, setCustomNotice] = useState(() =>
-    defaultNoticeChoice(values.minimum_notice_hours) === "custom"
-      ? String(values.minimum_notice_hours)
-      : "",
-  );
 
   // Which group currently owns each weekday — a day can only live in one
   // time window, so pills claimed elsewhere render disabled.
@@ -256,58 +242,28 @@ export function ProviderAvailabilityForm({
         <FieldError>{state.fieldErrors?.availabilityNote}</FieldError>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="serviceZip">Service ZIP</Label>
-          <Input
-            id="serviceZip"
-            name="serviceZip"
-            inputMode="numeric"
-            pattern="[0-9]{5}"
-            maxLength={5}
-            value={serviceZip}
-            onChange={(event) => setServiceZip(event.target.value)}
-            placeholder="60614"
-            aria-invalid={state.fieldErrors?.serviceZip ? true : undefined}
-            required
-          />
-          <FieldHint>Private. Used for nearby recommendations only.</FieldHint>
-          <FieldError>{state.fieldErrors?.serviceZip}</FieldError>
-        </div>
-
-        <div>
-          <Label htmlFor="noticeChoice">Minimum scheduling notice</Label>
-          <Select
-            id="noticeChoice"
-            name="noticeChoice"
-            value={noticeChoice}
-            onChange={(event) => setNoticeChoice(event.target.value)}
-          >
-            {NOTICE_HOUR_PRESETS.map((hours) => (
-              <option key={hours} value={hours}>
-                {hours === 168 ? "1 week" : `${hours} hours`}
-              </option>
-            ))}
-            <option value="custom">Custom hours</option>
-          </Select>
-          {noticeChoice === "custom" ? (
-            <Input
-              className="mt-2"
-              name="customNoticeHours"
-              type="number"
-              min={MINIMUM_NOTICE_HOURS.min}
-              max={MINIMUM_NOTICE_HOURS.max}
-              step={1}
-              value={customNotice}
-              onChange={(event) => setCustomNotice(event.target.value)}
-              aria-label="Custom minimum notice in hours"
-              required
-            />
-          ) : null}
-          <FieldHint>Whole hours from 3 through 168.</FieldHint>
-          <FieldError>{state.fieldErrors?.minimumNoticeHours}</FieldError>
-        </div>
+      <div>
+        <Label htmlFor="serviceZip">Service ZIP</Label>
+        <Input
+          id="serviceZip"
+          name="serviceZip"
+          inputMode="numeric"
+          pattern="[0-9]{5}"
+          maxLength={5}
+          value={serviceZip}
+          onChange={(event) => setServiceZip(event.target.value)}
+          placeholder="60614"
+          aria-invalid={state.fieldErrors?.serviceZip ? true : undefined}
+          required
+        />
+        <FieldHint>Private. Used for nearby recommendations only.</FieldHint>
+        <FieldError>{state.fieldErrors?.serviceZip}</FieldError>
       </div>
+
+      <p className="rounded-lg border border-line bg-court px-3 py-2 text-xs text-mist">
+        Customers book you at least 12 hours ahead, and you have 2 hours to
+        accept each request.
+      </p>
 
       <FieldError>{state.error}</FieldError>
       {state.success ? (
