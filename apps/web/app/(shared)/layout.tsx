@@ -27,9 +27,9 @@ export default async function SharedLayout({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-40 shrink-0 border-b border-viridian/10 bg-viridian text-shell">
+      <header className="sticky top-0 z-40 shrink-0 border-b border-viridian/15 bg-shell text-viridian">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
-          <Wordmark tone="dark" />
+          <Wordmark />
           {session && role ? (
             <UserMenu
               name={session.profile.full_name}
@@ -40,6 +40,7 @@ export default async function SharedLayout({
               providerCapable={providerCapable}
               dashboardLabel={dashboardLabelFor(role)}
               unreadCount={unreadCount}
+              badgeRing="ring-shell"
             />
           ) : null}
         </div>

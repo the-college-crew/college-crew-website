@@ -31,11 +31,11 @@ export default async function AdminLayout({
 
   return (
     <>
-      <header className="relative border-b border-viridian/10 bg-viridian text-shell">
+      <header className="relative border-b border-viridian/15 bg-shell text-viridian">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4">
           <div className="flex items-center gap-3">
-            <MobileNav nav={ADMIN_NAV} isAuthed />
-            <Wordmark tone="dark" />
+            <MobileNav nav={ADMIN_NAV} isAuthed tone="light" />
+            <Wordmark />
             <span className="rounded-full border border-honeydew/60 bg-honeydew px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-viridian">
               Admin
             </span>
@@ -52,30 +52,30 @@ export default async function AdminLayout({
         </div>
         <nav
           aria-label="Admin"
-          className="mx-auto hidden max-w-5xl gap-6 px-4 pb-3 text-sm font-semibold text-shell/70 sm:flex"
+          className="mx-auto hidden max-w-5xl gap-6 px-4 pb-3 text-sm font-semibold text-viridian/70 sm:flex"
         >
-          <Link href="/admin/providers" className="hover:text-shell">
+          <Link href="/admin/providers" className="hover:text-viridian">
             Provider approvals
           </Link>
-          <Link href="/admin/services" className="hover:text-shell">
+          <Link href="/admin/services" className="hover:text-viridian">
             Service curation
           </Link>
-          <Link href="/admin/bookings" className="hover:text-shell">
+          <Link href="/admin/bookings" className="hover:text-viridian">
             Bookings
           </Link>
-          <Link href="/admin/disputes" className="hover:text-shell">
+          <Link href="/admin/disputes" className="hover:text-viridian">
             Disputes
           </Link>
-          <Link href="/admin/operations" className="hover:text-shell">
+          <Link href="/admin/operations" className="hover:text-viridian">
             Operations
           </Link>
-          <Link href="/admin/flagged" className="hover:text-shell">
+          <Link href="/admin/flagged" className="hover:text-viridian">
             Flagged messages
           </Link>
-          <Link href="/admin/support" className="hover:text-shell">
+          <Link href="/admin/support" className="hover:text-viridian">
             Support inbox
           </Link>
-          <Link href="/admin/blog" className="hover:text-shell">
+          <Link href="/admin/blog" className="hover:text-viridian">
             Blog
           </Link>
         </nav>
