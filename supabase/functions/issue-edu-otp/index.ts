@@ -21,7 +21,7 @@
 //
 // verify_jwt stays ON (platform default). Secrets: SUPABASE_SERVICE_ROLE_KEY
 // (the pending/verified tables are service-role only), RESEND_API_KEY +
-// EMAIL_FROM (absent in dev → the code is logged and treated as sent).
+// EMAIL_FROM. A configured provider without EMAIL_FROM fails closed.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { createHash, randomInt } from "node:crypto";
@@ -58,10 +58,6 @@ function parseSchoolEmail(raw: unknown): string | null {
 function hashCode(userId: string, code: string): string {
   return createHash("sha256").update(`${userId}:${code}`).digest("hex");
 }
-
-const FROM =
-  Deno.env.get("EMAIL_FROM")?.trim() ||
-  "College Crew <onboarding@resend.dev>";
 
 function escapeHtml(value: string): string {
   return value
@@ -157,11 +153,25 @@ function schoolOtpHtml(code: string): string {
 async function sendOtpEmail(
   to: string,
   code: string,
+  admin: ReturnType<typeof createClient<any>>,
 ): Promise<{ ok: boolean; error?: string }> {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) {
     console.info(`[email:stub] To: ${to}  code: ${code}`);
     return { ok: true };
+  }
+  const from = Deno.env.get("EMAIL_FROM")?.trim();
+  if (!from) {
+    return { ok: false, error: "EMAIL_FROM is not configured." };
+  }
+  const suppression = await admin.rpc("get_active_email_suppression", {
+    p_recipient_email: to,
+  });
+  if (suppression.error) {
+    return { ok: false, error: "Email suppression state could not be checked." };
+  }
+  if (suppression.data?.length) {
+    return { ok: false, error: "That address cannot receive College Crew email." };
   }
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -171,7 +181,7 @@ async function sendOtpEmail(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: FROM,
+        from,
         to,
         subject: "Your College Crew verification code",
         text: [
@@ -184,8 +194,15 @@ async function sendOtpEmail(
       }),
     });
     if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      return { ok: false, error: `Resend ${res.status} ${detail}`.trim() };
+      const detail = (await res.json().catch(() => null)) as {
+        name?: string;
+      } | null;
+      return {
+        ok: false,
+        error: detail?.name
+          ? `Resend rejected the email (${detail.name}).`
+          : `Resend rejected the email (HTTP ${res.status}).`,
+      };
     }
     return { ok: true };
   } catch (cause) {
@@ -271,7 +288,7 @@ Deno.serve(async (request) => {
 
     // Send FIRST: a failed delivery must not persist a code or burn the resend
     // cooldown (the cooldown reads created_at on the row written below).
-    const sent = await sendOtpEmail(email, code);
+    const sent = await sendOtpEmail(email, code, admin);
     if (!sent.ok) {
       return fail("send_failed", `Could not send the code: ${sent.error}`, 502);
     }

@@ -8,9 +8,11 @@
  * retries instead of treating a stub as sent.
  */
 
+import { createAdminClient } from "./admin.ts";
+
 export type SendResult =
   | { ok: true; providerMessageId?: string }
-  | { ok: false; error: string };
+  | { ok: false; errorClass: string; error: string };
 
 export type BookingEmailContext = {
   eventKey: string;
@@ -32,11 +34,6 @@ const COPY: Record<
     subject: "New College Crew job request",
     heading: "You have a new request",
     body: "Review the job and respond before the customer’s response window closes.",
-  },
-  accepted_payment_deadline: {
-    subject: "Your College Crew request was accepted",
-    heading: "Your provider accepted",
-    body: "Confirm the booking by paying the first hour before the deadline shown in your dashboard.",
   },
   request_declined: {
     subject: "College Crew request update",
@@ -210,8 +207,37 @@ function getPublicSiteUrl() {
   return `https://${normalized}`;
 }
 
-const FROM =
-  Deno.env.get("EMAIL_FROM")?.trim() || "College Crew <onboarding@resend.dev>";
+function sanitizeEmailDiagnostic(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return trimmed
+    .replace(
+      /[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+/gi,
+      "[redacted-email]",
+    )
+    .replace(/\b(?:re|whsec)_[a-z0-9_-]+\b/gi, "[redacted-token]")
+    .replace(/\bBearer\s+\S+/gi, "Bearer [redacted-token]")
+    .slice(0, 500);
+}
+
+async function activeSuppression(recipientEmail: string) {
+  const admin = createAdminClient();
+  const result = await admin.rpc("get_active_email_suppression", {
+    p_recipient_email: recipientEmail,
+  });
+  if (result.error) {
+    return {
+      errorClass: "EmailSuppressionCheckFailed",
+      error: "Email suppression state could not be checked.",
+    };
+  }
+  const suppression = (result.data?.[0] ?? null) as { reason?: string } | null;
+  if (!suppression) return null;
+  return {
+    errorClass: "RecipientSuppressed",
+    error: `Recipient is suppressed (${suppression.reason ?? "provider"}).`,
+  };
+}
 
 async function sendEmail(opts: {
   to: string;
@@ -227,8 +253,24 @@ async function sendEmail(opts: {
       event: "delivery_stubbed",
       idempotencyKey: opts.idempotencyKey,
     });
-    return { ok: false, error: "Email provider is not configured." };
+    return {
+      ok: false,
+      errorClass: "EmailProviderUnconfigured",
+      error: "Email provider is not configured.",
+    };
   }
+
+  const from = Deno.env.get("EMAIL_FROM")?.trim();
+  if (!from) {
+    return {
+      ok: false,
+      errorClass: "EmailSenderUnconfigured",
+      error: "EMAIL_FROM is not configured.",
+    };
+  }
+
+  const suppression = await activeSuppression(opts.to);
+  if (suppression) return { ok: false, ...suppression };
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -238,7 +280,7 @@ async function sendEmail(opts: {
       "Idempotency-Key": opts.idempotencyKey,
     },
     body: JSON.stringify({
-      from: FROM,
+      from,
       to: opts.to,
       subject: opts.subject,
       text: opts.text,
@@ -246,8 +288,20 @@ async function sendEmail(opts: {
     }),
   });
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    return { ok: false, error: `Resend ${response.status}: ${detail.slice(0, 200)}` };
+    const providerError = (await response.json().catch(() => null)) as {
+      name?: string;
+      message?: string;
+    } | null;
+    const name = providerError?.name
+      ?.replace(/[^a-zA-Z0-9_.-]/g, "_")
+      .slice(0, 80);
+    return {
+      ok: false,
+      errorClass: name ? `Resend_${name}` : `ResendHttp${response.status}`,
+      error:
+        sanitizeEmailDiagnostic(providerError?.message) ??
+        `Resend rejected the email with HTTP ${response.status}.`,
+    };
   }
   const data = (await response.json().catch(() => null)) as { id?: string } | null;
   return { ok: true, providerMessageId: data?.id };

@@ -943,6 +943,13 @@ export type Database = {
           available_at: string
           booking_id: string | null
           created_at: string
+          delivered_at: string | null
+          delivery_detail: string | null
+          delivery_event_at: string | null
+          delivery_issue_at: string | null
+          delivery_status:
+            | Database["public"]["Enums"]["email_delivery_status"]
+            | null
           event_key: string
           id: string
           last_error: string | null
@@ -967,6 +974,13 @@ export type Database = {
           available_at?: string
           booking_id?: string | null
           created_at?: string
+          delivered_at?: string | null
+          delivery_detail?: string | null
+          delivery_event_at?: string | null
+          delivery_issue_at?: string | null
+          delivery_status?:
+            | Database["public"]["Enums"]["email_delivery_status"]
+            | null
           event_key: string
           id?: string
           last_error?: string | null
@@ -991,6 +1005,13 @@ export type Database = {
           available_at?: string
           booking_id?: string | null
           created_at?: string
+          delivered_at?: string | null
+          delivery_detail?: string | null
+          delivery_event_at?: string | null
+          delivery_issue_at?: string | null
+          delivery_status?:
+            | Database["public"]["Enums"]["email_delivery_status"]
+            | null
           event_key?: string
           id?: string
           last_error?: string | null
@@ -1026,6 +1047,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_suppressions: {
+        Row: {
+          cleared_at: string | null
+          created_at: string
+          detail: string | null
+          provider_message_id: string
+          reason: string
+          recipient_email: string
+          suppressed_at: string
+          updated_at: string
+        }
+        Insert: {
+          cleared_at?: string | null
+          created_at?: string
+          detail?: string | null
+          provider_message_id: string
+          reason: string
+          recipient_email: string
+          suppressed_at: string
+          updated_at?: string
+        }
+        Update: {
+          cleared_at?: string | null
+          created_at?: string
+          detail?: string | null
+          provider_message_id?: string
+          reason?: string
+          recipient_email?: string
+          suppressed_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       legal_acceptances: {
         Row: {
@@ -1672,6 +1726,59 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resend_webhook_events: {
+        Row: {
+          delivery_status: Database["public"]["Enums"]["email_delivery_status"]
+          detail: string | null
+          event_created_at: string
+          event_type: string
+          id: string
+          is_current: boolean
+          matched_outbox_id: string | null
+          processed_at: string
+          provider_message_id: string
+          received_at: string
+          recipient_email: string | null
+          svix_id: string
+        }
+        Insert: {
+          delivery_status: Database["public"]["Enums"]["email_delivery_status"]
+          detail?: string | null
+          event_created_at: string
+          event_type: string
+          id?: string
+          is_current?: boolean
+          matched_outbox_id?: string | null
+          processed_at?: string
+          provider_message_id: string
+          received_at?: string
+          recipient_email?: string | null
+          svix_id: string
+        }
+        Update: {
+          delivery_status?: Database["public"]["Enums"]["email_delivery_status"]
+          detail?: string | null
+          event_created_at?: string
+          event_type?: string
+          id?: string
+          is_current?: boolean
+          matched_outbox_id?: string | null
+          processed_at?: string
+          provider_message_id?: string
+          received_at?: string
+          recipient_email?: string | null
+          svix_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resend_webhook_events_matched_outbox_id_fkey"
+            columns: ["matched_outbox_id"]
+            isOneToOne: false
+            referencedRelation: "email_outbox"
             referencedColumns: ["id"]
           },
         ]
@@ -2429,6 +2536,14 @@ export type Database = {
         Args: { p_stripe_payment_intent_id: string }
         Returns: string
       }
+      get_active_email_suppression: {
+        Args: { p_recipient_email: string }
+        Returns: {
+          detail: string | null
+          reason: string
+          suppressed_at: string
+        }[]
+      }
       get_my_booking_reviews: {
         Args: never
         Returns: {
@@ -2550,6 +2665,21 @@ export type Database = {
         }
         Returns: string
       }
+      record_resend_webhook_event: {
+        Args: {
+          p_detail?: string | null
+          p_event_created_at: string
+          p_event_type: string
+          p_provider_message_id: string
+          p_recipient_email: string | null
+          p_svix_id: string
+        }
+        Returns: {
+          current_delivery_status: Database["public"]["Enums"]["email_delivery_status"]
+          duplicate: boolean
+          matched_outbox_id: string | null
+        }[]
+      }
       record_stripe_dispute: { Args: { p_event: Json }; Returns: string }
       release_due_invoice_claim: {
         Args: { p_invoice_id: string }
@@ -2603,6 +2733,17 @@ export type Database = {
       retry_email_outbox: {
         Args: {
           p_error_class: string
+          p_lease_token: string
+          p_outbox_id: string
+          p_retry_after_seconds: number
+          p_terminal?: boolean
+        }
+        Returns: boolean
+      }
+      retry_email_outbox_detailed: {
+        Args: {
+          p_error_class: string
+          p_error_detail: string
           p_lease_token: string
           p_outbox_id: string
           p_retry_after_seconds: number
@@ -2737,6 +2878,14 @@ export type Database = {
         | "withdrawn"
         | "expired"
         | "cancelled"
+      email_delivery_status:
+        | "accepted"
+        | "delivered"
+        | "delayed"
+        | "bounced"
+        | "complained"
+        | "failed"
+        | "suppressed"
       email_outbox_status: "pending" | "processing" | "sent" | "failed"
       legal_acceptance_kind:
         | "master_agreement"
@@ -2937,6 +3086,15 @@ export const Constants = {
         "expired",
         "cancelled",
       ],
+      email_delivery_status: [
+        "accepted",
+        "delivered",
+        "delayed",
+        "bounced",
+        "complained",
+        "failed",
+        "suppressed",
+      ],
       email_outbox_status: ["pending", "processing", "sent", "failed"],
       legal_acceptance_kind: [
         "master_agreement",
@@ -2969,6 +3127,7 @@ export type BookingPaymentStatus = Database["public"]["Enums"]["booking_payment_
 export type BookingRefundStatus = Database["public"]["Enums"]["booking_refund_status"]
 export type ModerationStatus = Database["public"]["Enums"]["moderation_status"]
 export type LegalAcceptanceKind = Database["public"]["Enums"]["legal_acceptance_kind"]
+export type EmailDeliveryStatus = Database["public"]["Enums"]["email_delivery_status"]
 
 export type ProfileTextField =
   | "display_name"
@@ -3002,6 +3161,8 @@ export type StripeWebhookReceipt = Tables<"stripe_webhook_receipts">
 export type StripeCustomer = Tables<"stripe_customers">
 export type StripeDispute = Tables<"stripe_disputes">
 export type EmailOutboxItem = Tables<"email_outbox">
+export type EmailSuppression = Tables<"email_suppressions">
+export type ResendWebhookEvent = Tables<"resend_webhook_events">
 export type Review = Tables<"reviews">
 export type Conversation = Tables<"conversations">
 export type ConversationRead = Tables<"conversation_reads">

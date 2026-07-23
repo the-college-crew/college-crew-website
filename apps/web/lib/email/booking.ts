@@ -23,11 +23,6 @@ const COPY: Record<
     heading: "You have a new request",
     body: "Review the job and respond before the customer’s response window closes.",
   },
-  accepted_payment_deadline: {
-    subject: "Your College Crew request was accepted",
-    heading: "Your provider accepted",
-    body: "Confirm the booking by paying the first hour before the deadline shown in your dashboard.",
-  },
   request_declined: {
     subject: "College Crew request update",
     heading: "The provider declined this request",
