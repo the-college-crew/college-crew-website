@@ -68,3 +68,32 @@ export async function ensureStripeCustomerForUser(input: {
     stripeCustomerId: settled?.stripe_customer_id ?? customer.id,
   };
 }
+
+/**
+ * A CustomerSession lets the Payment Element display and reuse the customer's
+ * saved card. We use it for quick-book re-authorization so a returning customer
+ * re-holds on a new provider with their card already on file (one confirm), not
+ * a fresh card entry. Only redisplay of saved methods is enabled — the hold
+ * itself already saves the method via `setup_future_usage` on the PaymentIntent.
+ */
+export async function createPaymentElementCustomerSession(
+  stripeCustomerId: string,
+): Promise<{ configured: true; clientSecret: string } | StripeUnconfigured> {
+  const stripe = getStripe();
+  if (!stripe) {
+    return {
+      configured: false,
+      reason: "Stripe isn't configured — set STRIPE_SECRET_KEY in .env.local.",
+    };
+  }
+  const session = await stripe.customerSessions.create({
+    customer: stripeCustomerId,
+    components: {
+      payment_element: {
+        enabled: true,
+        features: { payment_method_redisplay: "enabled" },
+      },
+    },
+  });
+  return { configured: true, clientSecret: session.client_secret };
+}

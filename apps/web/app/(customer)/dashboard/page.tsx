@@ -700,7 +700,7 @@ function BookingCard({
 
         {isDeclined ? (
           <Link
-            href={demo ? "/book/demo" : "/browse"}
+            href={demo ? "/book/demo" : `/bookings/${booking.id}/replace`}
             className={buttonClasses({ variant: "secondary", size: "sm" })}
           >
             Find another provider

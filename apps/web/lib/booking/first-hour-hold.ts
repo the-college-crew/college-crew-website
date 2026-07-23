@@ -125,7 +125,16 @@ export async function sweepInstantBookHolds(
           expired.add(row.id);
         }
       }
-      if (status === "expired" || status === "declined" || status === "cancelled") {
+      if (
+        status === "expired" ||
+        status === "declined" ||
+        status === "cancelled" ||
+        status === "withdrawn"
+      ) {
+        // `withdrawn` covers a request the customer switched away from via
+        // quick-book: finalize withdrew it, and its now-useless hold (on the
+        // provider they left) must be released. releaseFirstHourHold only acts
+        // on an `authorized` payment row, so this no-ops once already released.
         await releaseFirstHourHold(row.id).catch(() => {});
       }
     }),
