@@ -70,13 +70,11 @@ export async function releaseFirstHourHold(
 ): Promise<"released" | "skip" | "not_found" | "unconfigured"> {
   const payment = await loadFirstHourPayment(bookingId);
   if (!payment?.stripe_payment_intent_id) return "not_found";
-  if (
-    payment.status === "succeeded" ||
-    payment.status === "cancelled" ||
-    payment.status === "refunded"
-  ) {
-    return "skip";
-  }
+  // `authorized` is the only state in which a hold actually exists. Skipping
+  // everything else keeps us from making a Stripe round-trip for a captured,
+  // already-released, failed, or legacy payment row — this runs on a dashboard
+  // render, so it must not do network work it doesn't need to.
+  if (payment.status !== "authorized") return "skip";
 
   const result = await cancelFirstHourAuthorization({
     paymentIntentId: payment.stripe_payment_intent_id,
