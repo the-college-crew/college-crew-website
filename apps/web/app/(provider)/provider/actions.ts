@@ -121,6 +121,12 @@ export async function acceptBooking(
     p_booking_id: bookingId,
   });
   if (error) {
+    // Log the raw DB error so an unmapped failure (e.g. a stale check
+    // constraint) surfaces instead of hiding behind the generic fallback.
+    console.error("[accept] accept_booking_request failed", {
+      bookingId,
+      message: error.message,
+    });
     return {
       error: requestOperationMessage(error, "Could not accept the request."),
     };
