@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { Avatar } from "@/components/ui/avatar";
 import type { PersonGroup } from "@/lib/messaging/conversation-list";
+import { useLiveUnreadCounts } from "@/lib/messaging/unread-client";
 import { cn, formatDateTime } from "@/lib/utils";
 
 /**
@@ -17,6 +18,12 @@ export function ConversationList({ groups }: { groups: PersonGroup[] }) {
   const activeConversationId = pathname.match(
     /^\/messages\/([0-9a-f-]{36})$/i,
   )?.[1];
+  const initialUnread = Object.fromEntries(
+    groups.flatMap((person) =>
+      person.threads.map((thread) => [thread.id, thread.unread]),
+    ),
+  );
+  const liveUnread = useLiveUnreadCounts(initialUnread);
 
   return (
     <div>
@@ -30,14 +37,32 @@ export function ConversationList({ groups }: { groups: PersonGroup[] }) {
             <p className="truncate font-display text-sm font-semibold text-ink">
               {person.name}
             </p>
-            {person.unread > 0 ? (
-              <UnreadBadge count={person.unread} className="ml-auto" />
+            {person.threads.reduce(
+              (sum, thread) =>
+                sum +
+                (thread.id === activeConversationId
+                  ? 0
+                  : (liveUnread[thread.id] ?? 0)),
+              0,
+            ) > 0 ? (
+              <UnreadBadge
+                count={person.threads.reduce(
+                  (sum, thread) =>
+                    sum +
+                    (thread.id === activeConversationId
+                      ? 0
+                      : (liveUnread[thread.id] ?? 0)),
+                  0,
+                )}
+                className="ml-auto"
+              />
             ) : null}
           </div>
 
           <div className="flex flex-col gap-0.5 pb-2">
             {person.threads.map((thread) => {
               const active = thread.id === activeConversationId;
+              const unread = active ? 0 : (liveUnread[thread.id] ?? 0);
               return (
                 <Link
                   key={thread.id}
@@ -50,8 +75,8 @@ export function ConversationList({ groups }: { groups: PersonGroup[] }) {
                   <div className="flex items-baseline justify-between gap-2">
                     <p className="flex items-center gap-2 truncate text-sm font-semibold text-ink">
                       {thread.label}
-                      {thread.unread > 0 ? (
-                        <UnreadBadge count={thread.unread} />
+                      {unread > 0 ? (
+                        <UnreadBadge count={unread} />
                       ) : null}
                     </p>
                     <span className="shrink-0 text-[11px] text-mist">
@@ -61,7 +86,7 @@ export function ConversationList({ groups }: { groups: PersonGroup[] }) {
                   <p
                     className={cn(
                       "truncate text-xs",
-                      thread.unread > 0
+                      unread > 0
                         ? "font-semibold text-ink"
                         : "text-ink-soft",
                     )}

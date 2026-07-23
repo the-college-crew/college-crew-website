@@ -21,6 +21,8 @@ import { createClient } from "@/lib/supabase/client";
 
 const UNREAD_CHANGED_EVENT = "college-crew:unread-changed";
 
+type UnreadCounts = Record<string, number>;
+
 export function announceUnreadChanged() {
   window.dispatchEvent(new Event(UNREAD_CHANGED_EVENT));
 }
@@ -44,6 +46,72 @@ export async function markConversationReadClient(
     { onConflict: "conversation_id,user_id" },
   );
   announceUnreadChanged();
+}
+
+/** Live unread counts keyed by conversation id, seeded by the server list. */
+export function useLiveUnreadCounts(initial: UnreadCounts): UnreadCounts {
+  const initialKey = JSON.stringify(initial);
+  const [counts, setCounts] = useState<UnreadCounts>(initial);
+  const [previousInitialKey, setPreviousInitialKey] = useState(initialKey);
+
+  // Adopt fresh server-rendered counts after a navigation or refresh.
+  if (previousInitialKey !== initialKey) {
+    setPreviousInitialKey(initialKey);
+    setCounts(initial);
+  }
+
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const refetch = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const { data } = await supabase.rpc("unread_message_summary");
+        if (cancelled) return;
+        const next: UnreadCounts = {};
+        for (const row of data ?? []) {
+          const count = Number(row.unread_count) || 0;
+          if (count > 0) next[row.conversation_id] = count;
+        }
+        setCounts(next);
+      }, 250);
+    };
+
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+
+      await supabase.realtime.setAuth();
+      if (cancelled) return;
+
+      channel = supabase
+        .channel("unread-conversation-list")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "messages" },
+          (payload) => {
+            const senderId = (payload.new as { sender_id?: string }).sender_id;
+            if (senderId !== user.id) refetch();
+          },
+        )
+        .subscribe();
+    })();
+
+    window.addEventListener(UNREAD_CHANGED_EVENT, refetch);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      window.removeEventListener(UNREAD_CHANGED_EVENT, refetch);
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return counts;
 }
 
 /** Live unread total for the signed-in user, seeded by the server count. */
