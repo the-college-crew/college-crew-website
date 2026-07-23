@@ -6,6 +6,7 @@ import {
   useElements,
   useStripe,
 } from "@stripe/react-stripe-js";
+import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { useActionState, useMemo, useState, useTransition } from "react";
 
 import { FormLoader } from "@/components/form-loader";
@@ -30,11 +31,6 @@ import type { OfferedService } from "@/lib/db/queries";
 import { formatMoney, formatOfferedPrice } from "@/lib/utils";
 
 import {
-  appearance,
-  stripePromise,
-} from "@/app/(customer)/bookings/[id]/confirm/confirm-pay-panel";
-
-import {
   createBookingRequest,
   finalizeBooking,
   startBookingAuthorization,
@@ -49,6 +45,33 @@ const DURATION_OPTIONS = Array.from(
   },
   (_, index) => CUSTOMER_ESTIMATE_MINUTES.min + index * 15,
 );
+
+/**
+ * Stripe.js is loaded lazily on first use, and deliberately NOT imported from
+ * the confirm route's panel. That module calls `loadStripe()` at module scope;
+ * importing it from a second route pulls it into a shared chunk, so it runs on
+ * pages that never render a Payment Element and breaks their hydration.
+ */
+let stripeJs: Promise<StripeJs | null> | null | undefined;
+
+function getStripePromise() {
+  if (stripeJs === undefined) {
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    stripeJs = key ? loadStripe(key) : null;
+  }
+  return stripeJs;
+}
+
+/** Match the Payment Element to the cream/forest theme. */
+const appearance = {
+  variables: {
+    colorPrimary: "#344945",
+    colorBackground: "#fffdf8",
+    colorText: "#344945",
+    colorDanger: "#b3261e",
+    borderRadius: "8px",
+  },
+} as const;
 
 function durationLabel(minutes: number) {
   const hours = Math.floor(minutes / 60);
@@ -106,6 +129,7 @@ export function BookingRequestForm({
       : null;
 
   // Instant-book pay step: the hold is authorized, mount the Payment Element.
+  const stripePromise = authState.clientSecret ? getStripePromise() : null;
   const unconfigured =
     authState.unconfigured ||
     Boolean(authState.clientSecret && !stripePromise);
