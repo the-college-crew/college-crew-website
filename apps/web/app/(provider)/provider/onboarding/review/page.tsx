@@ -81,6 +81,7 @@ export default async function OnboardingReviewPage() {
   );
   const ready =
     identitySatisfied &&
+    Boolean(profile.school_name.trim()) &&
     Boolean(profile.avatar_image_path) &&
     liveOfferings.length > 0 &&
     isStructuredAvailabilityComplete(windows) &&
@@ -118,6 +119,26 @@ export default async function OnboardingReviewPage() {
                   className="text-crew-700 underline"
                 >
                   Not verified — verify it
+                </Link>
+              )}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-mist">College or university</dt>
+            <dd className="text-right font-medium">
+              {profile.school_name ? (
+                <>
+                  {profile.school_name}
+                  {profile.greek_organization
+                    ? ` · ${profile.greek_organization}`
+                    : ""}
+                </>
+              ) : (
+                <Link
+                  href="/provider/onboarding/account"
+                  className="text-crew-700 underline"
+                >
+                  Missing — add it
                 </Link>
               )}
             </dd>

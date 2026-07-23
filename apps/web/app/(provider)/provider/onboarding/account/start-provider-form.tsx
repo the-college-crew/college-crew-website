@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
+import { SchoolAutocomplete } from "@/components/school-autocomplete";
 
 import {
   startProviderProfile,
@@ -23,9 +24,15 @@ function maxDobToday() {
 export function StartProviderForm({
   needsDateOfBirth,
   askCompanyName,
+  schoolName,
+  schoolScorecardId,
+  greekOrganization,
 }: {
   needsDateOfBirth: boolean;
   askCompanyName: boolean;
+  schoolName?: string;
+  schoolScorecardId?: number | null;
+  greekOrganization?: string;
 }) {
   const [state, formAction, pending] = useActionState<
     OnboardingFormState,
@@ -61,6 +68,28 @@ export function StartProviderForm({
           </FieldHint>
         </div>
       ) : null}
+
+      <SchoolAutocomplete
+        defaultName={schoolName}
+        defaultSchoolId={schoolScorecardId}
+      />
+
+      <div>
+        <Label htmlFor="greekOrganization">
+          Greek house or chapter (optional)
+        </Label>
+        <Input
+          id="greekOrganization"
+          name="greekOrganization"
+          defaultValue={greekOrganization}
+          maxLength={120}
+          placeholder="e.g. Alpha Phi or Sigma Chi"
+        />
+        <FieldHint>
+          Add your fraternity, sorority, or chapter if you want it shown with
+          your school.
+        </FieldHint>
+      </div>
 
       <FieldError>{state.error}</FieldError>
 

@@ -41,12 +41,15 @@ export async function setProviderStatus(formData: FormData) {
   if (status === "approved") {
     const { data: prof } = await admin
       .from("provider_profiles")
-      .select("user_id, id_document_url, id_document_back_url")
+      .select("user_id, id_document_url, id_document_back_url, school_name")
       .eq("id", providerId)
       .maybeSingle();
     if (prof) {
       if (!prof.id_document_url || !prof.id_document_back_url) {
         redirect("/admin/providers?err=identity");
+      }
+      if (!prof.school_name.trim()) {
+        redirect("/admin/providers?err=school");
       }
       const [
         { data: school },
@@ -107,11 +110,14 @@ export async function bypassProviderVerification(formData: FormData) {
 
   const { data: prof } = await admin
     .from("provider_profiles")
-    .select("id")
+    .select("id, school_name")
     .eq("id", providerId)
     .maybeSingle();
   if (!prof) {
     redirect("/admin/providers?err=notfound");
+  }
+  if (!prof.school_name.trim()) {
+    redirect("/admin/providers?err=school");
   }
 
   const { error } = await admin

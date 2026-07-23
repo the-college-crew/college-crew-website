@@ -57,6 +57,9 @@ export type ProviderCard = {
   bio: string;
   provider_type: ProviderType;
   neighborhood: string;
+  school_name: string;
+  school_domain: string | null;
+  greek_organization: string;
   /** Operating-address town; falls back to the legacy neighborhood tag. */
   town: string;
   /** Straight-line miles from the viewer's "booking from" origin, if both sides geocoded. */
@@ -167,6 +170,7 @@ export async function getLiveServices(): Promise<Service[]> {
 
 const PROVIDER_CARD_SELECT = `
   id, display_name, company_name, bio, provider_type, neighborhood,
+  school_name, school_scorecard_id, school_domain, greek_organization,
   avatar_image_path, banner_image_path, banner_style,
   avatar_focal_x, avatar_focal_y, banner_focal_x, banner_focal_y,
   provider_services (
@@ -182,6 +186,8 @@ type SafePublicProviderRow = PublicProviderDirectoryRow & {
   bio: string;
   provider_type: ProviderType;
   neighborhood: string;
+  school_name: string;
+  greek_organization: string;
 };
 
 type SafePublicOfferingRow = PublicProviderOfferingRow & {
@@ -211,7 +217,9 @@ function isSafePublicProviderRow(
       row.display_name !== null &&
       row.bio !== null &&
       row.provider_type &&
-      row.neighborhood !== null,
+      row.neighborhood !== null &&
+      row.school_name !== null &&
+      row.greek_organization !== null,
   );
 }
 
@@ -378,6 +386,9 @@ export async function getApprovedProviders(
       bio: p.bio,
       provider_type: p.provider_type,
       neighborhood: p.neighborhood,
+      school_name: p.school_name,
+      school_domain: p.school_domain,
+      greek_organization: p.greek_organization,
       town: facts?.city || p.neighborhood,
       distance_miles: milesBetween(options.origin, facts),
       avatar_image_path: p.avatar_image_path,
@@ -619,6 +630,9 @@ export async function getPublicProviderProfile(
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
+    school_name: provider.school_name,
+    school_domain: provider.school_domain,
+    greek_organization: provider.greek_organization,
     town: facts?.city || provider.neighborhood,
     distance_miles: milesBetween(origin, facts),
     avatar_image_path: provider.avatar_image_path,
@@ -752,6 +766,9 @@ export async function getAdminProviderProfile(
     bio: provider.bio,
     provider_type: provider.provider_type,
     neighborhood: provider.neighborhood,
+    school_name: provider.school_name,
+    school_domain: provider.school_domain,
+    greek_organization: provider.greek_organization,
     town: facts?.city || provider.neighborhood,
     distance_miles: null,
     avatar_image_path: provider.avatar_image_path,

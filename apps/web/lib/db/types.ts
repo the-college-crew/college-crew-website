@@ -1441,12 +1441,16 @@ export type Database = {
           company_name: string | null
           created_at: string
           display_name: string
+          greek_organization: string
           id: string
           id_document_back_url: string | null
           id_document_url: string | null
           minimum_notice_hours: number
           neighborhood: string
           provider_type: Database["public"]["Enums"]["provider_type"]
+          school_domain: string | null
+          school_name: string
+          school_scorecard_id: number | null
           service_zip: string | null
           stripe_account_id: string | null
           stripe_transfers_active: boolean
@@ -1475,12 +1479,16 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           display_name?: string
+          greek_organization?: string
           id?: string
           id_document_back_url?: string | null
           id_document_url?: string | null
           minimum_notice_hours?: number
           neighborhood?: string
           provider_type?: Database["public"]["Enums"]["provider_type"]
+          school_domain?: string | null
+          school_name?: string
+          school_scorecard_id?: number | null
           service_zip?: string | null
           stripe_account_id?: string | null
           stripe_transfers_active?: boolean
@@ -1509,12 +1517,16 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           display_name?: string
+          greek_organization?: string
           id?: string
           id_document_back_url?: string | null
           id_document_url?: string | null
           minimum_notice_hours?: number
           neighborhood?: string
           provider_type?: Database["public"]["Enums"]["provider_type"]
+          school_domain?: string | null
+          school_name?: string
+          school_scorecard_id?: number | null
           service_zip?: string | null
           stripe_account_id?: string | null
           stripe_transfers_active?: boolean
@@ -2127,10 +2139,13 @@ export type Database = {
           company_name: string | null
           created_at: string | null
           display_name: string | null
+          greek_organization: string | null
           minimum_notice_hours: number | null
           neighborhood: string | null
           provider_id: string | null
           provider_type: Database["public"]["Enums"]["provider_type"] | null
+          school_domain: string | null
+          school_name: string | null
         }
         Insert: {
           availability?: Json | null
@@ -2150,10 +2165,13 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           display_name?: string | null
+          greek_organization?: string | null
           minimum_notice_hours?: number | null
           neighborhood?: string | null
           provider_id?: string | null
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
+          school_domain?: string | null
+          school_name?: string | null
         }
         Update: {
           availability?: Json | null
@@ -2173,10 +2191,13 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           display_name?: string | null
+          greek_organization?: string | null
           minimum_notice_hours?: number | null
           neighborhood?: string | null
           provider_id?: string | null
           provider_type?: Database["public"]["Enums"]["provider_type"] | null
+          school_domain?: string | null
+          school_name?: string | null
         }
         Relationships: []
       }
@@ -2949,7 +2970,12 @@ export type BookingRefundStatus = Database["public"]["Enums"]["booking_refund_st
 export type ModerationStatus = Database["public"]["Enums"]["moderation_status"]
 export type LegalAcceptanceKind = Database["public"]["Enums"]["legal_acceptance_kind"]
 
-export type ProfileTextField = "display_name" | "bio" | "company_name"
+export type ProfileTextField =
+  | "display_name"
+  | "bio"
+  | "company_name"
+  | "school_name"
+  | "greek_organization"
 export type SupportTicketCategory =
   | "website"
   | "feature_or_service"

@@ -231,6 +231,8 @@ const FIELD_LABEL: Record<ProfileTextField, string> = {
   display_name: "public display name",
   bio: "public profile bio",
   company_name: "public company name",
+  school_name: "public school name",
+  greek_organization: "public Greek-life organization",
 };
 
 const SCAN_POLICY = `You review the ${"{field}"} that a student service provider wrote for their public profile on a home-services marketplace. Neighbors read it when deciding who to hire. Decide whether it contains any of: profanity or vulgar language (including obfuscated spellings); slurs, hate speech, or harassment; sexual content; threats or glorified violence; illegal-activity solicitation; slander — an attack on, or a damaging accusation against, a named person, competitor, or business; or off-platform CONTACT CHANNELS, meaning a phone number (including spelled-out or obfuscated), a personal email, a social handle or platform, or a payment app (Venmo, Cash App, Zelle, PayPal, Apple Pay). Ordinary, professional self-description is fine and must not be flagged: naming their school, their major, their hometown, their work experience, the services they offer, or their general neighborhood is all legitimate. Mild enthusiasm, humor, and casual tone are fine. Report whether the text contains anything in the list above, and which categories apply. Do not rewrite anything.`;

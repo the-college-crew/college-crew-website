@@ -10,6 +10,7 @@ import type { AdminProviderDetail } from "@/app/(admin)/admin/actions";
 import { EditableProviderField } from "@/components/admin/editable-provider-field";
 import { Rating } from "@/components/provider-card";
 import { ProviderReadinessChecklist } from "@/components/provider-readiness-checklist";
+import { SchoolIdentity } from "@/components/school-identity";
 import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { providerAvatarUrl } from "@/lib/media/provider-avatars";
@@ -191,6 +192,13 @@ export function ProviderDetailModal({
                   ) : null}
                   <Rating rating={profile.rating} />
                 </div>
+
+                <SchoolIdentity
+                  name={profile.school_name}
+                  domain={profile.school_domain}
+                  greekOrganization={profile.greek_organization}
+                  className="mt-3"
+                />
 
                 {editing || profile.company_name ? (
                   <p className="mt-2 text-sm text-ink-soft">

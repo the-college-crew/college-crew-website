@@ -17,6 +17,10 @@ import {
   PROVIDER_BANNERS_BUCKET,
   type BannerStyle,
 } from "@/lib/media/provider-banners";
+import {
+  resolveSchoolProfileInput,
+  SchoolDirectoryError,
+} from "@/lib/education/schools";
 import { screenProfileText } from "@/lib/moderation/profile-text";
 import { parseProviderAvailabilityForm } from "@/lib/provider/setup";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -51,6 +55,15 @@ const profileSchema = z.object({
   providerType: z.enum(["business", "individual"]),
   neighborhood: z.string().trim().max(120).optional().default(""),
   bio: z.string().trim().max(2000).optional().default(""),
+  schoolName: z
+    .string()
+    .trim()
+    .min(1, "Enter your college or university.")
+    .max(160),
+  schoolId: z
+    .union([z.literal(""), z.string().trim().regex(/^\d+$/)])
+    .default(""),
+  greekOrganization: z.string().trim().max(120).optional().default(""),
 });
 
 /** Storefront fields — these render directly on the public profile. */
@@ -68,6 +81,9 @@ export async function updateProviderProfile(
     providerType: formData.get("providerType"),
     neighborhood: formData.get("neighborhood"),
     bio: formData.get("bio"),
+    schoolName: formData.get("schoolName"),
+    schoolId: formData.get("schoolId") ?? "",
+    greekOrganization: formData.get("greekOrganization"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
@@ -80,6 +96,17 @@ export async function updateProviderProfile(
   // client. .eq("id", profile.id) keeps it scoped to the caller's own row:
   // profile came from getOwnProviderProfile(), which is RLS-scoped to them.
   const companyName = parsed.data.companyName || null;
+  let school;
+  try {
+    school = await resolveSchoolProfileInput(parsed.data, profile);
+  } catch (error) {
+    return {
+      error:
+        error instanceof SchoolDirectoryError
+          ? error.message
+          : "Could not save your school. Try again.",
+    };
+  }
 
   const admin = createAdminClient();
   const { error } = await admin
@@ -90,6 +117,7 @@ export async function updateProviderProfile(
       provider_type: parsed.data.providerType,
       neighborhood: parsed.data.neighborhood,
       bio: parsed.data.bio,
+      ...school,
     })
     .eq("id", profile.id);
   if (error) {
@@ -107,6 +135,12 @@ export async function updateProviderProfile(
     { field: "display_name", text: parsed.data.displayName, before: profile.display_name },
     { field: "company_name", text: companyName ?? "", before: profile.company_name ?? "" },
     { field: "bio", text: parsed.data.bio, before: profile.bio },
+    { field: "school_name", text: school.school_name, before: profile.school_name },
+    {
+      field: "greek_organization",
+      text: school.greek_organization,
+      before: profile.greek_organization,
+    },
   ] as const;
 
   after(async () => {

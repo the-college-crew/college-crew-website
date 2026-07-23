@@ -80,6 +80,9 @@ export default async function OnboardingAccountPage() {
             <StartProviderForm
               needsDateOfBirth={!session.profile.date_of_birth}
               askCompanyName={!providerProfile}
+              schoolName={providerProfile?.school_name}
+              schoolScorecardId={providerProfile?.school_scorecard_id}
+              greekOrganization={providerProfile?.greek_organization}
             />
           </div>
         </Card>
