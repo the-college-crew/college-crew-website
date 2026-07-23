@@ -16,11 +16,33 @@ import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { href: "/browse", label: "Browse" },
-  { href: "/about", label: "About" },
-  { href: "/blog", label: "Blog" },
-];
+/**
+ * Main nav. A signed-in regular account gets its two personal destinations
+ * promoted out of the account menu and in beside Browse; the public links stay
+ * grouped at the end. Admins keep the plain three — they can't book, and their
+ * own surfaces live in the admin header.
+ */
+function navFor({
+  isMember,
+  providerCapable,
+}: {
+  isMember: boolean;
+  providerCapable: boolean;
+}) {
+  return [
+    { href: "/browse", label: "Browse" },
+    ...(isMember
+      ? [
+          { href: "/dashboard", label: "My Bookings" },
+          ...(providerCapable
+            ? [{ href: "/provider/dashboard", label: "Provider dashboard" }]
+            : []),
+        ]
+      : []),
+    { href: "/about", label: "About" },
+    { href: "/blog", label: "Blog" },
+  ];
+}
 
 /**
  * College Crew wordmark: the grad-cap ant + name. `tone` flips it for use on
@@ -59,19 +81,36 @@ export async function SiteHeader() {
     ? (await getUnreadSummary(await createClient())).total
     : 0;
 
+  const nav = navFor({
+    isMember: Boolean(session) && session?.profile.role !== "admin",
+    providerCapable,
+  });
+  // The personal links push the bar past what fits beside the wordmark
+  // between ~640px and ~870px, so they stay in the hamburger until lg. The
+  // public three-item nav is unaffected and still opens up at sm.
+  const compact = nav.length > 3;
+
   return (
     <header className="sticky top-0 z-40 border-b-[1.5px] border-viridian/15 bg-shell text-viridian">
       <div className="mx-auto flex h-[72px] max-w-[1140px] items-center justify-between gap-4 px-5 sm:px-8">
         <div className="flex min-w-0 items-center gap-2">
-          <MobileNav nav={NAV} isAuthed={Boolean(session)} tone="light" />
+          <MobileNav
+            nav={nav}
+            isAuthed={Boolean(session)}
+            tone="light"
+            breakpoint={compact ? "lg" : "sm"}
+          />
           <Wordmark />
         </div>
 
         <nav
           aria-label="Main"
-          className="hidden flex-1 items-center justify-center gap-7 text-base font-semibold sm:flex"
+          className={cn(
+            "hidden flex-1 items-center justify-center gap-7 text-base font-semibold",
+            compact ? "lg:flex" : "sm:flex",
+          )}
         >
-          <NavLinks nav={NAV} />
+          <NavLinks nav={nav} />
         </nav>
 
         <div className="flex shrink-0 items-center gap-3.5">
@@ -82,7 +121,6 @@ export async function SiteHeader() {
               homePath={homePathFor(effectiveRole ?? session.profile.role)}
               realRole={session.profile.role}
               currentRole={effectiveRole ?? session.profile.role}
-              providerCapable={providerCapable}
               dashboardLabel={dashboardLabelFor(
                 effectiveRole ?? session.profile.role,
               )}

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Top-right account menu: an initials avatar that opens a dropdown with
- * Account settings, Dashboard, and Log out. Self-contained styling (a colored
+ * Account settings, Messages, and Log out. Self-contained styling (a colored
  * circle + a white overlay panel) so it reads correctly in every header —
  * customer (cream/forest), provider, and admin (crew/ink).
  */
@@ -52,10 +52,8 @@ export function UserMenu({
   homePath,
   realRole,
   currentRole,
-  providerCapable = false,
   accountHref = "/account",
   messagesHref = "/messages",
-  supportHref = "/support",
   dashboardLabel = "Dashboard",
   unreadCount = 0,
   badgeRing = "ring-viridian",
@@ -65,11 +63,8 @@ export function UserMenu({
   homePath: string;
   realRole?: UserRole;
   currentRole?: UserRole;
-  /** Regular accounts with a provider profile get the provider links. */
-  providerCapable?: boolean;
   accountHref?: string;
   messagesHref?: string;
-  supportHref?: string;
   dashboardLabel?: string;
   unreadCount?: number;
   /** Ring color around the unread badge — match the header background. */
@@ -201,6 +196,9 @@ export function UserMenu({
             >
               Account settings
             </Link>
+            {/* Regular accounts reach My Bookings and the provider dashboard
+                from the header nav, and "Become a provider" from its own
+                settings tab — only admins need a dashboard link here. */}
             {realRole === "admin" ? (
               <Link
                 href={homePath}
@@ -210,31 +208,7 @@ export function UserMenu({
               >
                 {dashboardLabel}
               </Link>
-            ) : (
-              // Unified accounts: everyone books; providing is an add-on.
-              <>
-                <Link
-                  href="/dashboard"
-                  role="menuitem"
-                  className={itemClass}
-                  onClick={() => setOpen(false)}
-                >
-                  My Bookings
-                </Link>
-                <Link
-                  href={
-                    providerCapable
-                      ? "/provider/dashboard"
-                      : "/provider/onboarding/account"
-                  }
-                  role="menuitem"
-                  className={itemClass}
-                  onClick={() => setOpen(false)}
-                >
-                  {providerCapable ? "Provider dashboard" : "Become a provider"}
-                </Link>
-              </>
-            )}
+            ) : null}
             <Link
               href={messagesHref}
               role="menuitem"
@@ -247,14 +221,6 @@ export function UserMenu({
                   {liveUnread > 99 ? "99+" : liveUnread}
                 </span>
               ) : null}
-            </Link>
-            <Link
-              href={supportHref}
-              role="menuitem"
-              className={itemClass}
-              onClick={() => setOpen(false)}
-            >
-              Feedback &amp; support
             </Link>
           </div>
 
