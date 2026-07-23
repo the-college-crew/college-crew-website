@@ -10,7 +10,7 @@ function brandfetchLogoUrl(domain: string | null) {
   if (!domain || !clientId) return null;
   return `https://cdn.brandfetch.io/domain/${encodeURIComponent(
     domain,
-  )}/w/64/h/64/symbol.png?c=${encodeURIComponent(clientId)}`;
+  )}/w/64/h/64/icon.png?c=${encodeURIComponent(clientId)}`;
 }
 
 /** Recognized-school logo + name, with a deterministic icon fallback. */
