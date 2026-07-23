@@ -330,6 +330,27 @@ export function isStructuredAvailabilityComplete(
   return windows.length > 0;
 }
 
+/** Private five-digit ZIP used for matching; never shown to customers. */
+export function isServiceZipSet(
+  profile: Pick<ProviderProfile, "service_zip">,
+) {
+  return Boolean(profile.service_zip && ZIP_PATTERN.test(profile.service_zip));
+}
+
+/** Stripe Connect has finished onboarding and transfers are switched on. */
+export function isPayoutsActive(
+  profile: Pick<
+    ProviderProfile,
+    "stripe_account_id" | "stripe_transfers_active" | "stripe_transfers_checked_at"
+  >,
+) {
+  return Boolean(
+    profile.stripe_account_id &&
+      profile.stripe_transfers_active &&
+      profile.stripe_transfers_checked_at,
+  );
+}
+
 export type ProviderReadinessRequirement = {
   key:
     | "verification"
@@ -371,11 +392,7 @@ export function getOfferingReadiness(
     {
       key: "payouts",
       label: "Stripe payouts active",
-      ready: Boolean(
-        profile.stripe_account_id &&
-          profile.stripe_transfers_active &&
-          profile.stripe_transfers_checked_at,
-      ),
+      ready: isPayoutsActive(profile),
       private: true,
     },
     {
@@ -397,7 +414,7 @@ export function getOfferingReadiness(
     {
       key: "service_zip",
       label: "Private service ZIP set",
-      ready: Boolean(profile.service_zip && ZIP_PATTERN.test(profile.service_zip)),
+      ready: isServiceZipSet(profile),
       private: true,
     },
     {

@@ -41,7 +41,10 @@ export function DeleteAccountForm() {
         <Button type="submit" variant="danger" disabled={!armed || pending}>
           {pending ? "Deleting…" : "Permanently delete my account"}
         </Button>
-        <Link href="/account" className={buttonClasses({ variant: "secondary" })}>
+        <Link
+          href="/account?tab=delete"
+          className={buttonClasses({ variant: "secondary" })}
+        >
           Cancel
         </Link>
       </div>
