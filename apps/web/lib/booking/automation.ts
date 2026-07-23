@@ -30,7 +30,6 @@ function safeErrorClass(error: unknown) {
   const controlled = new Set([
     "StripeUnconfigured",
     "UnknownAutomationKind",
-    "EmailProviderRejected",
     "LeaseLost",
   ]);
   if (error instanceof Error && controlled.has(error.message)) return error.message;
@@ -38,6 +37,24 @@ function safeErrorClass(error: unknown) {
     return error.name.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 100);
   }
   return "unknown_error";
+}
+
+class EmailDeliveryFailure extends Error {
+  constructor(
+    readonly errorClass: string,
+    readonly safeDetail: string,
+  ) {
+    super(errorClass);
+    this.name = "EmailDeliveryFailure";
+  }
+}
+
+function safeEmailFailure(error: unknown) {
+  if (error instanceof EmailDeliveryFailure) {
+    return { errorClass: error.errorClass, detail: error.safeDetail };
+  }
+  const errorClass = safeErrorClass(error);
+  return { errorClass, detail: errorClass };
 }
 
 function recipientKind(payload: Json): string | undefined {
@@ -181,7 +198,9 @@ async function drainEmail(): Promise<Counters> {
           serviceName: booking?.data?.service_name_snapshot ?? null,
           scheduledAt: booking?.data?.scheduled_at ?? null,
         });
-        if (!delivery.ok) throw new Error("EmailProviderRejected");
+        if (!delivery.ok) {
+          throw new EmailDeliveryFailure(delivery.errorClass, delivery.error);
+        }
         const settled = await admin.rpc("settle_email_outbox", {
           p_outbox_id: message.id,
           p_lease_token: message.lease_token,
@@ -191,10 +210,12 @@ async function drainEmail(): Promise<Counters> {
         counters.succeeded += 1;
       } catch (error) {
         const terminal = message.attempt_count >= MAX_ATTEMPTS;
-        await admin.rpc("retry_email_outbox", {
+        const failure = safeEmailFailure(error);
+        await admin.rpc("retry_email_outbox_detailed", {
           p_outbox_id: message.id,
           p_lease_token: message.lease_token,
-          p_error_class: safeErrorClass(error),
+          p_error_class: failure.errorClass,
+          p_error_detail: failure.detail,
           p_retry_after_seconds: retryDelaySeconds(message.attempt_count),
           p_terminal: terminal,
         });

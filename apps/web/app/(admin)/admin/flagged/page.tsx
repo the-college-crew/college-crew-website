@@ -40,6 +40,8 @@ const PROFILE_FIELD_LABEL: Record<ProfileTextField, string> = {
   display_name: "Display name",
   bio: "Bio",
   company_name: "Company name",
+  school_name: "School name",
+  greek_organization: "Greek-life organization",
 };
 
 type ThreadMessage = {

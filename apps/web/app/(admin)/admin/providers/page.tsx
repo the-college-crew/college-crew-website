@@ -160,6 +160,12 @@ export default async function AdminProvidersPage({
         </div>
       ) : null}
 
+      {err === "school" ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          That provider must add their college or university before approval.
+        </div>
+      ) : null}
+
       <ProvidersManager rows={rows} serviceOptions={serviceOptions} />
     </div>
   );

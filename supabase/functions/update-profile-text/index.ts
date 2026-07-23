@@ -24,7 +24,8 @@
 // Contract of record: packages/core/src/contracts/edge.ts (updateProfileText*).
 // verify_jwt stays ON. Secrets: SUPABASE_SERVICE_ROLE_KEY (the columns and
 // profile_moderation_events are service-role only), OPENAI_API_KEY (Layer 2),
-// RESEND_API_KEY + EMAIL_FROM (founder email; absent → logged stub).
+// RESEND_API_KEY + EMAIL_FROM (founder email). A configured provider without
+// EMAIL_FROM fails loudly instead of using a shared sender.
 //
 // Deploy: npx supabase functions deploy update-profile-text
 
@@ -247,11 +248,9 @@ async function sendProfileFlagEmail(opts: {
   matched: string[];
   text: string;
   userId: string;
-}): Promise<void> {
+}, admin: ReturnType<typeof createClient<any>>): Promise<void> {
   const label = EMAIL_LABEL[opts.field];
   const apiKey = Deno.env.get("RESEND_API_KEY");
-  const from =
-    Deno.env.get("EMAIL_FROM")?.trim() || "College Crew <onboarding@resend.dev>";
   const subject = `College Crew: a provider ${label} was flagged`;
   const text = [
     `A provider's ${label} tripped the profile scan. It is LIVE on their public profile — flagging does not block it.`,
@@ -266,14 +265,34 @@ async function sendProfileFlagEmail(opts: {
   ].join("\n");
 
   if (!apiKey) {
-    console.info(`[email:stub] profile flag (${label}) to ${NOTIFY_TO.join(", ")} — ${opts.matched.join(", ")}`);
+    console.info(`[email:stub] profile flag (${label}) — ${opts.matched.join(", ")}`);
+    return;
+  }
+  const from = Deno.env.get("EMAIL_FROM")?.trim();
+  if (!from) {
+    console.error("profile flag notification configuration error: EMAIL_FROM is missing");
+    return;
+  }
+  const recipients: string[] = [];
+  for (const recipient of NOTIFY_TO) {
+    const suppression = await admin.rpc("get_active_email_suppression", {
+      p_recipient_email: recipient,
+    });
+    if (suppression.error) {
+      console.error("profile flag notification suppression check failed");
+      return;
+    }
+    if (!suppression.data?.length) recipients.push(recipient);
+  }
+  if (!recipients.length) {
+    console.error("profile flag notification skipped: all recipients are suppressed");
     return;
   }
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to: NOTIFY_TO, subject, text }),
+      body: JSON.stringify({ from, to: recipients, subject, text }),
     });
     if (!res.ok) {
       console.error("profile flag notification non-ok:", res.status, await res.text());
@@ -400,12 +419,15 @@ Deno.serve(async (request) => {
       );
       const notify = Promise.all(
         flagged.map((r) =>
-          sendProfileFlagEmail({
-            field: r.field,
-            matched: r.matched,
-            text: r.text,
-            userId: user.id,
-          }),
+          sendProfileFlagEmail(
+            {
+              field: r.field,
+              matched: r.matched,
+              text: r.text,
+              userId: user.id,
+            },
+            admin,
+          ),
         ),
       ).then(() => {});
       // @ts-ignore — EdgeRuntime is provided by the Supabase Deno runtime.

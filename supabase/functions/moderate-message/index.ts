@@ -291,8 +291,9 @@ async function modelModerationPass(
 // Edge functions run in Deno and cannot import the app's lib/email/send.ts, so
 // this hits the Resend REST API directly. Mirrors that file's stub behavior:
 // with no RESEND_API_KEY set on the function it logs instead of sending, so the
-// whole path is testable before the Resend account/domain exists. Never throws
-// — a notification failure must not affect message delivery.
+// whole path is testable before the Resend account/domain exists. A configured
+// provider without EMAIL_FROM fails loudly instead of using a shared sender.
+// Never throws — a notification failure must not affect message delivery.
 // ─────────────────────────────────────────────────────────────────────────
 const NOTIFY_TO = ["Ari@thecollegecrew.com", "zach@thecollegecrew.com"];
 
@@ -301,11 +302,8 @@ async function sendFlagNotification(opts: {
   senderId: string;
   matched: string[];
   original: string;
-}): Promise<void> {
+}, admin: ReturnType<typeof createClient<any>>): Promise<void> {
   const apiKey = Deno.env.get("RESEND_API_KEY");
-  const from =
-    Deno.env.get("EMAIL_FROM")?.trim() ||
-    "College Crew <onboarding@resend.dev>";
   const subject = "College Crew: a chat message was flagged";
   const text = [
     "A chat message was flagged for possible off-platform contact info.",
@@ -321,9 +319,27 @@ async function sendFlagNotification(opts: {
   ].join("\n");
 
   if (!apiKey) {
-    console.info(
-      `[email:stub] flag notification to ${NOTIFY_TO.join(", ")} — ${opts.matched.join(", ")}`,
-    );
+    console.info(`[email:stub] flag notification — ${opts.matched.join(", ")}`);
+    return;
+  }
+  const from = Deno.env.get("EMAIL_FROM")?.trim();
+  if (!from) {
+    console.error("flag notification configuration error: EMAIL_FROM is missing");
+    return;
+  }
+  const recipients: string[] = [];
+  for (const recipient of NOTIFY_TO) {
+    const suppression = await admin.rpc("get_active_email_suppression", {
+      p_recipient_email: recipient,
+    });
+    if (suppression.error) {
+      console.error("flag notification suppression check failed");
+      return;
+    }
+    if (!suppression.data?.length) recipients.push(recipient);
+  }
+  if (!recipients.length) {
+    console.error("flag notification skipped: all recipients are suppressed");
     return;
   }
   try {
@@ -333,7 +349,7 @@ async function sendFlagNotification(opts: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from, to: NOTIFY_TO, subject, text }),
+      body: JSON.stringify({ from, to: recipients, subject, text }),
     });
     if (!res.ok) {
       console.error("flag notification non-ok:", res.status, await res.text());
@@ -471,12 +487,15 @@ Deno.serve(async (request) => {
         original_body: flaggedGroup,
         matched_patterns: matched,
       });
-      const notify = sendFlagNotification({
-        messageId: message.id,
-        senderId: user.id,
-        matched,
-        original: flaggedGroup,
-      });
+      const notify = sendFlagNotification(
+        {
+          messageId: message.id,
+          senderId: user.id,
+          matched,
+          original: flaggedGroup,
+        },
+        admin,
+      );
       // @ts-ignore — EdgeRuntime is provided by the Supabase Deno runtime.
       if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(notify);
       else await notify;

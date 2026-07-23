@@ -1,7 +1,9 @@
 import "server-only";
 
 import type { ProfileTextField } from "@/lib/db/types";
+import { sanitizeEmailDiagnostic } from "@/lib/email/resend-webhooks";
 import { hasResendEnv } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Transactional email: the provider .edu verification code, plus the founder
@@ -13,14 +15,47 @@ import { hasResendEnv } from "@/lib/env";
  * server-only: never bundle the API key path into the browser.
  */
 
-// `??` alone would keep an empty/blank EMAIL_FROM ("") — which Resend rejects
-// as an invalid `from`. Trim and fall back on any blank value, not just unset.
-const FROM =
-  process.env.EMAIL_FROM?.trim() || "College Crew <onboarding@resend.dev>";
-
 export type SendResult =
   | { ok: true; providerMessageId?: string }
-  | { ok: false; error: string };
+  | { ok: false; errorClass: string; error: string };
+
+function providerErrorClass(error: unknown) {
+  if (!error || typeof error !== "object") return "ResendRejected";
+  const name = "name" in error && typeof error.name === "string" ? error.name : "";
+  const normalized = name.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 80);
+  return normalized ? `Resend_${normalized}` : "ResendRejected";
+}
+
+type RecipientFilterResult =
+  | { ok: true; recipients: string[] }
+  | { ok: false; errorClass: string; error: string };
+
+async function filterSuppressedRecipients(
+  recipients: string[],
+): Promise<RecipientFilterResult> {
+  const admin = createAdminClient();
+  const allowed: string[] = [];
+  for (const recipient of [...new Set(recipients.map((value) => value.trim().toLowerCase()))]) {
+    const result = await admin.rpc("get_active_email_suppression", {
+      p_recipient_email: recipient,
+    });
+    if (result.error) {
+      return {
+        ok: false,
+        errorClass: "EmailSuppressionCheckFailed",
+        error: "Email suppression state could not be checked.",
+      };
+    }
+    const suppression = result.data?.[0];
+    if (!suppression) allowed.push(recipient);
+  }
+  if (allowed.length > 0) return { ok: true, recipients: allowed };
+  return {
+    ok: false,
+    errorClass: "RecipientSuppressed",
+    error: "All recipients are suppressed.",
+  };
+}
 
 export async function sendEmail(opts: {
   to: string | string[];
@@ -50,18 +85,34 @@ export async function sendEmail(opts: {
       }
     }
     if (opts.requireProvider) {
-      return { ok: false, error: "Email provider is not configured." };
+      return {
+        ok: false,
+        errorClass: "EmailProviderUnconfigured",
+        error: "Email provider is not configured.",
+      };
     }
     return { ok: true };
   }
+
+  const from = process.env.EMAIL_FROM?.trim();
+  if (!from) {
+    return {
+      ok: false,
+      errorClass: "EmailSenderUnconfigured",
+      error: "EMAIL_FROM is not configured.",
+    };
+  }
+
+  const recipientCheck = await filterSuppressedRecipients([opts.to].flat());
+  if (!recipientCheck.ok) return recipientCheck;
 
   // Loaded lazily so the dependency is only touched when a key is present.
   const { Resend } = await import("resend");
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { data, error } = await resend.emails.send(
     {
-      from: FROM,
-      to: opts.to,
+      from,
+      to: recipientCheck.recipients,
       subject: opts.subject,
       text: opts.text,
       ...(opts.html ? { html: opts.html } : {}),
@@ -69,7 +120,11 @@ export async function sendEmail(opts: {
     opts.idempotencyKey ? { idempotencyKey: opts.idempotencyKey } : undefined,
   );
   if (error) {
-    return { ok: false, error: error.message };
+    return {
+      ok: false,
+      errorClass: providerErrorClass(error),
+      error: sanitizeEmailDiagnostic(error.message) ?? "Resend rejected the email.",
+    };
   }
   return { ok: true, providerMessageId: data?.id };
 }
@@ -191,6 +246,8 @@ const FIELD_LABEL: Record<ProfileTextField, string> = {
   display_name: "display name",
   bio: "bio",
   company_name: "company name",
+  school_name: "school name",
+  greek_organization: "Greek-life organization",
 };
 
 export function sendProfileFlagEmail(opts: {

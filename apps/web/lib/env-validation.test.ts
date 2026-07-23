@@ -11,6 +11,7 @@ const validRolloutEnvironment = {
   STRIPE_WEBHOOK_SECRET: "whsec_placeholder",
   RESEND_API_KEY: "re_placeholder",
   EMAIL_FROM: "College Crew <no-reply@send.example.com>",
+  RESEND_WEBHOOK_SECRET: "whsec_resend_placeholder",
   NEXT_PUBLIC_SITE_URL: "https://example.com",
   BOOKING_CRON_SECRET: "a".repeat(32),
   FOUNDER_OPERATIONS_EMAILS: "ops@example.com,founder@example.com",
@@ -38,6 +39,7 @@ describe("server environment validation", () => {
     const issues = getServerEnvironmentIssues({
       ...validRolloutEnvironment,
       STRIPE_SECRET_KEY: "sk_live_do-not-print",
+      RESEND_WEBHOOK_SECRET: "not-a-signing-secret",
       NEXT_PUBLIC_SITE_URL: "http://example.com/path",
       BOOKING_CRON_SECRET: "short",
     });
@@ -48,6 +50,9 @@ describe("server environment validation", () => {
       "NEXT_PUBLIC_SITE_URL must be a canonical HTTPS origin with no path",
     );
     expect(issues).toContain("BOOKING_CRON_SECRET must be at least 32 characters");
+    expect(issues).toContain(
+      "RESEND_WEBHOOK_SECRET must be a webhook signing secret",
+    );
     expect(issues.join(" ")).not.toContain("do-not-print");
   });
 });

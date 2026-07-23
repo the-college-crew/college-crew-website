@@ -12,6 +12,7 @@ const REQUIRED_FOR_HOURLY_ROLLOUT = [
   "STRIPE_WEBHOOK_SECRET",
   "RESEND_API_KEY",
   "EMAIL_FROM",
+  "RESEND_WEBHOOK_SECRET",
   "NEXT_PUBLIC_SITE_URL",
   "BOOKING_CRON_SECRET",
   "FOUNDER_OPERATIONS_EMAILS",
@@ -99,6 +100,11 @@ export function getServerEnvironmentIssues(env: Environment = process.env) {
   const emailAddress = emailFrom?.match(/<([^>]+)>$/)?.[1] ?? emailFrom;
   if (emailFrom && (!emailAddress || !isEmail(emailAddress))) {
     issues.push("EMAIL_FROM must contain a valid email address");
+  }
+
+  const resendWebhookSecret = env.RESEND_WEBHOOK_SECRET?.trim();
+  if (resendWebhookSecret && !resendWebhookSecret.startsWith("whsec_")) {
+    issues.push("RESEND_WEBHOOK_SECRET must be a webhook signing secret");
   }
 
   return issues;

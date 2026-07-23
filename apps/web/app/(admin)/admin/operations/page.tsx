@@ -24,7 +24,14 @@ export default async function AdminOperationsPage() {
   const webhookAttentionDate = new Date();
   webhookAttentionDate.setMinutes(webhookAttentionDate.getMinutes() - 5);
   const webhookAttentionBefore = webhookAttentionDate.toISOString();
-  const [jobsResult, emailResult, refundsResult, webhooksResult] = await Promise.all([
+  const [
+    jobsResult,
+    emailFailureResult,
+    deliveryIssueResult,
+    otherDeliveryIssueResult,
+    refundsResult,
+    webhooksResult,
+  ] = await Promise.all([
     admin
       .from("booking_automation_jobs")
       .select("id, kind, booking_id, attempt_count, last_error_class, last_error_at, terminal_at")
@@ -33,10 +40,42 @@ export default async function AdminOperationsPage() {
       .limit(100),
     admin
       .from("email_outbox")
-      .select("id, template, booking_id, attempt_count, last_error_class, last_error_at, terminal_at")
+      .select(
+        "id, template, booking_id, status, attempt_count, last_error, last_error_class, last_error_at, terminal_at, delivery_status, delivery_event_at, delivery_detail",
+      )
       .eq("status", "failed")
       .not("terminal_at", "is", null)
       .order("terminal_at", { ascending: false })
+      .limit(100),
+    admin
+      .from("email_outbox")
+      .select(
+        "id, template, booking_id, status, attempt_count, last_error, last_error_class, last_error_at, terminal_at, delivery_status, delivery_event_at, delivery_detail",
+      )
+      .in("delivery_status", [
+        "delayed",
+        "bounced",
+        "complained",
+        "failed",
+        "suppressed",
+      ])
+      .order("delivery_event_at", { ascending: false })
+      .limit(100),
+    admin
+      .from("resend_webhook_events")
+      .select(
+        "id, event_type, provider_message_id, recipient_email, event_created_at, detail",
+      )
+      .eq("is_current", true)
+      .is("matched_outbox_id", null)
+      .in("delivery_status", [
+        "delayed",
+        "bounced",
+        "complained",
+        "failed",
+        "suppressed",
+      ])
+      .order("event_created_at", { ascending: false })
       .limit(100),
     admin
       .from("booking_refunds")
@@ -55,10 +94,25 @@ export default async function AdminOperationsPage() {
       .limit(100),
   ]);
   const jobs = jobsResult.data ?? [];
-  const emails = emailResult.data ?? [];
+  const emailById = new Map(
+    [...(emailFailureResult.data ?? []), ...(deliveryIssueResult.data ?? [])].map(
+      (email) => [email.id, email],
+    ),
+  );
+  const emails = [...emailById.values()].sort(
+    (left, right) =>
+      Date.parse(right.delivery_event_at ?? right.last_error_at ?? right.terminal_at ?? "0") -
+      Date.parse(left.delivery_event_at ?? left.last_error_at ?? left.terminal_at ?? "0"),
+  );
+  const otherDeliveryIssues = otherDeliveryIssueResult.data ?? [];
   const refunds = refundsResult.data ?? [];
   const webhooks = webhooksResult.data ?? [];
-  const empty = !jobs.length && !emails.length && !refunds.length && !webhooks.length;
+  const empty =
+    !jobs.length &&
+    !emails.length &&
+    !otherDeliveryIssues.length &&
+    !refunds.length &&
+    !webhooks.length;
 
   return (
     <div className="space-y-8">
@@ -96,13 +150,35 @@ export default async function AdminOperationsPage() {
             <SafeDetails
               title={email.template}
               bookingId={email.booking_id}
-              detail={`${email.last_error_class ?? "unknown"} · ${email.attempt_count} attempts`}
-              at={email.last_error_at ?? email.terminal_at}
+              detail={
+                email.delivery_status &&
+                ["delayed", "bounced", "complained", "failed", "suppressed"].includes(
+                  email.delivery_status,
+                )
+                  ? `${email.delivery_status} · ${email.delivery_detail ?? "Resend delivery event"}`
+                  : `${email.last_error_class ?? "unknown"} · ${email.attempt_count} attempts · ${email.last_error ?? "No provider detail"}`
+              }
+              at={email.delivery_event_at ?? email.last_error_at ?? email.terminal_at}
             />
-            <form action={retryOutboxEmail}>
-              <input type="hidden" name="outboxId" value={email.id} />
-              <Button type="submit" size="sm" variant="secondary">Retry email</Button>
-            </form>
+            {email.status === "failed" && email.terminal_at ? (
+              <form action={retryOutboxEmail}>
+                <input type="hidden" name="outboxId" value={email.id} />
+                <Button type="submit" size="sm" variant="secondary">Retry email</Button>
+              </form>
+            ) : null}
+          </Card>
+        ))}
+      </OperationsSection>
+
+      <OperationsSection title="Other Resend delivery issues" count={otherDeliveryIssues.length}>
+        {otherDeliveryIssues.map((event) => (
+          <Card key={event.id} className="p-4">
+            <SafeDetails
+              title={event.event_type}
+              bookingId={null}
+              detail={`${maskEmail(event.recipient_email)} · message ${event.provider_message_id.slice(0, 8)} · ${event.detail ?? "Resend delivery event"}`}
+              at={event.event_created_at}
+            />
           </Card>
         ))}
       </OperationsSection>
@@ -146,6 +222,13 @@ export default async function AdminOperationsPage() {
       </OperationsSection>
     </div>
   );
+}
+
+function maskEmail(value: string | null) {
+  if (!value) return "recipient unavailable";
+  const [local, domain] = value.split("@");
+  if (!local || !domain) return "recipient redacted";
+  return `${local.slice(0, 1)}***@${domain}`;
 }
 
 function OperationsSection({

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { SchoolAutocomplete } from "@/components/school-autocomplete";
 import {
   FieldError,
   FieldHint,
@@ -93,6 +94,23 @@ export function ProviderProfileForm({ profile }: { profile: ProviderProfile }) {
           defaultValue={profile.neighborhood}
           placeholder="Where you work"
         />
+      </div>
+      <SchoolAutocomplete
+        defaultName={profile.school_name}
+        defaultSchoolId={profile.school_scorecard_id}
+      />
+      <div>
+        <Label htmlFor="greekOrganization">
+          Greek house or chapter (optional)
+        </Label>
+        <Input
+          id="greekOrganization"
+          name="greekOrganization"
+          defaultValue={profile.greek_organization}
+          maxLength={120}
+          placeholder="e.g. Alpha Phi or Sigma Chi"
+        />
+        <FieldHint>Shown beneath your school on your public profile.</FieldHint>
       </div>
       <div>
         <Label htmlFor="bio">Bio</Label>
