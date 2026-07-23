@@ -5,14 +5,28 @@ export type SettingsTab = {
   label: string;
   /** Provider-only tabs are hidden entirely from accounts that don't provide. */
   providerOnly: boolean;
+  /** The mirror image: hidden once the account does provide. */
+  customerOnly?: boolean;
 };
 
+/**
+ * Order matters twice over: it's the rail's reading order, and the first
+ * visible tab is the panel `/account` lands on. "Become a provider" therefore
+ * sits after Account rather than leading — it's an invitation, not the page
+ * you came for.
+ */
 export const SETTINGS_TABS: readonly SettingsTab[] = [
   { id: "storefront", label: "Storefront", providerOnly: true },
   { id: "availability", label: "Availability", providerOnly: true },
   { id: "pricing", label: "Pricing", providerOnly: true },
   { id: "payouts", label: "Payouts", providerOnly: true },
   { id: "account", label: "Account", providerOnly: false },
+  {
+    id: "become-provider",
+    label: "Become a provider",
+    providerOnly: false,
+    customerOnly: true,
+  },
   { id: "legal", label: "Legal", providerOnly: false },
   { id: "delete", label: "Delete account", providerOnly: false },
 ];
@@ -26,7 +40,9 @@ export function visibleSettingsTabs(
   exclude: readonly SettingsTabId[] = [],
 ) {
   return SETTINGS_TABS.filter(
-    (tab) => (isProvider || !tab.providerOnly) && !exclude.includes(tab.id),
+    (tab) =>
+      (isProvider ? !tab.customerOnly : !tab.providerOnly) &&
+      !exclude.includes(tab.id),
   );
 }
 

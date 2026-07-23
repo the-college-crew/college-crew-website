@@ -9,7 +9,7 @@ type NavItem = { href: string; label: string };
 /**
  * Mobile-only hamburger for the customer site header. Collapses the main nav
  * (and the logged-out auth links) into a dropdown panel that drops below the
- * bar. Hidden at `sm+`, where the desktop nav takes over.
+ * bar. Hidden from `breakpoint`+ up, where the desktop nav takes over.
  *
  * Interaction mirrors `user-menu.tsx`: toggle state, click-outside + Escape to
  * close, and aria wiring so the button announces the panel.
@@ -18,11 +18,15 @@ export function MobileNav({
   nav,
   isAuthed,
   tone = "dark",
+  breakpoint = "sm",
 }: {
   nav: NavItem[];
   isAuthed: boolean;
   /** "dark" for forest bars (provider/admin); "light" for the shell customer bar. */
   tone?: "light" | "dark";
+  /** Width at which the desktop nav takes over. "lg" for bars carrying the
+   * signed-in personal links, which need more room than three public ones. */
+  breakpoint?: "sm" | "lg";
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -56,7 +60,7 @@ export function MobileNav({
     : "block rounded-lg px-3 py-3 text-base font-semibold text-viridian/85 transition-colors hover:bg-viridian/5 hover:text-viridian";
 
   return (
-    <div ref={rootRef} className="sm:hidden">
+    <div ref={rootRef} className={breakpoint === "lg" ? "lg:hidden" : "sm:hidden"}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

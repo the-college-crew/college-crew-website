@@ -14,6 +14,7 @@ export type SettingsTabId =
   | "pricing"
   | "payouts"
   | "account"
+  | "become-provider"
   | "legal"
   | "delete";
 
@@ -47,6 +48,7 @@ const EMPTY: SettingsReadiness = {
   pricing: [],
   payouts: [],
   account: [],
+  "become-provider": [],
   legal: [],
   delete: [],
 };
@@ -154,6 +156,8 @@ export function getSettingsReadiness({
     pricing,
     payouts,
     account: [],
+    // Only reachable by accounts that don't provide yet, so never in play here.
+    "become-provider": [],
     legal,
     delete: [],
   };

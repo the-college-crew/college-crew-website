@@ -110,20 +110,28 @@ export default async function LandingPage() {
     getSession(),
     getLiveServices(),
   ]);
-  const showProviderCtas = !session;
   const role = session ? await getEffectiveRole() : null;
 
   // Providers already have an account — send them to their dashboard instead
   // of the customer browse flow. Everyone else gets the "Book a student" CTA.
-  const primaryCta: Cta =
-    role === "provider"
-      ? { href: "/provider/dashboard", label: "View dashboard" }
-      : { href: "/browse", label: "Book a student" };
+  const isProvider = role === "provider";
+  const primaryCta: Cta = isProvider
+    ? { href: "/provider/dashboard", label: "View dashboard" }
+    : { href: "/browse", label: "Book a student" };
+
+  // The ghost CTA is the other half of the marketplace: providers are offered
+  // the booking side, everyone else the earning side. Founder accounts get
+  // neither — they can't onboard as providers, so it would be a dead link.
+  const secondaryCta: Cta | null = isProvider
+    ? { href: "/browse", label: "Book a student" }
+    : session?.profile.role === "admin"
+      ? null
+      : { href: "/provider/onboarding/account", label: "Become a provider" };
 
   return (
     <div className="mx-[calc(50%-50vw)] -mt-8 -mb-8 w-screen max-w-[100vw] overflow-x-clip bg-shell text-viridian">
       <Hero
-        showProviderCta={showProviderCtas}
+        secondaryCta={secondaryCta}
         primaryCta={primaryCta}
         services={services}
       />
@@ -139,9 +147,11 @@ export default async function LandingPage() {
       />
       <ServicesSection services={services} />
       <FeaturesSection />
-      {showProviderCtas ? (
-        <CTASection showProviderCta={showProviderCtas} primaryCta={primaryCta} />
-      ) : null}
+      <CTASection
+        secondaryCta={secondaryCta}
+        primaryCta={primaryCta}
+        isMember={Boolean(session)}
+      />
     </div>
   );
 }
@@ -189,11 +199,11 @@ function AntRule() {
 }
 
 function Hero({
-  showProviderCta,
+  secondaryCta,
   primaryCta,
   services,
 }: {
-  showProviderCta: boolean;
+  secondaryCta: Cta | null;
   primaryCta: Cta;
   services: Service[];
 }) {
@@ -236,9 +246,9 @@ function Hero({
             <Link href={primaryCta.href} className={BTN_PRIMARY}>
               {primaryCta.label}
             </Link>
-            {showProviderCta ? (
-              <Link href="/provider/onboarding/account" className={BTN_GHOST}>
-                Become a provider
+            {secondaryCta ? (
+              <Link href={secondaryCta.href} className={BTN_GHOST}>
+                {secondaryCta.label}
               </Link>
             ) : null}
           </div>
@@ -572,12 +582,20 @@ function FeaturesSection() {
   );
 }
 
+/**
+ * Closing band. It now renders for everyone, so the copy comes in two
+ * variants: the signup pitch for visitors, and a "here's the other half of the
+ * marketplace" nudge for people who have already joined. Separate content keys
+ * so both stay independently editable.
+ */
 function CTASection({
-  showProviderCta,
+  secondaryCta,
   primaryCta,
+  isMember,
 }: {
-  showProviderCta: boolean;
+  secondaryCta: Cta | null;
   primaryCta: Cta;
+  isMember: boolean;
 }) {
   return (
     <section className={`${BAND} bg-viridian text-shell`}>
@@ -591,24 +609,34 @@ function CTASection({
       />
       <div className="reveal-rise relative z-10 mx-auto w-full max-w-[760px] px-5 text-center sm:px-8">
         <h2 className="mx-auto max-w-[20ch] text-balance font-display text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[42px]">
-          <Editable k="home.cta.heading">Ready to join College Crew?</Editable>
+          {isMember ? (
+            <Editable k="home.cta.member.heading">
+              There&rsquo;s another side to College Crew.
+            </Editable>
+          ) : (
+            <Editable k="home.cta.heading">Ready to join College Crew?</Editable>
+          )}
         </h2>
         <p className="mx-auto mt-5 max-w-[52ch] text-[17px] leading-[1.55] text-shell/80 md:text-[19px]">
-          <Editable k="home.cta.body">
-            Book trusted help nearby, or sign up to start earning and building
-            a reputation that follows you. It takes two minutes.
-          </Editable>
+          {isMember ? (
+            <Editable k="home.cta.member.body">
+              Book trusted help nearby, or start earning yourself — the same
+              account does both.
+            </Editable>
+          ) : (
+            <Editable k="home.cta.body">
+              Book trusted help nearby, or sign up to start earning and building
+              a reputation that follows you. It takes two minutes.
+            </Editable>
+          )}
         </p>
         <div className="mt-[34px] flex flex-wrap items-center justify-center gap-3.5">
           <Link href={primaryCta.href} className={BTN_PRIMARY_ON_DARK}>
             {primaryCta.label}
           </Link>
-          {showProviderCta ? (
-            <Link
-              href="/provider/onboarding/account"
-              className={BTN_GHOST_ON_DARK}
-            >
-              Become a provider
+          {secondaryCta ? (
+            <Link href={secondaryCta.href} className={BTN_GHOST_ON_DARK}>
+              {secondaryCta.label}
             </Link>
           ) : null}
         </div>

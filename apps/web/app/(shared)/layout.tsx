@@ -1,4 +1,6 @@
-import { Wordmark } from "@/components/site-header";
+import { MobileNav } from "@/components/mobile-nav";
+import { NavLinks } from "@/components/nav-links";
+import { navBreakpoint, navFor, Wordmark } from "@/components/site-header";
 import { UserMenu } from "@/components/user-menu";
 import {
   dashboardLabelFor,
@@ -9,6 +11,7 @@ import {
 } from "@/lib/auth/session";
 import { getUnreadSummary } from "@/lib/messaging/unread";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 
 /** Minimal chrome for shared surfaces (account, messaging) used by every role. */
 export default async function SharedLayout({
@@ -25,11 +28,38 @@ export default async function SharedLayout({
     ? (await getUnreadSummary(await createClient())).total
     : 0;
 
+  // Same links as the main site header: these surfaces are a dead end without
+  // them, since the bar carries no other way back to Browse or My Bookings.
+  const nav = navFor({
+    isMember: Boolean(session) && session?.profile.role !== "admin",
+    providerCapable,
+  });
+  const breakpoint = navBreakpoint(nav);
+
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-40 shrink-0 border-b border-viridian/15 bg-shell text-viridian">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
-          <Wordmark />
+          <div className="flex min-w-0 items-center gap-2">
+            <MobileNav
+              nav={nav}
+              isAuthed={Boolean(session)}
+              tone="light"
+              breakpoint={breakpoint}
+            />
+            <Wordmark />
+          </div>
+
+          <nav
+            aria-label="Main"
+            className={cn(
+              "hidden flex-1 items-center justify-center gap-6 text-sm font-semibold",
+              breakpoint === "lg" ? "lg:flex" : "sm:flex",
+            )}
+          >
+            <NavLinks nav={nav} />
+          </nav>
+
           {session && role ? (
             <UserMenu
               name={session.profile.full_name}
@@ -37,7 +67,6 @@ export default async function SharedLayout({
               homePath={homePathFor(role)}
               realRole={session.profile.role}
               currentRole={role}
-              providerCapable={providerCapable}
               dashboardLabel={dashboardLabelFor(role)}
               unreadCount={unreadCount}
               badgeRing="ring-shell"

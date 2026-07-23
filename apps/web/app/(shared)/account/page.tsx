@@ -34,6 +34,7 @@ import { SettingsNav } from "./_components/settings-nav";
 import { resolveSettingsTab, visibleSettingsTabs } from "./_components/tabs";
 import { AccountPanel } from "./_panels/account-panel";
 import { AvailabilityPanel } from "./_panels/availability-panel";
+import { BecomeProviderPanel } from "./_panels/become-provider-panel";
 import { DeletePanel } from "./_panels/delete-panel";
 import { LegalPanel } from "./_panels/legal-panel";
 import { PayoutsPanel } from "./_panels/payouts-panel";
@@ -146,7 +147,9 @@ export default async function AccountPage({
     });
   }
 
-  const tabs = visibleSettingsTabs(isProvider);
+  // Founder accounts don't onboard as providers (requireOnboardingUser sends
+  // them home), so the invitation would be a dead end for them.
+  const tabs = visibleSettingsTabs(isProvider, isAdmin ? ["become-provider"] : []);
   // A Stripe round-trip lands on Payouts so its result banner is actually seen.
   const stripeReturn = stripe === "connected" || stripe === "incomplete";
   const activeTab = resolveSettingsTab(
@@ -193,6 +196,8 @@ export default async function AccountPage({
       {activeTab === "account" ? (
         <AccountPanel profile={profile} email={user.email ?? ""} />
       ) : null}
+
+      {activeTab === "become-provider" ? <BecomeProviderPanel /> : null}
 
       {activeTab === "legal" ? (
         <LegalPanel
