@@ -1,29 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import {
-  connectStripe,
-  refreshStripeReadiness,
-} from "@/app/(provider)/provider/actions";
-import { ServicesPricingForm } from "@/app/(provider)/provider/_components/services-pricing-form";
-import { ProviderAvailabilityForm } from "@/app/(provider)/provider/_components/provider-availability-form";
-import { FormLoader } from "@/components/form-loader";
-import { ProviderReadinessChecklist } from "@/components/provider-readiness-checklist";
+import type { Offering } from "@/app/(provider)/provider/_components/services-pricing-form";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonClasses } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import {
-  getOwnProviderProfile,
-  getSession,
-  requireUser,
-} from "@/lib/auth/session";
-import {
-  getLiveServices,
-  getProviderAvailabilityWindows,
-} from "@/lib/db/queries";
+import { getOwnProviderProfile, getSession, requireUser } from "@/lib/auth/session";
+import { getProviderAvailabilityWindows } from "@/lib/db/queries";
 import {
   demoAvailabilityWindows,
   demoOfferings,
@@ -31,62 +14,61 @@ import {
   demoServices,
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
-import { createClient } from "@/lib/supabase/server";
+import { hasAcceptedCurrentLegalDocument } from "@/lib/legal/acceptance";
 import {
-  hasAcceptedCurrentLegalDocument,
-  legalDocumentPath,
-} from "@/lib/legal/acceptance";
-import {
-  CUSTOMER_BOOKING_TERMS_VERSION,
-  PLATFORM_TERMS_VERSION,
-  PROVIDER_TERMS_VERSION,
-} from "@/lib/legal/waivers";
-import { formatOfferedPrice } from "@/lib/utils";
-
-import { AccountPasswordForm, AccountProfileForm } from "./account-forms";
-import { AvatarUploadForm } from "./avatar-upload-form";
-import { BannerUploadForm } from "./banner-upload-form";
-import {
-  saveSettingsPricing,
-  updateAvailability,
-} from "./provider-actions";
-import { ProviderProfileForm } from "./provider-settings-forms";
-import { providerAvatarUrl } from "@/lib/media/provider-avatars";
-import { toBannerStyle } from "@/lib/media/provider-banners";
+  emptySettingsReadiness,
+  getSettingsReadiness,
+  type SettingsTabId,
+} from "@/lib/provider/settings-readiness";
 import {
   formatAvailabilityDays,
   formatAvailabilityWindow,
   groupAvailabilityWindows,
+  type AvailabilityWindow,
 } from "@/lib/provider/setup";
+import { createClient } from "@/lib/supabase/server";
+import { formatOfferedPrice } from "@/lib/utils";
+
+import { Section } from "./_components/section";
+import { SettingsNav } from "./_components/settings-nav";
+import { resolveSettingsTab, visibleSettingsTabs } from "./_components/tabs";
+import { AccountPanel } from "./_panels/account-panel";
+import { AvailabilityPanel } from "./_panels/availability-panel";
+import { DeletePanel } from "./_panels/delete-panel";
+import { LegalPanel } from "./_panels/legal-panel";
+import { PayoutsPanel } from "./_panels/payouts-panel";
+import { PricingPanel } from "./_panels/pricing-panel";
+import { StorefrontPanel } from "./_panels/storefront-panel";
 
 export const metadata: Metadata = { title: "Account settings" };
 
-function Section({
-  title,
+/** Two-column settings shell: category rail plus the one active panel. */
+function SettingsLayout({
   description,
+  nav,
   children,
 }: {
-  title: string;
-  description?: string;
+  description: string;
+  nav: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <Card className="p-6">
-      <h2 className="font-display text-xl font-semibold">{title}</h2>
-      {description ? (
-        <p className="mt-1 text-sm text-ink-soft">{description}</p>
-      ) : null}
-      <div className="mt-5">{children}</div>
-    </Card>
+    <div className="mx-auto w-full max-w-5xl px-4 py-8">
+      <PageHeader title="Account settings" description={description} />
+      <div className="mt-8 grid gap-6 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-10">
+        <div className="md:sticky md:top-24 md:self-start">{nav}</div>
+        <div className="min-w-0 space-y-6">{children}</div>
+      </div>
+    </div>
   );
 }
 
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stripe?: string }>;
+  searchParams: Promise<{ stripe?: string; tab?: string }>;
 }) {
-  const [{ stripe }] = await Promise.all([
+  const [{ stripe, tab }] = await Promise.all([
     searchParams,
     requireUser("/account"),
   ]);
@@ -94,19 +76,21 @@ export default async function AccountPage({
   // Admin previewing "as provider" via view-as → sample storefront, no real
   // personal/delete controls (those would act on the admin's own account).
   const demoPreview = await getDemoPreview("provider");
-  if (demoPreview) return <ProviderAccountDemo />;
+  if (demoPreview) return <ProviderAccountDemo tab={tab} />;
 
   const session = await getSession();
   if (!session) redirect("/login?next=/account");
   const { profile, user } = session;
 
-  // Provider storefront sections render for any account that has started
-  // providing (owns a provider profile). Everyone gets the personal/security/
-  // delete controls below.
+  // Provider panels render for any account that has started providing (owns a
+  // provider profile). Everyone gets Account, Legal, and Delete.
   const providerProfile = await getOwnProviderProfile();
+  const isProvider = Boolean(providerProfile);
+  const isAdmin = profile.role === "admin";
+
   const supabase = await createClient();
   const [platformTermsAccepted, customerTermsAccepted, providerTermsAccepted] =
-    profile.role === "admin"
+    isAdmin
       ? [true, true, true]
       : await Promise.all([
           hasAcceptedCurrentLegalDocument(supabase, {
@@ -125,152 +109,15 @@ export default async function AccountPage({
             : Promise.resolve(false),
         ]);
 
-  return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
-      <PageHeader
-        title="Account settings"
-        description={
-          providerProfile
-            ? "Your storefront, availability, pricing (the source of truth), and account."
-            : "Manage your profile, password, and account."
-        }
-      />
+  // Badge counts need offerings + windows regardless of which tab is open, so
+  // they're fetched once here and handed to both the rail and the panel that
+  // uses them. Only the live service catalog is deferred to its own panel.
+  let offerings: Offering[] = [];
+  let windows: AvailabilityWindow[] = [];
+  let readiness = emptySettingsReadiness();
 
-      {providerProfile ? (
-        <ProviderStorefront
-          providerProfile={providerProfile}
-          stripeConnected={stripe === "connected"}
-          stripeIncomplete={stripe === "incomplete"}
-          providerTermsAccepted={providerTermsAccepted}
-        />
-      ) : null}
-
-      <Section
-        title="Agreements"
-        description={
-          profile.role === "admin"
-            ? "Founder accounts are exempt from marketplace user agreements."
-            : "Your current account and action-specific legal status."
-        }
-      >
-        <div className="space-y-3 text-sm">
-          {[
-            {
-              label: "Platform Terms",
-              version: PLATFORM_TERMS_VERSION,
-              accepted: platformTermsAccepted,
-              href: "/legal#platform-terms",
-              acceptHref: legalDocumentPath("platform_terms", "/account"),
-            },
-            {
-              label: "Customer Booking Terms",
-              version: CUSTOMER_BOOKING_TERMS_VERSION,
-              accepted: customerTermsAccepted,
-              href: "/legal#customer-booking-terms",
-              acceptHref: legalDocumentPath(
-                "customer_booking_terms",
-                "/account",
-              ),
-            },
-            ...(providerProfile
-              ? [
-                  {
-                    label: "Provider Terms",
-                    version: PROVIDER_TERMS_VERSION,
-                    accepted: providerTermsAccepted,
-                    href: "/legal#provider-terms",
-                    acceptHref: legalDocumentPath("provider_terms", "/account"),
-                  },
-                ]
-              : []),
-          ].map((agreement) => (
-            <div
-              key={agreement.label}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line p-3"
-            >
-              <div>
-                <p className="font-medium">{agreement.label}</p>
-                <p className="text-xs text-mist">Version {agreement.version}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge tone={agreement.accepted ? "green" : "gold"}>
-                  {profile.role === "admin"
-                    ? "Exempt"
-                    : agreement.accepted
-                      ? "Accepted"
-                      : "Required when used"}
-                </Badge>
-                {agreement.accepted || profile.role === "admin" ? (
-                  <Link
-                    href={agreement.href}
-                    className={buttonClasses({ size: "sm", variant: "ghost" })}
-                  >
-                    View
-                  </Link>
-                ) : (
-                  <Link
-                    href={agreement.acceptHref}
-                    className={buttonClasses({ size: "sm" })}
-                  >
-                    Review &amp; accept
-                  </Link>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section
-        title="Personal details"
-        description="Your name and address. Address helps us match you with nearby neighbors."
-      >
-        <dl className="mb-5 text-sm">
-          <div className="flex justify-between gap-4 border-b border-line py-2.5">
-            <dt className="text-mist">Email</dt>
-            <dd className="font-medium">{user.email}</dd>
-          </div>
-        </dl>
-        <AccountProfileForm profile={profile} />
-      </Section>
-
-      <Section title="Security" description="Change your password.">
-        <AccountPasswordForm />
-      </Section>
-
-      <Section
-        title="Delete account"
-        description="Permanently remove your account and all associated data. This can't be undone."
-      >
-        <Link
-          href="/account/delete"
-          className={buttonClasses({ variant: "danger", size: "sm" })}
-        >
-          Delete my account
-        </Link>
-      </Section>
-    </div>
-  );
-}
-
-/**
- * Provider storefront sections (public profile, availability, pricing, payouts)
- * rendered above the personal/account controls on the unified /account page.
- */
-async function ProviderStorefront({
-  providerProfile,
-  stripeConnected,
-  stripeIncomplete,
-  providerTermsAccepted,
-}: {
-  providerProfile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
-  stripeConnected: boolean;
-  stripeIncomplete: boolean;
-  providerTermsAccepted: boolean;
-}) {
-  const supabase = await createClient();
-  const [services, { data: offerings }, windows] = await Promise.all([
-      getLiveServices(),
+  if (providerProfile) {
+    const [{ data }, providerWindows] = await Promise.all([
       supabase
         .from("provider_services")
         .select(
@@ -279,265 +126,215 @@ async function ProviderStorefront({
         .eq("provider_id", providerProfile.id),
       getProviderAvailabilityWindows(providerProfile.id),
     ]);
-  const readinessOfferings = (offerings ?? []).map((offering) => ({
-    id: offering.id,
-    name: offering.service?.name ?? "Retired service",
-    hourly_rate_cents: offering.hourly_rate_cents,
-    pricing_mode: (offering.pricing_mode === "quote" ? "quote" : "hourly") as
-      | "quote"
-      | "hourly",
-    average_quote_cents: offering.average_quote_cents,
-    service_slug: offering.service?.slug ?? "",
-    service_is_live: offering.service?.is_live === true,
-  }));
 
-  const payoutsActive = providerProfile.stripe_transfers_active;
+    const rows = data ?? [];
+    offerings = rows;
+    windows = providerWindows;
+    readiness = getSettingsReadiness({
+      profile: providerProfile,
+      offerings: rows.map((offering) => ({
+        id: offering.id,
+        name: offering.service?.name ?? "Retired service",
+        hourly_rate_cents: offering.hourly_rate_cents,
+        pricing_mode: offering.pricing_mode === "quote" ? "quote" : "hourly",
+        average_quote_cents: offering.average_quote_cents,
+        service_slug: offering.service?.slug ?? "",
+        service_is_live: offering.service?.is_live === true,
+      })),
+      windows,
+      providerTermsAccepted,
+    });
+  }
+
+  const tabs = visibleSettingsTabs(isProvider);
+  // A Stripe round-trip lands on Payouts so its result banner is actually seen.
+  const stripeReturn = stripe === "connected" || stripe === "incomplete";
+  const activeTab = resolveSettingsTab(
+    stripeReturn && isProvider ? "payouts" : tab,
+    tabs,
+  );
 
   return (
-    <>
-      {stripeConnected ? (
-        <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-          Stripe onboarding finished. Payouts will land in your bank account.
-        </div>
+    <SettingsLayout
+      description={
+        isProvider
+          ? "Your storefront, availability, pricing (the source of truth), and account."
+          : "Manage your profile, password, and account."
+      }
+      nav={
+        <SettingsNav activeTab={activeTab} tabs={tabs} readiness={readiness} />
+      }
+    >
+      {providerProfile && activeTab === "storefront" ? (
+        <StorefrontPanel providerProfile={providerProfile} />
       ) : null}
-      {stripeIncomplete ? (
-        <div className="rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
-          Stripe still needs information before payouts can turn on. Resume
-          onboarding below after reviewing any Stripe requirements.
-        </div>
+
+      {providerProfile && activeTab === "availability" ? (
+        <AvailabilityPanel
+          providerProfile={providerProfile}
+          windows={windows}
+          issues={readiness.availability}
+        />
       ) : null}
 
-      <ProviderReadinessChecklist
-        profile={providerProfile}
-        offerings={readinessOfferings}
-        windows={windows}
-        legalAcceptance={{
-          ready: providerTermsAccepted,
-          version: PROVIDER_TERMS_VERSION,
-        }}
-        acceptHref={legalDocumentPath("provider_terms", "/account")}
-      />
+      {providerProfile && activeTab === "pricing" ? (
+        <PricingPanel offerings={offerings} issues={readiness.pricing} />
+      ) : null}
 
-      <Section
-        title="Profile photo"
-        description="Your public headshot on Browse and your profile. Required to stay visible to neighbors."
-      >
-        <AvatarUploadForm
-          userId={providerProfile.user_id}
-          imageUrl={providerAvatarUrl(providerProfile.avatar_image_path)}
-          focalX={providerProfile.avatar_focal_x}
-          focalY={providerProfile.avatar_focal_y}
+      {providerProfile && activeTab === "payouts" ? (
+        <PayoutsPanel
+          providerProfile={providerProfile}
+          issues={readiness.payouts}
+          stripeConnected={stripe === "connected"}
+          stripeIncomplete={stripe === "incomplete"}
         />
-      </Section>
+      ) : null}
 
-      <Section
-        title="Profile banner"
-        description="The wide banner behind your headshot on Browse and your profile. Pick a theme or upload your own photo."
-      >
-        <BannerUploadForm
-          userId={providerProfile.user_id}
-          imagePath={providerProfile.banner_image_path}
-          activeStyle={toBannerStyle(providerProfile.banner_style)}
-          focalX={providerProfile.banner_focal_x}
-          focalY={providerProfile.banner_focal_y}
+      {activeTab === "account" ? (
+        <AccountPanel profile={profile} email={user.email ?? ""} />
+      ) : null}
+
+      {activeTab === "legal" ? (
+        <LegalPanel
+          isAdmin={isAdmin}
+          isProvider={isProvider}
+          platformTermsAccepted={platformTermsAccepted}
+          customerTermsAccepted={customerTermsAccepted}
+          providerTermsAccepted={providerTermsAccepted}
+          issues={readiness.legal}
         />
-      </Section>
+      ) : null}
 
-      <Section
-        title="Public profile"
-        description="What neighbors see on Browse and your profile page."
-      >
-        <ProviderProfileForm profile={providerProfile} />
-      </Section>
-
-      <Section
-        title="Availability"
-        description="Set Central Time hours per day. Group days that share the same hours, plus private matching details."
-      >
-        <ProviderAvailabilityForm
-          values={{ ...providerProfile, windows }}
-          action={updateAvailability}
-          submitLabel="Save availability"
-        />
-      </Section>
-
-      <Section
-        title="Services & pricing"
-        description="The source of truth: your public profile and the Jobs page both read from here."
-      >
-        <ServicesPricingForm
-          services={services}
-          offerings={offerings ?? []}
-          action={saveSettingsPricing}
-          submitLabel="Save pricing"
-        />
-      </Section>
-
-      <Section title="Payouts">
-        {providerProfile.verification_status !== "approved" ? (
-          <p className="text-sm text-ink-soft">
-            Stripe unlocks after your ID is approved. Hang tight.
-          </p>
-        ) : providerProfile.stripe_account_id && payoutsActive ? (
-          <div className="flex items-center gap-3">
-            <Badge tone="green">✓ Payouts active</Badge>
-            <span className="text-xs text-mist">
-              Account {providerProfile.stripe_account_id.slice(0, 8)}…
-            </span>
-          </div>
-        ) : providerProfile.stripe_account_id ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge tone="gold">Finish Stripe setup</Badge>
-            <form action={connectStripe}>
-              <FormLoader />
-              <Button type="submit" size="sm" variant="secondary">
-                Resume onboarding
-              </Button>
-            </form>
-            <form action={refreshStripeReadiness}>
-              <Button type="submit" size="sm" variant="ghost">
-                Refresh status
-              </Button>
-            </form>
-            <span className="text-xs text-mist">
-              A few details are still needed before payouts turn on.
-            </span>
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center gap-3">
-            <form action={connectStripe}>
-              <FormLoader />
-              <Button type="submit" size="sm">
-                Connect Stripe
-              </Button>
-            </form>
-            <span className="text-xs text-mist">
-              Hosted by Stripe; we never see your bank details.
-            </span>
-          </div>
-        )}
-      </Section>
-    </>
+      {activeTab === "delete" ? <DeletePanel /> : null}
+    </SettingsLayout>
   );
 }
 
-function ProviderAccountDemo() {
+/**
+ * Admin "view as provider" preview. Same rail, sample data, every control
+ * inert — and no Legal/Delete tabs, since those would act on the admin's own
+ * account rather than the sample one.
+ */
+function ProviderAccountDemo({ tab }: { tab?: string }) {
+  const tabs = visibleSettingsTabs(true, ["legal", "delete"]);
+  const activeTab: SettingsTabId = resolveSettingsTab(tab, tabs);
   const availabilityGroups = groupAvailabilityWindows(demoAvailabilityWindows);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
-      <PageHeader
-        title="Account settings"
-        description="Your storefront, availability, pricing (the source of truth), and account."
-      />
+    <SettingsLayout
+      description="Your storefront, availability, pricing (the source of truth), and account."
+      nav={
+        <SettingsNav
+          activeTab={activeTab}
+          tabs={tabs}
+          readiness={emptySettingsReadiness()}
+        />
+      }
+    >
       <SamplePreviewBanner role="provider" />
 
-      <ProviderReadinessChecklist
-        profile={demoProviderProfile}
-        offerings={demoOfferings.map((offering) => ({
-          id: offering.id,
-          name: offering.service.name,
-          hourly_rate_cents: offering.hourly_rate_cents,
-          pricing_mode: offering.pricing_mode,
-          average_quote_cents: offering.average_quote_cents,
-          service_slug: offering.service.slug,
-          service_is_live: offering.service.is_live,
-        }))}
-        windows={demoAvailabilityWindows}
-      />
+      {activeTab === "storefront" ? (
+        <Section
+          title="Public profile"
+          description="What neighbors see on Browse and your profile page."
+        >
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-mist">Display name</dt>
+              <dd className="font-medium">{demoProviderProfile.display_name}</dd>
+            </div>
+            <div>
+              <dt className="text-mist">Provider type</dt>
+              <dd className="font-medium">Student business</dd>
+            </div>
+            <div>
+              <dt className="text-mist">Neighborhood</dt>
+              <dd className="font-medium">{demoProviderProfile.neighborhood}</dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-mist">Bio</dt>
+              <dd className="font-medium">{demoProviderProfile.bio}</dd>
+            </div>
+          </dl>
+        </Section>
+      ) : null}
 
-      <Section
-        title="Public profile"
-        description="What neighbors see on Browse and your profile page."
-      >
-        <dl className="grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-mist">Display name</dt>
-            <dd className="font-medium">{demoProviderProfile.display_name}</dd>
-          </div>
-          <div>
-            <dt className="text-mist">Provider type</dt>
-            <dd className="font-medium">Student business</dd>
-          </div>
-          <div>
-            <dt className="text-mist">Neighborhood</dt>
-            <dd className="font-medium">{demoProviderProfile.neighborhood}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-mist">Bio</dt>
-            <dd className="font-medium">{demoProviderProfile.bio}</dd>
-          </div>
-        </dl>
-      </Section>
-
-      <Section
-        title="Availability"
-        description="Shown on your public profile so customers request times that work."
-      >
-        {availabilityGroups.map((group) => (
-          <p key={`${group.start}-${group.end}`} className="font-medium">
-            {formatAvailabilityDays(group.weekdays)} ·{" "}
-            {formatAvailabilityWindow(group.start, group.end)}
+      {activeTab === "availability" ? (
+        <Section
+          title="Availability"
+          description="Shown on your public profile so customers request times that work."
+        >
+          {availabilityGroups.map((group) => (
+            <p key={`${group.start}-${group.end}`} className="font-medium">
+              {formatAvailabilityDays(group.weekdays)} ·{" "}
+              {formatAvailabilityWindow(group.start, group.end)}
+            </p>
+          ))}
+          <p className="mt-3 text-sm text-ink-soft">
+            {demoProviderProfile.availability_note}
           </p>
-        ))}
-        <p className="mt-3 text-sm text-ink-soft">
-          {demoProviderProfile.availability_note}
-        </p>
-        <p className="mt-2 text-xs text-mist">
-          {demoProviderProfile.minimum_notice_hours} hours minimum notice ·
-          service ZIP stays private
-        </p>
-      </Section>
+          <p className="mt-2 text-xs text-mist">
+            {demoProviderProfile.minimum_notice_hours} hours minimum notice ·
+            service ZIP stays private
+          </p>
+        </Section>
+      ) : null}
 
-      <Section
-        title="Services & pricing"
-        description="The source of truth: your public profile and the Jobs page both read from here."
-      >
-        <ul className="space-y-3">
-          {demoServices.map((service) => {
-            const offered = demoOfferings.find(
-              (offering) => offering.service_id === service.id,
-            );
-            return (
-              <li
-                key={service.id}
-                className="flex items-center justify-between rounded-lg border border-line bg-paper p-4 text-sm"
-              >
-                <span className="font-semibold">{service.name}</span>
-                <span className="font-semibold text-quad-700">
-                  {offered ? formatOfferedPrice(offered) : "Not offered"}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-        <Button type="button" size="lg" className="mt-4" disabled>
-          Save pricing
-        </Button>
-      </Section>
-
-      <Section title="Payouts">
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="button" size="sm" disabled>
-            Connect Stripe
+      {activeTab === "pricing" ? (
+        <Section
+          title="Services & pricing"
+          description="The source of truth: your public profile and the Jobs page both read from here."
+        >
+          <ul className="space-y-3">
+            {demoServices.map((service) => {
+              const offered = demoOfferings.find(
+                (offering) => offering.service_id === service.id,
+              );
+              return (
+                <li
+                  key={service.id}
+                  className="flex items-center justify-between rounded-lg border border-line bg-paper p-4 text-sm"
+                >
+                  <span className="font-semibold">{service.name}</span>
+                  <span className="font-semibold text-quad-700">
+                    {offered ? formatOfferedPrice(offered) : "Not offered"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <Button type="button" size="lg" className="mt-4" disabled>
+            Save pricing
           </Button>
-          <span className="text-xs text-mist">
-            Disabled in sample mode; real providers connect after approval.
-          </span>
-        </div>
-      </Section>
+        </Section>
+      ) : null}
 
-      <Section title="Personal details">
-        <dl className="mb-5 text-sm">
-          <div className="flex justify-between gap-4 border-b border-line py-2.5">
-            <dt className="text-mist">Email</dt>
-            <dd className="font-medium">avery.student@example.edu</dd>
+      {activeTab === "payouts" ? (
+        <Section title="Payouts">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" size="sm" disabled>
+              Connect Stripe
+            </Button>
+            <span className="text-xs text-mist">
+              Disabled in sample mode; real providers connect after approval.
+            </span>
           </div>
-        </dl>
-        <Button type="button" size="sm" disabled>
-          Update password
-        </Button>
-      </Section>
-    </div>
+        </Section>
+      ) : null}
+
+      {activeTab === "account" ? (
+        <Section title="Personal details">
+          <dl className="mb-5 text-sm">
+            <div className="flex justify-between gap-4 border-b border-line py-2.5">
+              <dt className="text-mist">Email</dt>
+              <dd className="font-medium">avery.student@example.edu</dd>
+            </div>
+          </dl>
+          <Button type="button" size="sm" disabled>
+            Update password
+          </Button>
+        </Section>
+      ) : null}
+    </SettingsLayout>
   );
 }
