@@ -10,7 +10,7 @@ function brandfetchLogoUrl(domain: string | null) {
   if (!domain || !clientId) return null;
   return `https://cdn.brandfetch.io/domain/${encodeURIComponent(
     domain,
-  )}/w/64/h/64/icon.png?c=${encodeURIComponent(clientId)}`;
+  )}/w/64/h/64/symbol.png?c=${encodeURIComponent(clientId)}`;
 }
 
 /** Recognized-school logo + name, with a deterministic icon fallback. */
@@ -38,7 +38,7 @@ export function SchoolIdentity({
     <div className={cn("flex min-w-0 items-center gap-2.5", className)}>
       <span
         className={cn(
-          "flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-paper text-viridian",
+          "flex shrink-0 items-center justify-center overflow-hidden text-viridian",
           iconSize,
         )}
       >
