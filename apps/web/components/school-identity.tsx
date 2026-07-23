@@ -69,7 +69,7 @@ export function SchoolIdentity({
         </span>
         {greekOrganization?.trim() ? (
           <span className="block truncate text-[11px] text-mist">
-            Greek life · {greekOrganization}
+            {compact ? greekOrganization : `Greek life · ${greekOrganization}`}
           </span>
         ) : null}
       </span>

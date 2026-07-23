@@ -106,15 +106,14 @@ export function ProviderCard({
                 }}
               />
             ) : null}
-            {/* Name on its own line; the verified check + rating sit on a
-                consistent second row so a long name can't push the rating to
-                wrap only on some cards. */}
             <div className="flex flex-col gap-1">
-              <h3 className="font-display text-xl font-semibold">
-                {provider.company_name || provider.display_name || "Student provider"}
-              </h3>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <h3 className="min-w-0 font-display text-xl font-semibold">
+                  {provider.company_name || provider.display_name || "Student provider"}
+                </h3>
                 <VerifiedCheck />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 <Rating rating={provider.rating} />
               </div>
             </div>
@@ -127,7 +126,7 @@ export function ProviderCard({
             />
 
             <div className="flex flex-wrap items-center gap-3">
-              <Badge tone={provider.provider_type === "business" ? "blue" : "gray"}>
+              <Badge tone={provider.provider_type === "business" ? "blue" : "green"}>
                 {provider.provider_type === "business"
                   ? "Student business"
                   : "Hardworking individual"}
