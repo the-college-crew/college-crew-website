@@ -21,8 +21,11 @@ import { cn } from "@/lib/utils";
  * promoted out of the account menu and in beside Browse; the public links stay
  * grouped at the end. Admins keep the plain three — they can't book, and their
  * own surfaces live in the admin header.
+ *
+ * Exported because the shared-surface layout (account, messaging, legal)
+ * renders the same links in its own slimmer bar.
  */
-function navFor({
+export function navFor({
   isMember,
   providerCapable,
 }: {
@@ -42,6 +45,16 @@ function navFor({
     { href: "/about", label: "About" },
     { href: "/blog", label: "Blog" },
   ];
+}
+
+/**
+ * Width at which a given nav can sit beside the wordmark. The personal links
+ * push the bar past what fits between ~640px and ~870px, so a nav carrying
+ * them stays in the hamburger until lg; the public three-item nav still opens
+ * up at sm.
+ */
+export function navBreakpoint(nav: readonly unknown[]): "sm" | "lg" {
+  return nav.length > 3 ? "lg" : "sm";
 }
 
 /**
@@ -85,10 +98,7 @@ export async function SiteHeader() {
     isMember: Boolean(session) && session?.profile.role !== "admin",
     providerCapable,
   });
-  // The personal links push the bar past what fits beside the wordmark
-  // between ~640px and ~870px, so they stay in the hamburger until lg. The
-  // public three-item nav is unaffected and still opens up at sm.
-  const compact = nav.length > 3;
+  const breakpoint = navBreakpoint(nav);
 
   return (
     <header className="sticky top-0 z-40 border-b-[1.5px] border-viridian/15 bg-shell text-viridian">
@@ -98,7 +108,7 @@ export async function SiteHeader() {
             nav={nav}
             isAuthed={Boolean(session)}
             tone="light"
-            breakpoint={compact ? "lg" : "sm"}
+            breakpoint={breakpoint}
           />
           <Wordmark />
         </div>
@@ -107,7 +117,7 @@ export async function SiteHeader() {
           aria-label="Main"
           className={cn(
             "hidden flex-1 items-center justify-center gap-7 text-base font-semibold",
-            compact ? "lg:flex" : "sm:flex",
+            breakpoint === "lg" ? "lg:flex" : "sm:flex",
           )}
         >
           <NavLinks nav={nav} />
