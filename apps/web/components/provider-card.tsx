@@ -100,7 +100,7 @@ export function ProviderCard({
               <img
                 src={avatarUrl}
                 alt=""
-                className="-mt-12 relative z-10 h-16 w-16 rounded-full border-4 border-paper object-cover shadow-sm"
+                className="-mt-12 relative z-10 h-32 w-32 rounded-full border-4 border-paper object-cover shadow-sm"
                 style={{
                   objectPosition: `${provider.avatar_focal_x}% ${provider.avatar_focal_y}%`,
                 }}
