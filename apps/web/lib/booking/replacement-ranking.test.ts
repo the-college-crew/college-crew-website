@@ -52,6 +52,21 @@ describe("pickSuggestions", () => {
     expect(picked[0].suggestedStartAt).toBeNull();
   });
 
+  it("offers only exact-time matches for a fixed-time job", () => {
+    // A "this time only" booking gets an empty timeShift tier from the RPC, so
+    // the shortlist must never fall back to moving the job.
+    const picked = pickSuggestions(
+      {
+        exact: [suggestion({ providerId: "a" }), suggestion({ providerId: "b" })],
+        timeShift: [],
+      },
+      ORIGINAL,
+    );
+
+    expect(picked).toHaveLength(2);
+    expect(picked.every((row) => row.suggestedStartAt === null)).toBe(true);
+  });
+
   it("caps the shortlist at three", () => {
     const picked = pickSuggestions(
       {

@@ -142,8 +142,9 @@ export function ReplacementForm({
               Available at a different time
             </h2>
             <p className="mt-0.5 text-xs text-mist">
-              You asked for {formatDateTime(originalStartAt)}. Picking one of
-              these moves the job to their time.
+              You asked for {formatDateTime(originalStartAt)} and said a
+              different time was okay. Picking one of these moves the job to
+              their time.
             </p>
           </div>
           {timeShift.map((candidate) => (

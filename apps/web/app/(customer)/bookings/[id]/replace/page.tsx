@@ -44,7 +44,8 @@ export default async function ReplacementPage({
     .from("bookings")
     .select(
       `id, booking_flow, status, scheduled_at, response_alert_at,
-       cancelled_by_role, estimated_minutes, service:services(name, slug)`,
+       cancelled_by_role, estimated_minutes, time_flexibility,
+       service:services(name, slug)`,
     )
     .eq("id", id)
     .eq("customer_id", session.user.id)
@@ -69,6 +70,10 @@ export default async function ReplacementPage({
   const replacementAvailable =
     (timedOut || booking.status === "declined" || providerCancelled) &&
     now < new Date(booking.scheduled_at);
+
+  // "This time only" — the suggestion RPC returns no time-shifted options for
+  // these, so the empty state must explain why rather than imply scarcity.
+  const fixedTime = booking.time_flexibility === "fixed";
 
   const pool = replacementAvailable
     ? await getReplacementPool(supabase, {
@@ -103,9 +108,30 @@ export default async function ReplacementPage({
             : "This request can’t be replaced right now."}
         </Card>
       ) : candidates.length === 0 ? (
-        <Card className="p-6 text-sm text-ink-soft">
-          {pool.error ??
-            "No other ready student currently fits this service — at your time or nearby. Try browsing the crew for a different day."}
+        <Card className="space-y-2 p-6 text-sm text-ink-soft">
+          {pool.error ? (
+            <p>{pool.error}</p>
+          ) : fixedTime ? (
+            // They asked for this time only, so we never offered anyone at a
+            // different one. Say that plainly rather than implying nobody
+            // exists — booking a new time is still open to them.
+            <>
+              <p>
+                No other ready student is free at{" "}
+                {formatDateTime(booking.scheduled_at)}.
+              </p>
+              <p>
+                You asked for this time only, so we haven&apos;t suggested
+                students who&apos;d need to move it. Browse the crew to book a
+                different time.
+              </p>
+            </>
+          ) : (
+            <p>
+              No other ready student currently fits this service — at your time
+              or nearby. Try browsing the crew for a different day.
+            </p>
+          )}
         </Card>
       ) : (
         <ReplacementForm

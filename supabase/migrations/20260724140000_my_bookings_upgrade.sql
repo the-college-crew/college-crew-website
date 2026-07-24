@@ -174,6 +174,12 @@ $function$;
 -- rate band, honors the provider's own minimum notice, no reserved-slot
 -- conflict). Only the slot search differs. Providers who CAN make the original
 -- time are excluded — they belong to tier 1.
+--
+-- Suppressed entirely when the customer chose 'fixed' ("this time only"). They
+-- said the time is the constraint, so offering students who can't make it is
+-- noise — the answer for them is a different student at their time, or nothing.
+-- Gating here rather than in the UI means the dashboard, the replacement page,
+-- and the server-side `at` validation all inherit the rule from one place.
 create or replace function public.hourly_replacement_time_shift_ids(p_booking_id uuid)
  returns table(
    provider_service_id uuid,
@@ -216,6 +222,11 @@ begin
     raise exception 'REPLACEMENT_NOT_AVAILABLE_YET';
   end if;
   if v_booking.estimated_minutes is null then
+    return;
+  end if;
+  -- "This time only": the customer ruled out a different time up front, so a
+  -- student who can't make their slot is not a suggestion worth showing.
+  if v_booking.time_flexibility = 'fixed' then
     return;
   end if;
 
