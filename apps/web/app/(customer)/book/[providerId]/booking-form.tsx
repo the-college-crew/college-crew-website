@@ -246,39 +246,37 @@ export function BookingRequestForm({
       ) : (
         <fieldset>
           <legend className="mb-2 block text-sm font-medium text-ink">
-            If your student can&apos;t make it
+            If your student is busy at that exact time
           </legend>
           <div className="space-y-2">
             <label className="flex gap-3 rounded-xl border border-line bg-court p-3 text-sm text-ink-soft">
               <input
                 type="radio"
-                name="onDeclinePreference"
-                value="keep_control"
+                name="timeFlexibility"
+                value="flexible"
                 defaultChecked
                 className="mt-1 h-4 w-4 border-line"
               />
               <span>
                 <span className="font-medium text-ink">
-                  Let me choose a replacement
+                  They can suggest a different time
                 </span>
                 <br />
-                We free your hold and show other available students to pick from.
+                You decide whether to take it. Nothing is charged while you
+                decide, and your hold stays put.
               </span>
             </label>
             <label className="flex gap-3 rounded-xl border border-line bg-court p-3 text-sm text-ink-soft">
               <input
                 type="radio"
-                name="onDeclinePreference"
-                value="auto_rematch"
+                name="timeFlexibility"
+                value="fixed"
                 className="mt-1 h-4 w-4 border-line"
               />
               <span>
-                <span className="font-medium text-ink">
-                  Suggest the best match automatically
-                </span>
+                <span className="font-medium text-ink">This time only</span>
                 <br />
-                We free your hold and surface the top available student to
-                re-book in one step.
+                They can accept or decline the time you picked, nothing else.
               </span>
             </label>
           </div>

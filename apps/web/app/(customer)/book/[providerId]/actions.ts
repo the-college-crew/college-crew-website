@@ -131,14 +131,15 @@ export type AuthorizeState = {
   paymentIntentId?: string;
 };
 
-const DECLINE_PREFERENCES = ["auto_rematch", "keep_control"] as const;
+const TIME_FLEXIBILITY = ["flexible", "fixed"] as const;
 
 const authorizeSchema = z.object({
   providerServiceId: z.string().uuid("Pick a service."),
   scheduledLocal: z.string().min(1, "Pick a date and time."),
   estimatedMinutes: z.coerce.number().int(),
   details: z.string().trim().max(2000).optional().default(""),
-  onDeclinePreference: z.enum(DECLINE_PREFERENCES).default("keep_control"),
+  /** Whether the student may counter with a different time. */
+  timeFlexibility: z.enum(TIME_FLEXIBILITY).default("flexible"),
 });
 
 export async function startBookingAuthorization(
@@ -163,7 +164,7 @@ export async function startBookingAuthorization(
     scheduledLocal: formData.get("scheduledLocal"),
     estimatedMinutes: formData.get("estimatedMinutes"),
     details: formData.get("details"),
-    onDeclinePreference: formData.get("onDeclinePreference"),
+    timeFlexibility: formData.get("timeFlexibility"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
@@ -252,7 +253,10 @@ export async function startBookingAuthorization(
     p_service_city: origin.town,
     p_latitude: origin.latitude ?? undefined,
     p_longitude: origin.longitude ?? undefined,
-    p_on_decline_preference: parsed.data.onDeclinePreference,
+    // Retired as a customer-facing choice (no auto-matching); the column stays
+    // for existing rows, so pass the neutral value.
+    p_on_decline_preference: "keep_control",
+    p_time_flexibility: parsed.data.timeFlexibility,
     p_hourly_rate_cents: rate,
     p_stripe_payment_intent_id: intent.paymentIntentId,
     p_stripe_customer_id: stripeCustomer.stripeCustomerId,

@@ -13,6 +13,7 @@ import {
   captureFirstHourHold,
   releaseFirstHourHold,
 } from "@/lib/booking/first-hour-hold";
+import { pilotLocalDateTimeToUtc } from "@/lib/booking/policy";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import type { BookingStatus } from "@/lib/db/types";
 import {
@@ -146,6 +147,51 @@ export async function acceptBooking(
   revalidatePath("/provider/dashboard");
   revalidatePath("/provider/jobs");
   redirect(`/messages/${conversationId}`);
+}
+
+/**
+ * Suggest a different start time instead of accepting or declining. Only offered
+ * when the customer chose "they can suggest a different time" — the RPC enforces
+ * that, re-validates availability/notice/conflicts at the proposed slot, and
+ * emails the customer. The booking's rate snapshot and its first-hour hold are
+ * untouched: a counter moves the time only, and the provider does not change, so
+ * the existing hold stays valid and is captured if the customer accepts.
+ */
+const counterSchema = z.object({
+  bookingId: z.string().uuid(),
+  proposedLocal: z.string().min(1, "Pick the time you can do."),
+  note: z.string().trim().max(500).optional().default(""),
+});
+
+export async function counterBooking(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireProviderAccess();
+  const parsed = counterSchema.safeParse({
+    bookingId: formData.get("bookingId"),
+    proposedLocal: formData.get("proposedLocal"),
+    note: formData.get("note"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const proposed = pilotLocalDateTimeToUtc(parsed.data.proposedLocal);
+  if (!proposed.ok) return { error: "Pick a valid date and time." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("counter_hourly_booking_request", {
+    p_booking_id: parsed.data.bookingId,
+    p_proposed_start_at: proposed.date.toISOString(),
+    p_note: parsed.data.note,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not suggest a new time."),
+    };
+  }
+
+  revalidatePath("/provider/dashboard");
+  return {};
 }
 
 /**

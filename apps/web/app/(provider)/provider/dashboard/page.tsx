@@ -54,6 +54,7 @@ type ProviderBookingRow = {
   id: string;
   booking_flow: BookingFlow;
   status: BookingStatus;
+  time_flexibility: "flexible" | "fixed" | null;
   scheduled_at: string;
   address: string;
   service_city: string;
@@ -154,6 +155,7 @@ export default async function ProviderDashboardPage({
       .from("bookings")
       .select(
         `id, booking_flow, status, scheduled_at, address, service_city,
+         time_flexibility,
          latitude, longitude, details, price_cents,
          platform_fee_cents, estimated_minutes, hourly_rate_cents_snapshot,
          average_quote_cents_snapshot,
@@ -601,6 +603,7 @@ function ProviderDashboardView({
                         whenLabel: formatDateTime(booking.scheduled_at),
                         address: booking.address,
                         bookingFlow: booking.booking_flow,
+                        timeFlexibility: booking.time_flexibility ?? "fixed",
                       }}
                     />
                   )}

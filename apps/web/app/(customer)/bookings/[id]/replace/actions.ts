@@ -68,7 +68,7 @@ export async function startReplacementAuthorization(
     .select(
       `id, provider_id, status, scheduled_at, response_alert_at, estimated_minutes,
        details, address, job_zip, address_kind, service_city, latitude, longitude,
-       on_decline_preference`,
+       on_decline_preference, time_flexibility`,
     )
     .eq("id", parsed.data.originalBookingId)
     .eq("customer_id", session.user.id)
@@ -163,6 +163,8 @@ export async function startReplacementAuthorization(
     p_latitude: original.latitude ?? undefined,
     p_longitude: original.longitude ?? undefined,
     p_on_decline_preference: original.on_decline_preference,
+    // Carry the customer's original "may they suggest another time?" choice.
+    p_time_flexibility: original.time_flexibility,
     p_hourly_rate_cents: rate,
     p_stripe_payment_intent_id: intent.paymentIntentId,
     p_stripe_customer_id: stripeCustomer.stripeCustomerId,

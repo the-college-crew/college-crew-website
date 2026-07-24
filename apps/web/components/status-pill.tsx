@@ -10,6 +10,10 @@ const config: Record<BookingStatus, { label: string; classes: string }> = {
     label: "Requested",
     classes: "border-honeydew bg-honeydew text-viridian",
   },
+  countered: {
+    label: "New time suggested",
+    classes: "border-amber-200 bg-amber-50 text-amber-900",
+  },
   accepted: {
     label: "Accepted, awaiting payment",
     classes: "border-sky bg-sky text-viridian",
