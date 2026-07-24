@@ -70,13 +70,37 @@ export async function cancelBooking(
   return {};
 }
 
-/** Hide a declined request from this customer's dashboard without deleting it. */
-export async function dismissDeclinedBooking(formData: FormData) {
+/**
+ * Clear a resolved booking (declined, cancelled, expired, withdrawn) out of
+ * "Needs attention". The row is not deleted — it stays under Past, because a
+ * cancellation may have a refund attached that the customer needs to find.
+ */
+export async function dismissBooking(formData: FormData) {
   await requireRole("customer", "/dashboard");
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("dismiss_booking", {
+    p_booking_id: bookingId,
+  });
+  if (error) {
+    throw new Error(requestOperationMessage(error));
+  }
+
+  revalidatePath("/dashboard");
+}
+
+/**
+ * Stop asking for a review on this job. Deliberately separate from
+ * `dismissBooking`: skipping a review must not hide the completed job itself,
+ * and the customer can still review it later from the Past tab.
+ */
+export async function dismissReviewPrompt(formData: FormData) {
+  await requireRole("customer", "/dashboard");
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("dismiss_review_prompt", {
     p_booking_id: bookingId,
   });
   if (error) {

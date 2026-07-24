@@ -6,13 +6,29 @@ import { Button } from "@/components/ui/button";
 import { FieldError, Textarea } from "@/components/ui/field";
 import { submitReview, type ReviewFormState } from "./actions";
 
-/** Persistent inline review prompt for an eligible completed booking. */
-export function ReviewForm({ bookingId }: { bookingId: string }) {
+/**
+ * Inline review prompt for a completed booking.
+ *
+ * Collapsed by default: four expanded forms stacked on the dashboard buried
+ * everything else on the page. Picking a star is the entry point — it both
+ * records the rating and reveals the optional written note, so the common case
+ * (rate and go) is one tap and two clicks.
+ */
+export function ReviewForm({
+  bookingId,
+  collapsible = false,
+}: {
+  bookingId: string;
+  /** Start collapsed and expand on first interaction. */
+  collapsible?: boolean;
+}) {
   const [state, formAction, pending] = useActionState<
     ReviewFormState,
     FormData
   >(submitReview, {});
   const [rating, setRating] = useState(0);
+  const [expanded, setExpanded] = useState(!collapsible);
+  const showDetails = expanded || rating > 0;
 
   return (
     <form action={formAction} className="space-y-3">
@@ -30,7 +46,10 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
                 name="rating"
                 value={value}
                 checked={rating === value}
-                onChange={() => setRating(value)}
+                onChange={() => {
+                  setRating(value);
+                  setExpanded(true);
+                }}
                 aria-label={`${value} star${value === 1 ? "" : "s"}`}
                 className="peer sr-only"
                 required
@@ -48,30 +67,38 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
             </label>
           ))}
           <span className="ml-2 text-xs text-mist">
-            {rating ? `${rating} out of 5` : "Choose 1-5 stars"}
+            {rating ? `${rating} out of 5` : "Tap a star to review"}
           </span>
         </div>
       </fieldset>
 
-      <Textarea
-        name="text"
-        rows={2}
-        maxLength={2000}
-        aria-label="Written review (optional)"
-        placeholder="A sentence or two helps the next neighbor…"
-      />
-      <p className="text-xs text-mist">Written review optional · 2,000 characters maximum</p>
+      {showDetails ? (
+        <>
+          <Textarea
+            name="text"
+            rows={2}
+            maxLength={2000}
+            aria-label="Written review (optional)"
+            placeholder="A sentence or two helps the next neighbor…"
+          />
+          <p className="text-xs text-mist">
+            Written review optional · 2,000 characters maximum
+          </p>
 
-      <FieldError>{state.error}</FieldError>
+          <FieldError>{state.error}</FieldError>
 
-      <Button
-        type="submit"
-        variant="secondary"
-        size="sm"
-        disabled={pending || rating === 0}
-      >
-        {pending ? "Saving…" : "Leave review"}
-      </Button>
+          <Button
+            type="submit"
+            variant="secondary"
+            size="sm"
+            disabled={pending || rating === 0}
+          >
+            {pending ? "Saving…" : "Leave review"}
+          </Button>
+        </>
+      ) : (
+        <FieldError>{state.error}</FieldError>
+      )}
     </form>
   );
 }

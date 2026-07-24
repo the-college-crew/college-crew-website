@@ -11,10 +11,22 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireRole } from "@/lib/auth/session";
+import {
+  ATTENTION_LABELS,
+  needsReplacement,
+  partitionBookings,
+  UPCOMING_STATUSES,
+  type BookingGroups,
+  type DashboardBooking,
+} from "@/lib/booking/dashboard-groups";
 import { sweepInstantBookHolds } from "@/lib/booking/first-hour-hold";
+import {
+  pickSuggestions,
+  type ReplacementSuggestion,
+} from "@/lib/booking/replacement-ranking";
+import { getReplacementPool } from "@/lib/booking/replacement-suggestions";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { demoBookings, getDemoPreview } from "@/lib/demo/sample-preview";
-import type { BookingFlow, BookingStatus } from "@/lib/db/types";
 import {
   getCustomerConversationIndex,
   type ConversationEntry,
@@ -23,104 +35,57 @@ import { createClient } from "@/lib/supabase/server";
 import { cn, formatDateTime, formatMoney } from "@/lib/utils";
 
 import { CancelBookingButton } from "./cancel-booking-button";
+import { DismissBookingButton } from "./dismiss-booking-button";
+import { QuickBookSuggestions } from "./quick-book-suggestions";
 import { ReviewForm } from "./review-form";
-import { DismissDeclinedBookingButton } from "./dismiss-declined-booking-button";
 
 export const metadata: Metadata = { title: "My bookings" };
 
-const UPCOMING: BookingStatus[] = [
-  "requested",
-  "accepted",
-  "paid",
-  "booked",
-  "in_progress",
-  "invoice_review",
-  "disputed",
-];
+/**
+ * How many attention cards get live replacement suggestions. Each one costs two
+ * RPCs plus a directory read, so the fan-out is bounded; anything past this
+ * still links out to the full replacement page.
+ */
+const SUGGESTION_CARD_LIMIT = 5;
 
-type BookingRow = {
-  id: string;
-  booking_flow: BookingFlow;
-  status: BookingStatus;
-  scheduled_at: string;
-  address: string;
-  price_cents: number;
-  estimated_minutes: number | null;
-  hourly_rate_cents_snapshot: number | null;
-  average_quote_cents_snapshot: number | null;
-  response_alert_at: string | null;
-  initial_payment_due_at: string | null;
-  en_route_at: string | null;
-  dismissed_at: string | null;
-  cancelled_by_role: string | null;
-  service: { name: string; slug: string };
-  provider: { display_name: string };
-  review: { id: string } | null;
-  invoice: {
-    status: string;
-    remaining_balance_cents: number;
-    resolved_at: string | null;
-  } | null;
-  dispute: { id: string; status: string } | null;
-  responseAlertReached?: boolean;
-};
-
-type BookingGroups = {
-  attention: BookingRow[];
-  reviewable: BookingRow[];
-  upcoming: BookingRow[];
-  past: BookingRow[];
-};
+type SuggestionIndex = Map<string, ReplacementSuggestion[]>;
 
 /**
- * Split bookings into their dashboard groups. Completed, unreviewed bookings
- * remain in Past, but are also surfaced on the default view until the customer
- * leaves a review. There is deliberately no time cutoff: eligibility comes
- * from the completed booking, not from how quickly the customer responds.
+ * Look up quick-book suggestions for the attention cards that lost their
+ * student. Runs in parallel and swallows failures per card: a booking the
+ * database won't offer alternatives for should render without them, not break
+ * the page.
  */
-function partitionBookings(bookings: BookingRow[], now: Date): BookingGroups {
-  const attention: BookingRow[] = [];
-  const reviewable: BookingRow[] = [];
-  const upcoming: BookingRow[] = [];
-  const past: BookingRow[] = [];
-  for (const source of bookings) {
-    const responseAlertReached = Boolean(
-      source.booking_flow === "hourly_v1" &&
-        source.status === "requested" &&
-        source.response_alert_at &&
-        new Date(source.response_alert_at) <= now &&
-        new Date(source.scheduled_at) > now,
-    );
-    const booking: BookingRow =
-      source.booking_flow === "hourly_v1" &&
-      source.status === "requested" &&
-      new Date(source.scheduled_at) <= now
-        ? { ...source, status: "expired", responseAlertReached: false }
-        : { ...source, responseAlertReached };
-    if (booking.status === "declined" && booking.dismissed_at) continue;
-    if (booking.status === "completed" && !booking.review) {
-      reviewable.push(booking);
-    }
-    const providerCancelledUpcoming =
-      booking.status === "cancelled" &&
-      booking.cancelled_by_role === "provider" &&
-      new Date(booking.scheduled_at) >= now;
-    if (
-      booking.status === "declined" &&
-      new Date(booking.scheduled_at) >= now
-    ) {
-      attention.push(booking);
-    } else if (providerCancelledUpcoming) {
-      attention.push(booking);
-    } else if (responseAlertReached) {
-      attention.push(booking);
-    } else if (UPCOMING.includes(booking.status)) {
-      upcoming.push(booking);
-    } else {
-      past.push(booking);
-    }
-  }
-  return { attention, reviewable, upcoming, past };
+async function getSuggestionIndex(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  attention: DashboardBooking[],
+): Promise<SuggestionIndex> {
+  const targets = attention
+    .filter(
+      (booking) =>
+        booking.booking_flow === "hourly_v1" &&
+        needsReplacement(booking.attentionReason),
+    )
+    .slice(0, SUGGESTION_CARD_LIMIT);
+
+  const entries = await Promise.all(
+    targets.map(async (booking) => {
+      try {
+        const pool = await getReplacementPool(supabase, {
+          id: booking.id,
+          serviceSlug: booking.service.slug,
+        });
+        return [
+          booking.id,
+          pickSuggestions(pool, booking.scheduled_at),
+        ] as const;
+      } catch {
+        return [booking.id, [] as ReplacementSuggestion[]] as const;
+      }
+    }),
+  );
+
+  return new Map(entries.filter(([, list]) => list.length > 0));
 }
 
 export default async function CustomerDashboardPage({
@@ -134,10 +99,8 @@ export default async function CustomerDashboardPage({
     reviewed?: string;
   }>;
 }) {
-  const [{ tab, requested, replaced, paid, reviewed }, session] = await Promise.all([
-    searchParams,
-    requireRole("customer", "/dashboard"),
-  ]);
+  const [{ tab, requested, replaced, paid, reviewed }, session] =
+    await Promise.all([searchParams, requireRole("customer", "/dashboard")]);
   const showPast = tab === "past";
   const now = new Date();
   const demoPreview = await getDemoPreview("customer");
@@ -146,7 +109,7 @@ export default async function CustomerDashboardPage({
     // The demo path never resolves a real conversation, so it passes an empty
     // index and the sample rows' shape difference is safe here.
     const groups = partitionBookings(
-      demoBookings as unknown as BookingRow[],
+      demoBookings as unknown as DashboardBooking[],
       now,
     );
     return (
@@ -157,6 +120,7 @@ export default async function CustomerDashboardPage({
         replaced={replaced}
         paid={paid}
         convoIndex={new Map()}
+        suggestions={new Map()}
         demo
       />
     );
@@ -170,7 +134,9 @@ export default async function CustomerDashboardPage({
         `id, booking_flow, status, scheduled_at, address, price_cents,
          estimated_minutes, hourly_rate_cents_snapshot,
          average_quote_cents_snapshot, response_alert_at,
-         initial_payment_due_at, en_route_at, dismissed_at, cancelled_by_role,
+         initial_payment_due_at, en_route_at, dismissed_at,
+         review_prompt_dismissed_at, work_completed_at, cancelled_by_role,
+         proposed_start_at, counter_note, provider_id,
          service:services(name, slug),
          provider:provider_profiles(display_name),
          invoice:booking_invoices(status, remaining_balance_cents, resolved_at),
@@ -190,7 +156,7 @@ export default async function CustomerDashboardPage({
   const rows = (data ?? []).map((booking) => ({
     ...booking,
     review: reviewByBooking.get(booking.id) ?? null,
-  })) as BookingRow[];
+  })) as DashboardBooking[];
   // Query-string feedback is trusted only when the scoped review RPC confirms
   // this customer owns the reviewed booking relationship.
   const confirmedReviewedId =
@@ -206,14 +172,14 @@ export default async function CustomerDashboardPage({
   const expiredIds = new Set([...staleAcceptances, ...expiredRequests]);
   const groups = partitionBookings(
     rows.map((row) =>
-      expiredIds.has(row.id) ? { ...row, status: "expired" } : row,
+      expiredIds.has(row.id) ? { ...row, status: "expired" as const } : row,
     ),
     now,
   );
-  const convoIndex = await getCustomerConversationIndex(
-    supabase,
-    session.user.id,
-  );
+  const [convoIndex, suggestions] = await Promise.all([
+    getCustomerConversationIndex(supabase, session.user.id),
+    getSuggestionIndex(supabase, groups.attention),
+  ]);
 
   return (
     <CustomerDashboardView
@@ -224,6 +190,7 @@ export default async function CustomerDashboardPage({
       paid={paid}
       reviewed={confirmedReviewedId}
       convoIndex={convoIndex}
+      suggestions={suggestions}
       customerId={session.user.id}
     />
   );
@@ -237,6 +204,7 @@ function CustomerDashboardView({
   paid,
   reviewed,
   convoIndex,
+  suggestions,
   customerId,
   demo = false,
 }: {
@@ -247,6 +215,7 @@ function CustomerDashboardView({
   paid?: string;
   reviewed?: string;
   convoIndex: Map<string, ConversationEntry>;
+  suggestions: SuggestionIndex;
   customerId?: string;
   demo?: boolean;
 }) {
@@ -254,6 +223,8 @@ function CustomerDashboardView({
   const list = showPast ? past : upcoming;
   const showAttention = !showPast && attention.length > 0;
   const showReviewable = !showPast && reviewable.length > 0;
+  // Everything that lands on the Upcoming tab, so the count matches the page.
+  const upcomingCount = upcoming.length + attention.length;
 
   const tabClass = (active: boolean) =>
     cn(
@@ -328,8 +299,13 @@ function CustomerDashboardView({
         aria-label="Booking filters"
         className="inline-flex gap-1 rounded-xl border border-line bg-court p-1"
       >
-        <Link role="tab" aria-selected={!showPast} href="/dashboard" className={tabClass(!showPast)}>
-          Upcoming
+        <Link
+          role="tab"
+          aria-selected={!showPast}
+          href="/dashboard"
+          className={tabClass(!showPast)}
+        >
+          Upcoming{upcomingCount > 0 ? ` (${upcomingCount})` : ""}
         </Link>
         <Link
           role="tab"
@@ -337,7 +313,7 @@ function CustomerDashboardView({
           href="/dashboard?tab=past"
           className={tabClass(showPast)}
         >
-          Past
+          Past{past.length > 0 ? ` (${past.length})` : ""}
         </Link>
       </div>
 
@@ -353,6 +329,7 @@ function CustomerDashboardView({
                   booking={booking}
                   demo={demo}
                   convo={demo ? undefined : convoIndex.get(booking.id)}
+                  suggestions={suggestions.get(booking.id) ?? []}
                   attention
                 />
               </li>
@@ -379,6 +356,8 @@ function CustomerDashboardView({
                   booking={booking}
                   demo={demo}
                   convo={demo ? undefined : convoIndex.get(booking.id)}
+                  suggestions={[]}
+                  reviewPrompt
                 />
               </li>
             ))}
@@ -387,17 +366,27 @@ function CustomerDashboardView({
       ) : null}
 
       {list.length > 0 ? (
-        <ul className="space-y-4">
-          {list.map((booking) => (
-            <li key={booking.id}>
-              <BookingCard
-                booking={booking}
-                demo={demo}
-                convo={demo ? undefined : convoIndex.get(booking.id)}
-              />
-            </li>
-          ))}
-        </ul>
+        <section aria-label={showPast ? "Past bookings" : "Scheduled"} className="space-y-3">
+          {/* With attention and review sections above it, a bare list is
+              ambiguous — name what these are. */}
+          {showAttention || showReviewable ? (
+            <h2 className="font-display text-lg font-semibold text-ink">
+              {showPast ? "Past" : "Scheduled"}
+            </h2>
+          ) : null}
+          <ul className="space-y-4">
+            {list.map((booking) => (
+              <li key={booking.id}>
+                <BookingCard
+                  booking={booking}
+                  demo={demo}
+                  convo={demo ? undefined : convoIndex.get(booking.id)}
+                  suggestions={[]}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : showPast || (!showAttention && !showReviewable) ? (
         <EmptyState
           title={showPast ? "No past bookings" : "Nothing booked yet"}
@@ -414,41 +403,61 @@ function CustomerDashboardView({
             ? "Completed and closed bookings will show up here."
             : "Find a verified student and send your first request."}
         </EmptyState>
-      ) : null}
+      ) : (
+        // Only attention/review items exist: say plainly that the calendar is
+        // clear, instead of leaving the reader to infer it.
+        <p className="rounded-xl border border-dashed border-line px-4 py-3 text-sm text-ink-soft">
+          Nothing else is scheduled right now.
+        </p>
+      )}
     </div>
   );
 }
 
 /**
- * One booking card, shared by the attention, upcoming, and past lists. A
- * declined booking gets a red alert with the provider's message preview, a
- * "Read message" button into the chat, and a re-book CTA — so a decline reads
- * as "here's what happened and what to do next," not a dead end. Any booking
- * with an existing conversation keeps a "Message" button, past ones included.
+ * One booking card, shared by the attention, review, upcoming, and past lists.
+ *
+ * An attention card leads with a chip naming what happened, then the specific
+ * explanation, then the way out: for a job that lost its student that's a
+ * quick-book shortlist (details already saved), "Other options", and Dismiss.
+ * Any booking with an existing conversation keeps a "Message" button, past ones
+ * included.
  */
 function BookingCard({
   booking,
   demo,
   convo,
+  suggestions,
   attention = false,
+  reviewPrompt = false,
 }: {
-  booking: BookingRow;
+  booking: DashboardBooking;
   demo: boolean;
   convo?: ConversationEntry;
+  suggestions: ReplacementSuggestion[];
   attention?: boolean;
+  reviewPrompt?: boolean;
 }) {
   const providerName = booking.provider.display_name;
+  const reason = booking.attentionReason;
   const isDeclined = booking.status === "declined";
   const isCountered = booking.status === "countered";
   const isProviderCancelled =
-    booking.status === "cancelled" &&
-    booking.cancelled_by_role === "provider";
-  const isUpcoming = (UPCOMING as string[]).includes(booking.status);
+    booking.status === "cancelled" && booking.cancelled_by_role === "provider";
+  const isUpcoming = (UPCOMING_STATUSES as string[]).includes(booking.status);
   const isHourly = booking.booking_flow === "hourly_v1";
   const isQuote = booking.booking_flow === "quote_v1";
   const responseAlertReached = booking.responseAlertReached === true;
   const note = convo?.latest?.fromOther ? convo.latest : null;
   const hasProviderMessage = Boolean(note);
+  // Where "Other options" goes: the full replacement list for a job we can
+  // rebook in place, otherwise a fresh browse.
+  const otherOptionsHref =
+    !demo && isHourly && needsReplacement(reason)
+      ? `/bookings/${booking.id}/replace`
+      : demo
+        ? "/book/demo"
+        : "/browse";
 
   // Cancellation + dispute eligibility (Phase 6). The RPCs re-check everything
   // atomically; this only drives what the card offers and the outcome preview.
@@ -481,8 +490,7 @@ function BookingCard({
     : null;
   const withinLateWindow =
     finalChargeAt != null && nowMs <= finalChargeAt + 7 * 24 * 3_600_000;
-  const noShowEligible =
-    isHourly && booking.status === "booked" && startPassed;
+  const noShowEligible = isHourly && booking.status === "booked" && startPassed;
   const disputeEligible =
     isHourly &&
     !demo &&
@@ -496,7 +504,7 @@ function BookingCard({
     <Card
       id={`booking-${booking.id}`}
       data-booking-id={booking.id}
-      data-declined-booking={isDeclined || undefined}
+      data-dismissable-card={attention || reviewPrompt || undefined}
       className={cn(
         "p-5 transition-[opacity,transform] duration-200 ease-out",
         attention && "border-red-200",
@@ -504,6 +512,11 @@ function BookingCard({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
+          {reason ? (
+            <p className="mb-1.5 inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-800">
+              {ATTENTION_LABELS[reason]}
+            </p>
+          ) : null}
           <p className="font-display text-lg font-semibold">
             {booking.service.name}
           </p>
@@ -518,7 +531,7 @@ function BookingCard({
                 ? booking.average_quote_cents_snapshot == null
                   ? "Waiting for flat quote"
                   : `Average shown ${formatMoney(booking.average_quote_cents_snapshot)} · final quote pending`
-              : formatMoney(booking.price_cents)}
+                : formatMoney(booking.price_cents)}
           </p>
         </div>
         <StatusPill status={booking.status} />
@@ -536,9 +549,32 @@ function BookingCard({
             </p>
           ) : (
             <p className="mt-1 text-red-700">
-              Message them for details, or find another provider below.
+              Message them for details, or pick another student below.
             </p>
           )}
+        </div>
+      ) : null}
+
+      {isCountered && booking.proposed_start_at ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p className="font-semibold">
+            {providerName} suggested a different time.
+          </p>
+          <p className="mt-1">
+            You asked for {formatDateTime(booking.scheduled_at)}; they can do{" "}
+            <span className="font-semibold">
+              {formatDateTime(booking.proposed_start_at)}
+            </span>
+            .
+          </p>
+          {booking.counter_note ? (
+            <p className="mt-1 line-clamp-2 text-amber-800">
+              “{booking.counter_note}”
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -559,8 +595,8 @@ function BookingCard({
         >
           <p className="font-semibold">{providerName} cancelled this booking.</p>
           <p className="mt-1 text-red-700">
-            You&apos;ve been fully refunded. Find another verified student for
-            the same job below.
+            You&apos;ve been fully refunded. Your job details are saved — pick
+            another verified student below.
           </p>
         </div>
       ) : null}
@@ -576,6 +612,14 @@ function BookingCard({
             or atomically send one replacement request.
           </p>
         </div>
+      ) : null}
+
+      {suggestions.length > 0 ? (
+        <QuickBookSuggestions
+          bookingId={booking.id}
+          suggestions={suggestions}
+          originalStartAt={booking.scheduled_at}
+        />
       ) : null}
 
       {isHourly && booking.status === "requested" && booking.response_alert_at ? (
@@ -597,7 +641,9 @@ function BookingCard({
       {isQuote && booking.status === "accepted" ? (
         <div className="mt-3 rounded-lg border border-quad-200 bg-quad-50 p-3 text-sm text-quad-800">
           Final flat quote:{" "}
-          <span className="font-semibold">{formatMoney(booking.price_cents)}</span>
+          <span className="font-semibold">
+            {formatMoney(booking.price_cents)}
+          </span>
         </div>
       ) : null}
 
@@ -630,7 +676,9 @@ function BookingCard({
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {booking.status === "accepted" && !isHourly ? (
           <Link
-            href={demo ? "/bookings/demo/confirm" : `/bookings/${booking.id}/confirm`}
+            href={
+              demo ? "/bookings/demo/confirm" : `/bookings/${booking.id}/confirm`
+            }
             className={buttonClasses({ size: "sm" })}
           >
             Confirm & pay
@@ -670,15 +718,6 @@ function BookingCard({
           </Link>
         ) : null}
 
-        {responseAlertReached && !demo ? (
-          <Link
-            href={`/bookings/${booking.id}/replace`}
-            className={buttonClasses({ size: "sm" })}
-          >
-            Find replacement
-          </Link>
-        ) : null}
-
         {demo && (isDeclined || isUpcoming) ? (
           <Link
             href="/messages/demo"
@@ -689,7 +728,7 @@ function BookingCard({
           >
             {hasProviderMessage ? "Read message" : "Message"}
           </Link>
-        ) : !demo && (isDeclined || isUpcoming) ? (
+        ) : !demo && (isDeclined || isCountered || isUpcoming) ? (
           <form action={openConversationForBooking}>
             <input type="hidden" name="bookingId" value={booking.id} />
             <button
@@ -704,16 +743,17 @@ function BookingCard({
           </form>
         ) : null}
 
-        {isDeclined && !demo ? (
-          <DismissDeclinedBookingButton bookingId={booking.id} />
-        ) : null}
-
-        {isDeclined ? (
+        {/* A job that lost its student: the shortlist above is the main path,
+            so this is the way to see everyone rather than a primary action. */}
+        {needsReplacement(reason) ? (
           <Link
-            href={demo ? "/book/demo" : `/bookings/${booking.id}/replace`}
-            className={buttonClasses({ variant: "secondary", size: "sm" })}
+            href={otherOptionsHref}
+            className={buttonClasses({
+              variant: suggestions.length > 0 ? "secondary" : "primary",
+              size: "sm",
+            })}
           >
-            Find another provider
+            Other options
           </Link>
         ) : null}
 
@@ -730,15 +770,6 @@ function BookingCard({
             outcome={cancelOutcome}
             label={cancelLabel}
           />
-        ) : null}
-
-        {isProviderCancelled && !demo ? (
-          <Link
-            href="/browse"
-            className={buttonClasses({ size: "sm" })}
-          >
-            Find a replacement
-          </Link>
         ) : null}
 
         {hasOpenDispute && !demo ? (
@@ -760,6 +791,24 @@ function BookingCard({
             {noShowEligible ? "Report a no-show" : "Report a problem"}
           </Link>
         ) : null}
+
+        {/* Repeat business: rebook the same student and service with the job
+            details prefilled. */}
+        {booking.status === "completed" && !demo && booking.provider_id ? (
+          <Link
+            href={`/book/${booking.provider_id}?again=${booking.id}`}
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            Book again
+          </Link>
+        ) : null}
+
+        {/* Dismissal clears the card out of Needs attention; the booking stays
+            under Past. Not offered for a countered request — that needs a
+            decision, not a shrug. */}
+        {attention && !demo && !isCountered ? (
+          <DismissBookingButton bookingId={booking.id} />
+        ) : null}
       </div>
 
       {booking.status === "completed" ? (
@@ -771,7 +820,17 @@ function BookingCard({
           ) : booking.review ? (
             <p className="text-sm font-medium text-quad-700">Reviewed ✓</p>
           ) : (
-            <ReviewForm bookingId={booking.id} />
+            <div className="space-y-2">
+              <ReviewForm bookingId={booking.id} collapsible={reviewPrompt} />
+              {reviewPrompt ? (
+                <DismissBookingButton
+                  bookingId={booking.id}
+                  target="review-prompt"
+                  label="Not now"
+                  pendingLabel="Clearing…"
+                />
+              ) : null}
+            </div>
           )}
         </div>
       ) : null}

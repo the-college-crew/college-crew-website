@@ -770,6 +770,7 @@ export type Database = {
           response_alert_at: string | null
           response_alerted_at: string | null
           response_window_hours: number | null
+          review_prompt_dismissed_at: string | null
           scheduled_at: string
           service_city: string
           service_id: string
@@ -834,6 +835,7 @@ export type Database = {
           response_alert_at?: string | null
           response_alerted_at?: string | null
           response_window_hours?: number | null
+          review_prompt_dismissed_at?: string | null
           scheduled_at: string
           service_city?: string
           service_id: string
@@ -898,6 +900,7 @@ export type Database = {
           response_alert_at?: string | null
           response_alerted_at?: string | null
           response_window_hours?: number | null
+          review_prompt_dismissed_at?: string | null
           scheduled_at?: string
           service_city?: string
           service_id?: string
@@ -2660,6 +2663,7 @@ export type Database = {
         Returns: string
       }
       dismiss_booking: { Args: { p_booking_id: string }; Returns: string }
+      dismiss_review_prompt: { Args: { p_booking_id: string }; Returns: string }
       email_is_confirmed: { Args: { p_email: string }; Returns: boolean }
       expire_hourly_booking_request: {
         Args: { p_booking_id: string }
@@ -2693,6 +2697,14 @@ export type Database = {
         Returns: {
           provider_id: string
           provider_service_id: string
+        }[]
+      }
+      hourly_replacement_time_shift_ids: {
+        Args: { p_booking_id: string }
+        Returns: {
+          provider_id: string
+          provider_service_id: string
+          suggested_start_at: string
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
