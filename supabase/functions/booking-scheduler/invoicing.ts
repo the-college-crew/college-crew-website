@@ -69,7 +69,6 @@ export async function attemptDueInvoiceCharge(
       invoiceId,
       bookingId: claim.booking_id,
       amountCents: claim.amount_cents,
-      applicationFeeCents: claim.application_fee_cents,
       stripeCustomerId: claim.stripe_customer_id,
       stripePaymentMethodId: claim.stripe_payment_method_id,
       providerStripeAccountId: claim.stripe_connected_account_id,

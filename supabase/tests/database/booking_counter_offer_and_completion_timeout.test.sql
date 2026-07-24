@@ -99,5 +99,70 @@ select is(
   'anonymous callers cannot invoke the actorless auto-complete'
 );
 
+-- ---------------------------------------------------------------------------
+-- Held-funds payout model
+-- ---------------------------------------------------------------------------
+
+-- Money leaving the platform must never be reachable from a browser session.
+select is(
+  has_function_privilege('service_role', 'public.provider_payout_plan(uuid)', 'execute'),
+  true,
+  'the scheduler can compute a payout plan'
+);
+select is(
+  has_function_privilege('authenticated', 'public.provider_payout_plan(uuid)', 'execute'),
+  false,
+  'signed-in users cannot compute a payout plan'
+);
+select is(
+  has_function_privilege(
+    'authenticated',
+    'public.record_provider_payout(uuid,uuid,text,integer,text,text,text,text,text)',
+    'execute'
+  ),
+  false,
+  'signed-in users cannot record a payout'
+);
+select is(
+  has_table_privilege('authenticated', 'public.booking_provider_payouts', 'select'),
+  false,
+  'browser users cannot read payout records'
+);
+
+select is(
+  (
+    select pg_get_constraintdef(oid) like '%provider_payout%'
+    from pg_constraint where conname = 'booking_automation_jobs_kind_valid'
+  ),
+  true,
+  'the scheduler accepts the provider_payout job kind'
+);
+
+-- One transfer per booking+payment: the guard against paying a student twice.
+select is(
+  (
+    select count(*) > 0 from pg_constraint
+    where conrelid = 'public.booking_provider_payouts'::regclass
+      and contype = 'u'
+  ),
+  true,
+  'payouts are uniquely keyed so a retry cannot pay twice'
+);
+
+-- Legacy destination charges were already paid as the transfer leg; the payout
+-- plan must ignore them or the student is paid a second time.
+select is(
+  (
+    select count(*)::integer
+    from public.booking_payments p
+    join public.bookings b on b.id = p.booking_id
+    where b.status = 'completed'
+      and p.charge_model = 'destination'
+      and exists (select 1 from public.provider_payout_plan(b.id))
+  ),
+  0,
+  'completed destination-charge bookings never produce a payout leg'
+);
+
 select * from finish();
 rollback;

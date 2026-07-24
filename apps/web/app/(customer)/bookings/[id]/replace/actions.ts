@@ -122,7 +122,6 @@ export async function startReplacementAuthorization(
   }
 
   const rate = quote.hourly_rate_cents;
-  const feeCents = Math.round((rate * 500) / 10000);
 
   const stripeCustomer = await ensureStripeCustomerForUser({
     userId: session.user.id,
@@ -143,7 +142,6 @@ export async function startReplacementAuthorization(
   const intent = await createFirstHourPaymentIntent({
     bookingId,
     amountCents: rate,
-    applicationFeeCents: feeCents,
     stripeCustomerId: stripeCustomer.stripeCustomerId,
     providerStripeAccountId: providerPayout.stripe_account_id,
     idempotencyKey: `fhauth_${bookingId}`,

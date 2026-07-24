@@ -175,6 +175,10 @@ async function settleFirstHour(
   const refund = await refundFirstHourFull({
     paymentIntentId: intent.id,
     idempotencyKey: `fhr_${bookingId}`,
+    // The intent itself says which model funded it: `transfer_data` is present
+    // only on a legacy destination charge, where the student was already paid as
+    // the transfer leg. Held-funds charges have nothing to reverse yet.
+    reverseTransfer: Boolean(intent.transfer_data),
   });
   if (refund.configured) {
     assertResult(

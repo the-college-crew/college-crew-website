@@ -33,7 +33,6 @@ export async function createBalancePaymentIntent(input: {
   invoiceId: string;
   bookingId: string;
   amountCents: number;
-  applicationFeeCents: number;
   stripeCustomerId: string;
   providerStripeAccountId: string;
   idempotencyKey: string;
@@ -54,12 +53,14 @@ export async function createBalancePaymentIntent(input: {
     amount: input.amountCents,
     currency: "usd",
     customer: input.stripeCustomerId,
-    application_fee_amount: input.applicationFeeCents,
-    transfer_data: { destination: input.providerStripeAccountId },
+    // NOT a destination charge: held in the platform balance and paid out to the
+    // student after the job by the `provider_payout` job. Mirrors
+    // apps/web/lib/stripe/connect.ts — these two must stay in step.
     metadata: {
       booking_id: input.bookingId,
       invoice_id: input.invoiceId,
       payment_kind: "balance",
+      payee_account: input.providerStripeAccountId,
     },
     automatic_payment_methods: { enabled: true, allow_redirects: "never" },
   };
@@ -76,6 +77,55 @@ export async function createBalancePaymentIntent(input: {
     clientSecret: intent.client_secret,
     status: intent.status,
   };
+}
+
+/**
+ * Pay the student out of funds the platform is already holding, once the job is
+ * complete. `source_transaction` draws from the specific charge that funded the
+ * payout, so it cannot fail on unsettled platform balance. Mirrors
+ * `transferToProvider` in apps/web/lib/stripe/connect.ts.
+ */
+export async function transferToProvider(input: {
+  amountCents: number;
+  destinationAccountId: string;
+  sourceChargeId: string;
+  bookingId: string;
+  idempotencyKey: string;
+}): Promise<
+  { configured: true; transferId: string; amountCents: number } | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const transfer = await stripe.transfers.create(
+    {
+      amount: input.amountCents,
+      currency: "usd",
+      destination: input.destinationAccountId,
+      source_transaction: input.sourceChargeId,
+      metadata: { booking_id: input.bookingId },
+    },
+    { idempotencyKey: input.idempotencyKey },
+  );
+
+  return {
+    configured: true,
+    transferId: transfer.id,
+    amountCents: transfer.amount,
+  };
+}
+
+/** Resolve the charge that settled a PaymentIntent, for `source_transaction`. */
+export async function getChargeIdForPaymentIntent(
+  paymentIntentId: string,
+): Promise<{ configured: true; chargeId: string | null } | StripeUnconfigured> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  const latest = intent.latest_charge;
+  const chargeId = typeof latest === "string" ? latest : (latest?.id ?? null);
+  return { configured: true, chargeId };
 }
 
 /**

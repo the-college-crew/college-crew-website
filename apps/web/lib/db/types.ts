@@ -486,6 +486,7 @@ export type Database = {
           attempt_count: number
           authorized_at: string | null
           booking_id: string
+          charge_model: Database["public"]["Enums"]["booking_charge_model"]
           created_at: string
           currency: string
           customer_authorization_version: string
@@ -512,6 +513,7 @@ export type Database = {
           attempt_count?: number
           authorized_at?: string | null
           booking_id: string
+          charge_model?: Database["public"]["Enums"]["booking_charge_model"]
           created_at?: string
           currency?: string
           customer_authorization_version: string
@@ -538,6 +540,7 @@ export type Database = {
           attempt_count?: number
           authorized_at?: string | null
           booking_id?: string
+          charge_model?: Database["public"]["Enums"]["booking_charge_model"]
           created_at?: string
           currency?: string
           customer_authorization_version?: string
@@ -570,6 +573,69 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "booking_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_provider_payouts: {
+        Row: {
+          amount_cents: number
+          booking_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          paid_at: string | null
+          payment_id: string | null
+          status: string
+          stripe_destination_account_id: string
+          stripe_source_charge_id: string | null
+          stripe_transfer_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          booking_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          status?: string
+          stripe_destination_account_id: string
+          stripe_source_charge_id?: string | null
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          booking_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          status?: string
+          stripe_destination_account_id?: string
+          stripe_source_charge_id?: string | null
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_provider_payouts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_provider_payouts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "booking_payments"
             referencedColumns: ["id"]
           },
         ]
@@ -2695,6 +2761,16 @@ export type Database = {
         Returns: string
       }
       owns_provider_profile: { Args: { pp_id: string }; Returns: boolean }
+      provider_payout_plan: {
+        Args: { p_booking_id: string }
+        Returns: {
+          destination_account_id: string
+          kind: Database["public"]["Enums"]["booking_payment_kind"]
+          payment_id: string
+          payout_amount_cents: number
+          stripe_payment_intent_id: string
+        }[]
+      }
       quote_hourly_offering_slot: {
         Args: {
           p_estimated_minutes: number
@@ -2730,6 +2806,20 @@ export type Database = {
           p_reason: string
           p_stripe_payment_intent_id: string
           p_stripe_refund_id?: string
+        }
+        Returns: string
+      }
+      record_provider_payout: {
+        Args: {
+          p_amount_cents: number
+          p_booking_id: string
+          p_destination_account_id: string
+          p_error?: string
+          p_idempotency_key: string
+          p_payment_id: string
+          p_source_charge_id?: string
+          p_status?: string
+          p_stripe_transfer_id?: string
         }
         Returns: string
       }
@@ -2900,6 +2990,7 @@ export type Database = {
     }
     Enums: {
       background_check_status: "none" | "pending" | "passed"
+      booking_charge_model: "destination" | "platform"
       booking_decline_preference: "auto_rematch" | "keep_control"
       booking_dispute_category:
         | "provider_no_show"
@@ -3107,6 +3198,7 @@ export const Constants = {
   public: {
     Enums: {
       background_check_status: ["none", "pending", "passed"],
+      booking_charge_model: ["destination", "platform"],
       booking_decline_preference: ["auto_rematch", "keep_control"],
       booking_dispute_category: [
         "provider_no_show",

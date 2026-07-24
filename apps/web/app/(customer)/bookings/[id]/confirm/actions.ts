@@ -344,7 +344,6 @@ export async function confirmFirstHourPayment(
   const intent = await createFirstHourPaymentIntent({
     bookingId: booking.id,
     amountCents: begun.amount_cents,
-    applicationFeeCents: begun.application_fee_cents,
     stripeCustomerId: stripeCustomer.stripeCustomerId,
     providerStripeAccountId: providerPayout.stripe_account_id,
     idempotencyKey: begun.idempotency_key,

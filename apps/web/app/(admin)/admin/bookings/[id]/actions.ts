@@ -94,7 +94,6 @@ export async function resolveDispute(
       bookingId,
       invoiceId: directive.invoice_id,
       amountCents: directive.charge_amount_cents ?? 0,
-      applicationFeeCents: directive.charge_application_fee_cents ?? 0,
       idempotencyKey: directive.charge_idempotency_key ?? "",
     });
     revalidate();
@@ -121,7 +120,6 @@ async function chargeResolvedBalance(input: {
   bookingId: string;
   invoiceId: string | null;
   amountCents: number;
-  applicationFeeCents: number;
   idempotencyKey: string;
 }): Promise<boolean> {
   if (!hasServiceRoleEnv() || !input.invoiceId || input.amountCents <= 0) {
@@ -158,7 +156,6 @@ async function chargeResolvedBalance(input: {
     invoiceId: input.invoiceId,
     bookingId: input.bookingId,
     amountCents: input.amountCents,
-    applicationFeeCents: input.applicationFeeCents,
     stripeCustomerId: firstHour.stripe_customer_id,
     stripePaymentMethodId: firstHour.stripe_payment_method_id,
     providerStripeAccountId: provider.stripe_account_id,

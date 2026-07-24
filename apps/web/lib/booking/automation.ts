@@ -105,6 +105,14 @@ async function processJob(kind: string, bookingId: string, sourceId: string) {
     if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
     return;
   }
+  if (kind === "provider_payout") {
+    // The job is complete: release the student's share of the funds the platform
+    // has been holding. Idempotent, so a retry cannot pay twice.
+    const { attemptProviderPayout } = await import("@/lib/booking/payouts");
+    const outcome = await attemptProviderPayout(bookingId);
+    if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
+    return;
+  }
   throw new Error("UnknownAutomationKind");
 }
 

@@ -1,5 +1,6 @@
 import { createAdminClient } from "./admin.ts";
 import { attemptDueInvoiceCharge } from "./invoicing.ts";
+import { attemptProviderPayout } from "./payouts.ts";
 import { sendBookingEmail } from "./email.ts";
 
 /**
@@ -123,6 +124,13 @@ async function processJob(kind: string, bookingId: string, sourceId: string) {
   }
   if (kind === "invoice_autocharge") {
     const outcome = await attemptDueInvoiceCharge(sourceId);
+    if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
+    return;
+  }
+  if (kind === "provider_payout") {
+    // The job is complete: release the student's share of the funds the platform
+    // has been holding. Idempotent, so a retry cannot pay twice.
+    const outcome = await attemptProviderPayout(bookingId);
     if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
     return;
   }
