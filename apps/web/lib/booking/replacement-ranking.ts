@@ -8,24 +8,45 @@
 
 export const MAX_SUGGESTIONS = 3;
 
+/**
+ * Which tier a suggestion came from, and therefore how much we can promise:
+ *
+ *   exact      — can do the original time. Bookable now.
+ *   time_shift — has a nearby opening. Bookable, but moves the job.
+ *   browse     — offers the service; no validated slot behind it. This is a
+ *                person to look at, not a slot to hold, so it links to the
+ *                student rather than into the payment flow.
+ */
+export type SuggestionKind = "exact" | "time_shift" | "browse";
+
 export type ReplacementSuggestion = {
   providerServiceId: string;
   providerId: string;
   providerName: string;
   hourlyRateCents: number;
   rating: { avg: number; count: number } | null;
+  kind: SuggestionKind;
   /**
-   * Null for a tier-1 match (the original time works). Set for tier 2 — this is
-   * the start time the customer would be agreeing to instead.
+   * Null unless `kind` is "time_shift" — then it's the start time the customer
+   * would be agreeing to instead of the one they asked for.
    */
   suggestedStartAt: string | null;
+  /**
+   * Only meaningful for a "browse" suggestion: whether the student has finished
+   * Stripe onboarding, which decides where the row points.
+   */
+  payoutReady?: boolean;
 };
 
-/** The two suggestion tiers. Tier 1 fits the original slot; tier 2 needs a
- *  time change. */
+/**
+ * The three suggestion tiers, in descending order of what we can promise.
+ * `fallback` exists so a small pilot never renders an empty list while somebody
+ * else offers the service.
+ */
 export type SuggestionTiers = {
   exact: ReplacementSuggestion[];
   timeShift: ReplacementSuggestion[];
+  fallback: ReplacementSuggestion[];
 };
 
 type Pool = SuggestionTiers;
@@ -54,6 +75,12 @@ function hoursFrom(suggestion: ReplacementSuggestion, target: Date): number {
  * then the best all-round compromise. With one slot left the compromise pick is
  * what you want; with three you want the spread, because a customer choosing
  * between alternatives is trading time against who shows up.
+ *
+ * Tier 3 tops up whatever is still missing, in the order the database ranked it
+ * (payout-ready first, then local, then rated). It carries no slot guarantee, so
+ * it is strictly a last resort — but an empty list is worse than an imperfect
+ * one when the customer still wants the job done. The list only comes back short
+ * when nobody else offers the service at all; we never suggest a different one.
  *
  * Never returns the same provider twice, even across tiers.
  */
@@ -111,6 +138,13 @@ export function pickSuggestions(
 
   // Any leftover room goes to the closest remaining times.
   for (const candidate of remaining()) {
+    if (picked.length >= limit) break;
+    take(candidate);
+  }
+
+  // Last resort: top up with anyone else who offers this service, in the order
+  // the database ranked them. Better an imperfect option than a dead end.
+  for (const candidate of pool.fallback) {
     if (picked.length >= limit) break;
     take(candidate);
   }

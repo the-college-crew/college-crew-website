@@ -2699,6 +2699,14 @@ export type Database = {
           provider_service_id: string
         }[]
       }
+      hourly_replacement_fallback_ids: {
+        Args: { p_booking_id: string }
+        Returns: {
+          payout_ready: boolean
+          provider_id: string
+          provider_service_id: string
+        }[]
+      }
       hourly_replacement_time_shift_ids: {
         Args: { p_booking_id: string }
         Returns: {

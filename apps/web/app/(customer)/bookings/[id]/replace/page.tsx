@@ -6,18 +6,79 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireRole } from "@/lib/auth/session";
-import { isOfferedStartTime } from "@/lib/booking/replacement-ranking";
+import {
+  isOfferedStartTime,
+  type ReplacementSuggestion,
+} from "@/lib/booking/replacement-ranking";
 import { getReplacementPool } from "@/lib/booking/replacement-suggestions";
 import {
   hasAcceptedCurrentLegalDocument,
   legalDocumentPath,
 } from "@/lib/legal/acceptance";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, formatMoney } from "@/lib/utils";
 
 import { ReplacementForm } from "./replacement-form";
 
 export const metadata: Metadata = { title: "Pick another student" };
+
+/**
+ * Everyone else who offers this service, with no slot promise attached. These
+ * exist so the page is never a dead end while students remain: the customer
+ * picks the time themselves on the other side of the link.
+ */
+function FallbackStudents({
+  students,
+  hasBookableOptions,
+}: {
+  students: ReplacementSuggestion[];
+  hasBookableOptions: boolean;
+}) {
+  return (
+    <section aria-label="Other students who offer this service" className="space-y-3">
+      <div>
+        <h2 className="font-display text-sm font-semibold text-ink">
+          {hasBookableOptions
+            ? "Everyone else who does this"
+            : "Other students who do this"}
+        </h2>
+        <p className="mt-0.5 text-xs text-mist">
+          No opening matched your job, so you&apos;d pick a new time with them
+          directly.
+        </p>
+      </div>
+      <ul className="space-y-2">
+        {students.map((student) => (
+          <li key={student.providerServiceId}>
+            <Link
+              href={
+                student.payoutReady
+                  ? `/book/${student.providerId}`
+                  : `/providers/${student.providerId}`
+              }
+              className="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper p-3 transition-colors hover:border-crew-600 hover:bg-crew-50"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-ink">
+                  {student.providerName}
+                </span>
+                <span className="mt-0.5 block text-xs text-mist">
+                  {student.rating
+                    ? `${student.rating.avg.toFixed(1)} ★ · ${student.rating.count} review${student.rating.count === 1 ? "" : "s"}`
+                    : "New to the crew"}
+                  {student.payoutReady ? "" : " · still finishing setup"}
+                </span>
+              </span>
+              <span className="shrink-0 font-semibold text-quad-700">
+                {formatMoney(student.hourlyRateCents)}/hr
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export default async function ReplacementPage({
   params,
@@ -80,7 +141,9 @@ export default async function ReplacementPage({
         id: booking.id,
         serviceSlug: service.slug,
       })
-    : { exact: [], timeShift: [] };
+    : { exact: [], timeShift: [], fallback: [] };
+  // Only tiers 1 and 2 have a validated slot, so only they can go in the hold
+  // form. Tier 3 renders below it as links — there is no slot to price.
   const candidates = [...pool.exact, ...pool.timeShift];
 
   // A preselection arriving from a dashboard card. Both halves are verified
@@ -108,28 +171,26 @@ export default async function ReplacementPage({
             : "This request can’t be replaced right now."}
         </Card>
       ) : candidates.length === 0 ? (
+        // No bookable slot. The fallback list below may still have students; a
+        // truly empty page means nobody else offers this service at all.
         <Card className="space-y-2 p-6 text-sm text-ink-soft">
           {pool.error ? (
             <p>{pool.error}</p>
-          ) : fixedTime ? (
-            // They asked for this time only, so we never offered anyone at a
-            // different one. Say that plainly rather than implying nobody
-            // exists — booking a new time is still open to them.
-            <>
-              <p>
-                No other ready student is free at{" "}
-                {formatDateTime(booking.scheduled_at)}.
-              </p>
-              <p>
-                You asked for this time only, so we haven&apos;t suggested
-                students who&apos;d need to move it. Browse the crew to book a
-                different time.
-              </p>
-            </>
+          ) : pool.fallback.length > 0 ? (
+            <p>
+              No one can take {service.name.toLowerCase()} at{" "}
+              {formatDateTime(booking.scheduled_at)}
+              {fixedTime
+                ? ", and you asked for this time only."
+                : " or at a nearby opening."}{" "}
+              These students still offer it — you&apos;d agree a new time with
+              them.
+            </p>
           ) : (
             <p>
-              No other ready student currently fits this service — at your time
-              or nearby. Try browsing the crew for a different day.
+              No other student offers {service.name.toLowerCase()} right now. We
+              won&apos;t suggest a different service — browse the crew to see
+              what else is available.
             </p>
           )}
         </Card>
@@ -142,6 +203,17 @@ export default async function ReplacementPage({
           preselectedStartAt={preselectedStartAt}
         />
       )}
+
+      {/* Tier 3: no validated slot, so these sit outside the hold form and link
+          to the student. Shown whenever they exist — if the form above is empty
+          these are the only options left, and if it isn't they're still the
+          rest of the crew for this service. */}
+      {replacementAvailable && pool.fallback.length > 0 ? (
+        <FallbackStudents
+          students={pool.fallback}
+          hasBookableOptions={candidates.length > 0}
+        />
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <Link

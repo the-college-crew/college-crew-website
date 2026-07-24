@@ -13,12 +13,15 @@ type ServerClient = Awaited<ReturnType<typeof createClient>>;
  * Fetches replacement suggestions for a job that lost its student (declined,
  * timed out, or cancelled by the provider).
  *
- * Two tiers, because "nobody is free at your exact time" should not be a dead
+ * Three tiers, because "nobody is free at your exact time" should not be a dead
  * end when the customer still wants the job done:
  *
  *   Tier 1 — can do the original slot. No trade-off to explain.
  *   Tier 2 — cannot, but has a nearby opening. Surfaced with the time change
  *            made explicit, never silently rescheduled.
+ *   Tier 3 — offers the service, with no slot promise at all. Only used to top
+ *            the shortlist up to three, and rendered as a person to look at
+ *            rather than a slot to hold.
  *
  * Ratings and hourly rates are joined in from the public directory rather than
  * returned by the RPCs, so the browser only ever sees data already cleared for
@@ -44,22 +47,31 @@ export async function getReplacementPool(
   supabase: ServerClient,
   booking: { id: string; serviceSlug: string },
 ): Promise<ReplacementPool> {
-  const [exactResult, shiftResult] = await Promise.all([
+  const [exactResult, shiftResult, fallbackResult] = await Promise.all([
     supabase.rpc("hourly_replacement_candidate_ids", {
       p_booking_id: booking.id,
     }),
     supabase.rpc("hourly_replacement_time_shift_ids", {
       p_booking_id: booking.id,
     }),
+    supabase.rpc("hourly_replacement_fallback_ids", {
+      p_booking_id: booking.id,
+    }),
   ]);
 
-  const error = exactResult.error ?? shiftResult.error;
+  const error = exactResult.error ?? shiftResult.error ?? fallbackResult.error;
   const exactRows = exactResult.data ?? [];
   const shiftRows = shiftResult.data ?? [];
-  if (exactRows.length === 0 && shiftRows.length === 0) {
+  const fallbackRows = fallbackResult.data ?? [];
+  if (
+    exactRows.length === 0 &&
+    shiftRows.length === 0 &&
+    fallbackRows.length === 0
+  ) {
     return {
       exact: [],
       timeShift: [],
+      fallback: [],
       error: error ? requestOperationMessage(error) : undefined,
     };
   }
@@ -73,7 +85,9 @@ export async function getReplacementPool(
 
   const hydrate = (
     row: { provider_service_id: string; provider_id: string },
-    suggestedStartAt: string | null,
+    extra: Pick<ReplacementSuggestion, "kind" | "suggestedStartAt"> & {
+      payoutReady?: boolean;
+    },
   ): ReplacementSuggestion[] => {
     const provider = providersById.get(row.provider_id);
     const offering = provider?.services.find(
@@ -87,13 +101,27 @@ export async function getReplacementPool(
         providerName: provider.display_name,
         hourlyRateCents: offering.hourly_rate_cents,
         rating: provider.rating,
-        suggestedStartAt,
+        ...extra,
       },
     ];
   };
 
   return {
-    exact: exactRows.flatMap((row) => hydrate(row, null)),
-    timeShift: shiftRows.flatMap((row) => hydrate(row, row.suggested_start_at)),
+    exact: exactRows.flatMap((row) =>
+      hydrate(row, { kind: "exact", suggestedStartAt: null }),
+    ),
+    timeShift: shiftRows.flatMap((row) =>
+      hydrate(row, {
+        kind: "time_shift",
+        suggestedStartAt: row.suggested_start_at,
+      }),
+    ),
+    fallback: fallbackRows.flatMap((row) =>
+      hydrate(row, {
+        kind: "browse",
+        suggestedStartAt: null,
+        payoutReady: row.payout_ready,
+      }),
+    ),
   };
 }
