@@ -439,6 +439,7 @@ function BookingCard({
 }) {
   const providerName = booking.provider.display_name;
   const isDeclined = booking.status === "declined";
+  const isCountered = booking.status === "countered";
   const isProviderCancelled =
     booking.status === "cancelled" &&
     booking.cancelled_by_role === "provider";
@@ -657,6 +658,15 @@ function BookingCard({
             {booking.invoice?.status === "requires_action"
               ? "Fix payment"
               : "Review & pay"}
+          </Link>
+        ) : null}
+
+        {isCountered && !demo ? (
+          <Link
+            href={`/bookings/${booking.id}/counter`}
+            className={buttonClasses({ size: "sm" })}
+          >
+            Review new time
           </Link>
         ) : null}
 

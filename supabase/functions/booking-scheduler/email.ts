@@ -35,6 +35,12 @@ const COPY: Record<
     heading: "You have a new request",
     body: "Review the job and respond before the customer’s response window closes.",
   },
+  counter_offer_received: {
+    subject: "Your College Crew student suggested a different time",
+    heading: "A different time was suggested",
+    body: "Your student can’t make the time you picked and suggested another one. Accept it or turn it down — you’re not charged either way until you accept.",
+    ctaLabel: "Review the new time",
+  },
   request_declined: {
     subject: "College Crew request update",
     heading: "The provider declined this request",
@@ -180,6 +186,9 @@ function escapeHtml(value: string) {
 function dashboardPath(context: BookingEmailContext) {
   if (context.template === "response_alert" && context.bookingId) {
     return `/bookings/${encodeURIComponent(context.bookingId)}/replace`;
+  }
+  if (context.template === "counter_offer_received" && context.bookingId) {
+    return `/bookings/${encodeURIComponent(context.bookingId)}/counter`;
   }
   if (context.template === "final_payment_success" && context.bookingId) {
     return `/dashboard#booking-${encodeURIComponent(context.bookingId)}`;

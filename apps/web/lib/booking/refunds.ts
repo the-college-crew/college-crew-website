@@ -36,7 +36,7 @@ export async function executePendingRefunds(
   for (const refund of refunds) {
     const { data: payment } = await admin
       .from("booking_payments")
-      .select("stripe_payment_intent_id, amount_cents")
+      .select("stripe_payment_intent_id, amount_cents, charge_model")
       .eq("id", refund.payment_id)
       .maybeSingle();
     if (!payment?.stripe_payment_intent_id) {
@@ -56,6 +56,11 @@ export async function executePendingRefunds(
         paymentIntentId: payment.stripe_payment_intent_id,
         amountCents: isFull ? undefined : refund.amount_cents,
         idempotencyKey: refund.idempotency_key,
+        // Only a legacy destination charge has a transfer to reverse. On the
+        // held-funds model the payout happens after the job, so at refund time
+        // there is usually nothing transferred — and Stripe errors if asked to
+        // reverse a transfer that doesn't exist.
+        reverseTransfer: payment.charge_model === "destination",
       });
       if (!result.configured) {
         await settleRefundFailure(

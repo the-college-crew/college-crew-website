@@ -153,7 +153,6 @@ export async function createBookingPaymentIntent(input: {
 export async function createFirstHourPaymentIntent(input: {
   bookingId: string;
   amountCents: number;
-  applicationFeeCents: number;
   stripeCustomerId: string;
   providerStripeAccountId: string;
   idempotencyKey: string;
@@ -169,9 +168,16 @@ export async function createFirstHourPaymentIntent(input: {
       amount: input.amountCents,
       currency: "usd",
       customer: input.stripeCustomerId,
-      application_fee_amount: input.applicationFeeCents,
-      transfer_data: { destination: input.providerStripeAccountId },
-      metadata: { booking_id: input.bookingId, payment_kind: "first_hour" },
+      // NOT a destination charge. The captured hour is held in the PLATFORM
+      // balance and the student is paid once, after the job (`transferToProvider`,
+      // driven by the `provider_payout` scheduler job). That way the platform
+      // never has to claw money back when a job settles in cash, and a
+      // cancellation is a plain refund with no transfer to reverse.
+      metadata: {
+        booking_id: input.bookingId,
+        payment_kind: "first_hour",
+        payee_account: input.providerStripeAccountId,
+      },
       // Instant-book: the first hour is AUTHORIZED at request time and captured
       // only when the provider accepts (released, never charged, on
       // decline/timeout). Manual capture turns the confirmed intent into a hold.
@@ -257,7 +263,6 @@ export async function createBalancePaymentIntent(input: {
   invoiceId: string;
   bookingId: string;
   amountCents: number;
-  applicationFeeCents: number;
   stripeCustomerId: string;
   providerStripeAccountId: string;
   idempotencyKey: string;
@@ -278,12 +283,14 @@ export async function createBalancePaymentIntent(input: {
     amount: input.amountCents,
     currency: "usd",
     customer: input.stripeCustomerId,
-    application_fee_amount: input.applicationFeeCents,
-    transfer_data: { destination: input.providerStripeAccountId },
+    // Held in the platform balance like the first hour; the student is paid the
+    // whole balance (the rake comes out of the retained first hour) by the
+    // `provider_payout` job once the job completes.
     metadata: {
       booking_id: input.bookingId,
       invoice_id: input.invoiceId,
       payment_kind: "balance",
+      payee_account: input.providerStripeAccountId,
     },
     automatic_payment_methods: { enabled: true, allow_redirects: "never" },
   };
@@ -364,13 +371,74 @@ export async function confirmBalancePaymentIntent(input: {
 }
 
 /**
- * Full refund of a first-hour destination charge with the transfer and
- * application fee reversed, so a late/terminal success returns the customer's
- * money and claws back the provider transfer. Idempotent via the passed key.
+ * Pay the student out of money the platform is already holding. Runs once the
+ * job is complete, driven by the `provider_payout` scheduler job.
+ *
+ * `source_transaction` ties the transfer to the specific charge that funded it,
+ * so the transfer draws from those funds directly and cannot fail because the
+ * platform's *available* balance hasn't settled yet — the usual trap when you
+ * move off destination charges. It also makes the money traceable end to end:
+ * every payout points at the charge it came from.
+ */
+export async function transferToProvider(input: {
+  amountCents: number;
+  destinationAccountId: string;
+  /** The charge that funded this payout (`ch_…`, not the PaymentIntent). */
+  sourceChargeId: string;
+  bookingId: string;
+  idempotencyKey: string;
+}): Promise<
+  { configured: true; transferId: string; amountCents: number } | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const transfer = await stripe.transfers.create(
+    {
+      amount: input.amountCents,
+      currency: "usd",
+      destination: input.destinationAccountId,
+      source_transaction: input.sourceChargeId,
+      metadata: { booking_id: input.bookingId },
+    },
+    { idempotencyKey: input.idempotencyKey },
+  );
+
+  return {
+    configured: true,
+    transferId: transfer.id,
+    amountCents: transfer.amount,
+  };
+}
+
+/** Resolve the charge id that settled a PaymentIntent, for `source_transaction`. */
+export async function getChargeIdForPaymentIntent(
+  paymentIntentId: string,
+): Promise<{ configured: true; chargeId: string | null } | StripeUnconfigured> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  const latest = intent.latest_charge;
+  const chargeId =
+    typeof latest === "string" ? latest : (latest?.id ?? null);
+  return { configured: true, chargeId };
+}
+
+/**
+ * Full refund of a first-hour charge, so a late/terminal success returns the
+ * customer's money.
+ *
+ * `reverseTransfer` must be true only for a legacy DESTINATION charge, where the
+ * provider was already paid as the transfer leg. On the current platform-held
+ * model no transfer exists at refund time (payout happens after the job), and
+ * asking Stripe to reverse one would error — hence the explicit flag rather than
+ * a hardcoded `true`. Callers pass `booking_payments.charge_model`.
  */
 export async function refundFirstHourFull(input: {
   paymentIntentId: string;
   idempotencyKey: string;
+  reverseTransfer: boolean;
 }): Promise<
   { configured: true; refundId: string; amountCents: number } | StripeUnconfigured
 > {
@@ -380,8 +448,9 @@ export async function refundFirstHourFull(input: {
   const refund = await stripe.refunds.create(
     {
       payment_intent: input.paymentIntentId,
-      reverse_transfer: true,
-      refund_application_fee: true,
+      ...(input.reverseTransfer
+        ? { reverse_transfer: true, refund_application_fee: true }
+        : {}),
     },
     { idempotencyKey: input.idempotencyKey },
   );
@@ -406,6 +475,12 @@ export async function refundDestinationCharge(input: {
   paymentIntentId: string;
   amountCents?: number;
   idempotencyKey: string;
+  /**
+   * True only for a legacy destination charge. Platform-held charges have no
+   * transfer to reverse at refund time (the payout runs after the job), and
+   * Stripe rejects `reverse_transfer` on them.
+   */
+  reverseTransfer: boolean;
 }): Promise<
   | {
       configured: true;
@@ -420,8 +495,9 @@ export async function refundDestinationCharge(input: {
 
   const params: Stripe.RefundCreateParams = {
     payment_intent: input.paymentIntentId,
-    reverse_transfer: true,
-    refund_application_fee: true,
+    ...(input.reverseTransfer
+      ? { reverse_transfer: true, refund_application_fee: true }
+      : {}),
   };
   if (typeof input.amountCents === "number") {
     params.amount = input.amountCents;

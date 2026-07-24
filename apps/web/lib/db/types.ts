@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_allowlist: {
@@ -297,11 +322,13 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           on_decline_preference: Database["public"]["Enums"]["booking_decline_preference"]
+          original_booking_id: string | null
           provider_service_id: string
           scheduled_at: string
           service_city: string
           stripe_customer_id: string | null
           stripe_payment_intent_id: string
+          time_flexibility: Database["public"]["Enums"]["booking_time_flexibility"]
         }
         Insert: {
           address: string
@@ -318,11 +345,13 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           on_decline_preference?: Database["public"]["Enums"]["booking_decline_preference"]
+          original_booking_id?: string | null
           provider_service_id: string
           scheduled_at: string
           service_city?: string
           stripe_customer_id?: string | null
           stripe_payment_intent_id: string
+          time_flexibility?: Database["public"]["Enums"]["booking_time_flexibility"]
         }
         Update: {
           address?: string
@@ -339,11 +368,13 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           on_decline_preference?: Database["public"]["Enums"]["booking_decline_preference"]
+          original_booking_id?: string | null
           provider_service_id?: string
           scheduled_at?: string
           service_city?: string
           stripe_customer_id?: string | null
           stripe_payment_intent_id?: string
+          time_flexibility?: Database["public"]["Enums"]["booking_time_flexibility"]
         }
         Relationships: [
           {
@@ -351,6 +382,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_drafts_original_booking_id_fkey"
+            columns: ["original_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
           {
@@ -448,6 +486,7 @@ export type Database = {
           attempt_count: number
           authorized_at: string | null
           booking_id: string
+          charge_model: Database["public"]["Enums"]["booking_charge_model"]
           created_at: string
           currency: string
           customer_authorization_version: string
@@ -474,6 +513,7 @@ export type Database = {
           attempt_count?: number
           authorized_at?: string | null
           booking_id: string
+          charge_model?: Database["public"]["Enums"]["booking_charge_model"]
           created_at?: string
           currency?: string
           customer_authorization_version: string
@@ -500,6 +540,7 @@ export type Database = {
           attempt_count?: number
           authorized_at?: string | null
           booking_id?: string
+          charge_model?: Database["public"]["Enums"]["booking_charge_model"]
           created_at?: string
           currency?: string
           customer_authorization_version?: string
@@ -532,6 +573,69 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "booking_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_provider_payouts: {
+        Row: {
+          amount_cents: number
+          booking_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          paid_at: string | null
+          payment_id: string | null
+          status: string
+          stripe_destination_account_id: string
+          stripe_source_charge_id: string | null
+          stripe_transfer_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          booking_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          status?: string
+          stripe_destination_account_id: string
+          stripe_source_charge_id?: string | null
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          booking_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          status?: string
+          stripe_destination_account_id?: string
+          stripe_source_charge_id?: string | null
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_provider_payouts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_provider_payouts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "booking_payments"
             referencedColumns: ["id"]
           },
         ]
@@ -631,6 +735,9 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           cancelled_by_role: Database["public"]["Enums"]["user_role"] | null
+          cash_settled_at: string | null
+          counter_note: string | null
+          countered_at: string | null
           created_at: string
           customer_authorization_snapshot: Json | null
           customer_authorization_version: string | null
@@ -654,6 +761,7 @@ export type Database = {
           platform_fee_cents: number
           policy_snapshot: Json | null
           price_cents: number
+          proposed_start_at: string | null
           provider_display_name_snapshot: string | null
           provider_id: string
           quote_sent_at: string | null
@@ -669,6 +777,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           stripe_payment_intent_id: string | null
           terms_version: string | null
+          time_flexibility: Database["public"]["Enums"]["booking_time_flexibility"]
           withdrawal_reason: string | null
           withdrawn_at: string | null
           withdrawn_by: string | null
@@ -690,6 +799,9 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           cancelled_by_role?: Database["public"]["Enums"]["user_role"] | null
+          cash_settled_at?: string | null
+          counter_note?: string | null
+          countered_at?: string | null
           created_at?: string
           customer_authorization_snapshot?: Json | null
           customer_authorization_version?: string | null
@@ -713,6 +825,7 @@ export type Database = {
           platform_fee_cents: number
           policy_snapshot?: Json | null
           price_cents: number
+          proposed_start_at?: string | null
           provider_display_name_snapshot?: string | null
           provider_id: string
           quote_sent_at?: string | null
@@ -728,6 +841,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"]
           stripe_payment_intent_id?: string | null
           terms_version?: string | null
+          time_flexibility?: Database["public"]["Enums"]["booking_time_flexibility"]
           withdrawal_reason?: string | null
           withdrawn_at?: string | null
           withdrawn_by?: string | null
@@ -749,6 +863,9 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           cancelled_by_role?: Database["public"]["Enums"]["user_role"] | null
+          cash_settled_at?: string | null
+          counter_note?: string | null
+          countered_at?: string | null
           created_at?: string
           customer_authorization_snapshot?: Json | null
           customer_authorization_version?: string | null
@@ -772,6 +889,7 @@ export type Database = {
           platform_fee_cents?: number
           policy_snapshot?: Json | null
           price_cents?: number
+          proposed_start_at?: string | null
           provider_display_name_snapshot?: string | null
           provider_id?: string
           quote_sent_at?: string | null
@@ -787,6 +905,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"]
           stripe_payment_intent_id?: string | null
           terms_version?: string | null
+          time_flexibility?: Database["public"]["Enums"]["booking_time_flexibility"]
           withdrawal_reason?: string | null
           withdrawn_at?: string | null
           withdrawn_by?: string | null
@@ -2357,6 +2476,10 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      accept_hourly_counter_offer: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       admin_retry_booking_automation_job: {
         Args: { p_job_id: string }
         Returns: boolean
@@ -2380,6 +2503,10 @@ export type Database = {
           p_stripe_payment_intent_id: string
         }
         Returns: undefined
+      }
+      auto_complete_hourly_job: {
+        Args: { p_booking_id: string }
+        Returns: string
       }
       begin_balance_payment: {
         Args: { p_invoice_id: string }
@@ -2465,6 +2592,14 @@ export type Database = {
         Args: { p_job_id: string; p_lease_token: string }
         Returns: boolean
       }
+      counter_hourly_booking_request: {
+        Args: {
+          p_booking_id: string
+          p_note?: string
+          p_proposed_start_at: string
+        }
+        Returns: string
+      }
       create_booking_draft: {
         Args: {
           p_address: string
@@ -2477,11 +2612,13 @@ export type Database = {
           p_latitude?: number
           p_longitude?: number
           p_on_decline_preference: Database["public"]["Enums"]["booking_decline_preference"]
+          p_original_booking_id?: string
           p_provider_service_id: string
           p_scheduled_at: string
           p_service_city: string
           p_stripe_customer_id: string
           p_stripe_payment_intent_id: string
+          p_time_flexibility?: Database["public"]["Enums"]["booking_time_flexibility"]
         }
         Returns: undefined
       }
@@ -2539,7 +2676,7 @@ export type Database = {
       get_active_email_suppression: {
         Args: { p_recipient_email: string }
         Returns: {
-          detail: string | null
+          detail: string
           reason: string
           suppressed_at: string
         }[]
@@ -2627,6 +2764,16 @@ export type Database = {
         Returns: string
       }
       owns_provider_profile: { Args: { pp_id: string }; Returns: boolean }
+      provider_payout_plan: {
+        Args: { p_booking_id: string }
+        Returns: {
+          destination_account_id: string
+          kind: Database["public"]["Enums"]["booking_payment_kind"]
+          payment_id: string
+          payout_amount_cents: number
+          stripe_payment_intent_id: string
+        }[]
+      }
       quote_hourly_offering_slot: {
         Args: {
           p_estimated_minutes: number
@@ -2665,8 +2812,24 @@ export type Database = {
         }
         Returns: string
       }
+      record_provider_payout: {
+        Args: {
+          p_amount_cents: number
+          p_booking_id: string
+          p_destination_account_id: string
+          p_error?: string
+          p_idempotency_key: string
+          p_payment_id: string
+          p_source_charge_id?: string
+          p_status?: string
+          p_stripe_transfer_id?: string
+        }
+        Returns: string
+      }
       record_resend_webhook_event: {
         Args: {
+          // Hand-widened: the SQL accepts NULL for these, but `supabase gen
+          // types` cannot express argument nullability. Re-apply after any regen.
           p_detail?: string | null
           p_event_created_at: string
           p_event_type: string
@@ -2677,10 +2840,14 @@ export type Database = {
         Returns: {
           current_delivery_status: Database["public"]["Enums"]["email_delivery_status"]
           duplicate: boolean
-          matched_outbox_id: string | null
+          matched_outbox_id: string
         }[]
       }
       record_stripe_dispute: { Args: { p_event: Json }; Returns: string }
+      reject_hourly_counter_offer: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       release_due_invoice_claim: {
         Args: { p_invoice_id: string }
         Returns: boolean
@@ -2795,6 +2962,15 @@ export type Database = {
         }
         Returns: string
       }
+      settle_job_in_cash: {
+        Args: {
+          p_booking_id: string
+          p_confirmed?: boolean
+          p_provider_explanation?: string
+          p_submitted_minutes: number
+        }
+        Returns: string
+      }
       settle_zero_balance_invoice: {
         Args: { p_invoice_id: string }
         Returns: string
@@ -2826,6 +3002,7 @@ export type Database = {
     }
     Enums: {
       background_check_status: "none" | "pending" | "passed"
+      booking_charge_model: "destination" | "platform"
       booking_decline_preference: "auto_rematch" | "keep_control"
       booking_dispute_category:
         | "provider_no_show"
@@ -2849,6 +3026,7 @@ export type Database = {
         | "paid"
         | "waived"
         | "refunded"
+        | "cash_settled"
       booking_payment_kind: "first_hour" | "balance"
       booking_payment_status:
         | "created"
@@ -2878,6 +3056,8 @@ export type Database = {
         | "withdrawn"
         | "expired"
         | "cancelled"
+        | "countered"
+      booking_time_flexibility: "flexible" | "fixed"
       email_delivery_status:
         | "accepted"
         | "delivered"
@@ -3025,9 +3205,13 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       background_check_status: ["none", "pending", "passed"],
+      booking_charge_model: ["destination", "platform"],
       booking_decline_preference: ["auto_rematch", "keep_control"],
       booking_dispute_category: [
         "provider_no_show",
@@ -3053,6 +3237,7 @@ export const Constants = {
         "paid",
         "waived",
         "refunded",
+        "cash_settled",
       ],
       booking_payment_kind: ["first_hour", "balance"],
       booking_payment_status: [
@@ -3085,7 +3270,9 @@ export const Constants = {
         "withdrawn",
         "expired",
         "cancelled",
+        "countered",
       ],
+      booking_time_flexibility: ["flexible", "fixed"],
       email_delivery_status: [
         "accepted",
         "delivered",

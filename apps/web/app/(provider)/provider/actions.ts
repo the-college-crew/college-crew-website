@@ -13,6 +13,7 @@ import {
   captureFirstHourHold,
   releaseFirstHourHold,
 } from "@/lib/booking/first-hour-hold";
+import { pilotLocalDateTimeToUtc } from "@/lib/booking/policy";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import type { BookingStatus } from "@/lib/db/types";
 import {
@@ -146,6 +147,100 @@ export async function acceptBooking(
   revalidatePath("/provider/dashboard");
   revalidatePath("/provider/jobs");
   redirect(`/messages/${conversationId}`);
+}
+
+/**
+ * Close the job out as paid in person. The platform does NOT charge the job
+ * amount — it keeps only its rake from the first hour it already captured and
+ * pays the student the remainder through the ordinary payout job.
+ *
+ * `confirmed` is the whole control on this path: it is the only record that the
+ * customer actually handed money over off-platform, so the RPC refuses without
+ * it rather than trusting the UI to have asked.
+ */
+const cashSchema = z.object({
+  bookingId: z.string().uuid(),
+  submittedMinutes: z.coerce.number().int(),
+  explanation: z.string().max(2000).optional().default(""),
+  confirmed: z.literal("on", {
+    message: "Confirm the customer paid you in person.",
+  }),
+});
+
+export async function settleJobInCash(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireProviderAccess();
+  const parsed = cashSchema.safeParse({
+    bookingId: formData.get("bookingId"),
+    submittedMinutes: formData.get("submittedMinutes"),
+    explanation: formData.get("explanation") ?? "",
+    confirmed: formData.get("confirmed"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("settle_job_in_cash", {
+    p_booking_id: parsed.data.bookingId,
+    p_submitted_minutes: parsed.data.submittedMinutes,
+    p_provider_explanation: parsed.data.explanation,
+    p_confirmed: true,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not record the cash payment."),
+    };
+  }
+
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  redirect(`/provider/jobs/${parsed.data.bookingId}/complete`);
+}
+
+/**
+ * Suggest a different start time instead of accepting or declining. Only offered
+ * when the customer chose "they can suggest a different time" — the RPC enforces
+ * that, re-validates availability/notice/conflicts at the proposed slot, and
+ * emails the customer. The booking's rate snapshot and its first-hour hold are
+ * untouched: a counter moves the time only, and the provider does not change, so
+ * the existing hold stays valid and is captured if the customer accepts.
+ */
+const counterSchema = z.object({
+  bookingId: z.string().uuid(),
+  proposedLocal: z.string().min(1, "Pick the time you can do."),
+  note: z.string().trim().max(500).optional().default(""),
+});
+
+export async function counterBooking(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireProviderAccess();
+  const parsed = counterSchema.safeParse({
+    bookingId: formData.get("bookingId"),
+    proposedLocal: formData.get("proposedLocal"),
+    note: formData.get("note"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const proposed = pilotLocalDateTimeToUtc(parsed.data.proposedLocal);
+  if (!proposed.ok) return { error: "Pick a valid date and time." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("counter_hourly_booking_request", {
+    p_booking_id: parsed.data.bookingId,
+    p_proposed_start_at: proposed.date.toISOString(),
+    p_note: parsed.data.note,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not suggest a new time."),
+    };
+  }
+
+  revalidatePath("/provider/dashboard");
+  return {};
 }
 
 /**

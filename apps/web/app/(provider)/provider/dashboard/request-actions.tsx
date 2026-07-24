@@ -9,7 +9,12 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Textarea } from "@/components/ui/field";
 import type { BookingFlow } from "@/lib/db/types";
 
-import { acceptBooking, declineBooking, sendQuote } from "../actions";
+import {
+  acceptBooking,
+  counterBooking,
+  declineBooking,
+  sendQuote,
+} from "../actions";
 
 type RequestJob = {
   id: string;
@@ -18,6 +23,8 @@ type RequestJob = {
   whenLabel: string;
   address: string;
   bookingFlow: BookingFlow;
+  /** "flexible" means the customer allows a different time to be suggested. */
+  timeFlexibility: "flexible" | "fixed";
 };
 
 /**
@@ -27,9 +34,14 @@ type RequestJob = {
  * render here — the page navigates away.
  */
 export function RequestActions({ job }: { job: RequestJob }) {
-  const [mode, setMode] = useState<"idle" | "accept" | "quote" | "decline">(
-    "idle",
-  );
+  const [mode, setMode] = useState<
+    "idle" | "accept" | "quote" | "decline" | "counter"
+  >("idle");
+
+  // Only offered when the customer said a different time may be suggested; the
+  // RPC enforces the same rule server-side.
+  const canCounter =
+    job.bookingFlow === "hourly_v1" && job.timeFlexibility === "flexible";
 
   if (mode === "accept") {
     return (
@@ -41,12 +53,15 @@ export function RequestActions({ job }: { job: RequestJob }) {
       <DeclinePanel job={job} onCancel={() => setMode("idle")} />
     );
   }
+  if (mode === "counter") {
+    return <CounterPanel job={job} onCancel={() => setMode("idle")} />;
+  }
   if (mode === "quote") {
     return <SendQuotePanel job={job} onCancel={() => setMode("idle")} />;
   }
 
   return (
-    <div className="mt-3 flex gap-2">
+    <div className="mt-3 flex flex-wrap gap-2">
       <Button
         type="button"
         variant="success"
@@ -57,6 +72,16 @@ export function RequestActions({ job }: { job: RequestJob }) {
       >
         {job.bookingFlow === "quote_v1" ? "Send quote" : "Accept"}
       </Button>
+      {canCounter ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => setMode("counter")}
+        >
+          Suggest another time
+        </Button>
+      ) : null}
       <Button
         type="button"
         variant="danger"
@@ -66,6 +91,66 @@ export function RequestActions({ job }: { job: RequestJob }) {
         Decline
       </Button>
     </div>
+  );
+}
+
+/**
+ * Propose a different start time. The customer keeps control — their hold stays
+ * as-is and nothing is charged unless they accept the new time.
+ */
+function CounterPanel({
+  job,
+  onCancel,
+}: {
+  job: RequestJob;
+  onCancel: () => void;
+}) {
+  const [state, formAction] = useActionState(counterBooking, {});
+
+  return (
+    <form action={formAction} className="mt-3 space-y-2">
+      <FormLoader />
+      <input type="hidden" name="bookingId" value={job.id} />
+      <label
+        htmlFor={`counter-${job.id}`}
+        className="block text-sm font-medium text-ink"
+      >
+        When could you do it?
+      </label>
+      <Input
+        id={`counter-${job.id}`}
+        name="proposedLocal"
+        type="datetime-local"
+        required
+      />
+      <FieldHint>
+        They asked for {job.whenLabel}. Suggest the closest time that works for
+        you.
+      </FieldHint>
+      <Textarea
+        name="note"
+        rows={2}
+        maxLength={500}
+        placeholder="Optional: a quick word on why this time works better"
+      />
+      <p className="text-xs text-mist">
+        {job.customerName} chooses whether to take it. Nothing is charged unless
+        they accept.
+      </p>
+      <FieldError>{state.error}</FieldError>
+      <div className="flex gap-2">
+        <SubmitButton variant="primary" pendingLabel="Sending…">
+          Suggest this time
+        </SubmitButton>
+        <button
+          type="button"
+          onClick={onCancel}
+          className={buttonClasses({ variant: "ghost", size: "sm" })}
+        >
+          Back
+        </button>
+      </div>
+    </form>
   );
 }
 

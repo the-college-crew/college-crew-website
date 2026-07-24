@@ -90,8 +90,26 @@ async function processJob(kind: string, bookingId: string, sourceId: string) {
     if (result.error) throw result.error;
     return;
   }
+  if (kind === "completion_timeout") {
+    // 24h after Arrived with no invoice submitted: bill the original estimate.
+    // Idempotent and a no-op if the provider already submitted or the booking
+    // moved on, so a retry can never double-invoice.
+    const result = await admin.rpc("auto_complete_hourly_job", {
+      p_booking_id: bookingId,
+    });
+    if (result.error) throw result.error;
+    return;
+  }
   if (kind === "invoice_autocharge") {
     const outcome = await attemptDueInvoiceCharge(sourceId);
+    if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
+    return;
+  }
+  if (kind === "provider_payout") {
+    // The job is complete: release the student's share of the funds the platform
+    // has been holding. Idempotent, so a retry cannot pay twice.
+    const { attemptProviderPayout } = await import("@/lib/booking/payouts");
+    const outcome = await attemptProviderPayout(bookingId);
     if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
     return;
   }
