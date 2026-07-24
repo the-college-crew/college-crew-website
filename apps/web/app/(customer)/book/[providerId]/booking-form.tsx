@@ -79,13 +79,27 @@ function durationLabel(minutes: number) {
   return `${hours} hr${hours === 1 ? "" : "s"}${remainder ? ` ${remainder} min` : ""}`;
 }
 
+/**
+ * Prefill for a repeat booking. Date and time are intentionally absent — the
+ * old ones are stale, and asking again is the point.
+ */
+export type RebookDefaults = {
+  /** The service booked last time; resolved to this provider's offering of it. */
+  serviceId?: string;
+  estimatedMinutes?: number;
+  details?: string;
+};
+
 export function BookingRequestForm({
   services,
   originReady,
+  initial,
 }: {
   services: OfferedService[];
   /** False until "Booking from" resolves to a usable service address. */
   originReady: boolean;
+  /** Set when the customer arrived via "Book again". */
+  initial?: RebookDefaults;
 }) {
   const [quoteState, quoteAction, quotePending] = useActionState<
     BookingFormState,
@@ -96,9 +110,16 @@ export function BookingRequestForm({
     FormData
   >(startBookingAuthorization, {});
 
-  const [selectedId, setSelectedId] = useState(services[0]?.id ?? "");
+  const [selectedId, setSelectedId] = useState(() => {
+    const repeated = initial?.serviceId
+      ? services.find((offered) => offered.service.id === initial.serviceId)
+      : undefined;
+    return repeated?.id ?? services[0]?.id ?? "";
+  });
   const [scheduledLocal, setScheduledLocal] = useState("");
-  const [estimatedMinutes, setEstimatedMinutes] = useState(60);
+  const [estimatedMinutes, setEstimatedMinutes] = useState(
+    initial?.estimatedMinutes ?? 60,
+  );
   const [responseWindowHours, setResponseWindowHours] = useState<number>(
     DEFAULT_RESPONSE_WINDOW_HOURS,
   );
@@ -290,6 +311,7 @@ export function BookingRequestForm({
           name="details"
           rows={4}
           maxLength={2000}
+          defaultValue={initial?.details}
           placeholder={
             isQuote
               ? "Describe the size or quantity, surfaces or items, access, and anything that affects the scope..."
