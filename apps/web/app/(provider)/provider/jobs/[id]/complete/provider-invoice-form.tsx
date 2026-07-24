@@ -159,10 +159,10 @@ export function ProviderInvoiceForm({
     const cashAllocation = cashValid
       ? calculateInvoiceAllocation(rateCents, cashMinutes)
       : null;
+    const cashOverEstimate = cashMinutes > estimatedMinutes;
     return (
       <form action={cashAction} className="space-y-4">
         <input type="hidden" name="bookingId" value={bookingId} />
-        <input type="hidden" name="explanation" value="" />
 
         <div className="rounded-2xl border border-line bg-white p-5">
           <p className="font-display text-sm font-semibold">
@@ -196,6 +196,28 @@ export function ProviderInvoiceForm({
             </p>
           ) : null}
         </div>
+
+        {cashOverEstimate ? (
+          <div className="rounded-2xl border border-gold-300 bg-gold-100 p-5">
+            <label
+              htmlFor="cashExplanation"
+              className="font-display text-sm font-semibold text-gold-800"
+            >
+              Explain the time beyond the estimate
+            </label>
+            <textarea
+              id="cashExplanation"
+              name="explanation"
+              rows={3}
+              maxLength={2000}
+              required
+              className="mt-2 w-full rounded-lg border border-gold-300 bg-white px-3 py-2 text-sm"
+              placeholder="e.g. The session ran long to finish the material."
+            />
+          </div>
+        ) : (
+          <input type="hidden" name="explanation" value="" />
+        )}
 
         {cashAllocation ? (
           <div className="rounded-2xl border border-line bg-white p-5 text-sm">
