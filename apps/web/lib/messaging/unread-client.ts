@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import { createClient } from "@/lib/supabase/client";
-
 /**
  * Browser-side unread helpers. The header badge starts from the
  * server-rendered total (lib/messaging/unread.ts) and then follows two
@@ -17,9 +15,31 @@ import { createClient } from "@/lib/supabase/client";
  * Both signals trigger a debounced re-run of the `unread_message_summary`
  * RPC rather than local math, so the count can only ever be what the
  * database says it is.
+ *
+ * `createClient` is reached through `loadClient()` below rather than a
+ * module-scope import. UserMenu imports this file, SiteHeader imports
+ * UserMenu, so a static import parks @supabase/supabase-js in the static
+ * client graph of every route segment that renders the header — including the
+ * public landing page, where the menu never renders at all. The bundler hands
+ * that vendor chunk to every component in the segment's chunk group, so
+ * logged-out visitors were downloading ~250 KB of realtime client to look at
+ * a nav bar. Conditional rendering does not help; only a dynamic import
+ * inside client code moves it to its own async chunk.
  */
 
 const UNREAD_CHANGED_EVENT = "college-crew:unread-changed";
+
+/**
+ * Cached so repeated hook mounts share one module fetch. `createClient`
+ * itself is cheap to call again — it's the ~250 KB module behind it we only
+ * want to pull over the wire once.
+ */
+let clientModule: Promise<typeof import("@/lib/supabase/client")> | null = null;
+
+function loadClient() {
+  clientModule ??= import("@/lib/supabase/client");
+  return clientModule.then((m) => m.createClient());
+}
 
 type UnreadCounts = Record<string, number>;
 
@@ -31,7 +51,7 @@ export function announceUnreadChanged() {
 export async function markConversationReadClient(
   conversationId: string,
 ): Promise<void> {
-  const supabase = createClient();
+  const supabase = await loadClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -61,13 +81,15 @@ export function useLiveUnreadCounts(initial: UnreadCounts): UnreadCounts {
   }
 
   useEffect(() => {
-    const supabase = createClient();
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let teardown: (() => void) | null = null;
 
     const refetch = () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(async () => {
+        const supabase = await loadClient();
+        if (cancelled) return;
         const { data } = await supabase.rpc("unread_message_summary");
         if (cancelled) return;
         const next: UnreadCounts = {};
@@ -79,8 +101,10 @@ export function useLiveUnreadCounts(initial: UnreadCounts): UnreadCounts {
       }, 250);
     };
 
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
+      const supabase = await loadClient();
+      if (cancelled) return;
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -89,7 +113,7 @@ export function useLiveUnreadCounts(initial: UnreadCounts): UnreadCounts {
       await supabase.realtime.setAuth();
       if (cancelled) return;
 
-      channel = supabase
+      const channel = supabase
         .channel("unread-conversation-list")
         .on(
           "postgres_changes",
@@ -100,6 +124,10 @@ export function useLiveUnreadCounts(initial: UnreadCounts): UnreadCounts {
           },
         )
         .subscribe();
+
+      teardown = () => supabase.removeChannel(channel);
+      // Unmounting mid-await would otherwise strand a live channel.
+      if (cancelled) teardown();
     })();
 
     window.addEventListener(UNREAD_CHANGED_EVENT, refetch);
@@ -107,7 +135,7 @@ export function useLiveUnreadCounts(initial: UnreadCounts): UnreadCounts {
       cancelled = true;
       if (timer) clearTimeout(timer);
       window.removeEventListener(UNREAD_CHANGED_EVENT, refetch);
-      if (channel) supabase.removeChannel(channel);
+      teardown?.();
     };
   }, []);
 
@@ -126,13 +154,15 @@ export function useLiveUnreadCount(initial: number): number {
   }
 
   useEffect(() => {
-    const supabase = createClient();
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let teardown: (() => void) | null = null;
 
     const refetch = () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(async () => {
+        const supabase = await loadClient();
+        if (cancelled) return;
         const { data } = await supabase.rpc("unread_message_summary");
         if (cancelled) return;
         setCount(
@@ -144,8 +174,10 @@ export function useLiveUnreadCount(initial: number): number {
       }, 250);
     };
 
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
+      const supabase = await loadClient();
+      if (cancelled) return;
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -156,7 +188,7 @@ export function useLiveUnreadCount(initial: number): number {
       await supabase.realtime.setAuth();
       if (cancelled) return;
 
-      channel = supabase
+      const channel = supabase
         .channel("unread-badge")
         .on(
           "postgres_changes",
@@ -167,6 +199,10 @@ export function useLiveUnreadCount(initial: number): number {
           },
         )
         .subscribe();
+
+      teardown = () => supabase.removeChannel(channel);
+      // Unmounting mid-await would otherwise strand a live channel.
+      if (cancelled) teardown();
     })();
 
     window.addEventListener(UNREAD_CHANGED_EVENT, refetch);
@@ -174,7 +210,7 @@ export function useLiveUnreadCount(initial: number): number {
       cancelled = true;
       if (timer) clearTimeout(timer);
       window.removeEventListener(UNREAD_CHANGED_EVENT, refetch);
-      if (channel) supabase.removeChannel(channel);
+      teardown?.();
     };
   }, []);
 

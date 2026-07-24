@@ -24,9 +24,16 @@ export default async function CustomerLayout({
       </main>
       <SiteFooter />
       {modal}
-      {isAdmin ? <EditModeToggle /> : null}
-      {/* Copy edits land for every open visitor tab, not just the editor. */}
-      <RealtimeRefresh channel="site-content" table="site_content" />
+      {/* Live copy updates are for whoever is editing, and only an admin can
+          edit. Mounting this for anonymous visitors bought a stranger's open
+          tab a live-updating headline at the cost of the whole Supabase
+          realtime client on first paint — not a trade worth making. */}
+      {isAdmin ? (
+        <>
+          <EditModeToggle />
+          <RealtimeRefresh channel="site-content" table="site_content" />
+        </>
+      ) : null}
     </EditModeProvider>
   );
 }
