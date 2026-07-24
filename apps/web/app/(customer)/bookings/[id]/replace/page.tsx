@@ -6,7 +6,6 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireRole } from "@/lib/auth/session";
-import { eligibleResponseWindowHours } from "@/lib/booking/policy";
 import { getReplacementCandidateIds } from "@/lib/booking/requests";
 import { getApprovedProviders } from "@/lib/db/queries";
 import {
@@ -58,9 +57,16 @@ export default async function ReplacementPage({
 
   const service = Array.isArray(booking.service) ? booking.service[0] : booking.service;
   if (!service) notFound();
-  const replacementAvailable =
+  // Alternatives surface for a timed-out request (past its response window) or a
+  // declined one, as long as the job itself hasn't started.
+  const now = new Date();
+  const timedOut =
     booking.status === "requested" &&
-    new Date() >= new Date(booking.response_alert_at!);
+    booking.response_alert_at != null &&
+    now >= new Date(booking.response_alert_at);
+  const replacementAvailable =
+    (timedOut || booking.status === "declined") &&
+    now < new Date(booking.scheduled_at);
 
   let candidates: ReplacementCandidate[] = [];
   if (replacementAvailable) {
@@ -84,10 +90,6 @@ export default async function ReplacementPage({
       ];
     });
   }
-  const responseOptions = eligibleResponseWindowHours(
-    new Date(),
-    booking.scheduled_at,
-  );
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -99,20 +101,16 @@ export default async function ReplacementPage({
       {!replacementAvailable ? (
         <Card className="p-6 text-sm text-ink-soft">
           {booking.status === "requested"
-            ? "Replacement suggestions appear if the provider has not responded by the selected deadline."
-            : "This request is no longer open for replacement."}
+            ? "Replacement suggestions appear if the provider has not responded by the deadline."
+            : "This request can’t be replaced right now."}
         </Card>
-      ) : candidates.length === 0 || responseOptions.length === 0 ? (
+      ) : candidates.length === 0 ? (
         <Card className="p-6 text-sm text-ink-soft">
           No other ready provider currently fits this exact service, time, and
-          notice requirement. The original request remains open.
+          notice requirement.
         </Card>
       ) : (
-        <ReplacementForm
-          bookingId={booking.id}
-          candidates={candidates}
-          responseOptions={[...responseOptions]}
-        />
+        <ReplacementForm bookingId={booking.id} candidates={candidates} />
       )}
 
       <Link href="/dashboard" className={buttonClasses({ variant: "ghost", size: "sm" })}>
