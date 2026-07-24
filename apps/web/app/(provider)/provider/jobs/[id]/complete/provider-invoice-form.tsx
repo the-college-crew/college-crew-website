@@ -23,32 +23,120 @@ function formatMinutes(minutes: number) {
   return `${hours} hr ${rest} min`;
 }
 
+function MoneyPreview({
+  rateCents,
+  minutes,
+}: {
+  rateCents: number;
+  minutes: number;
+}) {
+  const allocation = calculateInvoiceAllocation(rateCents, minutes);
+  return (
+    <div className="rounded-2xl border border-line bg-white p-5 text-sm">
+      <dl className="space-y-2">
+        <div className="flex justify-between gap-4">
+          <dt className="text-mist">Invoice total</dt>
+          <dd>{formatMoney(allocation.subtotalCents)}</dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-mist">Platform fee (5%)</dt>
+          <dd>– {formatMoney(allocation.totalPlatformFeeCents)}</dd>
+        </div>
+        <div className="flex justify-between gap-4 border-t border-line pt-2">
+          <dt className="font-semibold">Your payout</dt>
+          <dd className="font-semibold text-quad-700">
+            {formatMoney(
+              allocation.subtotalCents - allocation.totalPlatformFeeCents,
+            )}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-mist">Customer balance due</dt>
+          <dd>{formatMoney(allocation.remainingBalanceCents)}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 /**
- * Job Complete + invoice (Phase 5). Prefilled from elapsed wall time rounded up
- * to the quarter hour; editable in 15-minute steps within the invoice bounds.
- * Time beyond the customer's estimate requires an explanation. The money preview
- * uses the shared policy math — the server recomputes it authoritatively.
+ * Job Complete + invoice. The student closes the job out one of two ways:
+ * "as planned" bills exactly the estimate the customer agreed to, or "the time
+ * changed" opens the editor (prefilled with what the clock measured) and, when
+ * it runs over, requires an explanation. Starting from the ESTIMATE rather than
+ * measured time is deliberate — the default should be the number the customer
+ * already signed off on, so nothing drifts upward without a decision.
+ *
+ * The money preview uses the shared policy math; the server recomputes it
+ * authoritatively in `submit_job_invoice`.
  */
 export function ProviderInvoiceForm({
   bookingId,
-  prefillMinutes,
   estimatedMinutes,
+  measuredMinutes,
   rateCents,
 }: {
   bookingId: string;
-  prefillMinutes: number;
   estimatedMinutes: number;
+  /** Elapsed wall time since Arrived, rounded up to the quarter hour. */
+  measuredMinutes: number;
   rateCents: number;
 }) {
   const [state, formAction, pending] = useActionState<
     BookingRequestActionState,
     FormData
   >(submitInvoice, {});
-  const [minutes, setMinutes] = useState(prefillMinutes);
+  const [mode, setMode] = useState<"choose" | "changed">("choose");
+  const [minutes, setMinutes] = useState(measuredMinutes);
 
   const valid = isDurationValid(minutes, PROVIDER_INVOICE_MINUTES);
   const overEstimate = minutes > estimatedMinutes;
-  const allocation = valid ? calculateInvoiceAllocation(rateCents, minutes) : null;
+  const measuredDiffers = measuredMinutes !== estimatedMinutes;
+
+  if (mode === "choose") {
+    return (
+      <form action={formAction} className="space-y-4">
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <input type="hidden" name="submittedMinutes" value={estimatedMinutes} />
+        <input type="hidden" name="explanation" value="" />
+
+        <div className="rounded-2xl border border-line bg-white p-5">
+          <p className="font-display text-sm font-semibold">
+            How did the job close out?
+          </p>
+          <p className="mt-1 text-xs text-mist">
+            The customer booked {formatMinutes(estimatedMinutes)}.
+            {measuredDiffers
+              ? ` Your clock shows ${formatMinutes(measuredMinutes)} since you marked Arrived.`
+              : ""}
+          </p>
+        </div>
+
+        <MoneyPreview rateCents={rateCents} minutes={estimatedMinutes} />
+
+        <Button type="submit" size="lg" className="w-full" disabled={pending}>
+          {pending
+            ? "Submitting…"
+            : `Ran as planned — bill ${formatMinutes(estimatedMinutes)}`}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="lg"
+          className="w-full"
+          onClick={() => setMode("changed")}
+          disabled={pending}
+        >
+          The time changed
+        </Button>
+        <p className="text-center text-xs text-mist">
+          If you don&apos;t submit anything within 24 hours, we bill the original
+          estimate automatically.
+        </p>
+        <FieldError>{state.error}</FieldError>
+      </form>
+    );
+  }
 
   return (
     <form action={formAction} className="space-y-4">
@@ -59,7 +147,7 @@ export function ProviderInvoiceForm({
           htmlFor="submittedMinutes"
           className="font-display text-sm font-semibold"
         >
-          Billable time
+          Actual billable time
         </label>
         <p className="mt-1 text-xs text-mist">
           Prefilled from elapsed time, rounded up to 15 minutes (1-hour minimum).
@@ -111,32 +199,7 @@ export function ProviderInvoiceForm({
         <input type="hidden" name="explanation" value="" />
       )}
 
-      {allocation ? (
-        <div className="rounded-2xl border border-line bg-white p-5 text-sm">
-          <dl className="space-y-2">
-            <div className="flex justify-between gap-4">
-              <dt className="text-mist">Invoice total</dt>
-              <dd>{formatMoney(allocation.subtotalCents)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-mist">Platform fee (5%)</dt>
-              <dd>– {formatMoney(allocation.totalPlatformFeeCents)}</dd>
-            </div>
-            <div className="flex justify-between gap-4 border-t border-line pt-2">
-              <dt className="font-semibold">Your payout</dt>
-              <dd className="font-semibold text-quad-700">
-                {formatMoney(
-                  allocation.subtotalCents - allocation.totalPlatformFeeCents,
-                )}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-mist">Customer balance due</dt>
-              <dd>{formatMoney(allocation.remainingBalanceCents)}</dd>
-            </div>
-          </dl>
-        </div>
-      ) : null}
+      {valid ? <MoneyPreview rateCents={rateCents} minutes={minutes} /> : null}
 
       <Button
         type="submit"
@@ -145,6 +208,16 @@ export function ProviderInvoiceForm({
         disabled={pending || !valid}
       >
         {pending ? "Submitting…" : "Submit job complete & invoice"}
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="w-full"
+        onClick={() => setMode("choose")}
+        disabled={pending}
+      >
+        Back
       </Button>
       <FieldError>{state.error}</FieldError>
     </form>

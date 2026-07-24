@@ -2435,6 +2435,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      auto_complete_hourly_job: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       begin_balance_payment: {
         Args: { p_invoice_id: string }
         Returns: {

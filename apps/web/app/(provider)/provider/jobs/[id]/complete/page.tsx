@@ -125,7 +125,14 @@ export default async function CompleteJobPage({
       ) : booking.status === "in_progress" ? (
         <ProviderInvoiceForm
           bookingId={booking.id}
-          prefillMinutes={billableMinutesFromElapsed(
+          estimatedMinutes={estimatedMinutes}
+          /**
+           * What the clock actually measured, offered as the one-tap value when
+           * the student says the job ran long/short. The form itself starts from
+           * the ESTIMATE, so "as planned" bills exactly what the customer agreed
+           * to and nothing silently drifts.
+           */
+          measuredMinutes={billableMinutesFromElapsed(
             booking.arrived_at
               ? Math.max(
                   0,
@@ -135,7 +142,6 @@ export default async function CompleteJobPage({
                 )
               : estimatedMinutes,
           )}
-          estimatedMinutes={estimatedMinutes}
           rateCents={rateCents}
         />
       ) : booking.status === "booked" ? (
