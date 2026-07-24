@@ -26,12 +26,6 @@ export const metadata: Metadata = {
     template: `%s · ${SITE.name}`,
   },
   description: SITE.description,
-  // PILOT ONLY — keep search engines out while pages are thin/unfinished.
-  // REMOVE THIS `robots` block on launch day so Google can index the site.
-  robots: {
-    index: false,
-    follow: false,
-  },
 };
 
 export const viewport: Viewport = {
