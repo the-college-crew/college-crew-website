@@ -91,9 +91,10 @@ export default async function InvoicePage({
     );
   }
 
+  const settledInCash = invoice.status === "cash_settled";
   const isPaid =
     booking.status === "completed" ||
-    ["paid", "waived", "refunded"].includes(invoice.status);
+    ["paid", "waived", "refunded", "cash_settled"].includes(invoice.status);
   const isReviewable =
     booking.status === "invoice_review" && invoice.status === "review";
   const needsRecovery = invoice.status === "requires_action";
@@ -129,7 +130,11 @@ export default async function InvoicePage({
       value: `- ${formatMoney(invoice.first_hour_credit_cents)}`,
     },
     {
-      label: isPaid ? "Balance paid" : "Remaining balance",
+      label: settledInCash
+        ? "Paid to your provider in person"
+        : isPaid
+          ? "Balance paid"
+          : "Remaining balance",
       value: formatMoney(invoice.remaining_balance_cents),
       strong: true,
     },
@@ -178,6 +183,18 @@ export default async function InvoicePage({
             </div>
           ))}
         </dl>
+
+        {settledInCash ? (
+          <div className="mt-4 rounded-lg border border-line bg-court p-3 text-sm">
+            <p className="font-semibold text-ink">Settled in person</p>
+            <p className="mt-1 text-xs text-ink-soft">
+              Your provider recorded that you paid them directly, so we did
+              not charge your card for this job. The only amount we collected is
+              the first hour taken when the booking was confirmed. If that
+              doesn&apos;t match what happened, report a problem below.
+            </p>
+          </div>
+        ) : null}
 
         {durationChanged && estimatedMinutes != null ? (
           <div className="mt-4 rounded-lg border border-line bg-court p-3 text-sm">

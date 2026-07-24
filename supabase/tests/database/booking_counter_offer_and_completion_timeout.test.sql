@@ -164,5 +164,45 @@ select is(
   'completed destination-charge bookings never produce a payout leg'
 );
 
+-- ---------------------------------------------------------------------------
+-- Cash / paid-in-person settlement
+-- ---------------------------------------------------------------------------
+
+select is(
+  exists (
+    select 1 from pg_type t join pg_enum e on e.enumtypid = t.oid
+    where t.typname = 'booking_invoice_status' and e.enumlabel = 'cash_settled'
+  ),
+  true,
+  'a cash-settled invoice is recorded as neither paid nor waived'
+);
+select is(
+  has_function_privilege(
+    'authenticated', 'public.settle_job_in_cash(uuid,integer,text,boolean)', 'execute'
+  ),
+  true,
+  'the assigned student can record a cash settlement'
+);
+select is(
+  has_function_privilege(
+    'anon', 'public.settle_job_in_cash(uuid,integer,text,boolean)', 'execute'
+  ),
+  false,
+  'anonymous callers cannot record a cash settlement'
+);
+
+-- The property that protects the customer: having paid in person, their card
+-- must never also be auto-charged. claim_due_invoice only ever picks up
+-- status='review' with a non-null autocharge_at, and a cash invoice is written
+-- with neither, so it is excluded twice over.
+select is(
+  (
+    select count(*)::integer from public.booking_invoices
+    where status = 'cash_settled' and autocharge_at is not null
+  ),
+  0,
+  'no cash-settled invoice carries an autocharge deadline'
+);
+
 select * from finish();
 rollback;

@@ -12,7 +12,7 @@ import {
 } from "@/lib/booking/policy";
 import { formatMoney } from "@/lib/utils";
 
-import { submitInvoice } from "../../../actions";
+import { settleJobInCash, submitInvoice } from "../../../actions";
 import type { BookingRequestActionState } from "../../../actions";
 
 function formatMinutes(minutes: number) {
@@ -86,8 +86,14 @@ export function ProviderInvoiceForm({
     BookingRequestActionState,
     FormData
   >(submitInvoice, {});
-  const [mode, setMode] = useState<"choose" | "changed">("choose");
+  const [cashState, cashAction, cashPending] = useActionState<
+    BookingRequestActionState,
+    FormData
+  >(settleJobInCash, {});
+  const [mode, setMode] = useState<"choose" | "changed" | "cash">("choose");
   const [minutes, setMinutes] = useState(measuredMinutes);
+  const [cashMinutes, setCashMinutes] = useState(estimatedMinutes);
+  const [cashConfirmed, setCashConfirmed] = useState(false);
 
   const valid = isDurationValid(minutes, PROVIDER_INVOICE_MINUTES);
   const overEstimate = minutes > estimatedMinutes;
@@ -129,11 +135,128 @@ export function ProviderInvoiceForm({
         >
           The time changed
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="lg"
+          className="w-full"
+          onClick={() => setMode("cash")}
+          disabled={pending}
+        >
+          They paid me in person
+        </Button>
         <p className="text-center text-xs text-mist">
           If you don&apos;t submit anything within 24 hours, we bill the original
           estimate automatically.
         </p>
         <FieldError>{state.error}</FieldError>
+      </form>
+    );
+  }
+
+  if (mode === "cash") {
+    const cashValid = isDurationValid(cashMinutes, PROVIDER_INVOICE_MINUTES);
+    const cashAllocation = cashValid
+      ? calculateInvoiceAllocation(rateCents, cashMinutes)
+      : null;
+    return (
+      <form action={cashAction} className="space-y-4">
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <input type="hidden" name="explanation" value="" />
+
+        <div className="rounded-2xl border border-line bg-white p-5">
+          <p className="font-display text-sm font-semibold">
+            The customer paid you directly
+          </p>
+          <p className="mt-1 text-xs text-mist">
+            We won&apos;t charge their card for the job. We keep only College
+            Crew&apos;s {5}% fee out of the first hour we already collected, and
+            send you the rest.
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <input
+              id="cashMinutes"
+              name="submittedMinutes"
+              type="number"
+              inputMode="numeric"
+              step={BILLING_INCREMENT_MINUTES}
+              min={PROVIDER_INVOICE_MINUTES.min}
+              max={PROVIDER_INVOICE_MINUTES.max}
+              value={cashMinutes}
+              onChange={(event) => setCashMinutes(Number(event.target.value))}
+              className="w-28 rounded-lg border border-line bg-court px-3 py-2 text-sm"
+            />
+            <span className="text-sm text-ink-soft">
+              minutes worked ({formatMinutes(cashMinutes)})
+            </span>
+          </div>
+          {!cashValid ? (
+            <p className="mt-2 text-xs text-red-700">
+              Enter 60–1440 minutes in 15-minute steps.
+            </p>
+          ) : null}
+        </div>
+
+        {cashAllocation ? (
+          <div className="rounded-2xl border border-line bg-white p-5 text-sm">
+            <dl className="space-y-2">
+              <div className="flex justify-between gap-4">
+                <dt className="text-mist">They paid you directly</dt>
+                <dd>{formatMoney(cashAllocation.remainingBalanceCents)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-mist">First hour we already collected</dt>
+                <dd>{formatMoney(rateCents)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-mist">College Crew fee (5% of the job)</dt>
+                <dd>– {formatMoney(cashAllocation.totalPlatformFeeCents)}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-t border-line pt-2">
+                <dt className="font-semibold">We send you</dt>
+                <dd className="font-semibold text-quad-700">
+                  {formatMoney(
+                    Math.max(0, rateCents - cashAllocation.totalPlatformFeeCents),
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        ) : null}
+
+        <label className="flex gap-3 rounded-2xl border border-gold-300 bg-gold-100 p-4 text-sm text-gold-900">
+          <input
+            type="checkbox"
+            name="confirmed"
+            checked={cashConfirmed}
+            onChange={(event) => setCashConfirmed(event.target.checked)}
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>
+            I confirm the customer paid me in person for this job. College Crew
+            will not charge their card for it.
+          </span>
+        </label>
+
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={cashPending || !cashValid || !cashConfirmed}
+        >
+          {cashPending ? "Recording…" : "Confirm cash payment & finish"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-full"
+          onClick={() => setMode("choose")}
+          disabled={cashPending}
+        >
+          Back
+        </Button>
+        <FieldError>{cashState.error}</FieldError>
       </form>
     );
   }

@@ -735,6 +735,7 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           cancelled_by_role: Database["public"]["Enums"]["user_role"] | null
+          cash_settled_at: string | null
           counter_note: string | null
           countered_at: string | null
           created_at: string
@@ -798,6 +799,7 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           cancelled_by_role?: Database["public"]["Enums"]["user_role"] | null
+          cash_settled_at?: string | null
           counter_note?: string | null
           countered_at?: string | null
           created_at?: string
@@ -861,6 +863,7 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           cancelled_by_role?: Database["public"]["Enums"]["user_role"] | null
+          cash_settled_at?: string | null
           counter_note?: string | null
           countered_at?: string | null
           created_at?: string
@@ -2959,6 +2962,15 @@ export type Database = {
         }
         Returns: string
       }
+      settle_job_in_cash: {
+        Args: {
+          p_booking_id: string
+          p_confirmed?: boolean
+          p_provider_explanation?: string
+          p_submitted_minutes: number
+        }
+        Returns: string
+      }
       settle_zero_balance_invoice: {
         Args: { p_invoice_id: string }
         Returns: string
@@ -3014,6 +3026,7 @@ export type Database = {
         | "paid"
         | "waived"
         | "refunded"
+        | "cash_settled"
       booking_payment_kind: "first_hour" | "balance"
       booking_payment_status:
         | "created"
@@ -3224,6 +3237,7 @@ export const Constants = {
         "paid",
         "waived",
         "refunded",
+        "cash_settled",
       ],
       booking_payment_kind: ["first_hour", "balance"],
       booking_payment_status: [

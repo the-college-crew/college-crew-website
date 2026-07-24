@@ -31,6 +31,7 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["PROVIDER_NO_LONGER_READY", "This provider cannot accept new hourly work right now."],
   ["INVALID_FINAL_QUOTE", "Enter a final quote between $20 and $10,000."],
   ["FINAL_QUOTE_REQUIRED", "Send a final quote before accepting this request."],
+  ["CASH_CONFIRMATION_REQUIRED", "Confirm the customer paid you in person first."],
   ["COUNTER_NOT_ALLOWED", "This customer asked for that exact time only."],
   ["INVALID_PROPOSED_TIME", "Pick a start time in the future."],
   ["PROPOSED_TIME_UNCHANGED", "That's already the requested time."],
