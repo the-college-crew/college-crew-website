@@ -1,5 +1,6 @@
 import type { createClient } from "@/lib/supabase/server";
 import { attachmentPreviewText } from "@/lib/messaging/attachments";
+import { getOwnResolvedIds } from "@/lib/messaging/resolutions";
 import { getUnreadSummary } from "@/lib/messaging/unread";
 import { formatDate } from "@/lib/utils";
 
@@ -38,7 +39,9 @@ export type PersonGroup = {
  * other side. There's one thread per booking, so the same person can appear
  * with several — each labelled by its job, plus at most one booking-less
  * "General inquiry". RLS scopes conversations (and messages) to members, so
- * this only ever returns the caller's own threads.
+ * this only ever returns the caller's own threads. Resolved threads (see
+ * conversation_resolutions) are left out entirely — a chat the caller
+ * hid stays hidden until a new message from the other party clears it.
  */
 export async function getConversationGroups(
   supabase: ServerClient,
@@ -52,7 +55,10 @@ export async function getConversationGroups(
       "id, customer_id, provider_id, booking_id, created_at, customer:profiles!conversations_customer_id_fkey(full_name), provider:provider_profiles(display_name), booking:bookings(scheduled_at, service:services(name))",
     );
   if (error) throw new Error(`Could not load conversations: ${error.message}`);
-  const conversations = (conversationData ?? []) as unknown as ConversationRow[];
+  const resolvedIds = await getOwnResolvedIds(supabase, userId);
+  const conversations = ((conversationData ?? []) as unknown as ConversationRow[]).filter(
+    (c) => !resolvedIds.has(c.id),
+  );
 
   // Latest message per thread, in one query, for the preview + sort order.
   const ids = conversations.map((c) => c.id);
@@ -95,7 +101,7 @@ export async function getConversationGroups(
       id: conversation.id,
       label: booking
         ? `${booking.service?.name ?? "Booking"} · ${formatDate(booking.scheduled_at)}`
-        : "General inquiry",
+        : "General",
       preview: preview?.body || "No messages yet",
       activityAt,
       unread,

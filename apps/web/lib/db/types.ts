@@ -981,6 +981,39 @@ export type Database = {
           },
         ]
       }
+      conversation_resolutions: {
+        Row: {
+          conversation_id: string
+          resolved_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          resolved_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          resolved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_resolutions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_resolutions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           booking_id: string | null
@@ -3441,6 +3474,7 @@ export type ResendWebhookEvent = Tables<"resend_webhook_events">
 export type Review = Tables<"reviews">
 export type Conversation = Tables<"conversations">
 export type ConversationRead = Tables<"conversation_reads">
+export type ConversationResolution = Tables<"conversation_resolutions">
 export type Message = Tables<"messages">
 export type ModerationEvent = Tables<"moderation_events">
 export type ModerationReport = Tables<"moderation_reports">
