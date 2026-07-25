@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  BOOKING_DURATION_BOUNDS,
   SLOT_MINUTES,
+  formatDurationLabel,
   formatHourLabel,
   formatRangeSummary,
   formatSlotLabel,
   maxEndMinutes,
   validateRange,
   type DayRail as DayRailModel,
+  type DurationBounds,
 } from "@/lib/booking/availability-grid";
-import { CUSTOMER_ESTIMATE_MINUTES } from "@/lib/booking/policy";
 import { cn } from "@/lib/utils";
 
 export type TimeRange = { startMinutes: number; endMinutes: number };
@@ -35,6 +37,14 @@ export type DayRailProps = {
   overlays?: readonly RailOverlay[];
   /** Copy for the blocked-slot tooltip; "booked" on the customer side. */
   busyLabel?: string;
+  /** How long a range may run. Defaults to the booking bounds. */
+  bounds?: DurationBounds;
+  /** Height of one 15-minute row. The editor packs a whole day in, so it runs tighter. */
+  density?: "comfortable" | "compact";
+  /** Replaces the default "tap a start time" prompt. */
+  emptyHint?: string;
+  /** Hidden by default on surfaces that render their own summary. */
+  hideSummary?: boolean;
 };
 
 const BLOCKED_COPY: Record<string, string> = {
@@ -62,27 +72,50 @@ export function DayRail({
   readOnly = false,
   overlays,
   busyLabel = "Booked",
+  bounds = BOOKING_DURATION_BOUNDS,
+  density = "comfortable",
+  emptyHint,
+  hideSummary = false,
 }: DayRailProps) {
   const [pendingStart, setPendingStart] = useState<number | null>(null);
   const [preview, setPreview] = useState<TimeRange | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const dragAnchor = useRef<number | null>(null);
   const didDrag = useRef(false);
+  const scrollBox = useRef<HTMLDivElement>(null);
+
+  // The rail can be taller than its box. On mount, bring the part that matters
+  // into view: the current selection, or failing that the first slot anyone can
+  // actually pick. Mount only, since every later change is the user's own and
+  // they are already looking at it.
+  useEffect(() => {
+    const box = scrollBox.current;
+    if (!box) return;
+    const target =
+      selection?.startMinutes ??
+      rail.slots.find((slot) => !slot.blocked)?.startMinutes;
+    if (target == null) return;
+    const row = box.querySelector<HTMLElement>(`[data-slot-minutes="${target}"]`);
+    if (!row) return;
+    const boxRect = box.getBoundingClientRect();
+    box.scrollTop += row.getBoundingClientRect().top - boxRect.top - boxRect.height / 3;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /** Grow or shrink a raw gesture into something the server would accept. */
   const clampRange = useCallback(
     (anchorMinutes: number, targetMinutes: number): TimeRange | null => {
       const raw = normalize(anchorMinutes, targetMinutes);
-      const reachableEnd = maxEndMinutes(rail, raw.startMinutes);
+      const reachableEnd = maxEndMinutes(rail, raw.startMinutes, bounds);
       if (reachableEnd <= raw.startMinutes) return null;
 
       const endMinutes = Math.max(
         Math.min(raw.endMinutes, reachableEnd),
-        Math.min(raw.startMinutes + CUSTOMER_ESTIMATE_MINUTES.min, reachableEnd),
+        Math.min(raw.startMinutes + bounds.min, reachableEnd),
       );
       return { startMinutes: raw.startMinutes, endMinutes };
     },
-    [rail],
+    [bounds, rail],
   );
 
   const commit = useCallback(
@@ -91,21 +124,21 @@ export function DayRail({
         setHint("That time isn't open. Pick another.");
         return;
       }
-      const check = validateRange(rail, range.startMinutes, range.endMinutes);
+      const check = validateRange(rail, range.startMinutes, range.endMinutes, bounds);
       if (!check.ok) {
         setHint(
           check.reason === "too-short"
-            ? "Jobs run at least one hour. There isn't a full hour free from there."
+            ? `Pick at least ${formatDurationLabel(bounds.min)}. There isn't that much free from there.`
             : check.reason === "too-long"
-              ? "Jobs run at most 12 hours. Shorten the range."
-              : "That range runs into a time your student isn't free.",
+              ? `Pick at most ${formatDurationLabel(bounds.max)}. Shorten the range.`
+              : "That range runs into a time that isn't free.",
         );
         return;
       }
       setHint(null);
       onSelectionChange?.(range);
     },
-    [onSelectionChange, rail],
+    [bounds, onSelectionChange, rail],
   );
 
   /** Tap semantics: first tap sets the start, second sets the end. */
@@ -204,6 +237,7 @@ export function DayRail({
       </p>
 
       <div
+        ref={scrollBox}
         role="group"
         aria-label={`Times on ${heading}`}
         className="mt-2 max-h-96 flex-1 overflow-y-auto rounded-xl border border-stone bg-paper"
@@ -260,7 +294,8 @@ export function DayRail({
                     tapSlot(slot.startMinutes, slot.blocked);
                   }}
                   className={cn(
-                    "relative flex h-5 select-none items-center px-2 text-left text-[11px] leading-none transition-colors",
+                    "relative flex select-none items-center px-2 text-left text-[11px] leading-none transition-colors",
+                    density === "compact" ? "h-3.5" : "h-5",
                     "border-t focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-viridian",
                     onTheHour || isFirst ? "border-t-stone" : "border-t-stone/35",
                     slot.blocked
@@ -290,7 +325,7 @@ export function DayRail({
         </div>
       </div>
 
-      {readOnly ? null : (
+      {readOnly || hideSummary ? null : (
         <div className="mt-2 min-h-9 text-xs" aria-live="polite">
           {hint ? (
             <p className="font-medium text-red-700">{hint}</p>
@@ -304,7 +339,8 @@ export function DayRail({
             </p>
           ) : (
             <p className="text-mist">
-              Tap a start time, then an end time. Drag to pick both at once.
+              {emptyHint ??
+                "Tap a start time, then an end time. Drag to pick both at once."}
             </p>
           )}
         </div>

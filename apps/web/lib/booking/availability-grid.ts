@@ -402,21 +402,34 @@ export function buildMonthCells(input: {
  * ------------------------------------------------------------------ */
 
 /**
- * Validate a selected range against the same bounds the database enforces:
- * 60-720 minutes, a multiple of 15, inside the day's window, and not crossing
- * anything blocked.
+ * How long a selected range may run. Booking uses the database's own bounds;
+ * the availability editor authors a window, where anything from one slot to a
+ * whole day is legitimate.
+ */
+export type DurationBounds = { min: number; max: number };
+
+export const BOOKING_DURATION_BOUNDS: DurationBounds = CUSTOMER_ESTIMATE_MINUTES;
+export const WINDOW_DURATION_BOUNDS: DurationBounds = {
+  min: SLOT_MINUTES,
+  max: 24 * 60,
+};
+
+/**
+ * Validate a selected range: a multiple of 15, within the duration bounds,
+ * inside the day's window, and not crossing anything blocked.
  */
 export function validateRange(
   rail: DayRail,
   startMinutes: number,
   endMinutes: number,
+  bounds: DurationBounds = BOOKING_DURATION_BOUNDS,
 ): { ok: true } | { ok: false; reason: RangeError } {
   const duration = endMinutes - startMinutes;
   if (duration % SLOT_MINUTES !== 0) return { ok: false, reason: "not-increment" };
-  if (duration < CUSTOMER_ESTIMATE_MINUTES.min) {
+  if (duration < bounds.min) {
     return { ok: false, reason: "too-short" };
   }
-  if (duration > CUSTOMER_ESTIMATE_MINUTES.max) {
+  if (duration > bounds.max) {
     return { ok: false, reason: "too-long" };
   }
   if (startMinutes < rail.startMinutes || endMinutes > rail.endMinutes) {
@@ -435,14 +448,18 @@ export function validateRange(
 }
 
 /** How far a selection starting at `startMinutes` may run before it hits something blocked. */
-export function maxEndMinutes(rail: DayRail, startMinutes: number) {
+export function maxEndMinutes(
+  rail: DayRail,
+  startMinutes: number,
+  bounds: DurationBounds = BOOKING_DURATION_BOUNDS,
+) {
   let end = startMinutes;
   for (const slot of rail.slots) {
     if (slot.startMinutes < startMinutes) continue;
     if (slot.startMinutes !== end) break;
     if (slot.blocked) break;
     end += SLOT_MINUTES;
-    if (end - startMinutes >= CUSTOMER_ESTIMATE_MINUTES.max) break;
+    if (end - startMinutes >= bounds.max) break;
   }
   return end;
 }

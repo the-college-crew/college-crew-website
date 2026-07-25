@@ -681,6 +681,24 @@ export async function getProviderSchedule(
   };
 }
 
+/** Upcoming per-date exceptions, for the availability editor. */
+export async function getProviderAvailabilityOverrides(
+  providerId: string,
+  options: { now?: Date; days?: number } = {},
+) {
+  if (!hasSupabaseEnv()) return [];
+  const from = pilotDateKey(options.now ?? new Date());
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("provider_availability_overrides")
+    .select("local_date, is_available, start_local, end_local")
+    .eq("provider_id", providerId)
+    .gte("local_date", from)
+    .lte("local_date", addDaysToDateKey(from, options.days ?? 365))
+    .order("local_date");
+  return data ?? [];
+}
+
 /** Everything the public provider profile page needs, or null if not visible. */
 export async function getPublicProviderProfile(
   providerId: string,

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { FormLoader } from "@/components/form-loader";
+import { WindowRail } from "@/components/scheduling/window-rail";
 import { Button } from "@/components/ui/button";
 import {
   FieldError,
@@ -76,14 +77,13 @@ export function ProviderAvailabilityForm({
     );
   }
 
-  function setGroupTime(
+  function setGroupWindow(
     groupIndex: number,
-    field: "start" | "end",
-    value: string,
+    next: { start: string; end: string },
   ) {
     setGroups((current) =>
       current.map((group, index) =>
-        index === groupIndex ? { ...group, [field]: value } : group,
+        index === groupIndex ? { ...group, ...next } : group,
       ),
     );
   }
@@ -158,40 +158,26 @@ export function ProviderAvailabilityForm({
                 </div>
                 <FieldError>{groupErrors?.days}</FieldError>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor={`windowStart_${groupIndex}`}>
-                      Start time
-                    </Label>
-                    <Input
-                      id={`windowStart_${groupIndex}`}
-                      name={`windowStart_${groupIndex}`}
-                      type="time"
-                      value={group.start}
-                      onChange={(event) =>
-                        setGroupTime(groupIndex, "start", event.target.value)
-                      }
-                      aria-invalid={groupErrors?.start ? true : undefined}
-                      required
-                    />
-                    <FieldError>{groupErrors?.start}</FieldError>
-                  </div>
-                  <div>
-                    <Label htmlFor={`windowEnd_${groupIndex}`}>End time</Label>
-                    <Input
-                      id={`windowEnd_${groupIndex}`}
-                      name={`windowEnd_${groupIndex}`}
-                      type="time"
-                      value={group.end}
-                      onChange={(event) =>
-                        setGroupTime(groupIndex, "end", event.target.value)
-                      }
-                      aria-invalid={groupErrors?.end ? true : undefined}
-                      required
-                    />
-                    <FieldError>{groupErrors?.end}</FieldError>
-                  </div>
-                </div>
+                <WindowRail
+                  railKey={`window-${groupIndex}`}
+                  heading="Hours on these days"
+                  start={group.start}
+                  end={group.end}
+                  onChange={(next) => setGroupWindow(groupIndex, next)}
+                />
+                {/* The rail is the control; these carry its value to the same
+                    fields parseProviderAvailabilityForm already reads. */}
+                <input
+                  type="hidden"
+                  name={`windowStart_${groupIndex}`}
+                  value={group.start}
+                />
+                <input
+                  type="hidden"
+                  name={`windowEnd_${groupIndex}`}
+                  value={group.end}
+                />
+                <FieldError>{groupErrors?.start ?? groupErrors?.end}</FieldError>
 
                 {groups.length > 1 ? (
                   <Button
@@ -221,8 +207,9 @@ export function ProviderAvailabilityForm({
         ) : null}
 
         <FieldHint>
-          Group the days that share the same hours; add another window for days
-          with different hours. Times are interpreted in Central Time.
+          Group the days that share the same hours, then drag your hours on the
+          rail. Add another window for days you work different hours. Times are
+          Central.
         </FieldHint>
         <FieldError>{state.fieldErrors?.weekdays}</FieldError>
       </fieldset>

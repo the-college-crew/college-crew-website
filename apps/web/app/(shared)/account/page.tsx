@@ -6,7 +6,12 @@ import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { getOwnProviderProfile, getSession, requireUser } from "@/lib/auth/session";
-import { getProviderAvailabilityWindows } from "@/lib/db/queries";
+import {
+  getProviderAvailabilityOverrides,
+  getProviderAvailabilityWindows,
+  getProviderSchedule,
+  type ProviderSchedule,
+} from "@/lib/db/queries";
 import {
   demoAvailabilityWindows,
   demoOfferings,
@@ -115,10 +120,13 @@ export default async function AccountPage({
   // uses them. Only the live service catalog is deferred to its own panel.
   let offerings: Offering[] = [];
   let windows: AvailabilityWindow[] = [];
+  let schedule: ProviderSchedule | null = null;
+  let overrides: Awaited<ReturnType<typeof getProviderAvailabilityOverrides>> = [];
   let readiness = emptySettingsReadiness();
 
   if (providerProfile) {
-    const [{ data }, providerWindows] = await Promise.all([
+    const [{ data }, providerWindows, providerSchedule, providerOverrides] =
+      await Promise.all([
       supabase
         .from("provider_services")
         .select(
@@ -126,11 +134,15 @@ export default async function AccountPage({
         )
         .eq("provider_id", providerProfile.id),
       getProviderAvailabilityWindows(providerProfile.id),
+      getProviderSchedule(providerProfile.id, { days: 364 }),
+      getProviderAvailabilityOverrides(providerProfile.id),
     ]);
 
     const rows = data ?? [];
     offerings = rows;
     windows = providerWindows;
+    schedule = providerSchedule;
+    overrides = providerOverrides;
     readiness = getSettingsReadiness({
       profile: providerProfile,
       offerings: rows.map((offering) => ({
@@ -176,6 +188,8 @@ export default async function AccountPage({
         <AvailabilityPanel
           providerProfile={providerProfile}
           windows={windows}
+          schedule={schedule}
+          overrides={overrides}
           issues={readiness.availability}
         />
       ) : null}
