@@ -115,6 +115,10 @@ export function MonthGrid({
             <button
               key={cell.date}
               type="button"
+              // Stable hook for tests: day numbers repeat across months, so
+              // there is otherwise nothing unique to select a cell by.
+              data-date={cell.date}
+              data-day-state={cell.state}
               // Unbookable days stay focusable and clickable on purpose: the
               // click is what surfaces the reason, which a `disabled` button
               // could never do.
