@@ -127,6 +127,9 @@ export default async function ConversationPage({
     ? conversation.provider?.display_name
     : conversation.customer?.full_name;
   const booking = conversation.booking;
+  // Job-linked threads can't be reinitiated by whoever resolved them — see
+  // moderate-message's matching guard. General threads have no such lock.
+  const lockedForMe = Boolean(booking) && resolvedIds.has(conversation.id);
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col px-4 py-4 sm:py-6 lg:px-6">
@@ -161,6 +164,7 @@ export default async function ConversationPage({
           conversationId={conversation.id}
           currentUserId={user.id}
           initialMessages={(messages ?? []) as Message[]}
+          locked={lockedForMe}
         />
       </Card>
     </div>

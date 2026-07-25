@@ -38,10 +38,14 @@ export function ChatThread({
   conversationId,
   currentUserId,
   initialMessages,
+  locked = false,
 }: {
   conversationId: string;
   currentUserId: string;
   initialMessages: Message[];
+  /** True when the viewer resolved this (job-linked) chat — see the page's
+   * matching lockedForMe check and moderate-message's server-side guard. */
+  locked?: boolean;
 }) {
   const [messages, setMessages] = useState<DisplayMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
@@ -304,6 +308,11 @@ export function ChatThread({
         )}
       </div>
 
+      {locked ? (
+        <div className="shrink-0 border-t border-line bg-court/60 p-4 text-center text-sm text-ink-soft">
+          You resolved this chat. It&apos;ll reopen if they message you again.
+        </div>
+      ) : (
       <div className="shrink-0 border-t border-line bg-paper p-3">
         {error ? (
           <p role="alert" className="mb-2 text-xs font-medium text-red-700">
@@ -393,6 +402,7 @@ export function ChatThread({
           </Button>
         </form>
       </div>
+      )}
     </div>
   );
 }

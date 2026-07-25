@@ -416,7 +416,7 @@ Deno.serve(async (request) => {
 
     const { data: conversation } = await admin
       .from("conversations")
-      .select("id, customer_id, provider:provider_profiles(user_id)")
+      .select("id, customer_id, booking_id, provider:provider_profiles(user_id)")
       .eq("id", conversation_id)
       .maybeSingle();
     const isMember =
@@ -425,6 +425,26 @@ Deno.serve(async (request) => {
         conversation.provider?.user_id === user.id);
     if (!isMember) {
       return json({ error: "Conversation not found." }, 404);
+    }
+
+    // Job-linked threads can't be reinitiated by whoever resolved them — only
+    // the other party messaging first can revive it (see
+    // conversation_resolutions + its trigger). General (booking-less)
+    // threads have no such block: messaging again via a provider's profile
+    // is the intended way to reopen one.
+    if (conversation.booking_id) {
+      const { data: ownResolution } = await admin
+        .from("conversation_resolutions")
+        .select("conversation_id")
+        .eq("conversation_id", conversation_id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (ownResolution) {
+        return json(
+          { error: "This chat is resolved and can't be reopened." },
+          403,
+        );
+      }
     }
 
     // Rolling context window shared by both layers: the last CONTEXT_WINDOW
