@@ -582,6 +582,8 @@ export type ProviderSchedule = {
   days: ScheduleDay[];
   /** Reserved ranges. Times only: the RPC exposes no job details. */
   busy: BusyInterval[];
+  /** Dates carrying a per-date override, for marking them in the provider's own view. */
+  overrideDates: string[];
   /** Inclusive `YYYY-MM-DD` bounds of the range that was fetched. */
   horizonStart: string;
   horizonEnd: string;
@@ -606,18 +608,25 @@ function addDaysToDateKey(date: string, days: number) {
  */
 export async function getProviderSchedule(
   providerId: string,
-  options: { days?: number; now?: Date } = {},
+  options: {
+    /** Days before today to include; the provider's own view looks back. */
+    lookBackDays?: number;
+    days?: number;
+    now?: Date;
+  } = {},
 ): Promise<ProviderSchedule> {
   const now = options.now ?? new Date();
   const nowIso = now.toISOString();
-  const horizonStart = pilotDateKey(now);
+  const today = pilotDateKey(now);
+  const horizonStart = addDaysToDateKey(today, -(options.lookBackDays ?? 0));
   const horizonEnd = addDaysToDateKey(
-    horizonStart,
+    today,
     options.days ?? SCHEDULE_HORIZON_DAYS,
   );
   const empty: ProviderSchedule = {
     days: [],
     busy: [],
+    overrideDates: [],
     horizonStart,
     horizonEnd,
     nowIso,
@@ -625,21 +634,33 @@ export async function getProviderSchedule(
   if (!hasSupabaseEnv()) return empty;
 
   const supabase = await createClient();
-  const [{ data: days, error: daysError }, { data: busy, error: busyError }] =
-    await Promise.all([
-      supabase.rpc("provider_schedule_days", {
-        p_provider_id: providerId,
-        p_from: horizonStart,
-        p_to: horizonEnd,
-      }),
-      supabase.rpc("provider_busy_intervals", {
-        p_provider_id: providerId,
-        p_from: nowIso,
-        // The busy window has to cover the last bookable day in full, not just
-        // its midnight boundary.
-        p_to: `${addDaysToDateKey(horizonEnd, 1)}T00:00:00.000Z`,
-      }),
-    ]);
+  const [
+    { data: days, error: daysError },
+    { data: busy, error: busyError },
+    { data: overrides },
+  ] = await Promise.all([
+    supabase.rpc("provider_schedule_days", {
+      p_provider_id: providerId,
+      p_from: horizonStart,
+      p_to: horizonEnd,
+    }),
+    supabase.rpc("provider_busy_intervals", {
+      p_provider_id: providerId,
+      p_from: `${horizonStart}T00:00:00.000Z`,
+      // The busy window has to cover the last bookable day in full, not just
+      // its midnight boundary.
+      p_to: `${addDaysToDateKey(horizonEnd, 1)}T00:00:00.000Z`,
+    }),
+    // Which dates were overridden, so the provider's own calendar can mark
+    // them. Customers never need this: the override is already baked into the
+    // window `provider_schedule_days` returns.
+    supabase
+      .from("provider_availability_overrides")
+      .select("local_date")
+      .eq("provider_id", providerId)
+      .gte("local_date", horizonStart)
+      .lte("local_date", horizonEnd),
+  ]);
 
   if (daysError || busyError) return empty;
 
@@ -653,6 +674,7 @@ export async function getProviderSchedule(
       start: interval.start_at,
       end: interval.end_at,
     })),
+    overrideDates: (overrides ?? []).map((row) => row.local_date),
     horizonStart,
     horizonEnd,
     nowIso,

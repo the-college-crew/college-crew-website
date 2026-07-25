@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import {
-  MonthCalendar,
-  type CalendarBooking,
-} from "@/components/month-calendar";
 import { DeadlineCountdown } from "@/components/deadline-countdown";
+import {
+  ProviderScheduleCalendar,
+  type ProviderCalendarBooking,
+} from "@/components/scheduling/provider-schedule-calendar";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,13 +26,22 @@ import { milesBetween } from "@/lib/geo/distance";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
 import {
+  expandWeeklyWindows,
+  pilotDateKey,
+  shiftDateKey,
+} from "@/lib/booking/availability-grid";
+import {
   demoAvailabilityWindows,
   demoBookings,
   demoOfferings,
   demoProviderProfile,
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
-import { getProviderAvailabilityWindows } from "@/lib/db/queries";
+import {
+  getProviderAvailabilityWindows,
+  getProviderSchedule,
+  type ProviderSchedule,
+} from "@/lib/db/queries";
 import type { AvailabilityWindow } from "@/lib/provider/setup";
 import { isProviderIdentityVerificationSatisfied } from "@/lib/provider/verification";
 import type { BookingFlow, BookingStatus } from "@/lib/db/types";
@@ -104,6 +113,27 @@ function providerReservedCents(b: ProviderBookingRow) {
   return legacyNet(b);
 }
 
+/**
+ * How far back the provider's month view reaches. Enough to review the recent
+ * past without dragging in months of history the dashboard never shows.
+ */
+const CALENDAR_LOOK_BACK_DAYS = 30;
+
+/** Sample-preview schedule, projected from the sample provider's weekly hours. */
+function demoSchedule(): ProviderSchedule {
+  const now = new Date();
+  const horizonStart = shiftDateKey(pilotDateKey(now), -CALENDAR_LOOK_BACK_DAYS);
+  const horizonEnd = shiftDateKey(horizonStart, 120);
+  return {
+    days: expandWeeklyWindows(demoAvailabilityWindows, horizonStart, 120),
+    busy: [],
+    overrideDates: [],
+    horizonStart,
+    horizonEnd,
+    nowIso: now.toISOString(),
+  };
+}
+
 export default async function ProviderDashboardPage({
   searchParams,
 }: {
@@ -129,6 +159,7 @@ export default async function ProviderDashboardPage({
           service_is_live: offering.service.is_live,
         }))}
         windows={demoAvailabilityWindows}
+        schedule={demoSchedule()}
         submitted={submitted}
         stripe={stripe}
         onboardingComplete
@@ -149,8 +180,13 @@ export default async function ProviderDashboardPage({
   );
 
   const supabase = await createClient();
-  const [{ data }, { data: offeringRows }, windows, providerTermsAccepted] =
-    await Promise.all([
+  const [
+    { data },
+    { data: offeringRows },
+    windows,
+    schedule,
+    providerTermsAccepted,
+  ] = await Promise.all([
     supabase
       .from("bookings")
       .select(
@@ -172,6 +208,7 @@ export default async function ProviderDashboardPage({
       )
       .eq("provider_id", profile.id),
     getProviderAvailabilityWindows(profile.id),
+    getProviderSchedule(profile.id, { lookBackDays: CALENDAR_LOOK_BACK_DAYS }),
     hasAcceptedCurrentLegalDocument(supabase, {
       userId: session.user.id,
       kind: "provider_terms",
@@ -207,6 +244,7 @@ export default async function ProviderDashboardPage({
       bookings={bookings}
       offerings={offerings}
       windows={windows}
+      schedule={schedule}
       submitted={submitted}
       stripe={stripe}
       onboardingComplete={onboardingComplete}
@@ -220,6 +258,7 @@ function ProviderDashboardView({
   bookings,
   offerings,
   windows,
+  schedule,
   submitted,
   stripe,
   onboardingComplete,
@@ -230,6 +269,7 @@ function ProviderDashboardView({
   bookings: ProviderBookingRow[];
   offerings: ReadinessOffering[];
   windows: AvailabilityWindow[];
+  schedule: ProviderSchedule;
   submitted?: string;
   stripe?: string;
   onboardingComplete: boolean;
@@ -267,7 +307,7 @@ function ProviderDashboardView({
     )
     .reduce((sum, b) => sum + providerReservedCents(b), 0);
 
-  const calendarBookings: CalendarBooking[] = bookings
+  const calendarBookings: ProviderCalendarBooking[] = bookings
     .filter((b) =>
       [
         "accepted",
@@ -281,6 +321,7 @@ function ProviderDashboardView({
     .map((b) => ({
       id: b.id,
       scheduled_at: b.scheduled_at,
+      estimated_minutes: b.estimated_minutes,
       status: b.status,
       serviceName: b.service.name,
       address: b.address,
@@ -622,7 +663,16 @@ function ProviderDashboardView({
             Your month
           </h2>
           <Card className="mt-3 p-4">
-            <MonthCalendar bookings={calendarBookings} />
+            <ProviderScheduleCalendar
+              bookings={calendarBookings}
+              days={schedule.days}
+              busy={schedule.busy}
+              nowIso={schedule.nowIso}
+              horizonStart={schedule.horizonStart}
+              horizonEnd={schedule.horizonEnd}
+              minimumNoticeHours={profile.minimum_notice_hours}
+              overrideDates={schedule.overrideDates}
+            />
           </Card>
         </section>
       </div>

@@ -20,9 +20,8 @@ export type TimeRange = { startMinutes: number; endMinutes: number };
 export type RailOverlay = {
   key: string;
   startMinutes: number;
+  /** Kept short: it has to fit one 15-minute row. */
   title: string;
-  subtitle?: string;
-  badge?: React.ReactNode;
 };
 
 export type DayRailProps = {
@@ -197,7 +196,7 @@ export function DayRail({
   );
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <p className="font-display text-sm font-semibold text-viridian">{heading}</p>
       <p className="mt-0.5 text-xs text-mist">
         {formatSlotLabel(rail.startMinutes)} to {formatSlotLabel(rail.endMinutes)}{" "}
@@ -275,14 +274,11 @@ export function DayRail({
                   )}
                 >
                   {overlay ? (
-                    <span className="flex w-full items-center gap-2 truncate font-semibold">
-                      <span className="truncate">{overlay.title}</span>
-                      {overlay.subtitle ? (
-                        <span className="truncate font-normal text-ink-soft">
-                          {overlay.subtitle}
-                        </span>
-                      ) : null}
-                      {overlay.badge}
+                    // One short line only: the row is a 15-minute slice, so
+                    // anything longer clips. The full job detail lives in the
+                    // list under the rail.
+                    <span className="w-full truncate font-semibold">
+                      {overlay.title}
                     </span>
                   ) : slot.blocked && slot.reason === "busy" ? (
                     <span className="sr-only">{busyLabel}</span>

@@ -7,6 +7,7 @@ import {
   buildMonthCells,
   firstRunFitting,
   formatUsDate,
+  pilotDateKey,
   toFormValues,
   type BusyInterval,
   type MonthCell,
@@ -67,8 +68,8 @@ export type SchedulePickerProps = {
   dottedDates?: ReadonlySet<string>;
   markedDates?: ReadonlySet<string>;
   gridLabel?: string;
-  /** Rendered under the rail; used by the provider override editor. */
-  railFooter?: React.ReactNode;
+  /** Rendered under the rail for the selected day. */
+  railFooter?: (date: string) => React.ReactNode;
 };
 
 export function SchedulePicker({
@@ -91,7 +92,9 @@ export function SchedulePicker({
   const minMonth = useMemo(() => monthOf(horizonStart), [horizonStart]);
   const maxMonth = useMemo(() => monthOf(horizonEnd), [horizonEnd]);
 
-  const [monthStart, setMonthStart] = useState(minMonth);
+  // Open on the current month, not the first month of the horizon: the
+  // provider's view looks back a few weeks, and landing there would be wrong.
+  const [monthStart, setMonthStart] = useState(() => monthOf(pilotDateKey(now)));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selection, setSelection] = useState<TimeRange | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -101,17 +104,22 @@ export function SchedulePicker({
     [days],
   );
 
-  const cells = useMemo(
-    () =>
-      buildMonthCells({
-        monthStart,
-        now,
-        days,
-        busy,
-        minimumNoticeHours,
-      }),
-    [busy, days, minimumNoticeHours, monthStart, now],
-  );
+  const cells = useMemo(() => {
+    const built = buildMonthCells({
+      monthStart,
+      now,
+      days,
+      busy,
+      minimumNoticeHours,
+    });
+    if (!readOnly) return built;
+    // The provider is reviewing, not booking. Every day they have hours on is
+    // worth opening, including days already past and days with no room left,
+    // because that is exactly where their finished and booked jobs are.
+    return built.map((cell) =>
+      cell && dayByDate.has(cell.date) ? { ...cell, state: "open" as const } : cell,
+    );
+  }, [busy, dayByDate, days, minimumNoticeHours, monthStart, now, readOnly]);
 
   const selectedDay = selectedDate ? dayByDate.get(selectedDate) : undefined;
   const rail = useMemo(
@@ -185,7 +193,7 @@ export function SchedulePicker({
         </p>
       </div>
 
-      <div className="md:border-l md:border-stone md:pl-5">
+      <div className="flex min-h-0 flex-col md:border-l md:border-stone md:pl-5">
         {rail && selectedDate ? (
           <>
             <DayRail
@@ -197,7 +205,7 @@ export function SchedulePicker({
               readOnly={readOnly}
               overlays={overlaysByDate?.[selectedDate]}
             />
-            {railFooter}
+            {railFooter?.(selectedDate)}
           </>
         ) : (
           <div className="flex h-full min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-stone px-4 text-center">

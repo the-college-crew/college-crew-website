@@ -131,6 +131,15 @@ export function expandWeeklyWindows(
   return result;
 }
 
+/** Where an instant falls in the pilot day: its date key and minutes from midnight. */
+export function pilotDatePosition(value: Date | string | number) {
+  const parts = getPilotLocalParts(value);
+  return {
+    date: toLocalDateKey(parts.year, parts.month, parts.day),
+    minutes: parts.hour * 60 + parts.minute,
+  };
+}
+
 /** Local minutes from midnight for a `HH:MM[:SS]` clock string. */
 export function clockToMinutes(value: string) {
   const [hours, minutes] = value.slice(0, 5).split(":").map(Number);
