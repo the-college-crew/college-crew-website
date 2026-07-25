@@ -88,6 +88,49 @@ export function pilotDateKey(value: Date | string | number) {
   return toLocalDateKey(parts.year, parts.month, parts.day);
 }
 
+/** Add days to a `YYYY-MM-DD` key without touching the host timezone. */
+export function shiftDateKey(date: string, days: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
+}
+
+/**
+ * Weekday of a `YYYY-MM-DD` key in the project's encoding: Monday 0 through
+ * Sunday 6, matching `provider_availability_windows.weekday`.
+ */
+export function weekdayIndexForDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+}
+
+/**
+ * Project recurring weekly windows onto real dates. The server resolves this
+ * itself (per-date overrides included) for anything that can be booked; this is
+ * for surfaces with no saved provider yet, like the sample preview and the
+ * live preview in the availability editor.
+ */
+export function expandWeeklyWindows(
+  windows: readonly { weekday: number; start_local: string; end_local: string }[],
+  fromDate: string,
+  days: number,
+): ScheduleDay[] {
+  const byWeekday = new Map(windows.map((window) => [window.weekday, window]));
+  const result: ScheduleDay[] = [];
+  for (let offset = 0; offset <= days; offset++) {
+    const date = shiftDateKey(fromDate, offset);
+    const window = byWeekday.get(weekdayIndexForDate(date));
+    if (!window) continue;
+    result.push({
+      date,
+      startLocal: window.start_local,
+      endLocal: window.end_local,
+    });
+  }
+  return result;
+}
+
 /** Local minutes from midnight for a `HH:MM[:SS]` clock string. */
 export function clockToMinutes(value: string) {
   const [hours, minutes] = value.slice(0, 5).split(":").map(Number);
@@ -104,6 +147,13 @@ export function formatSlotLabel(minutes: number) {
   const period = hours >= 12 ? "PM" : "AM";
   const displayHour = hours % 12 || 12;
   return `${displayHour}:${String(minutes % 60).padStart(2, "0")} ${period}`;
+}
+
+/** Compact gutter form: `10 AM` on the hour, `9:30 AM` otherwise. */
+export function formatHourLabel(minutes: number) {
+  return minutes % 60 === 0
+    ? formatSlotLabel(minutes).replace(":00", "")
+    : formatSlotLabel(minutes);
 }
 
 export function formatDurationLabel(minutes: number) {

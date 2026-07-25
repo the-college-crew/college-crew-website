@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   SLOT_MINUTES,
+  formatHourLabel,
   formatRangeSummary,
   formatSlotLabel,
   maxEndMinutes,
@@ -108,28 +109,8 @@ export function DayRail({
     [onSelectionChange, rail],
   );
 
-  useEffect(() => {
-    if (readOnly) return;
-    function endDrag() {
-      if (dragAnchor.current === null) return;
-      if (didDrag.current && preview) commit(preview);
-      dragAnchor.current = null;
-      setPreview(null);
-    }
-    window.addEventListener("pointerup", endDrag);
-    window.addEventListener("pointercancel", endDrag);
-    return () => {
-      window.removeEventListener("pointerup", endDrag);
-      window.removeEventListener("pointercancel", endDrag);
-    };
-  }, [commit, preview, readOnly]);
-
-  function handleSlotClick(startMinutes: number, blocked: boolean) {
-    // A drag already committed on pointerup; the trailing click is noise.
-    if (didDrag.current) {
-      didDrag.current = false;
-      return;
-    }
+  /** Tap semantics: first tap sets the start, second sets the end. */
+  function tapSlot(startMinutes: number, blocked: boolean) {
     if (blocked) {
       setPendingStart(null);
       setHint("Your student isn't free then.");
@@ -143,6 +124,71 @@ export function DayRail({
     }
     commit(clampRange(pendingStart, startMinutes));
     setPendingStart(null);
+  }
+
+  /**
+   * Which slot sits under the pointer. Hit-testing beats per-slot pointerenter
+   * handlers here: once the container captures the pointer, enter and leave
+   * stop firing on the slots being dragged across, so a captured drag would
+   * silently do nothing.
+   */
+  function slotAt(clientX: number, clientY: number) {
+    const element = document
+      .elementFromPoint(clientX, clientY)
+      ?.closest<HTMLElement>("[data-slot-minutes]");
+    if (!element) return null;
+    return {
+      startMinutes: Number(element.dataset.slotMinutes),
+      blocked: element.dataset.slotBlocked === "true",
+    };
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (readOnly) return;
+    const slot = slotAt(event.clientX, event.clientY);
+    if (!slot || slot.blocked) return;
+    didDrag.current = false;
+    dragAnchor.current = slot.startMinutes;
+    // Only a mouse or pen captures the gesture. Capturing a touch would mean
+    // owning vertical movement, and vertical movement in a scrollable rail is
+    // the user trying to scroll it. Touch gets tap-start-then-tap-end instead,
+    // which is the native pattern there anyway.
+    if (event.pointerType !== "touch") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const anchor = dragAnchor.current;
+    if (readOnly || anchor === null || event.pointerType === "touch") return;
+    const slot = slotAt(event.clientX, event.clientY);
+    if (!slot || slot.startMinutes === anchor) return;
+    didDrag.current = true;
+    setPreview(clampRange(anchor, slot.startMinutes));
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    const anchor = dragAnchor.current;
+    if (readOnly || anchor === null) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragAnchor.current = null;
+
+    if (didDrag.current) {
+      commit(preview);
+      setPendingStart(null);
+    } else {
+      // A press that never moved is a tap, wherever the pointer came to rest.
+      tapSlot(anchor, false);
+    }
+    setPreview(null);
+  }
+
+  function handlePointerCancel() {
+    dragAnchor.current = null;
+    didDrag.current = false;
+    setPreview(null);
   }
 
   const active = preview ?? selection;
@@ -163,7 +209,13 @@ export function DayRail({
         aria-label={`Times on ${heading}`}
         className="mt-2 max-h-96 flex-1 overflow-y-auto rounded-xl border border-stone bg-paper"
       >
-        <div className="grid grid-cols-[3.25rem_1fr]">
+        <div
+          className="grid grid-cols-[3.5rem_1fr]"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+        >
           {rail.slots.map((slot) => {
             const onTheHour = slot.startMinutes % 60 === 0;
             const isFirst = slot.startMinutes === rail.startMinutes;
@@ -182,11 +234,13 @@ export function DayRail({
                     onTheHour || isFirst ? "pt-px" : "",
                   )}
                 >
-                  {onTheHour || isFirst ? formatSlotLabel(slot.startMinutes) : null}
+                  {onTheHour || isFirst ? formatHourLabel(slot.startMinutes) : null}
                 </div>
                 <button
                   type="button"
                   disabled={readOnly}
+                  data-slot-minutes={slot.startMinutes}
+                  data-slot-blocked={slot.blocked}
                   aria-disabled={slot.blocked ? true : undefined}
                   aria-pressed={selected || undefined}
                   aria-label={`${slot.label}${
@@ -199,17 +253,13 @@ export function DayRail({
                       ? (BLOCKED_COPY[slot.reason ?? "busy"] ?? busyLabel)
                       : undefined
                   }
-                  onPointerDown={() => {
-                    if (readOnly || slot.blocked) return;
-                    didDrag.current = false;
-                    dragAnchor.current = slot.startMinutes;
+                  // Pointer gestures are handled on the container; a click with
+                  // detail 0 is a keyboard activation, which fires no pointer
+                  // events and would otherwise be the one way in that doesn't work.
+                  onClick={(event) => {
+                    if (readOnly || event.detail !== 0) return;
+                    tapSlot(slot.startMinutes, slot.blocked);
                   }}
-                  onPointerEnter={() => {
-                    if (readOnly || dragAnchor.current === null) return;
-                    didDrag.current = true;
-                    setPreview(clampRange(dragAnchor.current, slot.startMinutes));
-                  }}
-                  onClick={() => handleSlotClick(slot.startMinutes, slot.blocked)}
                   className={cn(
                     "relative flex h-5 select-none items-center px-2 text-left text-[11px] leading-none transition-colors",
                     "border-t focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-viridian",

@@ -5,6 +5,7 @@ import {
   buildDayRail,
   buildMonthCells,
   clockToMinutes,
+  expandWeeklyWindows,
   firstRunFitting,
   formatRangeSummary,
   formatUsDate,
@@ -12,8 +13,10 @@ import {
   maxEndMinutes,
   minutesToClock,
   pilotDateKey,
+  shiftDateKey,
   toFormValues,
   validateRange,
+  weekdayIndexForDate,
   type BusyInterval,
   type ScheduleDay,
 } from "./availability-grid";
@@ -64,6 +67,39 @@ describe("clock helpers", () => {
   it("reads the local date of an instant in the pilot zone, not the host zone", () => {
     // 01:30 UTC on the 13th is still 20:30 on the 12th in Chicago.
     expect(pilotDateKey("2026-08-13T01:30:00.000Z")).toBe("2026-08-12");
+  });
+
+  it("shifts date keys across month and year ends", () => {
+    expect(shiftDateKey("2026-08-31", 1)).toBe("2026-09-01");
+    expect(shiftDateKey("2026-12-31", 1)).toBe("2027-01-01");
+    expect(shiftDateKey("2026-03-01", -1)).toBe("2026-02-28");
+  });
+
+  it("encodes weekdays Monday zero through Sunday six", () => {
+    // 2026-08-10 is a Monday.
+    expect(weekdayIndexForDate("2026-08-10")).toBe(0);
+    expect(weekdayIndexForDate("2026-08-15")).toBe(5);
+    expect(weekdayIndexForDate("2026-08-16")).toBe(6);
+  });
+});
+
+describe("expandWeeklyWindows", () => {
+  const windows = [
+    { weekday: 0, start_local: "15:00:00", end_local: "20:00:00" },
+    { weekday: 4, start_local: "09:00:00", end_local: "16:00:00" },
+  ];
+
+  it("projects recurring windows onto the dates they land on", () => {
+    // 2026-08-10 is a Monday, so the Monday and Friday windows both appear.
+    expect(expandWeeklyWindows(windows, "2026-08-10", 7)).toEqual([
+      { date: "2026-08-10", startLocal: "15:00:00", endLocal: "20:00:00" },
+      { date: "2026-08-14", startLocal: "09:00:00", endLocal: "16:00:00" },
+      { date: "2026-08-17", startLocal: "15:00:00", endLocal: "20:00:00" },
+    ]);
+  });
+
+  it("returns nothing when no weekday has a window", () => {
+    expect(expandWeeklyWindows([], "2026-08-10", 30)).toEqual([]);
   });
 });
 

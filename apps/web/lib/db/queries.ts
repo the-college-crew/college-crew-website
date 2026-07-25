@@ -20,6 +20,11 @@ import {
   recommendationScore,
   utcDateKey,
 } from "@/lib/browse/ranking";
+import {
+  pilotDateKey,
+  type BusyInterval,
+  type ScheduleDay,
+} from "@/lib/booking/availability-grid";
 import { milesBetween, type MaybeCoordinates } from "@/lib/geo/distance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -570,6 +575,88 @@ export async function getProviderAvailabilityWindows(
     .eq("provider_id", providerId)
     .order("weekday");
   return data ?? [];
+}
+
+export type ProviderSchedule = {
+  /** Open days with their effective window, per-date overrides applied. */
+  days: ScheduleDay[];
+  /** Reserved ranges. Times only: the RPC exposes no job details. */
+  busy: BusyInterval[];
+  /** Inclusive `YYYY-MM-DD` bounds of the range that was fetched. */
+  horizonStart: string;
+  horizonEnd: string;
+  /** The instant the page was rendered, so the client can't drift on first paint. */
+  nowIso: string;
+};
+
+/** How far ahead the booking calendar loads. The RPCs cap the range at 120. */
+export const SCHEDULE_HORIZON_DAYS = 90;
+
+function addDaysToDateKey(date: string, days: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
+}
+
+/**
+ * Everything the booking calendar needs for one provider, in two round trips.
+ * Fetching the whole horizon up front means month navigation and day selection
+ * never wait on the network, which matters because this sits in front of a card
+ * authorization.
+ */
+export async function getProviderSchedule(
+  providerId: string,
+  options: { days?: number; now?: Date } = {},
+): Promise<ProviderSchedule> {
+  const now = options.now ?? new Date();
+  const nowIso = now.toISOString();
+  const horizonStart = pilotDateKey(now);
+  const horizonEnd = addDaysToDateKey(
+    horizonStart,
+    options.days ?? SCHEDULE_HORIZON_DAYS,
+  );
+  const empty: ProviderSchedule = {
+    days: [],
+    busy: [],
+    horizonStart,
+    horizonEnd,
+    nowIso,
+  };
+  if (!hasSupabaseEnv()) return empty;
+
+  const supabase = await createClient();
+  const [{ data: days, error: daysError }, { data: busy, error: busyError }] =
+    await Promise.all([
+      supabase.rpc("provider_schedule_days", {
+        p_provider_id: providerId,
+        p_from: horizonStart,
+        p_to: horizonEnd,
+      }),
+      supabase.rpc("provider_busy_intervals", {
+        p_provider_id: providerId,
+        p_from: nowIso,
+        // The busy window has to cover the last bookable day in full, not just
+        // its midnight boundary.
+        p_to: `${addDaysToDateKey(horizonEnd, 1)}T00:00:00.000Z`,
+      }),
+    ]);
+
+  if (daysError || busyError) return empty;
+
+  return {
+    days: (days ?? []).map((day) => ({
+      date: day.local_date,
+      startLocal: day.start_local,
+      endLocal: day.end_local,
+    })),
+    busy: (busy ?? []).map((interval) => ({
+      start: interval.start_at,
+      end: interval.end_at,
+    })),
+    horizonStart,
+    horizonEnd,
+    nowIso,
+  };
 }
 
 /** Everything the public provider profile page needs, or null if not visible. */

@@ -9,7 +9,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getOwnProviderProfile, getSession } from "@/lib/auth/session";
-import { getPublicProviderProfile } from "@/lib/db/queries";
+import { getProviderSchedule, getPublicProviderProfile } from "@/lib/db/queries";
 import {
   areBookingRequestsEnabled,
   isHourlyBookingEnabled,
@@ -102,6 +102,10 @@ export default async function BookingPage({
       ? await getRebookDefaults(again, session.user.id, provider.id)
       : undefined;
 
+  // The whole booking horizon in one shot, so month navigation and day
+  // selection never wait on the network in front of a card authorization.
+  const schedule = await getProviderSchedule(provider.id);
+
   const ownProviderProfile = session ? await getOwnProviderProfile() : null;
   const isOwnListing = ownProviderProfile?.id === provider.id;
   const isAdmin = session?.profile.role === "admin";
@@ -125,7 +129,9 @@ export default async function BookingPage({
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    // Wider than the other customer forms: the calendar and its time rail sit
+    // side by side, and squeezing them into the old measure breaks both.
+    <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
         title={provider.display_name || "Request booking"}
         description={
@@ -188,6 +194,8 @@ export default async function BookingPage({
           <BookingRequestForm
             services={bookableServices}
             originReady={origin.isSet}
+            schedule={schedule}
+            minimumNoticeHours={provider.minimum_notice_hours}
             initial={rebookDefaults}
           />
         </Card>
