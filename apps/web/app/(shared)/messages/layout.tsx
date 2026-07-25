@@ -1,4 +1,5 @@
 import { ConversationList } from "@/components/messaging/conversation-list";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireUser } from "@/lib/auth/session";
 import { getDemoPreview } from "@/lib/demo/sample-preview";
 import { getConversationGroups } from "@/lib/messaging/conversation-list";
@@ -27,6 +28,7 @@ export default async function MessagesLayout({
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-none overflow-y-auto lg:overflow-hidden">
+      <RealtimeRefresh channel={`messages-inbox:${user.id}`} table="messages" />
       <aside className="hidden w-[22rem] shrink-0 flex-col border-r border-line lg:flex">
         <div className="shrink-0 border-b border-line px-4 py-4">
           <h1 className="font-display text-lg font-semibold text-ink">

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { BackButton } from "@/components/back-button";
 import { ChatThread } from "@/components/chat/chat-thread";
 import { DemoChatThread } from "@/components/demo-chat-thread";
+import { ResolveButton } from "@/components/messaging/resolve-button";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { StatusPill } from "@/components/status-pill";
 import { Avatar } from "@/components/ui/avatar";
@@ -15,6 +16,7 @@ import {
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
 import type { BookingStatus, Message } from "@/lib/db/types";
+import { getOwnResolvedIds } from "@/lib/messaging/resolutions";
 import { markConversationRead } from "@/lib/messaging/unread";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
@@ -111,6 +113,7 @@ export default async function ConversationPage({
 
   // Opening the thread clears its unread badge. Best-effort; never blocks render.
   await markConversationRead(supabase, conversation.id);
+  const resolvedIds = await getOwnResolvedIds(supabase, user.id);
 
   const { data: messages } = await supabase
     .from("messages")
@@ -134,7 +137,7 @@ export default async function ConversationPage({
             <p className="font-display text-xs font-semibold uppercase tracking-wide text-mist">
               {booking
                 ? `${booking.service?.name ?? "Booking"} · ${formatDateTime(booking.scheduled_at)}`
-                : "General inquiry (no booking yet)"}
+                : "General (no booking yet)"}
             </p>
             <h1 className="font-display text-xl font-semibold text-ink lg:text-2xl">
               {otherName || "Conversation"}
@@ -143,6 +146,10 @@ export default async function ConversationPage({
         </div>
         <div className="flex items-center gap-2">
           {booking ? <StatusPill status={booking.status} /> : null}
+          <ResolveButton
+            conversationId={conversation.id}
+            alreadyResolved={resolvedIds.has(conversation.id)}
+          />
           <div className="lg:hidden">
             <BackButton />
           </div>
