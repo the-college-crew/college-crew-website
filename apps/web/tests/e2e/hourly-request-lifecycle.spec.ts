@@ -40,9 +40,33 @@ function futureDate(days: number, hour: number) {
   return value;
 }
 
-function localInput(value: Date) {
+function dateKey(value: Date) {
   const pad = (part: number) => String(part).padStart(2, "0");
-  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+}
+
+/**
+ * Pick a date and a time range on the booking calendar. The month grid opens on
+ * the current month, so step forward until the target day is rendered, then tap
+ * the start slot and the slot the range should end after: the second tap sets
+ * the end to that slot's end, 15 minutes later.
+ */
+async function pickSlot(
+  page: Page,
+  start: Date,
+  durationMinutes: number,
+) {
+  const day = page.locator(`[data-date="${dateKey(start)}"]`);
+  for (let hop = 0; hop < 3 && (await day.count()) === 0; hop++) {
+    await page.getByRole("button", { name: "Next month" }).click();
+  }
+  await day.click();
+
+  const startMinutes = start.getHours() * 60 + start.getMinutes();
+  await page.locator(`[data-slot-minutes="${startMinutes}"]`).click();
+  await page
+    .locator(`[data-slot-minutes="${startMinutes + durationMinutes - 15}"]`)
+    .click();
 }
 
 async function createUser(email: string, role: UserRole, fullName: string) {
@@ -315,9 +339,9 @@ test("browse, request, accept, replace, cancel, decline, and expire without Stri
   await customerPage
     .getByLabel("Service", { exact: true })
     .selectOption(providerOneOfferingId);
-  await customerPage.getByLabel("Date & time").fill(localInput(requestedStart));
-  await customerPage.getByLabel("Estimated duration").selectOption("120");
-  await customerPage.getByLabel("Provider response window").selectOption("1");
+  // Date, start, and duration are now one range picked on the calendar: the
+  // selected range IS the estimate, so there is no separate duration control.
+  await pickSlot(customerPage, requestedStart, 120);
   // The service address comes from "Booking from" (defaults to home).
   await expect(
     customerPage.getByText("100 Synthetic Street, Chicago, IL 60615"),

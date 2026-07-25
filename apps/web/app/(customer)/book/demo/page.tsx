@@ -4,12 +4,19 @@ import { notFound } from "next/navigation";
 
 import { FormLoader } from "@/components/form-loader";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
+import { SchedulePicker } from "@/components/scheduling/schedule-picker";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Label, Select, Textarea } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import {
-  demoBookings,
+  expandWeeklyWindows,
+  pilotDateKey,
+  shiftDateKey,
+} from "@/lib/booking/availability-grid";
+import { MINIMUM_NOTICE_HOURS } from "@/lib/booking/policy";
+import {
+  demoAvailabilityWindows,
   demoOfferings,
   demoProviderProfile,
   getDemoPreview,
@@ -24,10 +31,21 @@ export default async function DemoBookingPage() {
   const preview = await getDemoPreview("customer");
   if (!preview) notFound();
 
-  const sampleDateTime = demoBookings[0].scheduled_at.slice(0, 16);
+  // The sample uses the same picker as the real flow, driven off the sample
+  // provider's weekly hours, so the preview can't drift from what customers see.
+  const now = new Date();
+  const horizonStart = pilotDateKey(now);
+  const horizonEnd = shiftDateKey(horizonStart, 60);
+  const demoSchedule = {
+    days: expandWeeklyWindows(demoAvailabilityWindows, horizonStart, 60),
+    busy: [],
+    horizonStart,
+    horizonEnd,
+    nowIso: now.toISOString(),
+  };
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
         title={demoProviderProfile.display_name}
         description="Sample booking request"
@@ -48,44 +66,33 @@ export default async function DemoBookingPage() {
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="scheduledAt">Date & time</Label>
-            <Input
-              id="scheduledAt"
-              name="scheduledAt"
-              type="datetime-local"
-              defaultValue={sampleDateTime}
-              required
+          <fieldset>
+            <legend className="mb-2 block text-sm font-medium text-ink">
+              When do you need this?
+            </legend>
+            <SchedulePicker
+              days={demoSchedule.days}
+              busy={demoSchedule.busy}
+              nowIso={demoSchedule.nowIso}
+              minimumNoticeHours={MINIMUM_NOTICE_HOURS.default}
+              horizonStart={demoSchedule.horizonStart}
+              horizonEnd={demoSchedule.horizonEnd}
+              gridLabel="Choose a date to book"
             />
-          </div>
+          </fieldset>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="estimatedMinutes">Estimated duration</Label>
-              <Select
-                id="estimatedMinutes"
-                name="estimatedMinutes"
-                defaultValue="120"
-              >
-                <option value="60">1 hour</option>
-                <option value="90">1 hour 30 minutes</option>
-                <option value="120">2 hours</option>
-                <option value="180">3 hours</option>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="responseWindowHours">Response window</Label>
-              <Select
-                id="responseWindowHours"
-                name="responseWindowHours"
-                defaultValue="3"
-              >
-                <option value="1">1 hour</option>
-                <option value="3">3 hours</option>
-                <option value="5">5 hours</option>
-                <option value="12">12 hours</option>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="responseWindowHours">Response window</Label>
+            <Select
+              id="responseWindowHours"
+              name="responseWindowHours"
+              defaultValue="3"
+            >
+              <option value="1">1 hour</option>
+              <option value="3">3 hours</option>
+              <option value="5">5 hours</option>
+              <option value="12">12 hours</option>
+            </Select>
           </div>
 
           <div>

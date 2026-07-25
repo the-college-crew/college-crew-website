@@ -194,6 +194,92 @@ export async function updateAvailability(
   return { success: "Availability saved." };
 }
 
+export type AvailabilityOverrideState = { error?: string; success?: string };
+
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const overrideSchema = z
+  .object({
+    localDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date."),
+    mode: z.enum(["closed", "custom", "clear"]),
+    /** JSON array of {start,end}; a date may carry several periods. */
+    periods: z
+      .string()
+      .transform((raw, ctx) => {
+        try {
+          return z
+            .array(z.object({ start: z.string().regex(TIME), end: z.string().regex(TIME) }))
+            .max(4)
+            .parse(JSON.parse(raw || "[]"));
+        } catch {
+          ctx.addIssue({ code: "custom", message: "Pick the hours you'll work that day." });
+          return z.NEVER;
+        }
+      }),
+  })
+  .refine(
+    (value) =>
+      value.mode !== "custom" ||
+      (value.periods.length > 0 &&
+        value.periods.every((period) => period.start < period.end)),
+    { message: "Pick the hours you'll work that day." },
+  );
+
+/**
+ * One-date exception to the weekly hours: close the day, give it custom hours,
+ * or drop the exception so it falls back to the usual week.
+ */
+export async function saveAvailabilityOverride(
+  _prev: AvailabilityOverrideState,
+  formData: FormData,
+): Promise<AvailabilityOverrideState> {
+  await requireProviderAccess();
+  const profile = await getOwnProviderProfile();
+  if (!profile) redirect("/provider/onboarding/account");
+
+  const parsed = overrideSchema.safeParse({
+    localDate: formData.get("localDate"),
+    mode: formData.get("mode"),
+    periods: String(formData.get("periods") ?? "[]"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const supabase = await createClient();
+  const { error } =
+    parsed.data.mode === "clear"
+      ? await supabase.rpc("clear_provider_availability_override", {
+          p_local_date: parsed.data.localDate,
+        })
+      : await supabase.rpc("save_provider_availability_override", {
+          p_local_date: parsed.data.localDate,
+          p_is_available: parsed.data.mode === "custom",
+          p_periods: parsed.data.mode === "custom" ? parsed.data.periods : [],
+        });
+  if (error) {
+    return {
+      error: error.message.includes("INVALID_OVERRIDE_DATE")
+        ? "That date is in the past or more than a year out."
+        : error.message.includes("OVERLAPPING_AVAILABILITY_WINDOWS")
+          ? "Those hours overlap each other. Adjust them and try again."
+          : "Could not save that date. Try again.",
+    };
+  }
+
+  revalidateProviderStorefront(profile.id);
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/account");
+  return {
+    success:
+      parsed.data.mode === "clear"
+        ? "That date is back to your usual hours."
+        : parsed.data.mode === "closed"
+          ? "That date is closed."
+          : "Custom hours saved for that date.",
+  };
+}
+
 /** Pricing source of truth (SPEC §3) — Jobs & pricing shows it read-only. */
 export async function saveSettingsPricing(
   _prev: ProviderSettingsFormState,

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { FormLoader } from "@/components/form-loader";
+import { WindowRail } from "@/components/scheduling/window-rail";
 import { Button } from "@/components/ui/button";
 import {
   FieldError,
@@ -53,13 +54,6 @@ export function ProviderAvailabilityForm({
   const [note, setNote] = useState(values.availability_note);
   const [serviceZip, setServiceZip] = useState(values.service_zip ?? "");
 
-  // Which group currently owns each weekday — a day can only live in one
-  // time window, so pills claimed elsewhere render disabled.
-  const claimedBy = new Map<number, number>();
-  groups.forEach((group, index) => {
-    for (const day of group.weekdays) claimedBy.set(day, index);
-  });
-  const allDaysClaimed = claimedBy.size === PROVIDER_WEEKDAYS.length;
 
   function toggleDay(groupIndex: number, day: number, checked: boolean) {
     setGroups((current) =>
@@ -76,14 +70,13 @@ export function ProviderAvailabilityForm({
     );
   }
 
-  function setGroupTime(
+  function setGroupWindow(
     groupIndex: number,
-    field: "start" | "end",
-    value: string,
+    next: { start: string; end: string },
   ) {
     setGroups((current) =>
       current.map((group, index) =>
-        index === groupIndex ? { ...group, [field]: value } : group,
+        index === groupIndex ? { ...group, ...next } : group,
       ),
     );
   }
@@ -122,76 +115,50 @@ export function ProviderAvailabilityForm({
                 className="space-y-3 rounded-xl border border-line bg-paper p-4"
               >
                 <div className="flex flex-wrap gap-2">
-                  {PROVIDER_WEEKDAYS.map(({ value, short, long }) => {
-                    const owner = claimedBy.get(value);
-                    const claimedElsewhere =
-                      owner !== undefined && owner !== groupIndex;
-                    return (
-                      <label
-                        key={value}
-                        title={
-                          claimedElsewhere
-                            ? "Set in another time window"
-                            : undefined
+                  {/* A day can appear in more than one window now: mornings
+                      before class and evenings after are two periods on the
+                      same weekday. Only overlapping hours are rejected. */}
+                  {PROVIDER_WEEKDAYS.map(({ value, short, long }) => (
+                    <label
+                      key={value}
+                      className="relative flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm has-checked:border-quad-500 has-checked:bg-quad-50 has-checked:font-semibold has-checked:text-quad-800 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-viridian"
+                    >
+                      <input
+                        type="checkbox"
+                        name={`windowDay_${groupIndex}_${value}`}
+                        checked={group.weekdays.includes(value)}
+                        onChange={(event) =>
+                          toggleDay(groupIndex, value, event.target.checked)
                         }
-                        className={
-                          claimedElsewhere
-                            ? "relative flex cursor-not-allowed items-center gap-1.5 rounded-full border border-line bg-stone/30 px-3 py-1.5 text-sm text-mist"
-                            : "relative flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm has-checked:border-quad-500 has-checked:bg-quad-50 has-checked:font-semibold has-checked:text-quad-800 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-viridian"
-                        }
-                      >
-                        <input
-                          type="checkbox"
-                          name={`windowDay_${groupIndex}_${value}`}
-                          checked={group.weekdays.includes(value)}
-                          disabled={claimedElsewhere}
-                          onChange={(event) =>
-                            toggleDay(groupIndex, value, event.target.checked)
-                          }
-                          className="absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none rounded-full opacity-0 disabled:cursor-not-allowed"
-                        />
-                        <span className="sm:hidden">{short}</span>
-                        <span className="hidden sm:inline">{long}</span>
-                      </label>
-                    );
-                  })}
+                        className="absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none rounded-full opacity-0"
+                      />
+                      <span className="sm:hidden">{short}</span>
+                      <span className="hidden sm:inline">{long}</span>
+                    </label>
+                  ))}
                 </div>
                 <FieldError>{groupErrors?.days}</FieldError>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor={`windowStart_${groupIndex}`}>
-                      Start time
-                    </Label>
-                    <Input
-                      id={`windowStart_${groupIndex}`}
-                      name={`windowStart_${groupIndex}`}
-                      type="time"
-                      value={group.start}
-                      onChange={(event) =>
-                        setGroupTime(groupIndex, "start", event.target.value)
-                      }
-                      aria-invalid={groupErrors?.start ? true : undefined}
-                      required
-                    />
-                    <FieldError>{groupErrors?.start}</FieldError>
-                  </div>
-                  <div>
-                    <Label htmlFor={`windowEnd_${groupIndex}`}>End time</Label>
-                    <Input
-                      id={`windowEnd_${groupIndex}`}
-                      name={`windowEnd_${groupIndex}`}
-                      type="time"
-                      value={group.end}
-                      onChange={(event) =>
-                        setGroupTime(groupIndex, "end", event.target.value)
-                      }
-                      aria-invalid={groupErrors?.end ? true : undefined}
-                      required
-                    />
-                    <FieldError>{groupErrors?.end}</FieldError>
-                  </div>
-                </div>
+                <WindowRail
+                  railKey={`window-${groupIndex}`}
+                  heading="Hours on these days"
+                  start={group.start}
+                  end={group.end}
+                  onChange={(next) => setGroupWindow(groupIndex, next)}
+                />
+                {/* The rail is the control; these carry its value to the same
+                    fields parseProviderAvailabilityForm already reads. */}
+                <input
+                  type="hidden"
+                  name={`windowStart_${groupIndex}`}
+                  value={group.start}
+                />
+                <input
+                  type="hidden"
+                  name={`windowEnd_${groupIndex}`}
+                  value={group.end}
+                />
+                <FieldError>{groupErrors?.start ?? groupErrors?.end}</FieldError>
 
                 {groups.length > 1 ? (
                   <Button
@@ -208,7 +175,7 @@ export function ProviderAvailabilityForm({
           })}
         </div>
 
-        {!allDaysClaimed && groups.length < MAX_AVAILABILITY_WINDOWS ? (
+        {groups.length < MAX_AVAILABILITY_WINDOWS ? (
           <Button
             type="button"
             variant="secondary"
@@ -216,13 +183,14 @@ export function ProviderAvailabilityForm({
             className="mt-3"
             onClick={addGroup}
           >
-            + Add days with different hours
+            + Add another set of hours
           </Button>
         ) : null}
 
         <FieldHint>
-          Group the days that share the same hours; add another window for days
-          with different hours. Times are interpreted in Central Time.
+          Group the days that share the same hours, then drag those hours on the
+          rail. Add another set for different hours, including a second stretch
+          on a day you already picked. Times are Central.
         </FieldHint>
         <FieldError>{state.fieldErrors?.weekdays}</FieldError>
       </fieldset>

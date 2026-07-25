@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_allowlist: {
@@ -1524,6 +1499,51 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_availability_overrides: {
+        Row: {
+          created_at: string
+          end_local: string | null
+          id: string
+          is_available: boolean
+          local_date: string
+          provider_id: string
+          start_local: string | null
+        }
+        Insert: {
+          created_at?: string
+          end_local?: string | null
+          id?: string
+          is_available: boolean
+          local_date: string
+          provider_id: string
+          start_local?: string | null
+        }
+        Update: {
+          created_at?: string
+          end_local?: string | null
+          id?: string
+          is_available?: boolean
+          local_date?: string
+          provider_id?: string
+          start_local?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_availability_overrides_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_availability_overrides_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "public_provider_directory"
+            referencedColumns: ["provider_id"]
+          },
+        ]
+      }
       provider_availability_windows: {
         Row: {
           end_local: string
@@ -2591,6 +2611,10 @@ export type Database = {
           stripe_event_id: string
         }[]
       }
+      clear_provider_availability_override: {
+        Args: { p_local_date: string }
+        Returns: undefined
+      }
       complete_booking_automation_job: {
         Args: { p_job_id: string; p_lease_token: string }
         Returns: boolean
@@ -2603,28 +2627,50 @@ export type Database = {
         }
         Returns: string
       }
-      create_booking_draft: {
-        Args: {
-          p_address: string
-          p_address_kind: string
-          p_booking_id: string
-          p_details: string
-          p_estimated_minutes: number
-          p_hourly_rate_cents: number
-          p_job_zip: string
-          p_latitude?: number
-          p_longitude?: number
-          p_on_decline_preference: Database["public"]["Enums"]["booking_decline_preference"]
-          p_original_booking_id?: string
-          p_provider_service_id: string
-          p_scheduled_at: string
-          p_service_city: string
-          p_stripe_customer_id: string
-          p_stripe_payment_intent_id: string
-          p_time_flexibility?: Database["public"]["Enums"]["booking_time_flexibility"]
-        }
-        Returns: undefined
-      }
+      create_booking_draft:
+        | {
+            Args: {
+              p_address: string
+              p_address_kind: string
+              p_booking_id: string
+              p_details: string
+              p_estimated_minutes: number
+              p_hourly_rate_cents: number
+              p_job_zip: string
+              p_latitude?: number
+              p_longitude?: number
+              p_on_decline_preference: Database["public"]["Enums"]["booking_decline_preference"]
+              p_original_booking_id?: string
+              p_provider_service_id: string
+              p_scheduled_at: string
+              p_service_city: string
+              p_stripe_customer_id: string
+              p_stripe_payment_intent_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_address: string
+              p_address_kind: string
+              p_booking_id: string
+              p_details: string
+              p_estimated_minutes: number
+              p_hourly_rate_cents: number
+              p_job_zip: string
+              p_latitude?: number
+              p_longitude?: number
+              p_on_decline_preference: Database["public"]["Enums"]["booking_decline_preference"]
+              p_original_booking_id?: string
+              p_provider_service_id: string
+              p_scheduled_at: string
+              p_service_city: string
+              p_stripe_customer_id: string
+              p_stripe_payment_intent_id: string
+              p_time_flexibility?: Database["public"]["Enums"]["booking_time_flexibility"]
+            }
+            Returns: undefined
+          }
       create_hourly_booking_request: {
         Args: {
           p_address: string
@@ -2784,6 +2830,13 @@ export type Database = {
         Returns: string
       }
       owns_provider_profile: { Args: { pp_id: string }; Returns: boolean }
+      provider_busy_intervals: {
+        Args: { p_from: string; p_provider_id: string; p_to: string }
+        Returns: {
+          end_at: string
+          start_at: string
+        }[]
+      }
       provider_payout_plan: {
         Args: { p_booking_id: string }
         Returns: {
@@ -2792,6 +2845,14 @@ export type Database = {
           payment_id: string
           payout_amount_cents: number
           stripe_payment_intent_id: string
+        }[]
+      }
+      provider_schedule_days: {
+        Args: { p_from: string; p_provider_id: string; p_to: string }
+        Returns: {
+          end_local: string
+          local_date: string
+          start_local: string
         }[]
       }
       quote_hourly_offering_slot: {
@@ -2944,6 +3005,14 @@ export type Database = {
           p_minimum_notice_hours: number
           p_service_zip: string
           p_windows: Json
+        }
+        Returns: undefined
+      }
+      save_provider_availability_override: {
+        Args: {
+          p_is_available: boolean
+          p_local_date: string
+          p_periods?: Json
         }
         Returns: undefined
       }
@@ -3225,9 +3294,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       background_check_status: ["none", "pending", "passed"],
@@ -3356,6 +3422,8 @@ export type Profile = Tables<"profiles">
 export type Service = Tables<"services">
 export type ProviderProfile = Tables<"provider_profiles">
 export type ProviderAvailabilityWindowRow = Tables<"provider_availability_windows">
+export type ProviderAvailabilityOverrideRow =
+  Tables<"provider_availability_overrides">
 export type ProviderService = Tables<"provider_services">
 export type Booking = Tables<"bookings">
 export type BookingAutomationJob = Tables<"booking_automation_jobs">

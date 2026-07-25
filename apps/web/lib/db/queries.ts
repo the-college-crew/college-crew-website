@@ -20,6 +20,11 @@ import {
   recommendationScore,
   utcDateKey,
 } from "@/lib/browse/ranking";
+import {
+  pilotDateKey,
+  type BusyInterval,
+  type ScheduleDay,
+} from "@/lib/booking/availability-grid";
 import { milesBetween, type MaybeCoordinates } from "@/lib/geo/distance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -569,6 +574,128 @@ export async function getProviderAvailabilityWindows(
     .select("weekday, start_local, end_local")
     .eq("provider_id", providerId)
     .order("weekday");
+  return data ?? [];
+}
+
+export type ProviderSchedule = {
+  /** Open days with their effective window, per-date overrides applied. */
+  days: ScheduleDay[];
+  /** Reserved ranges. Times only: the RPC exposes no job details. */
+  busy: BusyInterval[];
+  /** Dates carrying a per-date override, for marking them in the provider's own view. */
+  overrideDates: string[];
+  /** Inclusive `YYYY-MM-DD` bounds of the range that was fetched. */
+  horizonStart: string;
+  horizonEnd: string;
+  /** The instant the page was rendered, so the client can't drift on first paint. */
+  nowIso: string;
+};
+
+/** How far ahead the booking calendar loads. The RPCs cap the range at 120. */
+export const SCHEDULE_HORIZON_DAYS = 90;
+
+function addDaysToDateKey(date: string, days: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
+}
+
+/**
+ * Everything the booking calendar needs for one provider, in two round trips.
+ * Fetching the whole horizon up front means month navigation and day selection
+ * never wait on the network, which matters because this sits in front of a card
+ * authorization.
+ */
+export async function getProviderSchedule(
+  providerId: string,
+  options: {
+    /** Days before today to include; the provider's own view looks back. */
+    lookBackDays?: number;
+    days?: number;
+    now?: Date;
+  } = {},
+): Promise<ProviderSchedule> {
+  const now = options.now ?? new Date();
+  const nowIso = now.toISOString();
+  const today = pilotDateKey(now);
+  const horizonStart = addDaysToDateKey(today, -(options.lookBackDays ?? 0));
+  const horizonEnd = addDaysToDateKey(
+    today,
+    options.days ?? SCHEDULE_HORIZON_DAYS,
+  );
+  const empty: ProviderSchedule = {
+    days: [],
+    busy: [],
+    overrideDates: [],
+    horizonStart,
+    horizonEnd,
+    nowIso,
+  };
+  if (!hasSupabaseEnv()) return empty;
+
+  const supabase = await createClient();
+  const [
+    { data: days, error: daysError },
+    { data: busy, error: busyError },
+    { data: overrides },
+  ] = await Promise.all([
+    supabase.rpc("provider_schedule_days", {
+      p_provider_id: providerId,
+      p_from: horizonStart,
+      p_to: horizonEnd,
+    }),
+    supabase.rpc("provider_busy_intervals", {
+      p_provider_id: providerId,
+      p_from: `${horizonStart}T00:00:00.000Z`,
+      // The busy window has to cover the last bookable day in full, not just
+      // its midnight boundary.
+      p_to: `${addDaysToDateKey(horizonEnd, 1)}T00:00:00.000Z`,
+    }),
+    // Which dates were overridden, so the provider's own calendar can mark
+    // them. Customers never need this: the override is already baked into the
+    // window `provider_schedule_days` returns.
+    supabase
+      .from("provider_availability_overrides")
+      .select("local_date")
+      .eq("provider_id", providerId)
+      .gte("local_date", horizonStart)
+      .lte("local_date", horizonEnd),
+  ]);
+
+  if (daysError || busyError) return empty;
+
+  return {
+    days: (days ?? []).map((day) => ({
+      date: day.local_date,
+      startLocal: day.start_local,
+      endLocal: day.end_local,
+    })),
+    busy: (busy ?? []).map((interval) => ({
+      start: interval.start_at,
+      end: interval.end_at,
+    })),
+    overrideDates: (overrides ?? []).map((row) => row.local_date),
+    horizonStart,
+    horizonEnd,
+    nowIso,
+  };
+}
+
+/** Upcoming per-date exceptions, for the availability editor. */
+export async function getProviderAvailabilityOverrides(
+  providerId: string,
+  options: { now?: Date; days?: number } = {},
+) {
+  if (!hasSupabaseEnv()) return [];
+  const from = pilotDateKey(options.now ?? new Date());
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("provider_availability_overrides")
+    .select("local_date, is_available, start_local, end_local")
+    .eq("provider_id", providerId)
+    .gte("local_date", from)
+    .lte("local_date", addDaysToDateKey(from, options.days ?? 365))
+    .order("local_date");
   return data ?? [];
 }
 

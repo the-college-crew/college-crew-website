@@ -10,24 +10,23 @@ import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { useActionState, useMemo, useState, useTransition } from "react";
 
 import { FormLoader } from "@/components/form-loader";
+import { SchedulePicker } from "@/components/scheduling/schedule-picker";
 import { Button } from "@/components/ui/button";
 import {
   FieldError,
   FieldHint,
-  Input,
   Label,
   Select,
   Textarea,
 } from "@/components/ui/field";
 import {
-  CUSTOMER_ESTIMATE_MINUTES,
   DEFAULT_RESPONSE_WINDOW_HOURS,
   RESPONSE_WINDOW_HOURS,
   calculateHourlySubtotalCents,
   eligibleResponseWindowHours,
   pilotLocalDateTimeToUtc,
 } from "@/lib/booking/policy";
-import type { OfferedService } from "@/lib/db/queries";
+import type { OfferedService, ProviderSchedule } from "@/lib/db/queries";
 import { formatMoney, formatOfferedPrice } from "@/lib/utils";
 
 import {
@@ -37,14 +36,6 @@ import {
   type AuthorizeState,
   type BookingFormState,
 } from "./actions";
-
-const DURATION_OPTIONS = Array.from(
-  {
-    length:
-      (CUSTOMER_ESTIMATE_MINUTES.max - CUSTOMER_ESTIMATE_MINUTES.min) / 15 + 1,
-  },
-  (_, index) => CUSTOMER_ESTIMATE_MINUTES.min + index * 15,
-);
 
 /**
  * Stripe.js is loaded lazily on first use, and deliberately NOT imported from
@@ -73,15 +64,10 @@ const appearance = {
   },
 } as const;
 
-function durationLabel(minutes: number) {
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  return `${hours} hr${hours === 1 ? "" : "s"}${remainder ? ` ${remainder} min` : ""}`;
-}
-
 /**
- * Prefill for a repeat booking. Date and time are intentionally absent — the
- * old ones are stale, and asking again is the point.
+ * Prefill for a repeat booking. Date and time are intentionally absent: the old
+ * ones are stale, and asking again is the point. The duration carries over as a
+ * hint, so opening a day preselects a range the same length as last time.
  */
 export type RebookDefaults = {
   /** The service booked last time; resolved to this provider's offering of it. */
@@ -93,11 +79,16 @@ export type RebookDefaults = {
 export function BookingRequestForm({
   services,
   originReady,
+  schedule,
+  minimumNoticeHours,
   initial,
 }: {
   services: OfferedService[];
   /** False until "Booking from" resolves to a usable service address. */
   originReady: boolean;
+  /** The provider's open days and reserved ranges over the booking horizon. */
+  schedule: ProviderSchedule;
+  minimumNoticeHours: number;
   /** Set when the customer arrived via "Book again". */
   initial?: RebookDefaults;
 }) {
@@ -116,19 +107,22 @@ export function BookingRequestForm({
       : undefined;
     return repeated?.id ?? services[0]?.id ?? "";
   });
-  const [scheduledLocal, setScheduledLocal] = useState("");
-  const [estimatedMinutes, setEstimatedMinutes] = useState(
-    initial?.estimatedMinutes ?? 60,
-  );
+  // The picked range is the whole schedule: its start is the booking time and
+  // its length is the estimate. Null until the customer has picked both ends.
+  const [slot, setSlot] = useState<{
+    scheduledLocal: string;
+    estimatedMinutes: number;
+  } | null>(null);
   const [responseWindowHours, setResponseWindowHours] = useState<number>(
     DEFAULT_RESPONSE_WINDOW_HOURS,
   );
 
   const selected = services.find((service) => service.id === selectedId);
   const isQuote = selected?.pricing_mode === "quote";
+  const estimatedMinutes = slot?.estimatedMinutes ?? 0;
   const scheduled = useMemo(
-    () => pilotLocalDateTimeToUtc(scheduledLocal),
-    [scheduledLocal],
+    () => pilotLocalDateTimeToUtc(slot?.scheduledLocal ?? ""),
+    [slot?.scheduledLocal],
   );
   const responseOptions = useMemo(
     () =>
@@ -144,8 +138,10 @@ export function BookingRequestForm({
     : responseOptions.includes(DEFAULT_RESPONSE_WINDOW_HOURS)
       ? DEFAULT_RESPONSE_WINDOW_HOURS
       : responseOptions[0];
+  // Only priceable once a full range is picked; the calculation rejects
+  // durations outside the bookable band rather than guessing.
   const estimatedSubtotal =
-    selected?.hourly_rate_cents != null
+    selected?.hourly_rate_cents != null && estimatedMinutes > 0
       ? calculateHourlySubtotalCents(selected.hourly_rate_cents, estimatedMinutes)
       : null;
 
@@ -199,44 +195,27 @@ export function BookingRequestForm({
         </Select>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="scheduledLocal">Date &amp; time</Label>
-          <Input
-            id="scheduledLocal"
-            name="scheduledLocal"
-            type="datetime-local"
-            value={scheduledLocal}
-            onChange={(event) => setScheduledLocal(event.target.value)}
-            required
-          />
-          <FieldHint>
-            {isQuote
-              ? "Central Time"
-              : "Central Time · book at least 12 hours ahead"}
-          </FieldHint>
-        </div>
-        <div>
-          <Label htmlFor="estimatedMinutes">Estimated duration</Label>
-          <Select
-            id="estimatedMinutes"
-            name="estimatedMinutes"
-            value={estimatedMinutes}
-            onChange={(event) => setEstimatedMinutes(Number(event.target.value))}
-          >
-            {DURATION_OPTIONS.map((minutes) => (
-              <option key={minutes} value={minutes}>
-                {durationLabel(minutes)}
-              </option>
-            ))}
-          </Select>
-          <FieldHint>
-            {isQuote
-              ? "Used for scheduling only. Your final price is the provider's flat quote."
-              : "One-hour minimum; billed in 15-minute increments."}
-          </FieldHint>
-        </div>
-      </div>
+      <fieldset>
+        <legend className="mb-2 block text-sm font-medium text-ink">
+          When do you need this?
+        </legend>
+        <SchedulePicker
+          days={schedule.days}
+          busy={schedule.busy}
+          nowIso={schedule.nowIso}
+          minimumNoticeHours={minimumNoticeHours}
+          horizonStart={schedule.horizonStart}
+          horizonEnd={schedule.horizonEnd}
+          onChange={setSlot}
+          preferredMinutes={initial?.estimatedMinutes}
+          gridLabel="Choose a date to book"
+        />
+        <FieldHint>
+          {isQuote
+            ? "Central Time. The time you pick is when the provider comes out; your final price is their flat quote."
+            : "Central Time. The range you pick is your estimate, billed in 15-minute increments with a one-hour minimum."}
+        </FieldHint>
+      </fieldset>
 
       {isQuote ? (
         <div>
@@ -395,10 +374,7 @@ export function BookingRequestForm({
         size="lg"
         className="w-full"
         disabled={
-          pending ||
-          !originReady ||
-          (isQuote && !effectiveResponseHours) ||
-          !scheduledLocal
+          pending || !originReady || (isQuote && !effectiveResponseHours) || !slot
         }
       >
         {pending
