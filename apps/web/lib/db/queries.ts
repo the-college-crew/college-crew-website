@@ -591,7 +591,7 @@ export type ProviderSchedule = {
   nowIso: string;
 };
 
-/** How far ahead the booking calendar loads. The RPCs cap the range at 120. */
+/** How far ahead the booking calendar loads. The RPCs cap the range at 400. */
 export const SCHEDULE_HORIZON_DAYS = 90;
 
 function addDaysToDateKey(date: string, days: number) {
@@ -662,7 +662,19 @@ export async function getProviderSchedule(
       .lte("local_date", horizonEnd),
   ]);
 
-  if (daysError || busyError) return empty;
+  // An empty schedule is indistinguishable from "this provider set no hours",
+  // so a failure here silently renders every date as unavailable. Log it: that
+  // is how a range that outgrows the RPC cap gets noticed.
+  if (daysError || busyError) {
+    console.error("getProviderSchedule failed", {
+      providerId,
+      horizonStart,
+      horizonEnd,
+      daysError,
+      busyError,
+    });
+    return empty;
+  }
 
   return {
     days: (days ?? []).map((day) => ({
