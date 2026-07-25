@@ -103,22 +103,10 @@ export function SchedulePicker({
   // A date can carry several periods, so this maps to a list, not one window.
   const dayByDate = useMemo(() => groupScheduleDays(days), [days]);
 
-  const cells = useMemo(() => {
-    const built = buildMonthCells({
-      monthStart,
-      now,
-      days,
-      busy,
-      minimumNoticeHours,
-    });
-    if (!readOnly) return built;
-    // The provider is reviewing, not booking. Every day they have hours on is
-    // worth opening, including days already past and days with no room left,
-    // because that is exactly where their finished and booked jobs are.
-    return built.map((cell) =>
-      cell && dayByDate.has(cell.date) ? { ...cell, state: "open" as const } : cell,
-    );
-  }, [busy, dayByDate, days, minimumNoticeHours, monthStart, now, readOnly]);
+  const cells = useMemo(
+    () => buildMonthCells({ monthStart, now, days, busy, minimumNoticeHours }),
+    [busy, days, minimumNoticeHours, monthStart, now],
+  );
 
   const selectedDay = selectedDate ? dayByDate.get(selectedDate) : undefined;
   const rail = useMemo(
@@ -141,7 +129,10 @@ export function SchedulePicker({
   }
 
   function handleSelect(cell: MonthCell) {
-    if (cell.state !== "open") {
+    // The provider is reviewing, not booking: every day opens, including
+    // turned-off and past days, because that's exactly where their finished
+    // and booked jobs are.
+    if (!readOnly && cell.state !== "open") {
       setNotice(unavailableReason(cell));
       return;
     }
@@ -180,6 +171,7 @@ export function SchedulePicker({
           dottedDates={dottedDates}
           markedDates={markedDates}
           label={gridLabel}
+          readOnly={readOnly}
         />
         <p
           role="status"
@@ -204,6 +196,17 @@ export function SchedulePicker({
               readOnly={readOnly}
               overlays={overlaysByDate?.[selectedDate]}
             />
+            {railFooter?.(selectedDate)}
+          </>
+        ) : readOnly && selectedDate ? (
+          // A day the provider never had hours on and never worked, so there
+          // is no rail to draw — but the click still opened it, and the job
+          // list below (empty) is the useful part of that.
+          <>
+            <p className="font-display text-base font-semibold text-viridian">
+              {headingFor(selectedDate)}
+            </p>
+            <p className="mt-1 text-xs text-mist">Closed.</p>
             {railFooter?.(selectedDate)}
           </>
         ) : (

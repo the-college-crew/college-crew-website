@@ -33,9 +33,15 @@ export type MonthGridProps = {
   maxMonth: Date;
   /** Days carrying a provider-set override, marked so the provider can spot them. */
   markedDates?: ReadonlySet<string>;
-  /** Days with at least one job, dotted on the provider's own calendar. */
+  /** Days with at least one job, dotted red on the provider's own calendar. */
   dottedDates?: ReadonlySet<string>;
   label?: string;
+  /**
+   * The provider reviewing their own month, not a customer booking one. Turned
+   * off days and past dates get dimmed instead of blending into the page —
+   * they're still clickable, this only changes how they look.
+   */
+  readOnly?: boolean;
 };
 
 function sameMonth(a: Date, b: Date) {
@@ -57,6 +63,7 @@ export function MonthGrid({
   markedDates,
   dottedDates,
   label = "Choose a date",
+  readOnly = false,
 }: MonthGridProps) {
   const atMin = sameMonth(monthStart, minMonth) || monthStart <= minMonth;
   const atMax = sameMonth(monthStart, maxMonth) || monthStart >= maxMonth;
@@ -108,7 +115,11 @@ export function MonthGrid({
         {cells.map((cell, index) => {
           if (!cell) return <div key={`blank-${index}`} role="presentation" />;
 
-          const selectable = cell.state === "open";
+          // Only readOnly (the provider's own view) dims turned-off/past days;
+          // the customer booking calendar keeps its original muted-text look.
+          const dimmed =
+            readOnly && (cell.state === "closed" || cell.state === "past");
+          const selectable = readOnly || cell.state === "open";
           const isSelected = selectedDate === cell.date;
 
           return (
@@ -121,7 +132,9 @@ export function MonthGrid({
               data-day-state={cell.state}
               // Unbookable days stay focusable and clickable on purpose: the
               // click is what surfaces the reason, which a `disabled` button
-              // could never do.
+              // could never do. In the provider's own view every day is
+              // clickable regardless of state, since past and closed days can
+              // still hold jobs worth reviewing.
               aria-disabled={selectable ? undefined : true}
               aria-pressed={selectable ? isSelected : undefined}
               onClick={() => onSelect(cell)}
@@ -130,27 +143,30 @@ export function MonthGrid({
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-viridian",
                 isSelected
                   ? "border-viridian bg-viridian font-semibold text-shell"
-                  : stateClasses[cell.state],
-                cell.isToday && !isSelected && "ring-1 ring-viridian/50",
+                  : cell.isToday
+                    ? "border-sky bg-sky font-semibold text-viridian"
+                    : dimmed
+                      ? "border-transparent bg-stone/45 text-mist"
+                      : stateClasses[cell.state],
                 !selectable && "cursor-not-allowed",
               )}
             >
               {cell.dayOfMonth}
-              {dottedDates?.has(cell.date) ? (
-                <span
-                  aria-hidden
-                  className={cn(
-                    "mt-0.5 h-1.5 w-1.5 rounded-full",
-                    isSelected ? "bg-shell" : "bg-quad-500",
-                  )}
-                />
-              ) : null}
               {markedDates?.has(cell.date) ? (
                 <span
                   aria-hidden
                   className={cn(
-                    "absolute right-1 top-1 h-1.5 w-1.5 rounded-full",
+                    "mt-0.5 h-1.5 w-1.5 rounded-full",
                     isSelected ? "bg-shell" : "bg-viridian",
+                  )}
+                />
+              ) : null}
+              {dottedDates?.has(cell.date) ? (
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute right-1 top-1 h-1.5 w-1.5 rounded-full",
+                    isSelected ? "bg-shell" : "bg-red-500",
                   )}
                 />
               ) : null}
