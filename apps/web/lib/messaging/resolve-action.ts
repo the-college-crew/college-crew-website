@@ -21,5 +21,8 @@ export async function resolveConversation(conversationId: string): Promise<void>
     { onConflict: "conversation_id,user_id" },
   );
 
-  revalidatePath("/messages");
+  // "layout" (not the default "page") so the persistent desktop sidebar in
+  // messages/layout.tsx — a different segment than the thread page we're
+  // resolving from — also drops the newly-hidden conversation immediately.
+  revalidatePath("/messages", "layout");
 }
