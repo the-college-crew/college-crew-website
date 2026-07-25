@@ -19,23 +19,42 @@ export function ResolveButton({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (alreadyResolved) {
     return <span className="text-xs font-medium text-mist">Resolved</span>;
   }
 
   return (
-    <Button
-      variant="secondary"
-      size="sm"
-      disabled={pending}
-      onClick={async () => {
-        setPending(true);
-        await resolveConversation(conversationId);
-        router.push("/messages");
-      }}
-    >
-      {pending ? "Resolving…" : "Resolve"}
-    </Button>
+    <div className="flex items-center gap-2">
+      {error ? (
+        <span role="alert" className="text-xs font-medium text-red-700">
+          {error}
+        </span>
+      ) : null}
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={pending}
+        onClick={async () => {
+          setPending(true);
+          setError(null);
+          try {
+            await resolveConversation(conversationId);
+            router.push("/messages");
+            // The sidebar lives in messages/layout.tsx, which both routes
+            // share — and a shared layout does NOT re-render on a client-side
+            // navigation between them. Without this the thread would vanish
+            // from the pane but linger in the sidebar list.
+            router.refresh();
+          } catch {
+            setError("Could not resolve. Try again.");
+            setPending(false);
+          }
+        }}
+      >
+        {pending ? "Resolving…" : "Resolve"}
+      </Button>
+    </div>
   );
 }
