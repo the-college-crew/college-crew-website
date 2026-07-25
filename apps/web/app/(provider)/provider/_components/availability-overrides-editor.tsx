@@ -11,6 +11,7 @@ import {
   clockToMinutes,
   formatSlotLabel,
   formatUsDate,
+  groupScheduleDays,
   pilotDateKey,
   shiftDateKey,
   type BusyInterval,
@@ -69,16 +70,17 @@ export function AvailabilityOverridesEditor({
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("usual");
-  const [window, setWindow] = useState({ start: "", end: "" });
+  /** Custom hours for the selected date; a date may carry several periods. */
+  const [periods, setPeriods] = useState<{ start: string; end: string }[]>([]);
 
-  const overrideByDate = useMemo(
-    () => new Map(overrides.map((row) => [row.local_date, row])),
-    [overrides],
-  );
-  const dayByDate = useMemo(
-    () => new Map(days.map((day) => [day.date, day])),
-    [days],
-  );
+  const overrideByDate = useMemo(() => {
+    const map = new Map<string, AvailabilityOverride[]>();
+    for (const row of overrides) {
+      map.set(row.local_date, [...(map.get(row.local_date) ?? []), row]);
+    }
+    return map;
+  }, [overrides]);
+  const dayByDate = useMemo(() => groupScheduleDays(days), [days]);
 
   const cells = useMemo(() => {
     const built = buildMonthCells({
@@ -108,26 +110,39 @@ export function AvailabilityOverridesEditor({
     setSelectedDate(cell.date);
 
     const override = overrideByDate.get(cell.date);
-    const usual = dayByDate.get(cell.date);
+    const usual = dayByDate.get(cell.date) ?? [];
+    const usualPeriods = usual.map((period) => ({
+      start: period.startLocal.slice(0, 5),
+      end: period.endLocal.slice(0, 5),
+    }));
+
     if (!override) {
       setMode("usual");
-      setWindow({
-        start: usual ? usual.startLocal.slice(0, 5) : "",
-        end: usual ? usual.endLocal.slice(0, 5) : "",
-      });
+      // Prefilling with the usual hours means switching to custom starts from
+      // what they already work, not from nothing.
+      setPeriods(usualPeriods);
       return;
     }
-    setMode(override.is_available ? "custom" : "closed");
-    setWindow({
-      start: override.start_local?.slice(0, 5) ?? usual?.startLocal.slice(0, 5) ?? "",
-      end: override.end_local?.slice(0, 5) ?? usual?.endLocal.slice(0, 5) ?? "",
-    });
+    const open = override.filter((row) => row.is_available);
+    setMode(open.length > 0 ? "custom" : "closed");
+    setPeriods(
+      open.length > 0
+        ? open.map((row) => ({
+            start: row.start_local!.slice(0, 5),
+            end: row.end_local!.slice(0, 5),
+          }))
+        : usualPeriods,
+    );
   }
 
   const usualForSelected = selectedDate ? dayByDate.get(selectedDate) : undefined;
   const overrideForSelected = selectedDate
     ? overrideByDate.get(selectedDate)
     : undefined;
+  const overrideDates = useMemo(
+    () => [...overrideByDate.keys()].sort(),
+    [overrideByDate],
+  );
 
   return (
     <form action={formAction} className="space-y-4">
@@ -137,8 +152,15 @@ export function AvailabilityOverridesEditor({
         name="mode"
         value={mode === "usual" ? "clear" : mode}
       />
-      <input type="hidden" name="start" value={mode === "custom" ? window.start : ""} />
-      <input type="hidden" name="end" value={mode === "custom" ? window.end : ""} />
+      <input
+        type="hidden"
+        name="periods"
+        value={JSON.stringify(
+          mode === "custom"
+            ? periods.filter((period) => period.start && period.end)
+            : [],
+        )}
+      />
 
       <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,17rem)]">
         <MonthGrid
@@ -154,7 +176,7 @@ export function AvailabilityOverridesEditor({
               .map(Number);
             return new Date(year, month - 1, 1);
           })()}
-          markedDates={new Set(overrideByDate.keys())}
+          markedDates={new Set(overrideDates)}
           label="Pick a date to change"
         />
 
@@ -165,12 +187,15 @@ export function AvailabilityOverridesEditor({
                 {DAY_HEADING.format(new Date(`${selectedDate}T12:00:00.000Z`))}
               </p>
               <p className="mt-0.5 text-xs text-mist">
-                {usualForSelected
-                  ? `Usually ${formatSlotLabel(
-                      clockToMinutes(usualForSelected.startLocal),
-                    )} to ${formatSlotLabel(
-                      clockToMinutes(usualForSelected.endLocal),
-                    )}`
+                {usualForSelected?.length
+                  ? `Usually ${usualForSelected
+                      .map(
+                        (period) =>
+                          `${formatSlotLabel(
+                            clockToMinutes(period.startLocal),
+                          )} to ${formatSlotLabel(clockToMinutes(period.endLocal))}`,
+                      )
+                      .join(", ")}`
                   : "You don't usually work this day."}
               </p>
 
@@ -205,14 +230,61 @@ export function AvailabilityOverridesEditor({
               </div>
 
               {mode === "custom" ? (
-                <div className="mt-3">
-                  <WindowRail
-                    railKey={`override-${selectedDate}`}
-                    heading="Hours on this date"
-                    start={window.start}
-                    end={window.end}
-                    onChange={setWindow}
-                  />
+                <div className="mt-3 space-y-3">
+                  {(periods.length > 0 ? periods : [{ start: "", end: "" }]).map(
+                    (period, index) => (
+                      <div key={index}>
+                        <WindowRail
+                          railKey={`override-${selectedDate}-${index}`}
+                          heading={
+                            periods.length > 1
+                              ? `Stretch ${index + 1}`
+                              : "Hours on this date"
+                          }
+                          start={period.start}
+                          end={period.end}
+                          onChange={(next) =>
+                            setPeriods((current) => {
+                              const base =
+                                current.length > 0 ? current : [{ start: "", end: "" }];
+                              return base.map((existing, i) =>
+                                i === index ? next : existing,
+                              );
+                            })
+                          }
+                        />
+                        {periods.length > 1 ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setPeriods((current) =>
+                                current.filter((_, i) => i !== index),
+                              )
+                            }
+                          >
+                            Remove this stretch
+                          </Button>
+                        ) : null}
+                      </div>
+                    ),
+                  )}
+                  {periods.length < 4 ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        setPeriods((current) => [
+                          ...(current.length > 0 ? current : [{ start: "", end: "" }]),
+                          { start: "", end: "" },
+                        ])
+                      }
+                    >
+                      + Add another stretch this day
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -229,7 +301,8 @@ export function AvailabilityOverridesEditor({
                 className="mt-3 w-full"
                 disabled={
                   pending ||
-                  (mode === "custom" && (!window.start || !window.end)) ||
+                  (mode === "custom" &&
+                    !periods.some((period) => period.start && period.end)) ||
                   (mode === "usual" && !overrideForSelected)
                 }
               >
@@ -261,11 +334,11 @@ export function AvailabilityOverridesEditor({
         <p className="sr-only">Select a date before saving.</p>
       )}
       <p className="text-xs text-mist">
-        {overrides.length === 0
+        {overrideDates.length === 0
           ? "No dates set aside yet."
-          : `${overrides.length} date${overrides.length === 1 ? "" : "s"} set aside: ${overrides
-              .map((row) => formatUsDate(row.local_date))
-              .join(", ")}`}
+          : `${overrideDates.length} date${
+              overrideDates.length === 1 ? "" : "s"
+            } set aside: ${overrideDates.map(formatUsDate).join(", ")}`}
       </p>
     </form>
   );

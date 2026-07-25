@@ -6,6 +6,7 @@ import {
   buildDayRail,
   buildMonthCells,
   firstRunFitting,
+  groupScheduleDays,
   formatUsDate,
   pilotDateKey,
   toFormValues,
@@ -99,10 +100,8 @@ export function SchedulePicker({
   const [selection, setSelection] = useState<TimeRange | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const dayByDate = useMemo(
-    () => new Map(days.map((day) => [day.date, day])),
-    [days],
-  );
+  // A date can carry several periods, so this maps to a list, not one window.
+  const dayByDate = useMemo(() => groupScheduleDays(days), [days]);
 
   const cells = useMemo(() => {
     const built = buildMonthCells({

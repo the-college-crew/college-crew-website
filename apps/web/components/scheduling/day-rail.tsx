@@ -51,6 +51,7 @@ const BLOCKED_COPY: Record<string, string> = {
   busy: "Booked",
   notice: "Too soon",
   dst: "Clock change",
+  gap: "Not working",
 };
 
 function normalize(anchorMinutes: number, targetMinutes: number) {

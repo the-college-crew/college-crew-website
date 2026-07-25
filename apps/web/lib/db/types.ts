@@ -3010,10 +3010,9 @@ export type Database = {
       }
       save_provider_availability_override: {
         Args: {
-          p_end?: string
           p_is_available: boolean
           p_local_date: string
-          p_start?: string
+          p_periods?: Json
         }
         Returns: undefined
       }

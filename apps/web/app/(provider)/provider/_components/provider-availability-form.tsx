@@ -54,13 +54,6 @@ export function ProviderAvailabilityForm({
   const [note, setNote] = useState(values.availability_note);
   const [serviceZip, setServiceZip] = useState(values.service_zip ?? "");
 
-  // Which group currently owns each weekday — a day can only live in one
-  // time window, so pills claimed elsewhere render disabled.
-  const claimedBy = new Map<number, number>();
-  groups.forEach((group, index) => {
-    for (const day of group.weekdays) claimedBy.set(day, index);
-  });
-  const allDaysClaimed = claimedBy.size === PROVIDER_WEEKDAYS.length;
 
   function toggleDay(groupIndex: number, day: number, checked: boolean) {
     setGroups((current) =>
@@ -122,39 +115,27 @@ export function ProviderAvailabilityForm({
                 className="space-y-3 rounded-xl border border-line bg-paper p-4"
               >
                 <div className="flex flex-wrap gap-2">
-                  {PROVIDER_WEEKDAYS.map(({ value, short, long }) => {
-                    const owner = claimedBy.get(value);
-                    const claimedElsewhere =
-                      owner !== undefined && owner !== groupIndex;
-                    return (
-                      <label
-                        key={value}
-                        title={
-                          claimedElsewhere
-                            ? "Set in another time window"
-                            : undefined
+                  {/* A day can appear in more than one window now: mornings
+                      before class and evenings after are two periods on the
+                      same weekday. Only overlapping hours are rejected. */}
+                  {PROVIDER_WEEKDAYS.map(({ value, short, long }) => (
+                    <label
+                      key={value}
+                      className="relative flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm has-checked:border-quad-500 has-checked:bg-quad-50 has-checked:font-semibold has-checked:text-quad-800 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-viridian"
+                    >
+                      <input
+                        type="checkbox"
+                        name={`windowDay_${groupIndex}_${value}`}
+                        checked={group.weekdays.includes(value)}
+                        onChange={(event) =>
+                          toggleDay(groupIndex, value, event.target.checked)
                         }
-                        className={
-                          claimedElsewhere
-                            ? "relative flex cursor-not-allowed items-center gap-1.5 rounded-full border border-line bg-stone/30 px-3 py-1.5 text-sm text-mist"
-                            : "relative flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-sm has-checked:border-quad-500 has-checked:bg-quad-50 has-checked:font-semibold has-checked:text-quad-800 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-viridian"
-                        }
-                      >
-                        <input
-                          type="checkbox"
-                          name={`windowDay_${groupIndex}_${value}`}
-                          checked={group.weekdays.includes(value)}
-                          disabled={claimedElsewhere}
-                          onChange={(event) =>
-                            toggleDay(groupIndex, value, event.target.checked)
-                          }
-                          className="absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none rounded-full opacity-0 disabled:cursor-not-allowed"
-                        />
-                        <span className="sm:hidden">{short}</span>
-                        <span className="hidden sm:inline">{long}</span>
-                      </label>
-                    );
-                  })}
+                        className="absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none rounded-full opacity-0"
+                      />
+                      <span className="sm:hidden">{short}</span>
+                      <span className="hidden sm:inline">{long}</span>
+                    </label>
+                  ))}
                 </div>
                 <FieldError>{groupErrors?.days}</FieldError>
 
@@ -194,7 +175,7 @@ export function ProviderAvailabilityForm({
           })}
         </div>
 
-        {!allDaysClaimed && groups.length < MAX_AVAILABILITY_WINDOWS ? (
+        {groups.length < MAX_AVAILABILITY_WINDOWS ? (
           <Button
             type="button"
             variant="secondary"
@@ -202,14 +183,14 @@ export function ProviderAvailabilityForm({
             className="mt-3"
             onClick={addGroup}
           >
-            + Add days with different hours
+            + Add another set of hours
           </Button>
         ) : null}
 
         <FieldHint>
-          Group the days that share the same hours, then drag your hours on the
-          rail. Add another window for days you work different hours. Times are
-          Central.
+          Group the days that share the same hours, then drag those hours on the
+          rail. Add another set for different hours, including a second stretch
+          on a day you already picked. Times are Central.
         </FieldHint>
         <FieldError>{state.fieldErrors?.weekdays}</FieldError>
       </fieldset>

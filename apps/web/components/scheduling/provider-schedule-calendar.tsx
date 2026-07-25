@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { StatusPill } from "@/components/status-pill";
 import {
   clockToMinutes,
+  groupScheduleDays,
   minutesToClock,
   pilotDatePosition,
   type BusyInterval,
@@ -82,22 +83,25 @@ export function ProviderScheduleCalendar({
       list.sort((a, b) => a.startMinutes - b.startMinutes);
     }
 
-    const byDate = new Map(days.map((day) => [day.date, day]));
+    // Add a period covering any job that falls outside the day's saved periods,
+    // rather than leaving the provider a dot on the grid they cannot open.
+    const byDate = groupScheduleDays(days);
     for (const [date, span] of spans) {
-      const existing = byDate.get(date);
-      const start = Math.min(
-        existing ? clockToMinutes(existing.startLocal) : span.start,
-        span.start,
+      const periods = byDate.get(date) ?? [];
+      const covered = periods.some(
+        (period) =>
+          span.start >= clockToMinutes(period.startLocal) &&
+          span.end <= clockToMinutes(period.endLocal),
       );
-      const end = Math.max(
-        existing ? clockToMinutes(existing.endLocal) : span.end,
-        Math.min(span.end, 24 * 60),
-      );
-      byDate.set(date, {
-        date,
-        startLocal: minutesToClock(start),
-        endLocal: minutesToClock(end),
-      });
+      if (covered) continue;
+      byDate.set(date, [
+        ...periods,
+        {
+          date,
+          startLocal: minutesToClock(span.start),
+          endLocal: minutesToClock(Math.min(span.end, 24 * 60)),
+        },
+      ]);
     }
 
     return {
@@ -106,9 +110,9 @@ export function ProviderScheduleCalendar({
       byDay: Object.groupBy(bookings, (booking) =>
         pilotDatePosition(booking.scheduled_at).date,
       ),
-      resolvedDays: [...byDate.values()].sort((a, b) =>
-        a.date.localeCompare(b.date),
-      ),
+      resolvedDays: [...byDate.values()]
+        .flat()
+        .sort((a, b) => a.date.localeCompare(b.date)),
     };
   }, [bookings, days]);
 

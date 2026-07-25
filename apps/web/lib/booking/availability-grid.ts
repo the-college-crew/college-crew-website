@@ -18,7 +18,11 @@ import {
 
 export const SLOT_MINUTES = BILLING_INCREMENT_MINUTES;
 
-/** One open day from `provider_schedule_days`. `date` is `YYYY-MM-DD`. */
+/**
+ * One open period from `provider_schedule_days`. `date` is `YYYY-MM-DD`, and a
+ * date can appear more than once: a student may work 9-12 and 4-8 on the same
+ * day. Periods on a date never overlap, which the save RPCs enforce.
+ */
 export type ScheduleDay = {
   date: string;
   startLocal: string;
@@ -45,7 +49,12 @@ export type MonthCell = {
   state: DayState;
 };
 
-export type SlotBlockReason = "busy" | "notice" | "dst";
+export type SlotBlockReason =
+  | "busy"
+  | "notice"
+  | "dst"
+  /** Between two of the day's periods: the student isn't working then. */
+  | "gap";
 
 export type RailSlot = {
   /** Local minutes from midnight; the slot covers [startMinutes, +SLOT_MINUTES). */
@@ -116,19 +125,40 @@ export function expandWeeklyWindows(
   fromDate: string,
   days: number,
 ): ScheduleDay[] {
-  const byWeekday = new Map(windows.map((window) => [window.weekday, window]));
+  const byWeekday = new Map<number, typeof windows>();
+  for (const window of windows) {
+    byWeekday.set(window.weekday, [
+      ...(byWeekday.get(window.weekday) ?? []),
+      window,
+    ]);
+  }
+
   const result: ScheduleDay[] = [];
   for (let offset = 0; offset <= days; offset++) {
     const date = shiftDateKey(fromDate, offset);
-    const window = byWeekday.get(weekdayIndexForDate(date));
-    if (!window) continue;
-    result.push({
-      date,
-      startLocal: window.start_local,
-      endLocal: window.end_local,
-    });
+    for (const window of byWeekday.get(weekdayIndexForDate(date)) ?? []) {
+      result.push({
+        date,
+        startLocal: window.start_local,
+        endLocal: window.end_local,
+      });
+    }
   }
   return result;
+}
+
+/** Group periods by local date, each date's periods sorted by start time. */
+export function groupScheduleDays(days: readonly ScheduleDay[]) {
+  const byDate = new Map<string, ScheduleDay[]>();
+  for (const day of days) {
+    const list = byDate.get(day.date);
+    if (list) list.push(day);
+    else byDate.set(day.date, [day]);
+  }
+  for (const list of byDate.values()) {
+    list.sort((a, b) => clockToMinutes(a.startLocal) - clockToMinutes(b.startLocal));
+  }
+  return byDate;
 }
 
 /** Where an instant falls in the pilot day: its date key and minutes from midnight. */
@@ -237,19 +267,37 @@ function overlapsBusy(
  * ------------------------------------------------------------------ */
 
 /**
- * Every 15-minute slot in a day's open window, flagged where it can't start a
- * booking. A slot is blocked when it overlaps a reserved job, falls inside the
- * provider's minimum-notice cutoff, or is a wall-clock time that DST skips.
+ * Every 15-minute slot across a day's open periods, flagged where it can't
+ * start a booking. A slot is blocked when it falls between two periods, overlaps
+ * a reserved job, falls inside the provider's minimum-notice cutoff, or is a
+ * wall-clock time that DST skips.
+ *
+ * The rail spans the first period's start to the last period's end, so a day
+ * with a break in it reads as one continuous day with the break greyed out
+ * rather than as two disconnected rails.
  */
 export function buildDayRail(input: {
-  day: ScheduleDay;
+  /** Every period on one date. Passing a single period is the common case. */
+  day: ScheduleDay | readonly ScheduleDay[];
   busy: readonly BusyInterval[];
   now: Date;
   minimumNoticeHours: number;
 }): DayRail {
-  const { day, now, minimumNoticeHours } = input;
-  const startMinutes = clockToMinutes(day.startLocal);
-  const endMinutes = clockToMinutes(day.endLocal);
+  const { now, minimumNoticeHours } = input;
+  const periods = (Array.isArray(input.day) ? input.day : [input.day]) as
+    readonly ScheduleDay[];
+  const ranges = periods
+    .map((period) => ({
+      start: clockToMinutes(period.startLocal),
+      end: clockToMinutes(period.endLocal),
+    }))
+    .sort((a, b) => a.start - b.start);
+
+  const day = periods[0];
+  const startMinutes = ranges[0].start;
+  const endMinutes = ranges[ranges.length - 1].end;
+  const inAPeriod = (minutes: number) =>
+    ranges.some((range) => minutes >= range.start && minutes < range.end);
   const busyRanges = toEpochRanges(input.busy);
   const earliestStartMs = now.getTime() + minimumNoticeHours * 60 * MS_PER_MINUTE;
 
@@ -266,6 +314,16 @@ export function buildDayRail(input: {
     minutes + SLOT_MINUTES <= endMinutes;
     minutes += SLOT_MINUTES
   ) {
+    if (!inAPeriod(minutes)) {
+      slots.push({
+        startMinutes: minutes,
+        label: formatSlotLabel(minutes),
+        blocked: true,
+        reason: "gap",
+      });
+      continue;
+    }
+
     const instant = localSlotInstant(day.date, minutes, stableOffset);
     if (!instant) {
       slots.push({
@@ -355,7 +413,7 @@ export function buildMonthCells(input: {
   const leadingBlanks = new Date(year, month, 1).getDay();
   const todayKey = pilotDateKey(now);
 
-  const openDays = new Map(days.map((day) => [day.date, day]));
+  const openDays = groupScheduleDays(days);
   const cells: Array<MonthCell | null> = Array.from(
     { length: leadingBlanks },
     () => null,
@@ -363,15 +421,15 @@ export function buildMonthCells(input: {
 
   for (let dayOfMonth = 1; dayOfMonth <= daysInMonth; dayOfMonth++) {
     const date = toLocalDateKey(year, month + 1, dayOfMonth);
-    const day = openDays.get(date);
+    const periods = openDays.get(date);
     let state: DayState;
 
     if (date < todayKey) {
       state = "past";
-    } else if (!day) {
+    } else if (!periods) {
       state = "closed";
     } else {
-      const rail = buildDayRail({ day, busy, now, minimumNoticeHours });
+      const rail = buildDayRail({ day: periods, busy, now, minimumNoticeHours });
       if (longestFreeRunMinutes(rail.slots) >= minMinutes) {
         state = "open";
       } else if (rail.slots.some((slot) => slot.reason === "busy")) {
@@ -381,7 +439,7 @@ export function buildMonthCells(input: {
         // Nothing left today only because of the notice cutoff.
         state = "past";
       } else {
-        // The window itself is too short to hold the shortest bookable job.
+        // Every period is too short to hold the shortest bookable job.
         state = "closed";
       }
     }

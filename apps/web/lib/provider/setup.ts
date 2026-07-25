@@ -80,7 +80,12 @@ export type AvailabilityDayGroup = {
   end: string;
 };
 
-export const MAX_AVAILABILITY_WINDOWS = PROVIDER_WEEKDAYS.length;
+/**
+ * Distinct time windows in the editor. A day may appear in several of them
+ * (mornings before class, evenings after), so this is no longer capped at one
+ * per weekday.
+ */
+export const MAX_AVAILABILITY_WINDOWS = 4;
 
 export type ProviderAvailabilityValues = Pick<
   ProviderProfile,
@@ -213,7 +218,8 @@ export function buildQuoteOfferingPersistenceRow(input: {
 /**
  * Group stored windows by shared hours for the editor and display surfaces.
  * Groups are ordered by their earliest weekday; weekdays within a group are
- * ascending. Round-trips stably: flatten(group(windows)) === sorted(windows).
+ * ascending. A weekday with two different periods lands in two groups, which is
+ * exactly how the editor renders it.
  */
 export function groupAvailabilityWindows(
   windows: readonly AvailabilityWindow[],
@@ -249,7 +255,8 @@ export function parseProviderAvailabilityForm(
   const minimumNoticeHours = 12;
   const fieldErrors: ProviderSetupFieldErrors = {};
   const windowErrors: Record<number, AvailabilityWindowFieldErrors> = {};
-  const claimedWeekdays = new Set<number>();
+  /** Periods already claimed per weekday, to catch overlaps across groups. */
+  const claimedByWeekday = new Map<number, { start: number; end: number }[]>();
   const windows: AvailabilityWindow[] = [];
 
   if (windowCount === 0) {
@@ -266,13 +273,6 @@ export function parseProviderAvailabilityForm(
 
     if (days.length === 0) {
       groupErrors.days = "Select at least one day.";
-    } else {
-      // Defense-in-depth: the editor disables pills claimed by other groups.
-      const duplicate = days.find((day) => claimedWeekdays.has(day));
-      if (duplicate !== undefined) {
-        const { long } = PROVIDER_WEEKDAYS[duplicate];
-        groupErrors.days = `${long} is already in another time window.`;
-      }
     }
     if (!TIME_PATTERN.test(start)) {
       groupErrors.start = "Choose a start time.";
@@ -286,12 +286,31 @@ export function parseProviderAvailabilityForm(
       groupErrors.end = "End time must be later than start time.";
     }
 
+    // A weekday may appear in several windows, but its periods can't overlap:
+    // the save RPC rejects that, and the union would be one period anyway.
+    if (Object.keys(groupErrors).length === 0) {
+      const startMinutes = timeToMinutes(start);
+      const endMinutes = timeToMinutes(end);
+      const clash = days.find((day) =>
+        (claimedByWeekday.get(day) ?? []).some(
+          (period) => startMinutes < period.end && period.start < endMinutes,
+        ),
+      );
+      if (clash !== undefined) {
+        const { long } = PROVIDER_WEEKDAYS[clash];
+        groupErrors.days = `${long} already has hours that overlap these.`;
+      }
+    }
+
     if (Object.keys(groupErrors).length > 0) {
       windowErrors[index] = groupErrors;
       continue;
     }
     for (const day of days) {
-      claimedWeekdays.add(day);
+      claimedByWeekday.set(day, [
+        ...(claimedByWeekday.get(day) ?? []),
+        { start: timeToMinutes(start), end: timeToMinutes(end) },
+      ]);
       windows.push({ weekday: day, start_local: start, end_local: end });
     }
   }
@@ -310,7 +329,11 @@ export function parseProviderAvailabilityForm(
     return { success: false, fieldErrors };
   }
 
-  windows.sort((a, b) => a.weekday - b.weekday);
+  windows.sort(
+    (a, b) =>
+      a.weekday - b.weekday ||
+      timeToMinutes(a.start_local) - timeToMinutes(b.start_local),
+  );
   return {
     success: true,
     data: {

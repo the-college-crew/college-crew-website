@@ -178,13 +178,37 @@ describe("structured provider availability", () => {
     });
   });
 
-  it("rejects a weekday claimed by two groups", () => {
+  it("lets a weekday appear in two groups when the hours don't overlap", () => {
+    // Mornings before class and evenings after are two periods on one day.
     const form = twoGroupAvailabilityForm();
-    form.set("windowDay_1_0", "on"); // Monday already lives in group 0.
+    form.set("windowDay_1_0", "on"); // Monday, also in group 0 at 09:00-17:00.
+    form.set("windowStart_1", "18:00");
+    form.set("windowEnd_1", "21:00");
+
+    const result = parseProviderAvailabilityForm(form);
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        windows: [
+          { weekday: 0, start_local: "09:00", end_local: "17:00" },
+          { weekday: 0, start_local: "18:00", end_local: "21:00" },
+          { weekday: 4, start_local: "09:00", end_local: "17:00" },
+          { weekday: 5, start_local: "18:00", end_local: "21:00" },
+          { weekday: 6, start_local: "18:00", end_local: "21:00" },
+        ],
+      },
+    });
+  });
+
+  it("rejects a weekday whose two groups overlap in time", () => {
+    const form = twoGroupAvailabilityForm();
+    form.set("windowDay_1_0", "on"); // Monday, already 09:00-17:00 in group 0.
+    // Group 1 runs 12:00-16:00, which sits inside that.
     const result = parseProviderAvailabilityForm(form);
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.fieldErrors.windows?.[1]?.days).toContain("Monday");
+      expect(result.fieldErrors.windows?.[1]?.days).toContain("overlap");
     }
   });
 

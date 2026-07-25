@@ -196,19 +196,32 @@ export async function updateAvailability(
 
 export type AvailabilityOverrideState = { error?: string; success?: string };
 
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 const overrideSchema = z
   .object({
     localDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date."),
     mode: z.enum(["closed", "custom", "clear"]),
-    start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
-    end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+    /** JSON array of {start,end}; a date may carry several periods. */
+    periods: z
+      .string()
+      .transform((raw, ctx) => {
+        try {
+          return z
+            .array(z.object({ start: z.string().regex(TIME), end: z.string().regex(TIME) }))
+            .max(4)
+            .parse(JSON.parse(raw || "[]"));
+        } catch {
+          ctx.addIssue({ code: "custom", message: "Pick the hours you'll work that day." });
+          return z.NEVER;
+        }
+      }),
   })
   .refine(
     (value) =>
       value.mode !== "custom" ||
-      (value.start !== undefined &&
-        value.end !== undefined &&
-        value.start < value.end),
+      (value.periods.length > 0 &&
+        value.periods.every((period) => period.start < period.end)),
     { message: "Pick the hours you'll work that day." },
   );
 
@@ -227,8 +240,7 @@ export async function saveAvailabilityOverride(
   const parsed = overrideSchema.safeParse({
     localDate: formData.get("localDate"),
     mode: formData.get("mode"),
-    start: formData.get("start") || undefined,
-    end: formData.get("end") || undefined,
+    periods: String(formData.get("periods") ?? "[]"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
@@ -243,14 +255,14 @@ export async function saveAvailabilityOverride(
       : await supabase.rpc("save_provider_availability_override", {
           p_local_date: parsed.data.localDate,
           p_is_available: parsed.data.mode === "custom",
-          p_start: parsed.data.mode === "custom" ? parsed.data.start : undefined,
-          p_end: parsed.data.mode === "custom" ? parsed.data.end : undefined,
+          p_periods: parsed.data.mode === "custom" ? parsed.data.periods : [],
         });
   if (error) {
     return {
-      error:
-        error.message.includes("INVALID_OVERRIDE_DATE")
-          ? "That date is in the past or more than a year out."
+      error: error.message.includes("INVALID_OVERRIDE_DATE")
+        ? "That date is in the past or more than a year out."
+        : error.message.includes("OVERLAPPING_AVAILABILITY_WINDOWS")
+          ? "Those hours overlap each other. Adjust them and try again."
           : "Could not save that date. Try again.",
     };
   }

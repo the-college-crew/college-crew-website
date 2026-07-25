@@ -9,6 +9,7 @@ import {
   firstRunFitting,
   formatRangeSummary,
   formatUsDate,
+  groupScheduleDays,
   longestFreeRunMinutes,
   maxEndMinutes,
   minutesToClock,
@@ -88,6 +89,17 @@ describe("expandWeeklyWindows", () => {
     { weekday: 0, start_local: "15:00:00", end_local: "20:00:00" },
     { weekday: 4, start_local: "09:00:00", end_local: "16:00:00" },
   ];
+
+  it("projects every period of a weekday, not just the first", () => {
+    const split = [
+      { weekday: 0, start_local: "09:00", end_local: "12:00" },
+      { weekday: 0, start_local: "16:00", end_local: "20:00" },
+    ];
+    expect(expandWeeklyWindows(split, "2026-08-10", 1)).toEqual([
+      { date: "2026-08-10", startLocal: "09:00", endLocal: "12:00" },
+      { date: "2026-08-10", startLocal: "16:00", endLocal: "20:00" },
+    ]);
+  });
 
   it("projects recurring windows onto the dates they land on", () => {
     // 2026-08-10 is a Monday, so the Monday and Friday windows both appear.
@@ -230,6 +242,113 @@ describe("DST transition days", () => {
         expect(pilotLocalDateTimeToUtc(scheduledLocal).ok).toBe(true);
       }
     }
+  });
+});
+
+describe("several periods in one day", () => {
+  /** Mornings before class, evenings after: one date, two disjoint periods. */
+  const SPLIT: ScheduleDay[] = [
+    { date: "2026-08-12", startLocal: "09:00", endLocal: "12:00" },
+    { date: "2026-08-12", startLocal: "16:00", endLocal: "20:00" },
+  ];
+
+  function splitRail(busy: BusyInterval[] = []) {
+    return buildDayRail({
+      day: SPLIT,
+      busy,
+      now: WELL_BEFORE,
+      minimumNoticeHours: NOTICE_HOURS,
+    });
+  }
+
+  it("spans the first period's start to the last period's end", () => {
+    const rail = splitRail();
+    expect(rail.startMinutes).toBe(9 * 60);
+    expect(rail.endMinutes).toBe(20 * 60);
+    expect(rail.slots).toHaveLength((20 - 9) * 4);
+  });
+
+  it("blocks the gap between periods", () => {
+    const gap = splitRail().slots.filter((slot) => slot.reason === "gap");
+    expect(gap[0].startMinutes).toBe(12 * 60);
+    expect(gap.at(-1)?.startMinutes).toBe(15 * 60 + 45);
+    expect(gap).toHaveLength((16 - 12) * 4);
+  });
+
+  it("leaves both periods fully selectable", () => {
+    const free = splitRail().slots.filter((slot) => !slot.blocked);
+    expect(free[0].startMinutes).toBe(9 * 60);
+    expect(free.at(-1)?.startMinutes).toBe(19 * 60 + 45);
+    expect(free).toHaveLength((12 - 9) * 4 + (20 - 16) * 4);
+  });
+
+  it("accepts a booking inside either period", () => {
+    const rail = splitRail();
+    expect(validateRange(rail, 9 * 60, 11 * 60)).toEqual({ ok: true });
+    expect(validateRange(rail, 17 * 60, 19 * 60)).toEqual({ ok: true });
+  });
+
+  it("refuses a booking that straddles the gap, matching the server", () => {
+    expect(validateRange(splitRail(), 11 * 60, 17 * 60)).toEqual({
+      ok: false,
+      reason: "crosses-blocked",
+    });
+  });
+
+  it("stops a drag at the end of the period it started in", () => {
+    expect(maxEndMinutes(splitRail(), 10 * 60)).toBe(12 * 60);
+  });
+
+  it("measures the longest run within a single period", () => {
+    expect(longestFreeRunMinutes(splitRail().slots)).toBe(4 * 60);
+  });
+
+  it("counts the day open when either period still fits a job", () => {
+    const cells = buildMonthCells({
+      monthStart: new Date(2026, 7, 1),
+      now: WELL_BEFORE,
+      days: SPLIT,
+      busy: [
+        {
+          start: cst("2026-08-12", "09:00").toISOString(),
+          end: cst("2026-08-12", "12:00").toISOString(),
+        },
+      ],
+      minimumNoticeHours: NOTICE_HOURS,
+    });
+    const cell = cells.find((entry) => entry?.date === "2026-08-12");
+    expect(cell?.state).toBe("open");
+  });
+
+  it("counts the day full when every period is taken", () => {
+    const cells = buildMonthCells({
+      monthStart: new Date(2026, 7, 1),
+      now: WELL_BEFORE,
+      days: SPLIT,
+      busy: [
+        {
+          start: cst("2026-08-12", "09:00").toISOString(),
+          end: cst("2026-08-12", "20:00").toISOString(),
+        },
+      ],
+      minimumNoticeHours: NOTICE_HOURS,
+    });
+    expect(cells.find((entry) => entry?.date === "2026-08-12")?.state).toBe("full");
+  });
+});
+
+describe("groupScheduleDays", () => {
+  it("collects a date's periods and orders them by start time", () => {
+    const grouped = groupScheduleDays([
+      { date: "2026-08-12", startLocal: "16:00", endLocal: "20:00" },
+      { date: "2026-08-13", startLocal: "09:00", endLocal: "17:00" },
+      { date: "2026-08-12", startLocal: "09:00", endLocal: "12:00" },
+    ]);
+    expect(grouped.get("2026-08-12")?.map((period) => period.startLocal)).toEqual([
+      "09:00",
+      "16:00",
+    ]);
+    expect(grouped.get("2026-08-13")).toHaveLength(1);
   });
 });
 
