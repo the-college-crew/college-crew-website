@@ -12,7 +12,11 @@ export async function resolveConversation(conversationId: string): Promise<void>
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  await supabase.from("conversation_resolutions").upsert(
+  // Never swallow this error: `.upsert()` is INSERT ... ON CONFLICT DO UPDATE,
+  // so it needs both the insert AND update privilege/policy. When the update
+  // half was missing, every resolve failed silently and the chat just stayed
+  // in the inbox with no sign anything had gone wrong.
+  const { error } = await supabase.from("conversation_resolutions").upsert(
     {
       conversation_id: conversationId,
       user_id: user.id,
@@ -20,6 +24,7 @@ export async function resolveConversation(conversationId: string): Promise<void>
     },
     { onConflict: "conversation_id,user_id" },
   );
+  if (error) throw new Error(`Could not resolve the chat: ${error.message}`);
 
   // "layout" (not the default "page") so the persistent desktop sidebar in
   // messages/layout.tsx — a different segment than the thread page we're
