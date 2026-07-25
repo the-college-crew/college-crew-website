@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { resolveConversation } from "@/lib/messaging/resolutions";
+import { resolveConversation } from "@/lib/messaging/resolve-action";
 
 /**
  * Hides this chat from the caller's own inbox (see conversation_resolutions).
