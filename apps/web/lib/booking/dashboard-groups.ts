@@ -1,4 +1,4 @@
-import type { BookingFlow, BookingStatus } from "@/lib/db/types";
+import type { BookingFlow, BookingStatus, Json } from "@/lib/db/types";
 
 /**
  * Grouping rules for the customer's "My bookings" page.
@@ -52,6 +52,8 @@ export type DashboardBooking = {
   estimated_minutes: number | null;
   hourly_rate_cents_snapshot: number | null;
   average_quote_cents_snapshot: number | null;
+  /** Quote requests only; absent in the sample-preview fixtures. */
+  job_photos?: Json;
   response_alert_at: string | null;
   initial_payment_due_at: string | null;
   en_route_at: string | null;

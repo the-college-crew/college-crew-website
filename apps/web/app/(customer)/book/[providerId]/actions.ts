@@ -16,6 +16,15 @@ import {
   resolveBookingOrigin,
 } from "@/lib/location/booking-from";
 import {
+  JOB_PHOTOS_BUCKET,
+  JOB_PHOTO_MIME_TYPES,
+  MAX_JOB_PHOTOS,
+  MAX_JOB_PHOTO_BYTES,
+  MIN_JOB_PHOTOS,
+  isOwnJobPhotoPath,
+} from "@/lib/media/job-photos";
+import { uploadedObjectExists } from "@/lib/media/uploaded-object";
+import {
   cancelFirstHourAuthorization,
   createFirstHourPaymentIntent,
 } from "@/lib/stripe/connect";
@@ -30,13 +39,35 @@ export type BookingFormState = { error?: string };
  * Hourly services now use the authorize-first instant-book flow below and never
  * reach this action.
  */
+const jobPhotoSchema = z.object({
+  path: z.string().min(1).max(200),
+  kind: z.literal("image"),
+  mimeType: z.enum(JOB_PHOTO_MIME_TYPES),
+  sizeBytes: z.number().int().positive().max(MAX_JOB_PHOTO_BYTES),
+  name: z.string().max(160),
+});
+
 const quoteSchema = z.object({
   providerServiceId: z.string().uuid("Pick a service."),
   scheduledLocal: z.string().min(1, "Pick a date and time."),
   estimatedMinutes: z.coerce.number().int(),
   responseWindowHours: z.coerce.number().int(),
   details: z.string().trim().max(2000).optional().default(""),
+  jobPhotos: z
+    .array(jobPhotoSchema)
+    .min(MIN_JOB_PHOTOS, "Add at least one photo of the job site.")
+    .max(MAX_JOB_PHOTOS, `Attach up to ${MAX_JOB_PHOTOS} photos.`),
 });
+
+/** The picker posts the uploaded manifest as a JSON string in a hidden input. */
+function parseJobPhotos(value: FormDataEntryValue | null): unknown {
+  if (typeof value !== "string" || value.length === 0) return [];
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
 
 export async function createBookingRequest(
   _prev: BookingFormState,
@@ -64,8 +95,32 @@ export async function createBookingRequest(
     estimatedMinutes: formData.get("estimatedMinutes"),
     responseWindowHours: formData.get("responseWindowHours"),
     details: formData.get("details"),
+    jobPhotos: parseJobPhotos(formData.get("jobPhotos")),
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  // The browser uploaded these straight to Storage and sent back only paths, so
+  // confirm each one belongs to this customer AND actually landed before the
+  // path is written to a column the provider will read from.
+  const photos = parsed.data.jobPhotos;
+  if (new Set(photos.map((photo) => photo.path)).size !== photos.length) {
+    return { error: "That photo was added twice. Remove the duplicate." };
+  }
+  if (
+    photos.some((photo) => !isOwnJobPhotoPath(photo.path, session.user.id))
+  ) {
+    return { error: "Those photos didn't go through. Add them again." };
+  }
+  const landed = await Promise.all(
+    photos.map((photo) =>
+      uploadedObjectExists(JOB_PHOTOS_BUCKET, photo.path),
+    ),
+  );
+  if (landed.some((exists) => !exists)) {
+    return {
+      error: "One of those photos didn't finish uploading. Add it again.",
+    };
+  }
 
   const bookingFrom = await getBookingFrom();
   const origin = resolveBookingOrigin(bookingFrom, session.profile);
@@ -107,6 +162,7 @@ export async function createBookingRequest(
     latitude: origin.latitude,
     longitude: origin.longitude,
     details: parsed.data.details,
+    jobPhotos: photos,
   });
   if (error || !bookingId) {
     return { error: requestOperationMessage(error, "Could not send the request. Try again.") };

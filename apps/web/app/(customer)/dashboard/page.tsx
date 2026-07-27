@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { openConversationForBooking } from "@/app/actions/messaging";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
+import { JobPhotoGrid } from "@/components/booking/job-photo-grid";
 import { DeadlineCountdown } from "@/components/deadline-countdown";
 import { StatusPill } from "@/components/status-pill";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
 import { getReplacementPool } from "@/lib/booking/replacement-suggestions";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { demoBookings, getDemoPreview } from "@/lib/demo/sample-preview";
+import { bookingJobPhotos } from "@/lib/media/job-photos";
 import {
   getCustomerConversationIndex,
   type ConversationEntry,
@@ -133,7 +135,7 @@ export default async function CustomerDashboardPage({
       .select(
         `id, booking_flow, status, scheduled_at, address, price_cents,
          estimated_minutes, hourly_rate_cents_snapshot,
-         average_quote_cents_snapshot, response_alert_at,
+         average_quote_cents_snapshot, job_photos, response_alert_at,
          initial_payment_due_at, en_route_at, dismissed_at,
          review_prompt_dismissed_at, work_completed_at, cancelled_by_role,
          proposed_start_at, counter_note, provider_id,
@@ -631,10 +633,17 @@ function BookingCard({
         </div>
       ) : null}
 
+      {isQuote ? (
+        <JobPhotoGrid
+          photos={bookingJobPhotos(booking.job_photos)}
+          label="Photos you sent"
+        />
+      ) : null}
+
       {isQuote && booking.status === "requested" ? (
         <div className="mt-3 rounded-lg border border-gold-300 bg-gold-100 p-3 text-xs leading-5 text-gold-900">
-          The provider may ask for images or a short video in the private chat
-          before sending the final flat quote.
+          Your student quotes from these photos. They may ask for more in the
+          private chat before sending the final flat quote.
         </div>
       ) : null}
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { JobPhotoGrid } from "@/components/booking/job-photo-grid";
 import { DeadlineCountdown } from "@/components/deadline-countdown";
 import {
   ProviderScheduleCalendar,
@@ -44,7 +45,8 @@ import {
 } from "@/lib/db/queries";
 import type { AvailabilityWindow } from "@/lib/provider/setup";
 import { isProviderIdentityVerificationSatisfied } from "@/lib/provider/verification";
-import type { BookingFlow, BookingStatus } from "@/lib/db/types";
+import type { BookingFlow, BookingStatus, Json } from "@/lib/db/types";
+import { bookingJobPhotos } from "@/lib/media/job-photos";
 import {
   hasAcceptedCurrentLegalDocument,
   legalDocumentPath,
@@ -77,6 +79,7 @@ type ProviderBookingRow = {
   estimated_minutes: number | null;
   hourly_rate_cents_snapshot: number | null;
   average_quote_cents_snapshot: number | null;
+  job_photos: Json;
   response_alert_at: string | null;
   accepted_at: string | null;
   initial_payment_due_at: string | null;
@@ -194,7 +197,7 @@ export default async function ProviderDashboardPage({
          time_flexibility,
          latitude, longitude, details, price_cents,
          platform_fee_cents, estimated_minutes, hourly_rate_cents_snapshot,
-         average_quote_cents_snapshot,
+         average_quote_cents_snapshot, job_photos,
          response_alert_at, accepted_at, initial_payment_due_at, service:services(name),
          customer:profiles!bookings_customer_id_fkey(full_name),
          invoice:booking_invoices(subtotal_cents, total_platform_fee_cents, status)`,
@@ -612,7 +615,6 @@ function ProviderDashboardView({
                         {" · "}
                         {booking.estimated_minutes ?? 60}-minute scheduling estimate
                       </p>
-                      <p>Review the private chat for requested images or video.</p>
                       {booking.response_alert_at ? (
                         <DeadlineCountdown
                           target={booking.response_alert_at}
@@ -620,6 +622,11 @@ function ProviderDashboardView({
                         />
                       ) : null}
                     </div>
+                  ) : null}
+                  {booking.booking_flow === "quote_v1" ? (
+                    <JobPhotoGrid
+                      photos={bookingJobPhotos(booking.job_photos)}
+                    />
                   ) : null}
                   {demo ? (
                     <div className="mt-3 flex gap-2">

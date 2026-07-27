@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PostgrestError } from "@supabase/supabase-js";
 
+import { toJobPhotoJson, type JobPhoto } from "@/lib/media/job-photos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -25,6 +26,9 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["INVALID_SERVICE_CITY", "Choose the job location with “Booking from”."],
   ["INVALID_COORDINATES", "Choose the job location with “Booking from”."],
   ["DETAILS_TOO_LONG", "Keep job details to 2,000 characters or fewer."],
+  ["JOB_PHOTOS_REQUIRED", "Add at least one photo of the job site."],
+  ["INVALID_JOB_PHOTOS", "Those photos didn't go through. Remove them and add them again."],
+  ["JOB_PHOTOS_IMMUTABLE", "Job site photos can't be changed after the request is sent."],
   ["MINIMUM_NOTICE_NOT_MET", "This job no longer meets the provider’s scheduling notice."],
   ["OUTSIDE_PROVIDER_AVAILABILITY", "The full job estimate must fit the provider’s availability."],
   ["PROVIDER_SLOT_ALREADY_RESERVED", "That provider just reserved another job during this time."],
@@ -175,6 +179,8 @@ export async function createQuoteRequest(
     latitude: number | null;
     longitude: number | null;
     details: string;
+    /** 1-8 job-site photos, already uploaded and verified by the caller. */
+    jobPhotos: JobPhoto[];
   },
 ) {
   return supabase.rpc("create_quote_booking_request", {
@@ -189,6 +195,7 @@ export async function createQuoteRequest(
     p_service_city: input.serviceCity,
     p_latitude: input.latitude ?? undefined,
     p_longitude: input.longitude ?? undefined,
+    p_job_photos: toJobPhotoJson(input.jobPhotos),
   });
 }
 

@@ -7,8 +7,15 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
-import { useActionState, useMemo, useState, useTransition } from "react";
+import {
+  useActionState,
+  useCallback,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 
+import { JobPhotoPicker } from "@/components/booking/job-photo-picker";
 import { FormLoader } from "@/components/form-loader";
 import { SchedulePicker } from "@/components/scheduling/schedule-picker";
 import { Button } from "@/components/ui/button";
@@ -27,6 +34,7 @@ import {
   pilotLocalDateTimeToUtc,
 } from "@/lib/booking/policy";
 import type { OfferedService, ProviderSchedule } from "@/lib/db/queries";
+import { MIN_JOB_PHOTOS, type JobPhoto } from "@/lib/media/job-photos";
 import { formatMoney, formatOfferedPrice } from "@/lib/utils";
 
 import {
@@ -82,6 +90,7 @@ export function BookingRequestForm({
   schedule,
   minimumNoticeHours,
   initial,
+  userId,
 }: {
   services: OfferedService[];
   /** False until "Booking from" resolves to a usable service address. */
@@ -91,6 +100,8 @@ export function BookingRequestForm({
   minimumNoticeHours: number;
   /** Set when the customer arrived via "Book again". */
   initial?: RebookDefaults;
+  /** Job photos upload to this customer's own storage folder. */
+  userId: string;
 }) {
   const [quoteState, quoteAction, quotePending] = useActionState<
     BookingFormState,
@@ -115,6 +126,11 @@ export function BookingRequestForm({
   } | null>(null);
   const [responseWindowHours, setResponseWindowHours] = useState<number>(
     DEFAULT_RESPONSE_WINDOW_HOURS,
+  );
+  const [jobPhotoCount, setJobPhotoCount] = useState(0);
+  const handleJobPhotosChange = useCallback(
+    (photos: JobPhoto[]) => setJobPhotoCount(photos.length),
+    [],
   );
 
   const selected = services.find((service) => service.id === selectedId);
@@ -283,6 +299,14 @@ export function BookingRequestForm({
         </fieldset>
       )}
 
+      {isQuote ? (
+        <JobPhotoPicker
+          userId={userId}
+          disabled={pending}
+          onChange={handleJobPhotosChange}
+        />
+      ) : null}
+
       <div>
         <Label htmlFor="details">Job details</Label>
         <Textarea
@@ -310,12 +334,12 @@ export function BookingRequestForm({
             </div>
             <div className="rounded-lg border border-gold-300 bg-gold-100 p-3 text-gold-900">
               <p className="font-semibold">
-                Images or a video may be required for an accurate quote.
+                Your photos decide the price.
               </p>
               <p className="mt-1 text-xs leading-5">
-                After you send this request, use the private booking chat to
-                share images or a short video if the provider needs them to
-                prepare an accurate quote.
+                Your student quotes from the photos above, so show anything that
+                changes the work. Once you send the request they&apos;re fixed,
+                but you can share more in the private booking chat.
               </p>
             </div>
             <p className="border-t border-line pt-3 text-xs text-mist">
@@ -374,7 +398,11 @@ export function BookingRequestForm({
         size="lg"
         className="w-full"
         disabled={
-          pending || !originReady || (isQuote && !effectiveResponseHours) || !slot
+          pending ||
+          !originReady ||
+          (isQuote && !effectiveResponseHours) ||
+          (isQuote && jobPhotoCount < MIN_JOB_PHOTOS) ||
+          !slot
         }
       >
         {pending
@@ -382,7 +410,9 @@ export function BookingRequestForm({
             ? "Sending request..."
             : "Preparing hold..."
           : isQuote
-            ? "Request flat quote"
+            ? jobPhotoCount < MIN_JOB_PHOTOS
+              ? "Add a job site photo to continue"
+              : "Request flat quote"
             : selected?.hourly_rate_cents != null
               ? `Continue to hold ${formatMoney(selected.hourly_rate_cents)}`
               : "Continue"}

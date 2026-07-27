@@ -197,6 +197,7 @@ export default async function BookingPage({
             schedule={schedule}
             minimumNoticeHours={provider.minimum_notice_hours}
             initial={rebookDefaults}
+            userId={session.user.id}
           />
         </Card>
       ) : (
