@@ -10,7 +10,12 @@ import { usePathname } from "next/navigation";
 export function FeedbackLauncher() {
   const pathname = usePathname();
 
-  if (pathname === "/support" || pathname.startsWith("/admin")) {
+  if (
+    pathname === "/support" ||
+    pathname.startsWith("/admin") ||
+    pathname === "/messages" ||
+    pathname.startsWith("/messages/")
+  ) {
     return null;
   }
 
@@ -36,4 +41,3 @@ export function FeedbackLauncher() {
     </Link>
   );
 }
-
