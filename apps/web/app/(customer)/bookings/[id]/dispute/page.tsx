@@ -60,7 +60,10 @@ export default async function DisputePage({
     .maybeSingle();
 
   if (!booking || booking.customer_id !== user.id) notFound();
-  if (booking.booking_flow !== "hourly_v1") redirect("/dashboard");
+  if (!["hourly_v1", "quote_v2"].includes(booking.booking_flow)) {
+    redirect("/dashboard");
+  }
+  const isQuote = booking.booking_flow === "quote_v2";
 
   const service = Array.isArray(booking.service)
     ? booking.service[0]
@@ -136,6 +139,7 @@ export default async function DisputePage({
 
   // No existing dispute — derive eligibility and the offered categories exactly
   // as open_booking_dispute does, so the page never offers an impossible action.
+  if (!booking.scheduled_at) notFound();
   const now = new Date().getTime();
   const startPassed = new Date(booking.scheduled_at).getTime() <= now;
 
@@ -147,7 +151,9 @@ export default async function DisputePage({
     booking.status === "in_progress" ||
     booking.status === "invoice_review"
   ) {
-    categories = ["hours", "service", "payment", "cancellation", "other"];
+    categories = isQuote
+      ? ["service", "payment", "cancellation", "other"]
+      : ["hours", "service", "payment", "cancellation", "other"];
   } else if (booking.status === "completed") {
     const { data: invoice } = await supabase
       .from("booking_invoices")
@@ -158,7 +164,9 @@ export default async function DisputePage({
       ? new Date(invoice.resolved_at).getTime()
       : null;
     if (finalChargeAt != null && now <= finalChargeAt + LATE_WINDOW_MS) {
-      categories = ["hours", "service", "payment", "other"];
+      categories = isQuote
+        ? ["service", "payment", "other"]
+        : ["hours", "service", "payment", "other"];
     }
   }
 

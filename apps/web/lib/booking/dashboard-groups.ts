@@ -46,7 +46,9 @@ export type DashboardBooking = {
   id: string;
   booking_flow: BookingFlow;
   status: BookingStatus;
-  scheduled_at: string;
+  scheduled_at: string | null;
+  requested_local_date?: string | null;
+  requested_daypart?: "morning" | "afternoon" | "either" | null;
   address: string;
   price_cents: number;
   estimated_minutes: number | null;
@@ -97,13 +99,19 @@ function attentionReasonFor(
 ): AttentionReason | null {
   // A dismissed booking has been explicitly cleared; it lives in Past only.
   if (booking.dismissed_at) return null;
-  const startsInFuture = new Date(booking.scheduled_at) >= now;
+  const startValue =
+    booking.scheduled_at ??
+    (booking.requested_local_date
+      ? `${booking.requested_local_date}T17:00:00-05:00`
+      : null);
+  const startsInFuture = startValue ? new Date(startValue) >= now : true;
 
   // The provider proposed a different time and the job is still ahead of us.
   // This one has a real decision attached, so it outranks the others.
   if (
     booking.status === "countered" &&
-    booking.proposed_start_at != null &&
+    (booking.booking_flow === "quote_v2" ||
+      booking.proposed_start_at != null) &&
     startsInFuture
   ) {
     return "countered";
@@ -130,7 +138,9 @@ function isReviewPromptOpen(booking: DashboardBooking, now: Date): boolean {
   if (booking.review) return false;
   if (booking.review_prompt_dismissed_at) return false;
   if (booking.dispute?.status === "open") return false;
-  const finishedAt = new Date(booking.work_completed_at ?? booking.scheduled_at);
+  const finishedAt = new Date(
+    booking.work_completed_at ?? booking.scheduled_at ?? now,
+  );
   return now.getTime() - finishedAt.getTime() <= REVIEW_PROMPT_WINDOW_DAYS * DAY_MS;
 }
 
@@ -157,6 +167,7 @@ export function partitionBookings(
         source.status === "requested" &&
         source.response_alert_at &&
         new Date(source.response_alert_at) <= now &&
+        source.scheduled_at != null &&
         new Date(source.scheduled_at) > now,
     );
     // An hourly request whose start time passed without an answer reads as
@@ -164,6 +175,7 @@ export function partitionBookings(
     const booking: DashboardBooking =
       source.booking_flow === "hourly_v1" &&
       source.status === "requested" &&
+      source.scheduled_at != null &&
       new Date(source.scheduled_at) <= now
         ? { ...source, status: "expired", responseAlertReached: false }
         : { ...source, responseAlertReached };
@@ -195,7 +207,12 @@ export function partitionBookings(
 function sortByUrgency(bookings: DashboardBooking[]): DashboardBooking[] {
   return [...bookings].sort((a, b) => {
     const byTime =
-      new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
+      new Date(
+        a.scheduled_at ?? a.requested_local_date ?? "9999-12-31",
+      ).getTime() -
+      new Date(
+        b.scheduled_at ?? b.requested_local_date ?? "9999-12-31",
+      ).getTime();
     if (byTime !== 0) return byTime;
     return (
       REASON_PRIORITY[a.attentionReason ?? "no_response"] -

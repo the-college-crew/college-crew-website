@@ -1,6 +1,11 @@
 import { createAdminClient } from "./admin.ts";
 import { attemptDueInvoiceCharge } from "./invoicing.ts";
 import { attemptProviderPayout } from "./payouts.ts";
+import {
+  cancelPaymentAuthorization,
+  captureFirstHourHold,
+  releaseFirstHourHold,
+} from "./stripe.ts";
 import { sendBookingEmail } from "./email.ts";
 
 /**
@@ -103,6 +108,38 @@ async function processJob(kind: string, bookingId: string, sourceId: string) {
       p_booking_id: bookingId,
     });
     if (result.error) throw result.error;
+    const outcome = await releaseFirstHourHold(bookingId);
+    if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
+    return;
+  }
+  if (kind === "quote_response_expiration" || kind === "quote_payment_expiration") {
+    const result = await admin.rpc("expire_quote_booking_stage", {
+      p_booking_id: bookingId,
+    });
+    if (result.error) throw result.error;
+    return;
+  }
+  if (kind === "capture_upfront") {
+    const booking = await admin
+      .from("bookings")
+      .select("status")
+      .eq("id", bookingId)
+      .maybeSingle();
+    if (booking.error) throw booking.error;
+    if (booking.data?.status !== "accepted") return;
+    const outcome = await captureFirstHourHold(bookingId);
+    if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
+    return;
+  }
+  if (kind === "capture_expiration") {
+    const result = await admin.rpc("expire_failed_hourly_capture", {
+      p_booking_id: bookingId,
+    });
+    if (result.error) throw result.error;
+    if (result.data === "capture_expired") {
+      const outcome = await releaseFirstHourHold(bookingId);
+      if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
+    }
     return;
   }
   if (kind === "payment_expiration") {
@@ -116,10 +153,16 @@ async function processJob(kind: string, bookingId: string, sourceId: string) {
     // 24h after Arrived with no invoice submitted: bill the original estimate.
     // Idempotent and a no-op if the provider already submitted or the booking
     // moved on, so a retry can never double-invoice.
-    const result = await admin.rpc("auto_complete_hourly_job", {
+    const quoteResult = await admin.rpc("auto_complete_quote_job", {
       p_booking_id: bookingId,
     });
-    if (result.error) throw result.error;
+    if (quoteResult.error) throw quoteResult.error;
+    if (!quoteResult.data) {
+      const result = await admin.rpc("auto_complete_hourly_job", {
+        p_booking_id: bookingId,
+      });
+      if (result.error) throw result.error;
+    }
     return;
   }
   if (kind === "invoice_autocharge") {
@@ -163,13 +206,52 @@ async function enqueueTerminalSchedulerAlert(jobId: string, bookingId: string) {
 async function drainJobs(): Promise<Counters> {
   const counters: Counters = { claimed: 0, succeeded: 0, retried: 0, failed: 0 };
   const admin = createAdminClient();
+  const draftsClaim = await admin.rpc("claim_expired_booking_drafts", {
+    p_limit: JOB_BATCH_SIZE,
+    p_lease_seconds: LEASE_SECONDS,
+  });
+  if (draftsClaim.error) throw draftsClaim.error;
+  const drafts = (draftsClaim.data ?? []) as Array<{
+    draft_id: string;
+    stripe_payment_intent_id: string;
+    lease_token: string;
+    attempt_count: number;
+  }>;
+  counters.claimed += drafts.length;
+  await Promise.all(
+    drafts.map(async (draft) => {
+      try {
+        const cancelled = await cancelPaymentAuthorization(
+          draft.stripe_payment_intent_id,
+        );
+        if (cancelled === "unconfigured") throw new Error("StripeUnconfigured");
+        const settled = await admin.rpc("complete_booking_draft_cleanup", {
+          p_draft_id: draft.draft_id,
+          p_lease_token: draft.lease_token,
+        });
+        if (settled.error || !settled.data) throw new Error("LeaseLost");
+        counters.succeeded += 1;
+      } catch (error) {
+        const terminal = draft.attempt_count >= MAX_ATTEMPTS;
+        await admin.rpc("retry_booking_draft_cleanup", {
+          p_draft_id: draft.draft_id,
+          p_lease_token: draft.lease_token,
+          p_error: safeErrorClass(error),
+          p_retry_after_seconds: retryDelaySeconds(draft.attempt_count),
+          p_terminal: terminal,
+        });
+        if (terminal) counters.failed += 1;
+        else counters.retried += 1;
+      }
+    }),
+  );
   const claim = await admin.rpc("claim_booking_automation_jobs", {
     p_limit: JOB_BATCH_SIZE,
     p_lease_seconds: LEASE_SECONDS,
   });
   if (claim.error) throw claim.error;
   const jobs = (claim.data ?? []) as ClaimedJob[];
-  counters.claimed = jobs.length;
+  counters.claimed += jobs.length;
 
   await Promise.all(
     jobs.map(async (job) => {

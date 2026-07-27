@@ -13,7 +13,12 @@ import {
 } from "@/lib/booking/policy";
 import { formatMoney } from "@/lib/utils";
 
-import { settleJobInCash, submitInvoice } from "../../../actions";
+import {
+  settleJobInCash,
+  settleQuoteJobInCash,
+  submitInvoice,
+  submitQuoteInvoice,
+} from "../../../actions";
 import type { BookingRequestActionState } from "../../../actions";
 
 function formatMinutes(minutes: number) {
@@ -61,6 +66,81 @@ function MoneyPreview({
           <dd>{formatMoney(allocation.remainingBalanceCents)}</dd>
         </div>
       </dl>
+    </div>
+  );
+}
+
+/** Fixed-price closeout: the provider can submit only the immutable quote. */
+export function QuoteInvoiceForm({
+  bookingId,
+  quoteTotalCents,
+  depositCents,
+}: {
+  bookingId: string;
+  quoteTotalCents: number;
+  depositCents: number;
+}) {
+  const [state, formAction, pending] = useActionState<
+    BookingRequestActionState,
+    FormData
+  >(submitQuoteInvoice, {});
+  const [cashState, cashAction, cashPending] = useActionState<
+    BookingRequestActionState,
+    FormData
+  >(settleQuoteJobInCash, {});
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-line bg-white p-5 text-sm">
+        <p className="font-display font-semibold">Complete the quoted job</p>
+        <dl className="mt-3 space-y-2">
+          <div className="flex justify-between gap-4">
+            <dt className="text-mist">Immutable final quote</dt>
+            <dd>{formatMoney(quoteTotalCents)}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-mist">Deposit already collected</dt>
+            <dd>– {formatMoney(depositCents)}</dd>
+          </div>
+          <div className="flex justify-between gap-4 border-t border-line pt-2 font-semibold">
+            <dt>Customer balance after job</dt>
+            <dd>{formatMoney(Math.max(0, quoteTotalCents - depositCents))}</dd>
+          </div>
+        </dl>
+      </div>
+      <p className="text-xs text-mist">
+        The quote cannot be edited at completion; the customer gets the same
+        24-hour review, dispute, recovery, and payment options as an hourly job.
+      </p>
+      <form action={formAction} className="space-y-3">
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <Button type="submit" size="lg" className="w-full" disabled={pending}>
+          {pending ? "Submitting…" : "Complete job & send fixed invoice"}
+        </Button>
+        <FieldError>{state.error}</FieldError>
+      </form>
+      <form action={cashAction} className="space-y-3 rounded-2xl border border-line bg-court p-4">
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <label className="flex gap-3 text-sm text-ink-soft">
+          <input
+            type="checkbox"
+            name="confirmed"
+            className="mt-1 h-4 w-4 rounded border-line"
+          />
+          <span>
+            The customer paid me the remaining{" "}
+            {formatMoney(Math.max(0, quoteTotalCents - depositCents))} in person.
+          </span>
+        </label>
+        <Button
+          type="submit"
+          variant="secondary"
+          className="w-full"
+          disabled={cashPending}
+        >
+          {cashPending ? "Recording…" : "Close out as paid in person"}
+        </Button>
+        <FieldError>{cashState.error}</FieldError>
+      </form>
     </div>
   );
 }

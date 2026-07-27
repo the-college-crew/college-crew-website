@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PostgrestError } from "@supabase/supabase-js";
 
+import type { QuoteDaypart } from "@/lib/booking/quote-dayparts";
 import { toJobPhotoJson, type JobPhoto } from "@/lib/media/job-photos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { createClient } from "@/lib/supabase/server";
@@ -32,6 +33,13 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["MINIMUM_NOTICE_NOT_MET", "This job no longer meets the provider’s scheduling notice."],
   ["OUTSIDE_PROVIDER_AVAILABILITY", "The full job estimate must fit the provider’s availability."],
   ["PROVIDER_SLOT_ALREADY_RESERVED", "That provider just reserved another job during this time."],
+  ["QUOTE_DAYPART_UNAVAILABLE", "That date window is no longer available."],
+  ["EXACT_START_OUTSIDE_REQUEST", "Choose a start time inside the requested date window."],
+  ["INVALID_COUNTER_OPTIONS", "Offer one to three valid date windows."],
+  ["COUNTER_DATE_MUST_CHANGE", "Counter with a different date from the current request."],
+  ["DUPLICATE_COUNTER_DATE", "Each alternative must use a different date."],
+  ["COUNTER_WINDOW_UNAVAILABLE", "Those options are too close to the start time."],
+  ["COUNTER_OPTION_NOT_FOUND", "That date option is no longer available."],
   ["PROVIDER_NO_LONGER_READY", "This provider cannot accept new hourly work right now."],
   ["INVALID_FINAL_QUOTE", "Enter a final quote between $20 and $10,000."],
   ["FINAL_QUOTE_REQUIRED", "Send a final quote before accepting this request."],
@@ -169,9 +177,8 @@ export async function createQuoteRequest(
   supabase: ServerClient,
   input: {
     providerServiceId: string;
-    scheduledAt: string;
-    estimatedMinutes: number;
-    responseWindowHours: number;
+    requestedDate: string;
+    requestedDaypart: QuoteDaypart;
     address: string;
     jobZip: string;
     addressKind: "home" | "other";
@@ -183,11 +190,10 @@ export async function createQuoteRequest(
     jobPhotos: JobPhoto[];
   },
 ) {
-  return supabase.rpc("create_quote_booking_request", {
+  return supabase.rpc("create_quote_deposit_booking_request", {
     p_provider_service_id: input.providerServiceId,
-    p_scheduled_at: input.scheduledAt,
-    p_estimated_minutes: input.estimatedMinutes,
-    p_response_window_hours: input.responseWindowHours,
+    p_requested_local_date: input.requestedDate,
+    p_requested_daypart: input.requestedDaypart,
     p_address: input.address,
     p_job_zip: input.jobZip,
     p_details: input.details,

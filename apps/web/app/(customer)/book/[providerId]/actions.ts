@@ -9,6 +9,7 @@ import {
   postDetailsMessage,
 } from "@/lib/booking/finalize";
 import { pilotLocalDateTimeToUtc } from "@/lib/booking/policy";
+import { QUOTE_DAYPARTS } from "@/lib/booking/quote-dayparts";
 import { createQuoteRequest, requestOperationMessage } from "@/lib/booking/requests";
 import { areBookingRequestsEnabled, isHourlyBookingEnabled } from "@/lib/env";
 import {
@@ -49,9 +50,10 @@ const jobPhotoSchema = z.object({
 
 const quoteSchema = z.object({
   providerServiceId: z.string().uuid("Pick a service."),
-  scheduledLocal: z.string().min(1, "Pick a date and time."),
-  estimatedMinutes: z.coerce.number().int(),
-  responseWindowHours: z.coerce.number().int(),
+  requestedDate: z.string().date("Pick a date."),
+  requestedDaypart: z.enum(QUOTE_DAYPARTS, {
+    message: "Choose Morning, Afternoon, or Either.",
+  }),
   details: z.string().trim().max(2000).optional().default(""),
   jobPhotos: z
     .array(jobPhotoSchema)
@@ -91,9 +93,8 @@ export async function createBookingRequest(
 
   const parsed = quoteSchema.safeParse({
     providerServiceId: formData.get("providerServiceId"),
-    scheduledLocal: formData.get("scheduledLocal"),
-    estimatedMinutes: formData.get("estimatedMinutes"),
-    responseWindowHours: formData.get("responseWindowHours"),
+    requestedDate: formData.get("requestedDate"),
+    requestedDaypart: formData.get("requestedDaypart"),
     details: formData.get("details"),
     jobPhotos: parseJobPhotos(formData.get("jobPhotos")),
   });
@@ -131,11 +132,6 @@ export async function createBookingRequest(
     };
   }
 
-  const scheduled = pilotLocalDateTimeToUtc(parsed.data.scheduledLocal);
-  if (!scheduled.ok) {
-    return { error: dstMessage(scheduled.reason) };
-  }
-
   const supabase = await createClient();
   const { data: offering } = await supabase
     .from("public_provider_offerings")
@@ -152,9 +148,8 @@ export async function createBookingRequest(
 
   const { data: bookingId, error } = await createQuoteRequest(supabase, {
     providerServiceId: parsed.data.providerServiceId,
-    scheduledAt: scheduled.date.toISOString(),
-    estimatedMinutes: parsed.data.estimatedMinutes,
-    responseWindowHours: parsed.data.responseWindowHours,
+    requestedDate: parsed.data.requestedDate,
+    requestedDaypart: parsed.data.requestedDaypart,
     address: origin.addressLine,
     jobZip: origin.zip,
     addressKind: origin.kind,

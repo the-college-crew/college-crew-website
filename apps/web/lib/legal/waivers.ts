@@ -2,10 +2,10 @@ import type { UserRole } from "@/lib/db/types";
 
 export const LEGAL_CONTENT_VERSION = "2026-07-20";
 export const PLATFORM_TERMS_VERSION = "2026-07-20";
-export const CUSTOMER_BOOKING_TERMS_VERSION = "2026-07-15";
+export const CUSTOMER_BOOKING_TERMS_VERSION = "2026-07-27";
 export const PROVIDER_TERMS_VERSION = "2026-07-15";
 export const BOOKING_RISK_VERSION = "2026-07-15";
-export const QUOTE_BOOKING_RISK_VERSION = "quote-v1-2026-07-20";
+export const QUOTE_BOOKING_RISK_VERSION = "quote-v2-2026-07-27";
 
 export type LegalDocumentKind =
   | "platform_terms"
@@ -209,6 +209,16 @@ export const CUSTOMER_BOOKING_TERMS_SECTIONS: HourlyTermsSection[] = [
     body: [MASTER_SECTIONS.find((section) => section.number === "5")!.body[1]],
   },
   ...HOURLY_TERMS_SECTIONS.filter((section) => section.title !== "Provider fee"),
+  {
+    title: "Fixed quotes and deposits",
+    body: [
+      "Supported quote services require at least one job photo and 12 hours' notice. The customer requests a date and Morning, Afternoon, or Either rather than an exact start time.",
+      "The provider has exactly two hours to set an exact start and send one final quote, or may offer one to three other date windows. Choosing a provider-offered window sends the saved request back with a fresh two-hour response period; either party may instead decline.",
+      "The final quote is immutable. Accepting it charges a 20% deposit that College Crew holds and credits against the final invoice; the fixed remaining 80% is due after the job.",
+      "Quote payment is due at the earlier of 24 hours after the quote is sent or 6 hours before the scheduled start. A late successful payment is refunded and does not revive an expired booking.",
+      "The remaining quote balance uses the same 24-hour invoice review, saved-method autocharge, cash settlement, recovery, dispute, cancellation, and provider payout process as hourly work.",
+    ],
+  },
 ];
 
 export const PROVIDER_TERMS_SECTIONS: HourlyTermsSection[] = [
@@ -242,12 +252,15 @@ export const BOOKING_CONSENT_LABEL =
   "I have read and accept these risks for this booking.";
 
 export const QUOTE_PAYMENT_CONSENT_LABEL =
-  "I accept the booking risks and authorize the displayed final flat quote for this booking.";
+  "I accept the booking risks and authorize a 20% deposit now, with the fixed remaining balance due after the job.";
 
 export const QUOTE_PAYMENT_TERMS = [
   "The provider's optional average quote is informational and is not a price promise.",
-  "The final flat quote shown at checkout is the complete service price authorized for this booking. College Crew does not add a separate customer platform fee.",
-  "Images or a video shared in the private booking chat may be used by the provider to prepare the quote. Sending a quote request does not create a charge.",
+  "The final flat quote shown at checkout is immutable and is the complete service price authorized for this booking. College Crew does not add a separate customer platform fee.",
+  "College Crew charges 20% of the final quote as a deposit when the customer accepts it, holds the captured funds on the platform, and credits that deposit against the invoice after the job.",
+  "The fixed remaining 80% is due after the job through the same invoice review, dispute, payment recovery, cash-settlement, and payout process used for hourly work.",
+  "The quote must be paid by the earlier of 24 hours after it is sent or 6 hours before the scheduled start; a late successful payment is refunded and does not revive an expired booking.",
+  "At least one job photo is required with a quote request; additional images or video shared in the private booking chat may also be used to prepare the quote. Sending a quote request does not create a charge.",
 ] as const;
 
 export const GENERAL_FAMILY_DISCLOSURE = [

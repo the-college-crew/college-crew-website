@@ -61,16 +61,32 @@ export async function resolveDispute(
     parsed.data;
 
   const supabase = await createClient();
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("booking_flow")
+    .eq("id", bookingId)
+    .maybeSingle();
   const { data: directive, error } = await supabase
-    .rpc("resolve_booking_dispute", {
-      p_booking_id: bookingId,
-      p_resolution_kind: resolutionKind,
-      p_audit_note: auditNote,
-      p_resolved_billable_minutes:
-        resolutionKind === "reduce_billable_minutes"
-          ? (resolvedBillableMinutes ?? undefined)
-          : undefined,
-    })
+    .rpc(
+      booking?.booking_flow === "quote_v2"
+        ? "resolve_quote_booking_dispute"
+        : "resolve_booking_dispute",
+      booking?.booking_flow === "quote_v2"
+        ? {
+            p_booking_id: bookingId,
+            p_resolution_kind: resolutionKind,
+            p_audit_note: auditNote,
+          }
+        : {
+            p_booking_id: bookingId,
+            p_resolution_kind: resolutionKind,
+            p_audit_note: auditNote,
+            p_resolved_billable_minutes:
+              resolutionKind === "reduce_billable_minutes"
+                ? (resolvedBillableMinutes ?? undefined)
+                : undefined,
+          },
+    )
     .maybeSingle();
   if (error || !directive) {
     return {
@@ -132,7 +148,7 @@ async function chargeResolvedBalance(input: {
       .from("booking_payments")
       .select("stripe_customer_id, stripe_payment_method_id")
       .eq("booking_id", input.bookingId)
-      .eq("kind", "first_hour")
+      .in("kind", ["first_hour", "quote_deposit"])
       .maybeSingle(),
     admin
       .from("bookings")

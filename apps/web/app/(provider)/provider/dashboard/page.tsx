@@ -25,6 +25,10 @@ import {
 } from "@/lib/auth/session";
 import { calculatePlatformFeeCents } from "@/lib/booking/policy";
 import {
+  QUOTE_DAYPART_LABELS,
+  type QuoteDaypart,
+} from "@/lib/booking/quote-dayparts";
+import {
   bookingCopyValue,
   type BookingCopyOverrides,
 } from "@/lib/content/booking-copy";
@@ -72,7 +76,9 @@ type ProviderBookingRow = {
   booking_flow: BookingFlow;
   status: BookingStatus;
   time_flexibility: "flexible" | "fixed" | null;
-  scheduled_at: string;
+  scheduled_at: string | null;
+  requested_local_date: string | null;
+  requested_daypart: QuoteDaypart | null;
   address: string;
   service_city: string;
   latitude: number | null;
@@ -83,6 +89,10 @@ type ProviderBookingRow = {
   price_cents: number;
   platform_fee_cents: number;
   estimated_minutes: number | null;
+  quote_estimate:
+    | { estimated_minutes: number }
+    | { estimated_minutes: number }[]
+    | null;
   hourly_rate_cents_snapshot: number | null;
   average_quote_cents_snapshot: number | null;
   job_photos: Json;
@@ -203,11 +213,13 @@ export default async function ProviderDashboardPage({
     supabase
       .from("bookings")
       .select(
-        `id, booking_flow, status, scheduled_at, address, service_city,
+        `id, booking_flow, status, scheduled_at, requested_local_date,
+         requested_daypart, address, service_city,
          time_flexibility,
          latitude, longitude, details, price_cents,
          platform_fee_cents, estimated_minutes, hourly_rate_cents_snapshot,
          average_quote_cents_snapshot, job_photos,
+         quote_estimate:booking_quote_provider_estimates(estimated_minutes),
          response_alert_at, accepted_at, initial_payment_due_at, service:services(name),
          customer:profiles!bookings_customer_id_fkey(full_name),
          invoice:booking_invoices(subtotal_cents, total_platform_fee_cents, status)`,
@@ -302,13 +314,17 @@ function ProviderDashboardView({
   const requests = bookings.filter(
     (booking) =>
       booking.status === "requested" &&
-      (booking.booking_flow === "legacy" || new Date(booking.scheduled_at) > now),
+      (booking.booking_flow === "quote_v2" ||
+        (booking.scheduled_at != null &&
+          new Date(booking.scheduled_at) > now)),
   );
   const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
   const missedRequests = bookings.filter((booking) => {
+    if (booking.booking_flow !== "hourly_v1" || !booking.scheduled_at) {
+      return false;
+    }
     const scheduledAt = new Date(booking.scheduled_at).getTime();
     return (
-      booking.booking_flow === "hourly_v1" &&
       booking.accepted_at == null &&
       ["requested", "expired"].includes(booking.status) &&
       scheduledAt <= now.getTime() &&
@@ -318,7 +334,7 @@ function ProviderDashboardView({
   const awaitingPayment = bookings.filter(
     (booking) =>
       booking.status === "accepted" &&
-      ["hourly_v1", "quote_v1"].includes(booking.booking_flow),
+      ["hourly_v1", "quote_v1", "quote_v2"].includes(booking.booking_flow),
   );
   const earnedCents = bookings
     .filter((b) => b.status === "completed")
@@ -330,20 +346,27 @@ function ProviderDashboardView({
     .reduce((sum, b) => sum + providerReservedCents(b), 0);
 
   const calendarBookings: ProviderCalendarBooking[] = bookings
-    .filter((b) =>
-      [
-        "accepted",
-        "paid",
-        "booked",
-        "in_progress",
-        "invoice_review",
-        "completed",
-      ].includes(b.status),
+    .filter(
+      (b): b is ProviderBookingRow & { scheduled_at: string } =>
+        b.scheduled_at != null &&
+        [
+          "accepted",
+          "paid",
+          "booked",
+          "in_progress",
+          "invoice_review",
+          "completed",
+        ].includes(b.status),
     )
     .map((b) => ({
       id: b.id,
       scheduled_at: b.scheduled_at,
-      estimated_minutes: b.estimated_minutes,
+      estimated_minutes:
+        b.booking_flow === "quote_v2"
+          ? (Array.isArray(b.quote_estimate)
+              ? b.quote_estimate[0]?.estimated_minutes
+              : b.quote_estimate?.estimated_minutes) ?? null
+          : b.estimated_minutes,
       status: b.status,
       serviceName: b.service.name,
       address: b.address,
@@ -530,11 +553,13 @@ function ProviderDashboardView({
                   {booking.service.name}
                 </p>
                 <p className="mt-0.5 text-sm text-ink-soft">
-                  {booking.customer.full_name} ·{" "}
-                  {formatDateTime(booking.scheduled_at)}
+                  {booking.customer.full_name}
+                  {booking.scheduled_at
+                    ? ` · ${formatDateTime(booking.scheduled_at)}`
+                    : ""}
                 </p>
                 <p className="mt-1 text-xs text-mist">
-                  {booking.booking_flow === "quote_v1"
+                  {["quote_v1", "quote_v2"].includes(booking.booking_flow)
                     ? `Final quote ${formatMoney(booking.price_cents)} sent. The customer must confirm and pay.`
                     : copy("booking-provider.dashboard.reserved")}
                 </p>
@@ -543,7 +568,7 @@ function ProviderDashboardView({
                     <DeadlineCountdown
                       target={booking.initial_payment_due_at}
                       label={
-                        booking.booking_flow === "quote_v1"
+                        ["quote_v1", "quote_v2"].includes(booking.booking_flow)
                           ? "Quote payment due"
                           : "First-hour payment due"
                       }
@@ -585,7 +610,13 @@ function ProviderDashboardView({
                   </p>
                   <p className="mt-0.5 text-sm text-ink-soft">
                     {booking.customer.full_name} ·{" "}
-                    {formatDateTime(booking.scheduled_at)}
+                    {booking.booking_flow === "quote_v2" &&
+                    booking.requested_local_date &&
+                    booking.requested_daypart
+                      ? `${booking.requested_local_date} · ${QUOTE_DAYPART_LABELS[booking.requested_daypart]}`
+                      : booking.scheduled_at
+                        ? formatDateTime(booking.scheduled_at)
+                        : "Schedule pending"}
                   </p>
                   <p className="mt-0.5">
                     <LocationLine
@@ -625,15 +656,16 @@ function ProviderDashboardView({
                       ) : null}
                     </div>
                   ) : null}
-                  {booking.booking_flow === "quote_v1" ? (
+                  {["quote_v1", "quote_v2"].includes(booking.booking_flow) ? (
                     <div className="mt-2 space-y-1 text-xs text-mist">
                       <p>
                         Flat quote requested
                         {booking.average_quote_cents_snapshot == null
                           ? ""
                           : ` · ${formatMoney(booking.average_quote_cents_snapshot)} average shown`}
-                        {" · "}
-                        {booking.estimated_minutes ?? 60}-minute scheduling estimate
+                        {booking.booking_flow === "quote_v2"
+                          ? " · date-window request"
+                          : ` · ${booking.estimated_minutes ?? 60}-minute scheduling estimate`}
                       </p>
                       {booking.response_alert_at ? (
                         <DeadlineCountdown
@@ -643,7 +675,7 @@ function ProviderDashboardView({
                       ) : null}
                     </div>
                   ) : null}
-                  {booking.booking_flow === "quote_v1" ? (
+                  {["quote_v1", "quote_v2"].includes(booking.booking_flow) ? (
                     <JobPhotoGrid
                       photos={bookingJobPhotos(booking.job_photos)}
                       label={copy("booking-provider.dashboard.photo-label")}
@@ -672,10 +704,23 @@ function ProviderDashboardView({
                         id: booking.id,
                         serviceName: booking.service.name,
                         customerName: booking.customer.full_name,
-                        whenLabel: formatDateTime(booking.scheduled_at),
+                        whenLabel:
+                          booking.booking_flow === "quote_v2" &&
+                          booking.requested_local_date &&
+                          booking.requested_daypart
+                            ? `${booking.requested_local_date} · ${QUOTE_DAYPART_LABELS[booking.requested_daypart]}`
+                            : booking.scheduled_at
+                              ? formatDateTime(booking.scheduled_at)
+                              : "Schedule pending",
                         address: booking.address,
                         bookingFlow: booking.booking_flow,
                         timeFlexibility: booking.time_flexibility ?? "fixed",
+                        requestedDate: booking.requested_local_date,
+                        requestedDaypart: booking.requested_daypart,
+                        privateEstimatedMinutes:
+                          (Array.isArray(booking.quote_estimate)
+                            ? booking.quote_estimate[0]?.estimated_minutes
+                            : booking.quote_estimate?.estimated_minutes) ?? null,
                       }}
                     />
                   )}
@@ -727,7 +772,9 @@ function ProviderDashboardView({
                 </p>
                 <p className="mt-0.5 text-sm text-ink-soft">
                   {booking.customer.full_name} ·{" "}
-                  {formatDateTime(booking.scheduled_at)}
+                  {booking.scheduled_at
+                    ? formatDateTime(booking.scheduled_at)
+                    : "Exact time pending"}
                 </p>
                 <p className="mt-1 text-xs text-mist">
                   The start time passed without an acceptance. No action is

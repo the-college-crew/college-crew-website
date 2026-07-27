@@ -7,16 +7,28 @@ import { openConversationForBooking } from "@/app/actions/messaging";
 import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { FormLoader } from "@/components/form-loader";
 import { Button, buttonClasses } from "@/components/ui/button";
-import { FieldError, FieldHint, Input, Textarea } from "@/components/ui/field";
+import {
+  FieldError,
+  FieldHint,
+  Input,
+  Select,
+  Textarea,
+} from "@/components/ui/field";
 import {
   BASIS_POINTS_SCALE,
   PLATFORM_FEE_BPS,
 } from "@/lib/booking/policy";
+import {
+  QUOTE_DAYPART_LABELS,
+  QUOTE_DAYPARTS,
+  type QuoteDaypart,
+} from "@/lib/booking/quote-dayparts";
 import type { BookingFlow } from "@/lib/db/types";
 
 import {
   acceptBooking,
   counterBooking,
+  counterQuote,
   declineBooking,
   sendQuote,
 } from "../actions";
@@ -30,6 +42,9 @@ type RequestJob = {
   bookingFlow: BookingFlow;
   /** "flexible" means the customer allows a different time to be suggested. */
   timeFlexibility: "flexible" | "fixed";
+  requestedDate?: string | null;
+  requestedDaypart?: QuoteDaypart | null;
+  privateEstimatedMinutes?: number | null;
 };
 
 /**
@@ -41,7 +56,7 @@ type RequestJob = {
 export function RequestActions({ job }: { job: RequestJob }) {
   const copy = useBookingCopy();
   const [mode, setMode] = useState<
-    "idle" | "accept" | "quote" | "decline" | "counter"
+    "idle" | "accept" | "quote" | "decline" | "counter" | "quoteCounter"
   >("idle");
 
   // Only offered when the customer said a different time may be suggested; the
@@ -65,6 +80,9 @@ export function RequestActions({ job }: { job: RequestJob }) {
   if (mode === "quote") {
     return <SendQuotePanel job={job} onCancel={() => setMode("idle")} />;
   }
+  if (mode === "quoteCounter") {
+    return <QuoteCounterPanel job={job} onCancel={() => setMode("idle")} />;
+  }
 
   return (
     <div className="mt-3 flex flex-wrap gap-2">
@@ -73,10 +91,14 @@ export function RequestActions({ job }: { job: RequestJob }) {
         variant="success"
         size="sm"
         onClick={() =>
-          setMode(job.bookingFlow === "quote_v1" ? "quote" : "accept")
+          setMode(
+            ["quote_v1", "quote_v2"].includes(job.bookingFlow)
+              ? "quote"
+              : "accept",
+          )
         }
       >
-        {job.bookingFlow === "quote_v1"
+        {["quote_v1", "quote_v2"].includes(job.bookingFlow)
           ? copy("booking-provider.dashboard.quote-start")
           : copy("booking-provider.dashboard.accept")}
       </Button>
@@ -88,6 +110,16 @@ export function RequestActions({ job }: { job: RequestJob }) {
           onClick={() => setMode("counter")}
         >
           Suggest another time
+        </Button>
+      ) : null}
+      {job.bookingFlow === "quote_v2" ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => setMode("quoteCounter")}
+        >
+          Offer other days
         </Button>
       ) : null}
       <Button
@@ -198,6 +230,49 @@ function SendQuotePanel({
       <form action={formAction} className="mt-4 space-y-2">
         <FormLoader />
         <input type="hidden" name="bookingId" value={job.id} />
+        {job.bookingFlow === "quote_v2" ? (
+          <>
+            <label
+              htmlFor={`quote-start-${job.id}`}
+              className="block text-sm font-medium text-ink"
+            >
+              Exact start time
+            </label>
+            <Input
+              id={`quote-start-${job.id}`}
+              name="scheduledLocal"
+              type="datetime-local"
+              required
+            />
+            <FieldHint>
+              Start within{" "}
+              {job.requestedDaypart
+                ? QUOTE_DAYPART_LABELS[job.requestedDaypart]
+                : "the requested window"}{" "}
+              on {job.requestedDate ?? "the requested date"}.
+            </FieldHint>
+            <label
+              htmlFor={`quote-duration-${job.id}`}
+              className="block text-sm font-medium text-ink"
+            >
+              Private calendar estimate
+            </label>
+            <Input
+              id={`quote-duration-${job.id}`}
+              name="estimatedMinutes"
+              type="number"
+              min={60}
+              max={720}
+              step={15}
+              defaultValue={job.privateEstimatedMinutes ?? 120}
+              required
+            />
+            <FieldHint>
+              Minutes reserved on your calendar; the customer does not see this
+              estimate and it cannot change the fixed quote.
+            </FieldHint>
+          </>
+        ) : null}
         <label
           htmlFor={`quote-${job.id}`}
           className="block text-sm font-medium text-ink"
@@ -241,6 +316,139 @@ function SendQuotePanel({
         </div>
       </form>
     </div>
+  );
+}
+
+function QuoteCounterPanel({
+  job,
+  onCancel,
+}: {
+  job: RequestJob;
+  onCancel: () => void;
+}) {
+  const [state, formAction] = useActionState(counterQuote, {});
+  const [options, setOptions] = useState<
+    Array<{ localDate: string; daypart: QuoteDaypart }>
+  >([{ localDate: "", daypart: "either" }]);
+
+  return (
+    <form action={formAction} className="mt-3 space-y-3 rounded-xl border border-line bg-court p-3">
+      <FormLoader />
+      <input type="hidden" name="bookingId" value={job.id} />
+      <input type="hidden" name="options" value={JSON.stringify(options)} />
+      <div>
+        <p className="text-sm font-medium text-ink">Offer other days</p>
+        <FieldHint>
+          Offer up to three different dates. The customer will choose one and
+          send the request back to you.
+        </FieldHint>
+      </div>
+      <label
+        htmlFor={`counter-duration-${job.id}`}
+        className="block text-sm font-medium text-ink"
+      >
+        Private job estimate
+      </label>
+      <Input
+        id={`counter-duration-${job.id}`}
+        name="estimatedMinutes"
+        type="number"
+        min={60}
+        max={720}
+        step={15}
+        defaultValue={job.privateEstimatedMinutes ?? 120}
+        required
+      />
+      {options.map((option, index) => (
+        <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+          <Input
+            type="date"
+            aria-label={`Alternative date ${index + 1}`}
+            value={option.localDate}
+            required
+            onChange={(event) =>
+              setOptions((current) =>
+                current.map((item, itemIndex) =>
+                  itemIndex === index
+                    ? { ...item, localDate: event.target.value }
+                    : item,
+                ),
+              )
+            }
+          />
+          <Select
+            aria-label={`Alternative daypart ${index + 1}`}
+            value={option.daypart}
+            onChange={(event) =>
+              setOptions((current) =>
+                current.map((item, itemIndex) =>
+                  itemIndex === index
+                    ? {
+                        ...item,
+                        daypart: event.target.value as QuoteDaypart,
+                      }
+                    : item,
+                ),
+              )
+            }
+          >
+            {QUOTE_DAYPARTS.map((daypart) => (
+              <option key={daypart} value={daypart}>
+                {QUOTE_DAYPART_LABELS[daypart]}
+              </option>
+            ))}
+          </Select>
+          {options.length > 1 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                setOptions((current) =>
+                  current.filter((_, itemIndex) => itemIndex !== index),
+                )
+              }
+            >
+              Remove
+            </Button>
+          ) : null}
+        </div>
+      ))}
+      {options.length < 3 ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() =>
+            setOptions((current) => [
+              ...current,
+              { localDate: "", daypart: "either" },
+            ])
+          }
+        >
+          Add another day
+        </Button>
+      ) : null}
+      <Textarea
+        name="note"
+        rows={2}
+        maxLength={500}
+        placeholder="Optional note for the customer"
+      />
+      <FieldError>{state.error}</FieldError>
+      <div className="flex gap-2">
+        <SubmitButton variant="primary" pendingLabel="Sending…">
+          Send alternatives
+        </SubmitButton>
+        <button
+          type="button"
+          onClick={onCancel}
+          className={buttonClasses({ variant: "ghost", size: "sm" })}
+        >
+          Back
+        </button>
+      </div>
+    </form>
   );
 }
 

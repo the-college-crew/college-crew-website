@@ -27,17 +27,25 @@ export default async function AdminBookingsPage() {
   await requireRole("admin");
   const admin = createAdminClient();
 
-  const { data } = await admin
-    .from("bookings")
-    .select(
-      `id, status, scheduled_at, service_name_snapshot,
-       customer_name_snapshot, provider_display_name_snapshot,
-       dispute:booking_disputes(status)`,
-    )
-    .eq("booking_flow", "hourly_v1")
-    .in("status", OVERSIGHT_STATUSES)
-    .order("scheduled_at", { ascending: false })
-    .limit(100);
+  const [{ data }, { data: failedDrafts }] = await Promise.all([
+    admin
+      .from("bookings")
+      .select(
+        `id, status, scheduled_at, requested_local_date, service_name_snapshot,
+         customer_name_snapshot, provider_display_name_snapshot,
+         dispute:booking_disputes(status)`,
+      )
+      .in("booking_flow", ["hourly_v1", "quote_v2"])
+      .in("status", OVERSIGHT_STATUSES)
+      .order("scheduled_at", { ascending: false })
+      .limit(100),
+    admin
+      .from("booking_drafts")
+      .select("id, expires_at, cleanup_attempt_count, cleanup_last_error")
+      .eq("cleanup_status", "failed")
+      .order("expires_at", { ascending: false })
+      .limit(25),
+  ]);
 
   const bookings = data ?? [];
 
@@ -50,8 +58,26 @@ export default async function AdminBookingsPage() {
       />
       <PageHeader
         title="Booking oversight"
-        description="Active and recently-closed hourly bookings. Open one to review the timeline, money, and any dispute."
+        description="Active and recently-closed hourly and quote bookings, including payment and cleanup exceptions."
       />
+      {failedDrafts?.length ? (
+        <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <p className="font-semibold">
+            {failedDrafts.length} expired payment hold cleanup
+            {failedDrafts.length === 1 ? "" : "s"} need attention
+          </p>
+          <ul className="mt-2 space-y-1 text-xs">
+            {failedDrafts.map((draft) => (
+              <li key={draft.id}>
+                Draft {draft.id.slice(0, 8)} · {draft.cleanup_attempt_count} attempts
+                {draft.cleanup_last_error
+                  ? ` · ${draft.cleanup_last_error}`
+                  : ""}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
       {bookings.length === 0 ? (
         <EmptyState title="No hourly bookings yet">
           Active and closed hourly bookings will show up here for oversight.
@@ -81,7 +107,10 @@ export default async function AdminBookingsPage() {
                           {booking.provider_display_name_snapshot ?? "Provider"}
                         </p>
                         <p className="mt-0.5 text-xs text-mist">
-                          {formatDateTime(booking.scheduled_at)}
+                          {booking.scheduled_at
+                            ? formatDateTime(booking.scheduled_at)
+                            : booking.requested_local_date ??
+                              "Exact time pending"}
                         </p>
                       </div>
                       <StatusPill status={booking.status} />

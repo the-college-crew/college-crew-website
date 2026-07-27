@@ -14,6 +14,7 @@ import {
   releaseFirstHourHold,
 } from "@/lib/booking/first-hour-hold";
 import { pilotLocalDateTimeToUtc } from "@/lib/booking/policy";
+import { QUOTE_DAYPARTS } from "@/lib/booking/quote-dayparts";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import type { BookingStatus } from "@/lib/db/types";
 import {
@@ -255,6 +256,23 @@ export async function sendQuote(
 ): Promise<BookingRequestActionState> {
   const session = await requireProviderAccess();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const schedule = z
+    .object({
+      scheduledLocal: z.string().min(1, "Choose the exact start time."),
+      estimatedMinutes: z.coerce
+        .number()
+        .int()
+        .min(60)
+        .max(720)
+        .refine((value) => value % 15 === 0, "Use 15-minute increments."),
+    })
+    .safeParse({
+      scheduledLocal: formData.get("scheduledLocal"),
+      estimatedMinutes: formData.get("estimatedMinutes"),
+    });
+  if (!schedule.success) return { error: schedule.error.issues[0].message };
+  const scheduled = pilotLocalDateTimeToUtc(schedule.data.scheduledLocal);
+  if (!scheduled.ok) return { error: "Choose a valid exact start time." };
   const parsedQuote = parseAverageQuoteInput(formData.get("quoteAmount"));
   if (!parsedQuote.success || parsedQuote.cents === null) {
     return {
@@ -280,6 +298,8 @@ export async function sendQuote(
   const { error } = await supabase.rpc("send_booking_quote", {
     p_booking_id: bookingId,
     p_quote_cents: parsedQuote.cents,
+    p_scheduled_at: scheduled.date.toISOString(),
+    p_estimated_minutes: schedule.data.estimatedMinutes,
   });
   if (error) {
     return {
@@ -298,6 +318,62 @@ export async function sendQuote(
   revalidatePath("/provider/jobs");
   revalidatePath("/dashboard");
   redirect(`/messages/${conversationId}`);
+}
+
+const quoteCounterSchema = z.object({
+  bookingId: z.string().uuid(),
+  estimatedMinutes: z.coerce
+    .number()
+    .int()
+    .min(60, "Estimate at least one hour.")
+    .max(720, "Estimate no more than 12 hours.")
+    .refine((value) => value % 15 === 0, "Use 15-minute increments."),
+  note: z.string().trim().max(500).optional().default(""),
+  options: z
+    .array(
+      z.object({
+        localDate: z.string().date(),
+        daypart: z.enum(QUOTE_DAYPARTS),
+      }),
+    )
+    .min(1, "Offer at least one alternative.")
+    .max(3, "Offer no more than three alternatives."),
+});
+
+export async function counterQuote(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireProviderAccess();
+  let options: unknown = null;
+  try {
+    options = JSON.parse(String(formData.get("options") ?? ""));
+  } catch {
+    return { error: "Add at least one valid alternative." };
+  }
+  const parsed = quoteCounterSchema.safeParse({
+    bookingId: formData.get("bookingId"),
+    estimatedMinutes: formData.get("estimatedMinutes"),
+    note: formData.get("note"),
+    options,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("counter_quote_booking_request", {
+    p_booking_id: parsed.data.bookingId,
+    p_estimated_minutes: parsed.data.estimatedMinutes,
+    p_options: parsed.data.options,
+    p_note: parsed.data.note,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not send those alternatives."),
+    };
+  }
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/dashboard");
+  return {};
 }
 
 /**
@@ -380,8 +456,15 @@ export async function cancelBookingAsProvider(
     .parse(formData.get("reason"));
 
   const supabase = await createClient();
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("booking_flow")
+    .eq("id", bookingId)
+    .maybeSingle();
   const { data: result, error } = await supabase.rpc(
-    "cancel_booking_as_provider",
+    booking?.booking_flow === "quote_v2"
+      ? "cancel_quote_booking_as_provider"
+      : "cancel_booking_as_provider",
     { p_booking_id: bookingId, p_reason: reason },
   );
   if (error) {
@@ -467,6 +550,51 @@ export async function submitInvoice(
   if (error) {
     return {
       error: requestOperationMessage(error, "Could not submit the invoice."),
+    };
+  }
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  redirect(`/provider/jobs/${bookingId}/complete`);
+}
+
+/** Submit the immutable quote total; no provider-entered amount can change it. */
+export async function submitQuoteInvoice(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireProviderAccess();
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("submit_quote_invoice", {
+    p_booking_id: bookingId,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not submit the quote invoice."),
+    };
+  }
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/jobs");
+  redirect(`/provider/jobs/${bookingId}/complete`);
+}
+
+export async function settleQuoteJobInCash(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireProviderAccess();
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  if (formData.get("confirmed") !== "on") {
+    return { error: "Confirm the customer paid the remaining balance in person." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("settle_quote_job_in_cash", {
+    p_booking_id: bookingId,
+    p_confirmed: true,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not record the cash payment."),
     };
   }
   revalidatePath("/provider/dashboard");

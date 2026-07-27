@@ -1,5 +1,7 @@
 import Stripe from "npm:stripe@22";
 
+import { createAdminClient } from "./admin.ts";
+
 /**
  * The slice of apps/web/lib/stripe/{server,connect}.ts the scheduler needs:
  * the balance-charge create/confirm pair used by the invoice autocharge.
@@ -183,4 +185,77 @@ export async function confirmBalancePaymentIntent(input: {
       status: current.status,
     };
   }
+}
+
+/** Retry-safe capture of the first-hour authorization after provider accept. */
+export async function captureFirstHourHold(
+  bookingId: string,
+): Promise<"captured" | "already" | "not_found" | "unconfigured"> {
+  const admin = createAdminClient();
+  const { data: payment } = await admin
+    .from("booking_payments")
+    .select("stripe_payment_intent_id, status")
+    .eq("booking_id", bookingId)
+    .eq("kind", "first_hour")
+    .maybeSingle();
+  if (!payment?.stripe_payment_intent_id) return "not_found";
+  if (payment.status === "succeeded") return "already";
+  const stripe = getStripe();
+  if (!stripe) return "unconfigured";
+  try {
+    await stripe.paymentIntents.capture(
+      payment.stripe_payment_intent_id,
+      {},
+      { idempotencyKey: `fhcap_${bookingId}` },
+    );
+  } catch {
+    const current = await stripe.paymentIntents.retrieve(
+      payment.stripe_payment_intent_id,
+    );
+    if (current.status !== "succeeded") throw new Error("CaptureFailed");
+  }
+  return "captured";
+}
+
+/** Release an un-captured first-hour hold after timeout or capture failure. */
+export async function releaseFirstHourHold(
+  bookingId: string,
+): Promise<"released" | "skip" | "not_found" | "unconfigured"> {
+  const admin = createAdminClient();
+  const { data: payment } = await admin
+    .from("booking_payments")
+    .select("id, stripe_payment_intent_id, status")
+    .eq("booking_id", bookingId)
+    .eq("kind", "first_hour")
+    .maybeSingle();
+  if (!payment?.stripe_payment_intent_id) return "not_found";
+  if (payment.status !== "authorized") return "skip";
+  const stripe = getStripe();
+  if (!stripe) return "unconfigured";
+  const current = await stripe.paymentIntents.retrieve(
+    payment.stripe_payment_intent_id,
+  );
+  if (current.status === "requires_capture" || current.status === "requires_payment_method") {
+    await stripe.paymentIntents.cancel(payment.stripe_payment_intent_id);
+  }
+  await admin
+    .from("booking_payments")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("id", payment.id)
+    .neq("status", "succeeded");
+  return "released";
+}
+
+export async function cancelPaymentAuthorization(
+  paymentIntentId: string,
+): Promise<"cancelled" | "already_cancelled" | "unconfigured"> {
+  const stripe = getStripe();
+  if (!stripe) return "unconfigured";
+  const current = await stripe.paymentIntents.retrieve(paymentIntentId);
+  if (current.status === "canceled") return "already_cancelled";
+  if (current.status === "succeeded" || current.status === "processing") {
+    throw new Error("DraftAuthorizationAlreadyCaptured");
+  }
+  await stripe.paymentIntents.cancel(paymentIntentId);
+  return "cancelled";
 }

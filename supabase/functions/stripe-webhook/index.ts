@@ -162,7 +162,10 @@ async function handleEvent(
   switch (event.type) {
     case "payment_intent.succeeded": {
       const intent = event.data.object as Stripe.PaymentIntent;
-      if (intent.metadata.payment_kind === "first_hour") {
+      if (
+        intent.metadata.payment_kind === "first_hour" ||
+        intent.metadata.payment_kind === "quote_deposit"
+      ) {
         await settleFirstHour(admin, stripe, event, intent);
       } else if (intent.metadata.payment_kind === "balance") {
         await admin.rpc("settle_balance_payment", {
@@ -182,8 +185,11 @@ async function handleEvent(
     }
     case "payment_intent.payment_failed": {
       const intent = event.data.object as Stripe.PaymentIntent;
-      if (intent.metadata.payment_kind === "first_hour") {
-        await admin.rpc("mark_first_hour_payment_unsuccessful", {
+      if (
+        intent.metadata.payment_kind === "first_hour" ||
+        intent.metadata.payment_kind === "quote_deposit"
+      ) {
+        await admin.rpc("mark_upfront_payment_unsuccessful", {
           p_stripe_payment_intent_id: intent.id,
           p_target_status: "failed",
           p_failure_code: intent.last_payment_error?.code ?? undefined,
@@ -201,8 +207,11 @@ async function handleEvent(
     }
     case "payment_intent.canceled": {
       const intent = event.data.object as Stripe.PaymentIntent;
-      if (intent.metadata.payment_kind === "first_hour") {
-        await admin.rpc("mark_first_hour_payment_unsuccessful", {
+      if (
+        intent.metadata.payment_kind === "first_hour" ||
+        intent.metadata.payment_kind === "quote_deposit"
+      ) {
+        await admin.rpc("mark_upfront_payment_unsuccessful", {
           p_stripe_payment_intent_id: intent.id,
           p_target_status: "cancelled",
           p_failure_code: intent.cancellation_reason ?? "canceled",
@@ -294,12 +303,12 @@ async function settleFirstHour(
   const refund = await stripe.refunds.create(
     {
       payment_intent: intent.id,
-      reverse_transfer: true,
-      refund_application_fee: true,
+      reverse_transfer: Boolean(intent.transfer_data),
+      refund_application_fee: Boolean(intent.transfer_data),
     },
     { idempotencyKey: `fhr_${bookingId}` },
   );
-  await admin.rpc("record_first_hour_refund", {
+  await admin.rpc("reconcile_stripe_refund", {
     p_stripe_payment_intent_id: intent.id,
     p_reason: "late_success_after_deadline",
     p_stripe_refund_id: refund.id,

@@ -70,3 +70,41 @@ export async function rejectCounterOffer(
 
   redirect(`/bookings/${bookingId}/replace`);
 }
+
+export async function selectQuoteCounterOption(
+  _previous: CounterOfferState,
+  formData: FormData,
+): Promise<CounterOfferState> {
+  await requireRole("customer", "/dashboard");
+  const bookingId = idSchema.parse(formData.get("bookingId"));
+  const optionId = idSchema.parse(formData.get("optionId"));
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("select_quote_counter_option", {
+    p_booking_id: bookingId,
+    p_option_id: optionId,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not select that option."),
+    };
+  }
+  redirect("/dashboard?countered=selected");
+}
+
+export async function rejectQuoteCounter(
+  _previous: CounterOfferState,
+  formData: FormData,
+): Promise<CounterOfferState> {
+  await requireRole("customer", "/dashboard");
+  const bookingId = idSchema.parse(formData.get("bookingId"));
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("withdraw_quote_negotiation", {
+    p_booking_id: bookingId,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not decline those options."),
+    };
+  }
+  redirect(`/bookings/${bookingId}/replace`);
+}

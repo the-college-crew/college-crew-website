@@ -31,7 +31,7 @@ describe("published legal content", () => {
       "603a6f06820600bed07b092e4281c1d94e8f8b5d56b7dc9fe1c6e307d2047dd8",
     );
     expect(hash(getCustomerBookingTermsSnapshot())).toBe(
-      "6c1466f50728eb4208fab6b006df9544219ab253b0690170ded587fdf3093e95",
+      "4d0c985ce3809af8b6dacd25728ae38677164470553f2f2ac440d7a2e79f7c9d",
     );
     expect(hash(getProviderTermsSnapshot())).toBe(
       "f0f882fde99647191d17ee6ffa74a33e636ffe6dc8550b0d63cbb6c055973aad",

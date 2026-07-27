@@ -29,6 +29,18 @@ const COPY: Record<
     body: "Your student can’t make the time you picked and suggested another one. Accept it or turn it down — you’re not charged either way until you accept.",
     ctaLabel: "Review the new time",
   },
+  quote_counter_options: {
+    subject: "Your College Crew student offered other dates",
+    heading: "Choose a new date window",
+    body: "Your student offered up to three other date windows. Choose one before the options expire, or find another provider.",
+    ctaLabel: "Review date options",
+  },
+  quote_option_selected: {
+    subject: "A customer selected your College Crew date option",
+    heading: "Finish the quote",
+    body: "The customer selected one of your date windows. Set the exact start time and send the fixed quote before the new response deadline.",
+    ctaLabel: "Finish the quote",
+  },
   request_declined: {
     subject: "College Crew request update",
     heading: "The provider declined this request",
@@ -58,6 +70,22 @@ const COPY: Record<
     subject: "College Crew booking confirmed",
     heading: "Your job is booked",
     body: "Your first-hour payment succeeded and the provider’s time is reserved.",
+  },
+  quote_deposit_due: {
+    subject: "Your College Crew quote is ready",
+    heading: "Review your final quote",
+    body: "Accept the fixed quote and pay the 20% deposit before the payment window closes to reserve the provider’s time.",
+    ctaLabel: "Review and pay deposit",
+  },
+  quote_deposit_receipt: {
+    subject: "College Crew booking confirmed",
+    heading: "Your job is booked",
+    body: "Your 20% deposit succeeded and the provider’s time is reserved. The fixed remaining balance is due after the job.",
+  },
+  quote_deposit_booked_job: {
+    subject: "College Crew quote booking confirmed",
+    heading: "The customer accepted your quote",
+    body: "The 20% deposit is paid and held by College Crew, and this job is now on your schedule.",
   },
   booked_job: {
     subject: "College Crew job confirmed",
@@ -175,7 +203,12 @@ function dashboardPath(context: BookingEmailContext) {
   if (context.template === "response_alert" && context.bookingId) {
     return `/bookings/${encodeURIComponent(context.bookingId)}/replace`;
   }
-  if (context.template === "counter_offer_received" && context.bookingId) {
+  if (
+    ["counter_offer_received", "quote_counter_options"].includes(
+      context.template,
+    ) &&
+    context.bookingId
+  ) {
     return `/bookings/${encodeURIComponent(context.bookingId)}/counter`;
   }
   if (context.template === "final_payment_success" && context.bookingId) {
