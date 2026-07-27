@@ -29,7 +29,7 @@ export function CancelBookingButton({
   };
   const [state, formAction, pending] = useActionState(cancelBooking, {});
   return (
-    <form action={formAction} className="space-y-1">
+    <form action={formAction} className="flex flex-col space-y-1">
       <input type="hidden" name="bookingId" value={bookingId} />
       {outcome && !state.policyResult ? (
         <p className="text-xs text-ink-soft">{outcomeCopy[outcome]}</p>
