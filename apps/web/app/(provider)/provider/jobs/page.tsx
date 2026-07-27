@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { openConversationForBooking } from "@/app/actions/messaging";
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { StatusPill } from "@/components/status-pill";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -24,6 +25,11 @@ import {
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
 import type { BookingFlow, BookingStatus } from "@/lib/db/types";
+import {
+  bookingCopyValue,
+  type BookingCopyOverrides,
+} from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney, formatOfferedPrice } from "@/lib/utils";
 
@@ -65,18 +71,24 @@ type JobRow = {
 
 /** Upcoming jobs + read-only pricing (editing lives in Profile & settings). */
 export default async function ProviderJobsPage() {
-  const session = await requireProviderAccess("/provider/jobs");
+  const [session, copyOverrides] = await Promise.all([
+    requireProviderAccess("/provider/jobs"),
+    getBookingCopyOverrides("provider"),
+  ]);
   const demoPreview = await getDemoPreview("provider");
   if (demoPreview) {
     return (
-      <ProviderJobsView
-        profile={demoProviderProfile}
-        jobs={demoBookings.filter((booking) =>
-          ["accepted", "paid"].includes(booking.status),
-        ) as unknown as JobRow[]}
-        offerings={demoOfferings}
-        demo
-      />
+      <BookingCopyProvider overrides={copyOverrides}>
+        <ProviderJobsView
+          profile={demoProviderProfile}
+          jobs={demoBookings.filter((booking) =>
+            ["accepted", "paid"].includes(booking.status),
+          ) as unknown as JobRow[]}
+          offerings={demoOfferings}
+          copyOverrides={copyOverrides}
+          demo
+        />
+      </BookingCopyProvider>
     );
   }
 
@@ -125,11 +137,14 @@ export default async function ProviderJobsPage() {
   );
 
   return (
-    <ProviderJobsView
-      profile={profile}
-      jobs={jobs}
-      offerings={liveOfferings}
-    />
+    <BookingCopyProvider overrides={copyOverrides}>
+      <ProviderJobsView
+        profile={profile}
+        jobs={jobs}
+        offerings={liveOfferings}
+        copyOverrides={copyOverrides}
+      />
+    </BookingCopyProvider>
   );
 }
 
@@ -137,6 +152,7 @@ function ProviderJobsView({
   profile,
   jobs,
   offerings,
+  copyOverrides,
   demo = false,
 }: {
   profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
@@ -148,8 +164,13 @@ function ProviderJobsView({
     average_quote_cents: number | null;
     service: { name: string; is_live?: boolean };
   }[];
+  copyOverrides: BookingCopyOverrides;
   demo?: boolean;
 }) {
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   return (
     <div className="space-y-8">
       {demo ? null : (
@@ -170,8 +191,8 @@ function ProviderJobsView({
         </>
       )}
       <PageHeader
-        title="Jobs & pricing"
-        description="Your upcoming jobs, and the pricing customers currently see."
+        title={copy("booking-provider.jobs.title")}
+        description={copy("booking-provider.jobs.description")}
       />
       {demo ? <SamplePreviewBanner role="provider" /> : null}
 
@@ -184,9 +205,8 @@ function ProviderJobsView({
         </h2>
         <div className="mt-3 space-y-3">
           {jobs.length === 0 ? (
-            <EmptyState title="No jobs on the books">
-              Accepted and paid bookings show up here with everything you need
-              to show up and get it done.
+            <EmptyState title={copy("booking-provider.jobs.empty-title")}>
+              {copy("booking-provider.jobs.empty-body")}
             </EmptyState>
           ) : (
             jobs.map((job) => (

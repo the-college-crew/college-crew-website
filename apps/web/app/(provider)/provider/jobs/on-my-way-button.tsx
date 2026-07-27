@@ -1,15 +1,19 @@
 "use client";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { Button } from "@/components/ui/button";
 
 import { markEnRoute } from "../actions";
 
 export function OnMyWayButton({ bookingId }: { bookingId: string }) {
+  const copy = useBookingCopy();
   return (
     <form
       action={markEnRoute}
       onSubmit={(event) => {
-        if (!window.confirm("Notify the customer that you are on the way?")) {
+        if (
+          !window.confirm(copy("booking-provider.jobs.on-way-confirm"))
+        ) {
           event.preventDefault();
         }
       }}

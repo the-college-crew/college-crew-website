@@ -3,6 +3,7 @@
 import { ImagePlus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { FieldError, FieldHint, Label } from "@/components/ui/field";
 import {
   JOB_PHOTOS_BUCKET,
@@ -46,6 +47,7 @@ export function JobPhotoPicker({
   /** Fires with the uploaded manifest so the parent can gate submit. */
   onChange: (photos: JobPhoto[]) => void;
 }) {
+  const copy = useBookingCopy();
   const [slots, setSlots] = useState<Slot[]>([]);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -91,7 +93,11 @@ export function JobPhotoPicker({
 
     const remaining = MAX_JOB_PHOTOS - slots.length;
     if (remaining <= 0) {
-      setError(`Attach up to ${MAX_JOB_PHOTOS} photos.`);
+      setError(
+        copy("booking-customer.request.photo-capacity-error", {
+          max_photos: MAX_JOB_PHOTOS,
+        }),
+      );
       return;
     }
     // Validate the batch as if it were the whole set, so the per-file type and
@@ -104,7 +110,11 @@ export function JobPhotoPicker({
     }
     if (picked.length > remaining) {
       setError(
-        `Only the first ${remaining} photo${remaining === 1 ? "" : "s"} were added. ${MAX_JOB_PHOTOS} is the maximum.`,
+        copy("booking-customer.request.photo-truncated-error", {
+          added_count: remaining,
+          photo_word: remaining === 1 ? "photo" : "photos",
+          max_photos: MAX_JOB_PHOTOS,
+        }),
       );
     }
 
@@ -135,7 +145,7 @@ export function JobPhotoPicker({
           const reason =
             uploadError instanceof Error
               ? uploadError.message
-              : "Upload failed.";
+              : copy("booking-customer.request.photo-generic-error");
           setSlots((current) =>
             current.map((item) =>
               item.localId === slot.localId
@@ -174,7 +184,10 @@ export function JobPhotoPicker({
   return (
     <div>
       <Label htmlFor="jobPhotosInput">
-        Job site photos <span className="text-quad-700">(required)</span>
+        {copy("booking-customer.request.photo-label")}{" "}
+        <span className="text-quad-700">
+          {copy("booking-customer.request.photo-required")}
+        </span>
       </Label>
 
       <input type="hidden" name="jobPhotos" value={JSON.stringify(ready)} />
@@ -197,7 +210,7 @@ export function JobPhotoPicker({
             {slot.status === "uploading" ? (
               <div className="absolute inset-0 grid place-items-center bg-ink/45">
                 <span className="animate-pulse text-xs font-medium text-white">
-                  Uploading
+                  {copy("booking-customer.request.photo-uploading")}
                 </span>
               </div>
             ) : null}
@@ -205,7 +218,7 @@ export function JobPhotoPicker({
             {slot.status === "error" ? (
               <div className="absolute inset-0 grid place-items-center bg-ink/70 p-1">
                 <span className="text-center text-[11px] font-medium leading-tight text-white">
-                  Upload failed
+                  {copy("booking-customer.request.photo-upload-failed")}
                 </span>
               </div>
             ) : null}
@@ -232,7 +245,9 @@ export function JobPhotoPicker({
             >
               <ImagePlus aria-hidden className="size-5" strokeWidth={1.75} />
               <span className="text-xs font-medium">
-                {slots.length === 0 ? "Add photos" : "Add more"}
+                {slots.length === 0
+                  ? copy("booking-customer.request.photo-add")
+                  : copy("booking-customer.request.photo-add-more")}
               </span>
             </button>
           </li>
@@ -252,8 +267,14 @@ export function JobPhotoPicker({
 
       <FieldHint>
         {slots.length === 0
-          ? `Show the space, the items, and how a truck or hose would reach them. Up to ${MAX_JOB_PHOTOS} photos, ${MAX_JOB_PHOTO_BYTES / 1024 / 1024} MB each.`
-          : `${ready.length} of ${MAX_JOB_PHOTOS} photos ready. Your student sees these with the request.`}
+          ? copy("booking-customer.request.photo-empty-hint", {
+              max_photos: MAX_JOB_PHOTOS,
+              max_mb: MAX_JOB_PHOTO_BYTES / 1024 / 1024,
+            })
+          : copy("booking-customer.request.photo-ready-hint", {
+              ready_count: ready.length,
+              max_photos: MAX_JOB_PHOTOS,
+            })}
       </FieldHint>
 
       <FieldError>{error}</FieldError>

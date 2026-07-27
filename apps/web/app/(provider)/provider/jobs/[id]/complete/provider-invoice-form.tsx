@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import {
@@ -30,12 +31,15 @@ function MoneyPreview({
   rateCents: number;
   minutes: number;
 }) {
+  const copy = useBookingCopy();
   const allocation = calculateInvoiceAllocation(rateCents, minutes);
   return (
     <div className="rounded-2xl border border-line bg-white p-5 text-sm">
       <dl className="space-y-2">
         <div className="flex justify-between gap-4">
-          <dt className="text-mist">Invoice total</dt>
+          <dt className="text-mist">
+            {copy("booking-provider.invoice.total-label")}
+          </dt>
           <dd>{formatMoney(allocation.subtotalCents)}</dd>
         </div>
         <div className="flex justify-between gap-4">
@@ -43,7 +47,9 @@ function MoneyPreview({
           <dd>– {formatMoney(allocation.totalPlatformFeeCents)}</dd>
         </div>
         <div className="flex justify-between gap-4 border-t border-line pt-2">
-          <dt className="font-semibold">Your payout</dt>
+          <dt className="font-semibold">
+            {copy("booking-provider.invoice.payout-label")}
+          </dt>
           <dd className="font-semibold text-quad-700">
             {formatMoney(
               allocation.subtotalCents - allocation.totalPlatformFeeCents,
@@ -82,6 +88,7 @@ export function ProviderInvoiceForm({
   measuredMinutes: number;
   rateCents: number;
 }) {
+  const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState<
     BookingRequestActionState,
     FormData
@@ -266,7 +273,9 @@ export function ProviderInvoiceForm({
           className="w-full"
           disabled={cashPending || !cashValid || !cashConfirmed}
         >
-          {cashPending ? "Recording…" : "Confirm cash payment & finish"}
+          {cashPending
+            ? "Recording…"
+            : copy("booking-provider.invoice.cash-submit")}
         </Button>
         <Button
           type="button"
@@ -337,7 +346,9 @@ export function ProviderInvoiceForm({
             maxLength={2000}
             required
             className="mt-2 w-full rounded-lg border border-gold-300 bg-white px-3 py-2 text-sm"
-            placeholder="e.g. The yard was larger than described and needed a second pass."
+            placeholder={copy(
+              "booking-provider.invoice.overage-placeholder",
+            )}
           />
         </div>
       ) : (
@@ -352,7 +363,9 @@ export function ProviderInvoiceForm({
         className="w-full"
         disabled={pending || !valid}
       >
-        {pending ? "Submitting…" : "Submit job complete & invoice"}
+        {pending
+          ? "Submitting…"
+          : copy("booking-provider.invoice.submit")}
       </Button>
       <Button
         type="button"

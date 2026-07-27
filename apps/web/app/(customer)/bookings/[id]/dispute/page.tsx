@@ -2,11 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { StatusPill } from "@/components/status-pill";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/session";
+import { LATE_DISPUTE_DAYS } from "@/lib/booking/policy";
+import { bookingCopyValue } from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
 
@@ -14,7 +18,7 @@ import { DisputeForm, type DisputeCategory } from "./dispute-form";
 
 export const metadata: Metadata = { title: "Report a problem" };
 
-const LATE_WINDOW_MS = 7 * 24 * 3_600_000;
+const LATE_WINDOW_MS = LATE_DISPUTE_DAYS * 24 * 3_600_000;
 
 const RESOLUTION_COPY: Record<string, string> = {
   approve_submitted_hours: "The submitted hours were approved.",
@@ -30,10 +34,19 @@ export default async function DisputePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ category?: string; opened?: string }>;
 }) {
-  const [{ id }, { category: categoryParam, opened }] = await Promise.all([
+  const [
+    { id },
+    { category: categoryParam, opened },
+    copyOverrides,
+  ] = await Promise.all([
     params,
     searchParams,
+    getBookingCopyOverrides("customer"),
   ]);
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   const user = await requireUser();
   const supabase = await createClient();
 
@@ -68,18 +81,23 @@ export default async function DisputePage({
   // Existing case: show it (customers can view but never re-open a duplicate).
   if (dispute) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="Your dispute" description={heading} />
+      <BookingCopyProvider overrides={copyOverrides}>
+        <div className="space-y-6">
+        <PageHeader
+          title={copy("booking-customer.dispute.existing-title")}
+          description={heading}
+        />
         {opened ? (
           <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-            Thanks. A founder will review this and follow up. Payment is paused
-            while it’s open.
+            {copy("booking-customer.dispute.opened")}
           </div>
         ) : null}
         <Card className="p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="font-display text-lg font-semibold">
-              {dispute.status === "resolved" ? "Resolved" : "Under review"}
+              {dispute.status === "resolved"
+                ? copy("booking-customer.dispute.resolved")
+                : copy("booking-customer.dispute.under-review")}
             </p>
             <StatusPill status={booking.status} />
           </div>
@@ -90,7 +108,9 @@ export default async function DisputePage({
             </div>
           </dl>
           <div className="mt-4 border-t border-line pt-4 text-sm">
-            <p className="text-mist">Your report</p>
+            <p className="text-mist">
+              {copy("booking-customer.dispute.report-label")}
+            </p>
             <p className="mt-1 whitespace-pre-wrap">{dispute.narrative}</p>
           </div>
           {dispute.status === "resolved" ? (
@@ -109,7 +129,8 @@ export default async function DisputePage({
             Back to bookings
           </Link>
         </Card>
-      </div>
+        </div>
+      </BookingCopyProvider>
     );
   }
 
@@ -143,14 +164,14 @@ export default async function DisputePage({
 
   if (!categories) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="Report a problem" description={heading} />
+      <BookingCopyProvider overrides={copyOverrides}>
+        <div className="space-y-6">
+        <PageHeader
+          title={copy("booking-customer.dispute.title")}
+          description={heading}
+        />
         <Card className="p-5 text-sm text-ink-soft">
-          <p>
-            This booking can’t be disputed right now. Disputes are available
-            while a job is underway, during invoice review, for a no-show after
-            the start time, or for seven days after the final payment.
-          </p>
+          <p>{copy("booking-customer.dispute.ineligible")}</p>
           <Link
             href="/dashboard"
             className={buttonClasses({ variant: "secondary", size: "sm" })}
@@ -159,13 +180,18 @@ export default async function DisputePage({
             Back to bookings
           </Link>
         </Card>
-      </div>
+        </div>
+      </BookingCopyProvider>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Report a problem" description={heading} />
+    <BookingCopyProvider overrides={copyOverrides}>
+      <div className="space-y-6">
+      <PageHeader
+        title={copy("booking-customer.dispute.title")}
+        description={heading}
+      />
       <Card className="p-5">
         <DisputeForm
           bookingId={booking.id}
@@ -181,6 +207,7 @@ export default async function DisputePage({
         . Opening a dispute pauses any pending final charge while a founder
         reviews it.
       </p>
-    </div>
+      </div>
+    </BookingCopyProvider>
   );
 }

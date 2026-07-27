@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireRole } from "@/lib/auth/session";
+import {
+  BOOKING_COPY_BY_KEY,
+  validateBookingCopyValue,
+} from "@/lib/content/booking-copy";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -47,21 +51,31 @@ export async function updateSiteContent(
 
   const parsedKey = keySchema.safeParse(key);
   const parsedValue = valueSchema.safeParse(value);
-  if (!parsedKey.success) return { ok: false, error: "Unknown content key" };
-  if (!parsedValue.success) {
-    return { ok: false, error: "Text must be 1–4000 characters" };
+  let safeKey: string;
+  let safeValue: string;
+  if (parsedKey.success) {
+    if (!parsedValue.success) {
+      return { ok: false, error: "Text must be 1–4000 characters" };
+    }
+    safeKey = parsedKey.data;
+    safeValue = parsedValue.data;
+  } else {
+    const bookingCopy = validateBookingCopyValue(key, value);
+    if (!bookingCopy.ok) return { ok: false, error: bookingCopy.error };
+    safeKey = bookingCopy.key;
+    safeValue = bookingCopy.value;
   }
 
   const admin = createAdminClient();
   const { error } = await admin.from("site_content").upsert({
-    key: parsedKey.data,
-    value: parsedValue.data,
+    key: safeKey,
+    value: safeValue,
     updated_by: session.user.id,
     updated_at: new Date().toISOString(),
   });
   if (error) return { ok: false, error: "Could not save — try again" };
 
-  revalidateFor(parsedKey.data);
+  revalidateFor(safeKey);
   return { ok: true };
 }
 
@@ -75,20 +89,37 @@ export async function resetSiteContent(
   }
 
   const parsedKey = keySchema.safeParse(key);
-  if (!parsedKey.success) return { ok: false, error: "Unknown content key" };
+  const bookingKey = key in BOOKING_COPY_BY_KEY ? key : null;
+  if (!parsedKey.success && !bookingKey) {
+    return { ok: false, error: "Unknown content key" };
+  }
+  const safeKey = parsedKey.success ? parsedKey.data : bookingKey!;
 
   const admin = createAdminClient();
   const { error } = await admin
     .from("site_content")
     .delete()
-    .eq("key", parsedKey.data);
+    .eq("key", safeKey);
   if (error) return { ok: false, error: "Could not reset — try again" };
 
-  revalidateFor(parsedKey.data);
+  revalidateFor(safeKey);
   return { ok: true };
 }
 
 function revalidateFor(key: string) {
+  const bookingField =
+    BOOKING_COPY_BY_KEY[key as keyof typeof BOOKING_COPY_BY_KEY];
+  if (bookingField) {
+    for (const route of bookingField.livePaths) {
+      if ("type" in route && route.type) {
+        revalidatePath(route.path, route.type);
+      } else {
+        revalidatePath(route.path);
+      }
+    }
+    revalidatePath("/admin/booking-copy");
+    return;
+  }
   const prefix = key.split(".")[0];
   if (prefix === "footer") {
     // The footer renders in the customer layout, on every page under it.

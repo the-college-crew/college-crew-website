@@ -3,12 +3,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { BookingFrom } from "@/components/booking-from";
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { LocationLine } from "@/components/provider-card";
 import { VerifiedBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getOwnProviderProfile, getSession } from "@/lib/auth/session";
+import { bookingCopyValue } from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { getProviderSchedule, getPublicProviderProfile } from "@/lib/db/queries";
 import {
   areBookingRequestsEnabled,
@@ -71,10 +74,15 @@ export default async function BookingPage({
     params,
     searchParams,
   ]);
-  const [session, bookingFrom] = await Promise.all([
+  const [session, bookingFrom, copyOverrides] = await Promise.all([
     getSession(),
     getBookingFrom(),
+    getBookingCopyOverrides("customer"),
   ]);
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   const origin = resolveBookingOrigin(bookingFrom, session?.profile ?? null);
   const provider = await getPublicProviderProfile(
     providerId,
@@ -129,9 +137,10 @@ export default async function BookingPage({
   }
 
   return (
-    // Wider than the other customer forms: the calendar and its time rail sit
-    // side by side, and squeezing them into the old measure breaks both.
-    <div className="mx-auto max-w-3xl space-y-6">
+    <BookingCopyProvider overrides={copyOverrides}>
+      {/* Wider than the other customer forms: the calendar and its time rail
+          sit side by side, and squeezing them into the old measure breaks both. */}
+      <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
         title={provider.display_name || "Request booking"}
         description={
@@ -147,15 +156,18 @@ export default async function BookingPage({
 
       {!requestsEnabled ? (
         <Card className="p-6 text-sm text-ink-soft">
-          <p className="font-semibold text-ink">Booking requests open soon.</p>
+          <p className="font-semibold text-ink">
+            {copy("booking-customer.request.paused-title")}
+          </p>
           <p className="mt-1">
-            Provider setup is underway, but customer requests are temporarily
-            paused.
+            {copy("booking-customer.request.paused-body")}
           </p>
         </Card>
       ) : !session ? (
         <Card className="p-6 text-sm text-ink-soft">
-          <p className="font-semibold text-ink">Log in to send this request.</p>
+          <p className="font-semibold text-ink">
+            {copy("booking-customer.request.login-title")}
+          </p>
           <Link
             href={`/login?next=${encodeURIComponent(`/book/${provider.id}`)}`}
             className={buttonClasses({ size: "sm", className: "mt-4" })}
@@ -165,17 +177,11 @@ export default async function BookingPage({
         </Card>
       ) : isAdmin ? (
         <Card className="p-6 text-sm text-ink-soft">
-          <p>
-            You&apos;re signed in as a founder. Founder accounts don&apos;t
-            send booking requests.
-          </p>
+          <p>{copy("booking-customer.request.admin-blocked")}</p>
         </Card>
       ) : isOwnListing ? (
         <Card className="p-6 text-sm text-ink-soft">
-          <p>
-            This is your own listing. You can book other providers, but not
-            yourself.
-          </p>
+          <p>{copy("booking-customer.request.own-listing")}</p>
         </Card>
       ) : bookableServices.length > 0 ? (
         <Card pennant className="p-6">
@@ -202,7 +208,7 @@ export default async function BookingPage({
         </Card>
       ) : (
         <Card className="p-6 text-sm text-ink-soft">
-          This provider is still completing booking setup.
+          {copy("booking-customer.request.setup-incomplete")}
         </Card>
       )}
 
@@ -214,6 +220,7 @@ export default async function BookingPage({
           ← Back to profile
         </Link>
       </p>
-    </div>
+      </div>
+    </BookingCopyProvider>
   );
 }
