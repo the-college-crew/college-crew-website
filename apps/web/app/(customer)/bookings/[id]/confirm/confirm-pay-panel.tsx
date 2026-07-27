@@ -9,6 +9,7 @@ import {
 import { loadStripe } from "@stripe/stripe-js";
 import { useActionState, useState } from "react";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -45,6 +46,7 @@ export function ConfirmPayPanel({
   simulateAllowed: boolean;
   consentLabel?: string;
 }) {
+  const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState<
     ConfirmPayState,
     FormData
@@ -85,10 +87,11 @@ export function ConfirmPayPanel({
         </form>
       ) : (
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
-          <p className="font-semibold">Payments aren&apos;t live yet.</p>
+          <p className="font-semibold">
+            {copy("booking-customer.confirm.payments-title")}
+          </p>
           <p className="mt-1">
-            Stripe isn&apos;t configured in this environment. This button
-            will run the real (test-mode) payment once it is.
+            {copy("booking-customer.confirm.payments-body")}
           </p>
           {simulateAllowed ? (
             <form action={simulatePayment} className="mt-3">
@@ -120,6 +123,7 @@ export function PaymentForm({
   /** Path segment under /bookings/[id] to return to after Stripe redirects. */
   returnPath?: "confirm" | "invoice";
 }) {
+  const copy = useBookingCopy();
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -141,7 +145,7 @@ export function PaymentForm({
 
     // Only validation/card errors land here — success navigates away.
     setError(
-      result.error.message ?? "Payment didn't go through. Please try again.",
+      result.error.message ?? copy("booking-customer.confirm.card-error"),
     );
     setSubmitting(false);
   }
@@ -155,7 +159,7 @@ export function PaymentForm({
         className="w-full"
         disabled={!stripe || !elements || submitting}
       >
-        {submitting ? "Paying…" : "Pay now"}
+        {submitting ? "Paying…" : copy("booking-customer.confirm.pay-now")}
       </Button>
       <p className="text-center text-xs text-mist">
         Test mode: use card 4242 4242 4242 4242, any future expiry, any CVC.

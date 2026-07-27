@@ -4,9 +4,14 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { openConversationForBooking } from "@/app/actions/messaging";
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { FormLoader } from "@/components/form-loader";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Textarea } from "@/components/ui/field";
+import {
+  BASIS_POINTS_SCALE,
+  PLATFORM_FEE_BPS,
+} from "@/lib/booking/policy";
 import type { BookingFlow } from "@/lib/db/types";
 
 import {
@@ -34,6 +39,7 @@ type RequestJob = {
  * render here — the page navigates away.
  */
 export function RequestActions({ job }: { job: RequestJob }) {
+  const copy = useBookingCopy();
   const [mode, setMode] = useState<
     "idle" | "accept" | "quote" | "decline" | "counter"
   >("idle");
@@ -70,7 +76,9 @@ export function RequestActions({ job }: { job: RequestJob }) {
           setMode(job.bookingFlow === "quote_v1" ? "quote" : "accept")
         }
       >
-        {job.bookingFlow === "quote_v1" ? "Send quote" : "Accept"}
+        {job.bookingFlow === "quote_v1"
+          ? copy("booking-provider.dashboard.quote-start")
+          : copy("booking-provider.dashboard.accept")}
       </Button>
       {canCounter ? (
         <Button
@@ -105,6 +113,7 @@ function CounterPanel({
   job: RequestJob;
   onCancel: () => void;
 }) {
+  const copy = useBookingCopy();
   const [state, formAction] = useActionState(counterBooking, {});
 
   return (
@@ -131,7 +140,9 @@ function CounterPanel({
         name="note"
         rows={2}
         maxLength={500}
-        placeholder="Optional: a quick word on why this time works better"
+        placeholder={copy(
+          "booking-provider.dashboard.counter-placeholder",
+        )}
       />
       <p className="text-xs text-mist">
         {job.customerName} chooses whether to take it. Nothing is charged unless
@@ -140,7 +151,7 @@ function CounterPanel({
       <FieldError>{state.error}</FieldError>
       <div className="flex gap-2">
         <SubmitButton variant="primary" pendingLabel="Sending…">
-          Suggest this time
+          {copy("booking-provider.dashboard.counter-submit")}
         </SubmitButton>
         <button
           type="button"
@@ -161,16 +172,16 @@ function SendQuotePanel({
   job: RequestJob;
   onCancel: () => void;
 }) {
+  const copy = useBookingCopy();
   const [state, formAction] = useActionState(sendQuote, {});
 
   return (
     <div className="mt-3 rounded-xl border border-viridian/25 bg-honeydew/40 p-3">
       <p className="font-display text-sm font-semibold text-viridian">
-        Send a final flat quote
+        {copy("booking-provider.dashboard.quote-title")}
       </p>
       <p className="mt-1 text-xs leading-5 text-ink-soft">
-        Review the job and any images or video first. Once sent, this price
-        cannot be edited for this request.
+        {copy("booking-provider.dashboard.quote-body")}
       </p>
 
       <form action={openConversationForBooking} className="mt-3">
@@ -180,7 +191,7 @@ function SendQuotePanel({
           type="submit"
           className={buttonClasses({ variant: "secondary", size: "sm" })}
         >
-          Open chat for media
+          {copy("booking-provider.dashboard.quote-chat")}
         </button>
       </form>
 
@@ -191,7 +202,7 @@ function SendQuotePanel({
           htmlFor={`quote-${job.id}`}
           className="block text-sm font-medium text-ink"
         >
-          Final quote
+          {copy("booking-provider.dashboard.quote-label")}
         </label>
         <div className="flex max-w-xs items-center rounded-xl border border-line bg-paper focus-within:border-viridian focus-within:ring-2 focus-within:ring-viridian/15">
           <span aria-hidden className="pl-3 text-sm font-semibold text-ink-soft">
@@ -210,13 +221,15 @@ function SendQuotePanel({
           />
         </div>
         <FieldHint>
-          The customer pays this exact amount. College Crew&apos;s 5% fee comes
-          from your payout.
+          {copy("booking-provider.dashboard.quote-hint", {
+            platform_fee_percent:
+              (PLATFORM_FEE_BPS / BASIS_POINTS_SCALE) * 100,
+          })}
         </FieldHint>
         <FieldError>{state.error}</FieldError>
         <div className="flex gap-2">
           <SubmitButton variant="success" pendingLabel="Sending...">
-            Send final quote
+            {copy("booking-provider.dashboard.quote-submit")}
           </SubmitButton>
           <button
             type="button"
@@ -243,6 +256,7 @@ function ConfirmPanel({
   job: RequestJob;
   onCancel: () => void;
 }) {
+  const copy = useBookingCopy();
   const [state, formAction] = useActionState(acceptBooking, {});
   const rows: [string, string][] = [
     ["Service", job.serviceName],
@@ -274,7 +288,10 @@ function ConfirmPanel({
         <input type="hidden" name="bookingId" value={job.id} />
         <FieldError>{state.error}</FieldError>
         <div className="flex gap-2">
-          <SubmitButton variant="success" pendingLabel="Accepting…">
+          <SubmitButton
+            variant="success"
+            pendingLabel={copy("booking-provider.dashboard.accepting")}
+          >
             Yes, I&apos;m in
           </SubmitButton>
           <button
@@ -297,6 +314,7 @@ function DeclinePanel({
   job: RequestJob;
   onCancel: () => void;
 }) {
+  const copy = useBookingCopy();
   const [note, setNote] = useState("");
   const [state, formAction] = useActionState(declineBooking, {});
 
@@ -317,7 +335,9 @@ function DeclinePanel({
         rows={3}
         value={note}
         onChange={(event) => setNote(event.target.value)}
-        placeholder="e.g. I can't make that time. I could do Saturday morning if you want to send a new request."
+        placeholder={copy(
+          "booking-provider.dashboard.decline-placeholder",
+        )}
       />
       <p className="text-xs text-mist">
         This declines the request and opens a chat with {job.customerName} so
@@ -330,7 +350,7 @@ function DeclinePanel({
           pendingLabel="Sending…"
           disabled={note.trim().length === 0}
         >
-          Send note &amp; decline
+          {copy("booking-provider.dashboard.decline-submit")}
         </SubmitButton>
         <button
           type="button"

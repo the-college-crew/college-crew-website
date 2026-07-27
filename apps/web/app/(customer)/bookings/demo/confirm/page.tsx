@@ -3,11 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { FormLoader } from "@/components/form-loader";
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { StatusPill } from "@/components/status-pill";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  bookingCopyValue,
+  type BookingCopyKey,
+} from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { demoBookings, getDemoPreview } from "@/lib/demo/sample-preview";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
@@ -21,20 +27,39 @@ export default async function DemoConfirmPayPage() {
 
   const booking = demoBookings.find((item) => item.status === "accepted");
   if (!booking) notFound();
+  const copyOverrides = await getBookingCopyOverrides("customer");
+  const copy = (key: BookingCopyKey) =>
+    bookingCopyValue(copyOverrides, key);
 
   const rows = [
-    { label: "Service", value: booking.service.name },
-    { label: "Provider", value: booking.provider.display_name },
-    { label: "When", value: formatDateTime(booking.scheduled_at) },
-    { label: "Where", value: booking.address },
-    { label: "Price", value: formatMoney(booking.price_cents) },
+    {
+      label: copy("booking-customer.demo-confirm.service-label"),
+      value: booking.service.name,
+    },
+    {
+      label: copy("booking-customer.demo-confirm.provider-label"),
+      value: booking.provider.display_name,
+    },
+    {
+      label: copy("booking-customer.demo-confirm.when-label"),
+      value: formatDateTime(booking.scheduled_at),
+    },
+    {
+      label: copy("booking-customer.demo-confirm.where-label"),
+      value: booking.address,
+    },
+    {
+      label: copy("booking-customer.demo-confirm.price-label"),
+      value: formatMoney(booking.price_cents),
+    },
   ];
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <BookingCopyProvider overrides={copyOverrides}>
+      <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
-        title="Confirm & pay"
-        description="Sample accepted booking details before payment."
+        title={copy("booking-customer.demo-confirm.title")}
+        description={copy("booking-customer.demo-confirm.description")}
       />
       <SamplePreviewBanner role="customer" />
 
@@ -51,13 +76,13 @@ export default async function DemoConfirmPayPage() {
           ))}
         </dl>
         <p className="mt-2 text-xs text-mist">
-          This demo does not create a Stripe PaymentIntent or charge a card.
+          {copy("booking-customer.demo-confirm.notice")}
         </p>
 
         <form action={confirmDemoPayment} className="mt-6">
           <FormLoader />
           <Button type="submit" size="lg" className="w-full">
-            Confirm sample payment
+            {copy("booking-customer.demo-confirm.submit")}
           </Button>
         </form>
       </Card>
@@ -67,9 +92,10 @@ export default async function DemoConfirmPayPage() {
           href="/dashboard"
           className={buttonClasses({ variant: "ghost", size: "sm" })}
         >
-          Back to dashboard
+          {copy("booking-customer.demo-confirm.back")}
         </Link>
       </p>
-    </div>
+      </div>
+    </BookingCopyProvider>
   );
 }

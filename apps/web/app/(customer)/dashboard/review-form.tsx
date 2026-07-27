@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError, Textarea } from "@/components/ui/field";
 import { submitReview, type ReviewFormState } from "./actions";
@@ -22,6 +23,7 @@ export function ReviewForm({
   /** Start collapsed and expand on first interaction. */
   collapsible?: boolean;
 }) {
+  const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState<
     ReviewFormState,
     FormData
@@ -79,7 +81,9 @@ export function ReviewForm({
             rows={2}
             maxLength={2000}
             aria-label="Written review (optional)"
-            placeholder="A sentence or two helps the next neighbor…"
+            placeholder={copy(
+              "booking-customer.dashboard.review-placeholder",
+            )}
           />
           <p className="text-xs text-mist">
             Written review optional · 2,000 characters maximum
@@ -93,7 +97,9 @@ export function ReviewForm({
             size="sm"
             disabled={pending || rating === 0}
           >
-            {pending ? "Saving…" : "Leave review"}
+            {pending
+              ? "Saving…"
+              : copy("booking-customer.dashboard.review-submit")}
           </Button>
         </>
       ) : (

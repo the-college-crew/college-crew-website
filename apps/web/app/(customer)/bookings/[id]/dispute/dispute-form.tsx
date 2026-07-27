@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 
@@ -15,15 +16,6 @@ export type DisputeCategory =
   | "cancellation"
   | "other";
 
-const CATEGORY_LABELS: Record<DisputeCategory, string> = {
-  provider_no_show: "The provider never showed up",
-  hours: "The billed time is wrong",
-  service: "The work wasn’t done as agreed",
-  payment: "A payment or charge problem",
-  cancellation: "A cancellation problem",
-  other: "Something else",
-};
-
 export function DisputeForm({
   bookingId,
   categories,
@@ -33,6 +25,15 @@ export function DisputeForm({
   categories: DisputeCategory[];
   defaultCategory?: DisputeCategory;
 }) {
+  const copy = useBookingCopy();
+  const categoryLabels: Record<DisputeCategory, string> = {
+    provider_no_show: copy("booking-customer.dispute.no-show-option"),
+    hours: copy("booking-customer.dispute.hours-option"),
+    service: copy("booking-customer.dispute.service-option"),
+    payment: copy("booking-customer.dispute.payment-option"),
+    cancellation: copy("booking-customer.dispute.cancellation-option"),
+    other: copy("booking-customer.dispute.other-option"),
+  };
   const [state, formAction, pending] = useActionState(openDispute, {});
   const initial =
     defaultCategory && categories.includes(defaultCategory)
@@ -44,7 +45,9 @@ export function DisputeForm({
       <input type="hidden" name="bookingId" value={bookingId} />
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold">What’s the issue?</legend>
+        <legend className="text-sm font-semibold">
+          {copy("booking-customer.dispute.issue-label")}
+        </legend>
         {categories.map((category) => (
           <label
             key={category}
@@ -57,7 +60,7 @@ export function DisputeForm({
               defaultChecked={category === initial}
               className="mt-0.5"
             />
-            <span>{CATEGORY_LABELS[category]}</span>
+            <span>{categoryLabels[category]}</span>
           </label>
         ))}
       </fieldset>
@@ -74,7 +77,7 @@ export function DisputeForm({
           maxLength={5000}
           rows={5}
           className="w-full rounded-lg border border-line bg-white p-3 text-sm"
-          placeholder="Describe the problem in your own words. A founder reviews every dispute personally."
+          placeholder={copy("booking-customer.dispute.placeholder")}
         />
         <p className="text-xs text-mist">
           You can’t change the provider’s hours or trigger a refund here. A
@@ -83,7 +86,7 @@ export function DisputeForm({
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={pending}>
-        {pending ? "Submitting…" : "Submit for review"}
+        {pending ? "Submitting…" : copy("booking-customer.dispute.submit")}
       </Button>
       <FieldError>{state.error}</FieldError>
     </form>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { DeadlineCountdown } from "@/components/deadline-countdown";
 import { StatusPill } from "@/components/status-pill";
 import { buttonClasses } from "@/components/ui/button";
@@ -10,9 +11,17 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/session";
 import {
   BASIS_POINTS_SCALE,
+  BILLING_INCREMENT_MINUTES,
   calculateInvoiceAllocation,
+  CUSTOMER_REFUND_NOTICE_HOURS,
+  INVOICE_REVIEW_HOURS,
   PLATFORM_FEE_BPS,
 } from "@/lib/booking/policy";
+import {
+  bookingCopyValue,
+  type BookingCopyOverrides,
+} from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import type { Booking } from "@/lib/db/types";
 import {
   BOOKING_CONSENT_LABEL,
@@ -58,10 +67,19 @@ export default async function ConfirmPayPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ redirect_status?: string }>;
 }) {
-  const [{ id }, { redirect_status: redirectStatus }] = await Promise.all([
+  const [
+    { id },
+    { redirect_status: redirectStatus },
+    copyOverrides,
+  ] = await Promise.all([
     params,
     searchParams,
+    getBookingCopyOverrides("customer"),
   ]);
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   const user = await requireUser(`/bookings/${id}/confirm`);
 
   const supabase = await createClient();
@@ -87,14 +105,17 @@ export default async function ConfirmPayPage({
 
   if (booking.booking_flow === "hourly_v1") {
     return (
-      <HourlyConfirmView
-        booking={booking}
-        serviceName={service.name}
-        serviceSlug={service.slug}
-        providerName={provider.display_name}
-        customerName={customer?.full_name ?? "Customer"}
-        paidSucceeded={paidSucceeded}
-      />
+      <BookingCopyProvider overrides={copyOverrides}>
+        <HourlyConfirmView
+          booking={booking}
+          serviceName={service.name}
+          serviceSlug={service.slug}
+          providerName={provider.display_name}
+          customerName={customer?.full_name ?? "Customer"}
+          paidSucceeded={paidSucceeded}
+          copyOverrides={copyOverrides}
+        />
+      </BookingCopyProvider>
     );
   }
 
@@ -120,13 +141,14 @@ export default async function ConfirmPayPage({
   });
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <BookingCopyProvider overrides={copyOverrides}>
+      <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
-        title="Confirm & pay"
+        title={copy("booking-customer.confirm.full-price-title")}
         description={
           isQuote
-            ? "Your provider sent a final flat quote. Review the exact price and booking details before paying."
-            : "The provider accepted your request. Confirm the details below to lock it in."
+            ? copy("booking-customer.confirm.quote-description")
+            : copy("booking-customer.confirm.fixed-description")
         }
       />
 
@@ -143,8 +165,7 @@ export default async function ConfirmPayPage({
           ))}
         </dl>
         <p className="mt-2 text-xs text-mist">
-          You pay the price shown. College Crew&apos;s platform fee comes out of
-          the provider&apos;s earnings, with no added customer platform fee.
+          {copy("booking-customer.confirm.full-price-fee-note")}
         </p>
 
         {isQuote ? (
@@ -239,8 +260,8 @@ export default async function ConfirmPayPage({
           ) : booking.status === "requested" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
               {isQuote
-                ? "Still waiting on the provider's final quote. They may request images or video in the private chat first."
-                : "Still waiting on the provider. You'll be able to confirm and pay once they accept."}
+                ? copy("booking-customer.confirm.quote-waiting")
+                : copy("booking-customer.confirm.provider-waiting")}
             </div>
           ) : (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
@@ -251,7 +272,8 @@ export default async function ConfirmPayPage({
       </Card>
 
       <BackToDashboard />
-    </div>
+      </div>
+    </BookingCopyProvider>
   );
 }
 
@@ -263,6 +285,7 @@ function HourlyConfirmView({
   providerName,
   customerName,
   paidSucceeded,
+  copyOverrides,
 }: {
   booking: ConfirmBooking;
   serviceName: string;
@@ -270,7 +293,12 @@ function HourlyConfirmView({
   providerName: string;
   customerName: string;
   paidSucceeded: boolean;
+  copyOverrides: BookingCopyOverrides;
 }) {
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   const rateCents = booking.hourly_rate_cents_snapshot ?? 0;
   const estimatedMinutes = booking.estimated_minutes ?? 60;
   const allocation = calculateInvoiceAllocation(rateCents, estimatedMinutes);
@@ -286,10 +314,22 @@ function HourlyConfirmView({
     { label: "Where", value: booking.address },
   ];
   const paymentRows = [
-    { label: "Rate", value: `${formatMoney(rateCents)}/hr` },
-    { label: "Estimated time", value: `${estimatedMinutes} min (~${hours} hr)` },
-    { label: "First-hour payment now", value: firstHourLabel },
-    { label: "Estimated total", value: estimatedTotalLabel },
+    {
+      label: copy("booking-customer.confirm.rate-label"),
+      value: `${formatMoney(rateCents)}/hr`,
+    },
+    {
+      label: copy("booking-customer.confirm.estimate-label"),
+      value: `${estimatedMinutes} min (~${hours} hr)`,
+    },
+    {
+      label: copy("booking-customer.confirm.first-hour-label"),
+      value: firstHourLabel,
+    },
+    {
+      label: copy("booking-customer.confirm.total-label"),
+      value: estimatedTotalLabel,
+    },
   ];
 
   const addendum = getBookingAddendumSnapshot({
@@ -308,8 +348,8 @@ function HourlyConfirmView({
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
-        title="Confirm & pay the first hour"
-        description="Your provider accepted. Pay the first hour to lock in the booking; the rest is billed by actual time after the job."
+        title={copy("booking-customer.confirm.title")}
+        description={copy("booking-customer.confirm.description")}
       />
 
       <Card pennant className="p-6">
@@ -325,7 +365,7 @@ function HourlyConfirmView({
           ))}
         </dl>
         <h2 className="mt-4 font-display text-xs font-semibold uppercase tracking-wide text-mist">
-          Payment
+          {copy("booking-customer.confirm.payment-heading")}
         </h2>
         <dl className="divide-y divide-line text-sm">
           {paymentRows.map((row) => (
@@ -338,24 +378,25 @@ function HourlyConfirmView({
 
         <div className="mt-3 rounded-lg border border-line bg-court p-4 text-xs leading-5 text-ink-soft">
           <p>
-            You pay <span className="font-semibold">{firstHourLabel}</span> now
-            for the first hour. Your card charges the remaining balance for{" "}
-            <span className="font-semibold">this booking only</span>, once the
-            provider submits actual time.
+            {copy("booking-customer.confirm.payment-explanation", {
+              first_hour_amount: firstHourLabel,
+            })}
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-4">
             <li>
-              Final time is the actual work rounded up to 15 minutes (one-hour
-              minimum); time beyond the estimate needs an explanation.
+              Final time is the actual work rounded up to{" "}
+              {BILLING_INCREMENT_MINUTES} minutes (one-hour minimum); time
+              beyond the estimate needs an explanation.
             </li>
             <li>
-              With no confirmation or dispute, the remaining balance is charged
-              24 hours after the invoice is submitted.
+              {copy("booking-customer.confirm.invoice-policy", {
+                invoice_hours: INVOICE_REVIEW_HOURS,
+              })}
             </li>
             <li>
-              Cancel 12+ hours before the start for a full refund; a later
-              cancellation keeps the first hour. Concerns after arrival are
-              handled as a dispute.
+              {copy("booking-customer.confirm.cancellation-policy", {
+                cancellation_hours: CUSTOMER_REFUND_NOTICE_HOURS,
+              })}
             </li>
             <li>
               College Crew&apos;s {platformFeePercent}% fee comes out of the
@@ -400,14 +441,15 @@ function HourlyConfirmView({
         <div className="mt-6">
           {isAccepted && paidSucceeded ? (
             <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-              Payment received. Finalizing your booking. Refresh in a moment.
+              {copy("booking-customer.confirm.payment-received")}
             </div>
           ) : isAccepted && windowClosed ? (
             <div className="rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
-              <p className="font-semibold">The first-hour payment window closed.</p>
+              <p className="font-semibold">
+                {copy("booking-customer.confirm.window-closed-title")}
+              </p>
               <p className="mt-1">
-                This request will be released. Send a new request to book this
-                service.
+                {copy("booking-customer.confirm.window-closed-body")}
               </p>
               <Link
                 href="/browse"
@@ -437,25 +479,21 @@ function HourlyConfirmView({
             </div>
           ) : booking.status === "booked" ? (
             <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-              First hour paid. You&apos;re on the schedule. You&apos;ll see the
-              final invoice here after the job.
+              {copy("booking-customer.confirm.booked")}
             </div>
           ) : booking.status === "invoice_review" ? (
             <div className="space-y-3 rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-              <p>
-                The provider submitted the final invoice. Review it and pay the
-                remaining balance.
-              </p>
+              <p>{copy("booking-customer.confirm.invoice-ready")}</p>
               <Link
                 href={`/bookings/${booking.id}/invoice`}
                 className={buttonClasses({ size: "sm" })}
               >
-                Review & pay
+                {copy("booking-customer.confirm.invoice-button")}
               </Link>
             </div>
           ) : ["in_progress", "disputed"].includes(booking.status) ? (
             <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-              This booking is already underway. Track it from your dashboard.
+              {copy("booking-customer.confirm.underway")}
             </div>
           ) : booking.status === "requested" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">

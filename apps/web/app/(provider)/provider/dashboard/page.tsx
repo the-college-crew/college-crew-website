@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { JobPhotoGrid } from "@/components/booking/job-photo-grid";
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { DeadlineCountdown } from "@/components/deadline-countdown";
 import {
   ProviderScheduleCalendar,
@@ -23,6 +24,11 @@ import {
   requireProviderAccess,
 } from "@/lib/auth/session";
 import { calculatePlatformFeeCents } from "@/lib/booking/policy";
+import {
+  bookingCopyValue,
+  type BookingCopyOverrides,
+} from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { milesBetween } from "@/lib/geo/distance";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
@@ -142,32 +148,36 @@ export default async function ProviderDashboardPage({
 }: {
   searchParams: Promise<{ submitted?: string; stripe?: string }>;
 }) {
-  const [{ submitted, stripe }, session] = await Promise.all([
+  const [{ submitted, stripe }, session, copyOverrides] = await Promise.all([
     searchParams,
     requireProviderAccess("/provider/dashboard"),
+    getBookingCopyOverrides("provider"),
   ]);
   const demoPreview = await getDemoPreview("provider");
   if (demoPreview) {
     return (
-      <ProviderDashboardView
-        profile={demoProviderProfile}
-        bookings={demoBookings as unknown as ProviderBookingRow[]}
-        offerings={demoOfferings.map((offering) => ({
-          id: offering.id,
-          name: offering.service.name,
-          hourly_rate_cents: offering.hourly_rate_cents,
-          pricing_mode: offering.pricing_mode,
-          average_quote_cents: offering.average_quote_cents,
-          service_slug: offering.service.slug,
-          service_is_live: offering.service.is_live,
-        }))}
-        windows={demoAvailabilityWindows}
-        schedule={demoSchedule()}
-        submitted={submitted}
-        stripe={stripe}
-        onboardingComplete
-        demo
-      />
+      <BookingCopyProvider overrides={copyOverrides}>
+        <ProviderDashboardView
+          profile={demoProviderProfile}
+          bookings={demoBookings as unknown as ProviderBookingRow[]}
+          offerings={demoOfferings.map((offering) => ({
+            id: offering.id,
+            name: offering.service.name,
+            hourly_rate_cents: offering.hourly_rate_cents,
+            pricing_mode: offering.pricing_mode,
+            average_quote_cents: offering.average_quote_cents,
+            service_slug: offering.service.slug,
+            service_is_live: offering.service.is_live,
+          }))}
+          windows={demoAvailabilityWindows}
+          schedule={demoSchedule()}
+          submitted={submitted}
+          stripe={stripe}
+          onboardingComplete
+          copyOverrides={copyOverrides}
+          demo
+        />
+      </BookingCopyProvider>
     );
   }
 
@@ -242,17 +252,20 @@ export default async function ProviderDashboardPage({
   );
 
   return (
-    <ProviderDashboardView
-      profile={profile}
-      bookings={bookings}
-      offerings={offerings}
-      windows={windows}
-      schedule={schedule}
-      submitted={submitted}
-      stripe={stripe}
-      onboardingComplete={onboardingComplete}
-      providerTermsAccepted={providerTermsAccepted}
-    />
+    <BookingCopyProvider overrides={copyOverrides}>
+      <ProviderDashboardView
+        profile={profile}
+        bookings={bookings}
+        offerings={offerings}
+        windows={windows}
+        schedule={schedule}
+        submitted={submitted}
+        stripe={stripe}
+        onboardingComplete={onboardingComplete}
+        providerTermsAccepted={providerTermsAccepted}
+        copyOverrides={copyOverrides}
+      />
+    </BookingCopyProvider>
   );
 }
 
@@ -266,6 +279,7 @@ function ProviderDashboardView({
   stripe,
   onboardingComplete,
   providerTermsAccepted = true,
+  copyOverrides,
   demo = false,
 }: {
   profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
@@ -277,8 +291,13 @@ function ProviderDashboardView({
   stripe?: string;
   onboardingComplete: boolean;
   providerTermsAccepted?: boolean;
+  copyOverrides: BookingCopyOverrides;
   demo?: boolean;
 }) {
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   const now = new Date();
   const requests = bookings.filter(
     (booking) =>
@@ -351,8 +370,8 @@ function ProviderDashboardView({
         </>
       )}
       <PageHeader
-        title="Dashboard"
-        description="Requests, earnings, and your month at a glance."
+        title={copy("booking-provider.dashboard.title")}
+        description={copy("booking-provider.dashboard.description")}
       />
       {demo ? <SamplePreviewBanner role="provider" /> : null}
 
@@ -517,7 +536,7 @@ function ProviderDashboardView({
                 <p className="mt-1 text-xs text-mist">
                   {booking.booking_flow === "quote_v1"
                     ? `Final quote ${formatMoney(booking.price_cents)} sent. The customer must confirm and pay.`
-                    : "Reserved. The customer must pay the first hour to confirm."}
+                    : copy("booking-provider.dashboard.reserved")}
                 </p>
                 {booking.initial_payment_due_at ? (
                   <div className="mt-2">
@@ -548,9 +567,10 @@ function ProviderDashboardView({
           </h2>
           <div className="mt-3 space-y-3">
             {requests.length === 0 ? (
-              <EmptyState title="No new requests">
-                Booking requests land here — accept or decline, and the
-                customer pays after you accept.
+              <EmptyState
+                title={copy("booking-provider.dashboard.no-requests")}
+              >
+                {copy("booking-provider.dashboard.no-requests-body")}
               </EmptyState>
             ) : (
               requests.map((booking) => (
@@ -626,12 +646,16 @@ function ProviderDashboardView({
                   {booking.booking_flow === "quote_v1" ? (
                     <JobPhotoGrid
                       photos={bookingJobPhotos(booking.job_photos)}
+                      label={copy("booking-provider.dashboard.photo-label")}
+                      unavailableText={copy(
+                        "booking-provider.dashboard.photos-unavailable",
+                      )}
                     />
                   ) : null}
                   {demo ? (
                     <div className="mt-3 flex gap-2">
                       <Button type="button" size="sm" disabled>
-                        Accept
+                        {copy("booking-provider.dashboard.accept")}
                       </Button>
                       <Button
                         type="button"

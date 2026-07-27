@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { DeadlineCountdown } from "@/components/deadline-countdown";
 import { StatusPill } from "@/components/status-pill";
 import { buttonClasses } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import {
   BASIS_POINTS_SCALE,
   PLATFORM_FEE_BPS,
 } from "@/lib/booking/policy";
+import { bookingCopyValue } from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
@@ -35,7 +38,14 @@ export default async function InvoicePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, copyOverrides] = await Promise.all([
+    params,
+    getBookingCopyOverrides("customer"),
+  ]);
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   const user = await requireUser();
   const supabase = await createClient();
 
@@ -72,8 +82,12 @@ export default async function InvoicePage({
 
   if (!invoice) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="Invoice" description={service?.name ?? "Your booking"} />
+      <BookingCopyProvider overrides={copyOverrides}>
+        <div className="space-y-6">
+        <PageHeader
+          title={copy("booking-customer.invoice.title")}
+          description={service?.name ?? "Your booking"}
+        />
         <Card className="p-5 text-sm text-ink-soft">
           <p>
             The provider hasn&apos;t submitted the invoice for this job yet.
@@ -87,7 +101,8 @@ export default async function InvoicePage({
             Back to bookings
           </Link>
         </Card>
-      </div>
+        </div>
+      </BookingCopyProvider>
     );
   }
 
@@ -126,7 +141,7 @@ export default async function InvoicePage({
       value: formatMoney(invoice.subtotal_cents),
     },
     {
-      label: "First hour already paid",
+      label: copy("booking-customer.invoice.first-hour-label"),
       value: `- ${formatMoney(invoice.first_hour_credit_cents)}`,
     },
     {
@@ -134,16 +149,17 @@ export default async function InvoicePage({
         ? "Paid to your provider in person"
         : isPaid
           ? "Balance paid"
-          : "Remaining balance",
+          : copy("booking-customer.invoice.balance-label"),
       value: formatMoney(invoice.remaining_balance_cents),
       strong: true,
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <BookingCopyProvider overrides={copyOverrides}>
+      <div className="space-y-6">
       <PageHeader
-        title="Invoice"
+        title={copy("booking-customer.invoice.title")}
         description={`${service?.name ?? "Service"} with ${provider?.display_name ?? "your provider"}`}
       />
 
@@ -159,13 +175,17 @@ export default async function InvoicePage({
         <dl className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
           {booking.arrived_at ? (
             <div className="flex justify-between gap-4">
-              <dt className="text-mist">Arrived</dt>
+              <dt className="text-mist">
+                {copy("booking-customer.invoice.arrived-label")}
+              </dt>
               <dd>{formatDateTime(booking.arrived_at)}</dd>
             </div>
           ) : null}
           {booking.work_completed_at ? (
             <div className="flex justify-between gap-4">
-              <dt className="text-mist">Completed</dt>
+              <dt className="text-mist">
+                {copy("booking-customer.invoice.completed-label")}
+              </dt>
               <dd>{formatDateTime(booking.work_completed_at)}</dd>
             </div>
           ) : null}
@@ -203,7 +223,9 @@ export default async function InvoicePage({
             </p>
             <dl className="mt-2 space-y-1 text-xs text-ink-soft">
               <div className="flex justify-between gap-4">
-                <dt className="text-mist">You booked</dt>
+                <dt className="text-mist">
+                  {copy("booking-customer.invoice.booked-label")}
+                </dt>
                 <dd>
                   {formatMinutes(estimatedMinutes)}
                   {estimatedSubtotalCents != null
@@ -212,7 +234,9 @@ export default async function InvoicePage({
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-mist">Actually worked</dt>
+                <dt className="text-mist">
+                  {copy("booking-customer.invoice.actual-label")}
+                </dt>
                 <dd>
                   {formatMinutes(invoice.submitted_minutes)} ·{" "}
                   {formatMoney(invoice.subtotal_cents)}
@@ -220,7 +244,9 @@ export default async function InvoicePage({
               </div>
               {subtotalDeltaCents != null && subtotalDeltaCents !== 0 ? (
                 <div className="flex justify-between gap-4 border-t border-line pt-1">
-                  <dt className="font-semibold text-ink">Difference</dt>
+                  <dt className="font-semibold text-ink">
+                    {copy("booking-customer.invoice.difference-label")}
+                  </dt>
                   <dd
                     className={
                       subtotalDeltaCents > 0
@@ -239,21 +265,26 @@ export default async function InvoicePage({
 
         {overEstimate && invoice.provider_explanation ? (
           <div className="mt-4 rounded-lg border border-gold-300 bg-gold-100 p-3 text-sm text-gold-800">
-            <p className="font-semibold">Time beyond the estimate</p>
+            <p className="font-semibold">
+              {copy("booking-customer.invoice.over-estimate")}
+            </p>
             <p className="mt-1">{invoice.provider_explanation}</p>
           </div>
         ) : null}
 
         <p className="mt-4 border-t border-line pt-3 text-xs text-mist">
-          The {platformFeePercent}% platform fee comes out of the
-          provider&apos;s payout; the amount above is all you pay.
+          {copy("booking-customer.invoice.fee-note", {
+            platform_fee_percent: platformFeePercent,
+          })}
         </p>
       </Card>
 
       <Card className="p-5">
         {isPaid ? (
           <div className="space-y-3 text-sm">
-            <p className="font-semibold text-quad-700">Paid in full ✓</p>
+            <p className="font-semibold text-quad-700">
+              {copy("booking-customer.invoice.paid")} ✓
+            </p>
             <Link
               href="/dashboard"
               className={buttonClasses({ variant: "secondary", size: "sm" })}
@@ -263,8 +294,12 @@ export default async function InvoicePage({
           </div>
         ) : isProcessing ? (
           <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-            <p className="font-semibold">Payment processing.</p>
-            <p className="mt-1">This updates to Completed once it settles.</p>
+            <p className="font-semibold">
+              {copy("booking-customer.invoice.processing-title")}
+            </p>
+            <p className="mt-1">
+              {copy("booking-customer.invoice.processing-body")}
+            </p>
           </div>
         ) : needsRecovery ? (
           <InvoiceRecoveryPanel bookingId={booking.id} />
@@ -274,7 +309,7 @@ export default async function InvoicePage({
             invoice.remaining_balance_cents > 0 ? (
               <DeadlineCountdown
                 target={invoice.autocharge_at}
-                label="Auto-charges the saved card"
+                label={copy("booking-customer.invoice.autocharge-label")}
               />
             ) : null}
             <InvoicePayPanel
@@ -299,6 +334,7 @@ export default async function InvoicePage({
           </Link>. A founder reviews it and payment pauses while it’s open.
         </p>
       </Card>
-    </div>
+      </div>
+    </BookingCopyProvider>
   );
 }

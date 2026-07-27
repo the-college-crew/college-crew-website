@@ -3,6 +3,7 @@
 import { Elements } from "@stripe/react-stripe-js";
 import { useActionState } from "react";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { HOURLY_PAYMENT_AUTHORIZATION } from "@/lib/legal/waivers";
@@ -29,6 +30,7 @@ export function HourlyPayPanel({
   balanceLabel: string;
   consentLabel: string;
 }) {
+  const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState<ConfirmPayState, FormData>(
     confirmFirstHourPayment,
     {},
@@ -51,10 +53,11 @@ export function HourlyPayPanel({
   if (unconfigured) {
     return (
       <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
-        <p className="font-semibold">Payments aren&apos;t live yet.</p>
+        <p className="font-semibold">
+          {copy("booking-customer.confirm.payments-title")}
+        </p>
         <p className="mt-1">
-          Stripe isn&apos;t configured in this environment. This button will run
-          the real (test-mode) payment once it is.
+          {copy("booking-customer.confirm.payments-body")}
         </p>
         <FieldError>{state.error}</FieldError>
       </div>
@@ -88,7 +91,11 @@ export function HourlyPayPanel({
       </label>
 
       <Button type="submit" size="lg" className="w-full" disabled={pending}>
-        {pending ? "Preparing payment…" : `Pay first hour (${firstHourLabel})`}
+        {pending
+          ? copy("booking-customer.confirm.pay-pending")
+          : copy("booking-customer.confirm.pay-button", {
+              first_hour_amount: firstHourLabel,
+            })}
       </Button>
 
       <FieldError>{state.error}</FieldError>

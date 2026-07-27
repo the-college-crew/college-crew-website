@@ -9,6 +9,7 @@ const ADMIN_NAV = [
   { href: "/admin/providers", label: "Provider approvals" },
   { href: "/admin/services", label: "Service curation" },
   { href: "/admin/bookings", label: "Bookings" },
+  { href: "/admin/booking-copy", label: "Booking copy" },
   { href: "/admin/disputes", label: "Disputes" },
   { href: "/admin/operations", label: "Operations" },
   { href: "/admin/flagged", label: "Flagged messages" },
@@ -52,7 +53,7 @@ export default async function AdminLayout({
         </div>
         <nav
           aria-label="Admin"
-          className="mx-auto hidden max-w-5xl gap-6 px-4 pb-3 text-sm font-semibold text-viridian/70 sm:flex"
+          className="mx-auto hidden max-w-5xl flex-wrap gap-x-5 gap-y-2 px-4 pb-3 text-sm font-semibold text-viridian/70 sm:flex"
         >
           <Link href="/admin/providers" className="hover:text-viridian">
             Provider approvals
@@ -62,6 +63,9 @@ export default async function AdminLayout({
           </Link>
           <Link href="/admin/bookings" className="hover:text-viridian">
             Bookings
+          </Link>
+          <Link href="/admin/booking-copy" className="hover:text-viridian">
+            Booking copy
           </Link>
           <Link href="/admin/disputes" className="hover:text-viridian">
             Disputes

@@ -3,6 +3,7 @@
 import { Elements } from "@stripe/react-stripe-js";
 import { useActionState } from "react";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 
@@ -18,12 +19,14 @@ import {
 } from "./actions";
 
 function UnconfiguredNotice({ error }: { error?: string }) {
+  const copy = useBookingCopy();
   return (
     <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
-      <p className="font-semibold">Payments aren&apos;t live yet.</p>
+      <p className="font-semibold">
+        {copy("booking-customer.confirm.payments-title")}
+      </p>
       <p className="mt-1">
-        Stripe isn&apos;t configured in this environment. This button will run
-        the real (test-mode) payment once it is.
+        {copy("booking-customer.confirm.payments-body")}
       </p>
       <FieldError>{error}</FieldError>
     </div>
@@ -45,6 +48,7 @@ export function InvoicePayPanel({
   payLabel: string;
   isZeroBalance: boolean;
 }) {
+  const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState<InvoicePayState, FormData>(
     confirmInvoiceBalance,
     {},
@@ -68,8 +72,12 @@ export function InvoicePayPanel({
   if (state.settled) {
     return (
       <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-        <p className="font-semibold">All set! The job is complete.</p>
-        <p className="mt-1">You can leave a review from your bookings.</p>
+        <p className="font-semibold">
+          {copy("booking-customer.invoice.complete")}
+        </p>
+        <p className="mt-1">
+          {copy("booking-customer.invoice.complete-body")}
+        </p>
       </div>
     );
   }
@@ -92,7 +100,7 @@ export function InvoicePayPanel({
         {pending
           ? "Processing…"
           : isZeroBalance
-            ? "Confirm & complete"
+            ? copy("booking-customer.invoice.confirm-button")
             : `Confirm & pay ${payLabel}`}
       </Button>
       {isZeroBalance ? (
@@ -115,6 +123,7 @@ export function InvoicePayPanel({
  * or authorize a different one.
  */
 export function InvoiceRecoveryPanel({ bookingId }: { bookingId: string }) {
+  const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState<InvoicePayState, FormData>(
     recoverInvoicePayment,
     {},
@@ -138,7 +147,9 @@ export function InvoiceRecoveryPanel({ bookingId }: { bookingId: string }) {
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-        <p className="font-semibold">That payment didn&apos;t go through.</p>
+        <p className="font-semibold">
+          {copy("booking-customer.invoice.payment-failed")}
+        </p>
         <p className="mt-1">
           Update or re-authorize your card to finish paying this invoice.
         </p>
@@ -146,7 +157,9 @@ export function InvoiceRecoveryPanel({ bookingId }: { bookingId: string }) {
       <form action={formAction}>
         <input type="hidden" name="bookingId" value={bookingId} />
         <Button type="submit" size="lg" className="w-full" disabled={pending}>
-          {pending ? "Preparing…" : "Update payment method"}
+          {pending
+            ? "Preparing…"
+            : copy("booking-customer.invoice.update-payment")}
         </Button>
       </form>
       <FieldError>{state.error}</FieldError>

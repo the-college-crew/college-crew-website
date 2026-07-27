@@ -2,10 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireRole } from "@/lib/auth/session";
+import {
+  bookingCopyValue,
+  type BookingCopyOverrides,
+} from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import {
   isOfferedStartTime,
   type ReplacementSuggestion,
@@ -30,21 +36,26 @@ export const metadata: Metadata = { title: "Pick another student" };
 function FallbackStudents({
   students,
   hasBookableOptions,
+  copyOverrides,
 }: {
   students: ReplacementSuggestion[];
   hasBookableOptions: boolean;
+  copyOverrides: BookingCopyOverrides;
 }) {
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   return (
     <section aria-label="Other students who offer this service" className="space-y-3">
       <div>
         <h2 className="font-display text-sm font-semibold text-ink">
           {hasBookableOptions
             ? "Everyone else who does this"
-            : "Other students who do this"}
+            : copy("booking-customer.replace.other-students")}
         </h2>
         <p className="mt-0.5 text-xs text-mist">
-          No opening matched your job, so you&apos;d pick a new time with them
-          directly.
+          {copy("booking-customer.replace.fallback-note")}
         </p>
       </div>
       <ul className="space-y-2">
@@ -87,11 +98,16 @@ export default async function ReplacementPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ ps?: string; at?: string }>;
 }) {
-  const [{ id }, { ps, at }, session] = await Promise.all([
+  const [{ id }, { ps, at }, session, copyOverrides] = await Promise.all([
     params,
     searchParams,
     requireRole("customer", "/dashboard"),
+    getBookingCopyOverrides("customer"),
   ]);
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   const supabase = await createClient();
   if (
     !(await hasAcceptedCurrentLegalDocument(supabase, {
@@ -158,17 +174,18 @@ export default async function ReplacementPage({
       : undefined;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <BookingCopyProvider overrides={copyOverrides}>
+      <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
-        title="Pick another student"
+        title={copy("booking-customer.replace.title")}
         description={`${service.name} · ${formatDateTime(booking.scheduled_at)}`}
       />
 
       {!replacementAvailable ? (
         <Card className="p-6 text-sm text-ink-soft">
           {booking.status === "requested"
-            ? "Replacement suggestions appear if the provider has not responded by the deadline."
-            : "This request can’t be replaced right now."}
+            ? copy("booking-customer.replace.waiting")
+            : copy("booking-customer.replace.unavailable")}
         </Card>
       ) : candidates.length === 0 ? (
         // No bookable slot. The fallback list below may still have students; a
@@ -212,6 +229,7 @@ export default async function ReplacementPage({
         <FallbackStudents
           students={pool.fallback}
           hasBookableOptions={candidates.length > 0}
+          copyOverrides={copyOverrides}
         />
       ) : null}
 
@@ -229,6 +247,7 @@ export default async function ReplacementPage({
           Browse the whole crew
         </Link>
       </div>
-    </div>
+      </div>
+    </BookingCopyProvider>
   );
 }

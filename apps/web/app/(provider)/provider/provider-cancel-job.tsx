@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 
@@ -13,6 +14,7 @@ import { cancelBookingAsProvider } from "./actions";
  * The reason is revealed on click so the danger action is deliberate.
  */
 export function ProviderCancelJob({ bookingId }: { bookingId: string }) {
+  const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState(
     cancelBookingAsProvider,
     {},
@@ -46,11 +48,13 @@ export function ProviderCancelJob({ bookingId }: { bookingId: string }) {
         maxLength={500}
         rows={2}
         className="w-full rounded-md border border-line bg-white p-2 text-sm"
-        placeholder="e.g. Family emergency — can't make it."
+        placeholder={copy("booking-provider.jobs.cancel-placeholder")}
       />
       <div className="flex items-center gap-2">
         <Button type="submit" variant="danger" size="sm" disabled={pending}>
-          {pending ? "Cancelling…" : "Confirm cancellation"}
+          {pending
+            ? "Cancelling…"
+            : copy("booking-provider.jobs.cancel-submit")}
         </Button>
         <Button
           type="button"

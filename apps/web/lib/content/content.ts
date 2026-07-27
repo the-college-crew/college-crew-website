@@ -13,7 +13,10 @@ export const getContentMap = cache(
   async (): Promise<ReadonlyMap<string, string>> => {
     if (!hasSupabaseEnv()) return new Map();
     const supabase = await createClient();
-    const { data } = await supabase.from("site_content").select("key, value");
+    const { data } = await supabase
+      .from("site_content")
+      .select("key, value")
+      .not("key", "like", "booking-%");
     return new Map((data ?? []).map((row) => [row.key, row.value]));
   },
 );

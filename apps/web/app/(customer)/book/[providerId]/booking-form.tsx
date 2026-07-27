@@ -17,6 +17,7 @@ import {
 
 import { JobPhotoPicker } from "@/components/booking/job-photo-picker";
 import { FormLoader } from "@/components/form-loader";
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { SchedulePicker } from "@/components/scheduling/schedule-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +28,10 @@ import {
   Textarea,
 } from "@/components/ui/field";
 import {
+  BASIS_POINTS_SCALE,
   DEFAULT_RESPONSE_WINDOW_HOURS,
+  BILLING_INCREMENT_MINUTES,
+  PLATFORM_FEE_BPS,
   RESPONSE_WINDOW_HOURS,
   calculateHourlySubtotalCents,
   eligibleResponseWindowHours,
@@ -103,6 +107,7 @@ export function BookingRequestForm({
   /** Job photos upload to this customer's own storage folder. */
   userId: string;
 }) {
+  const copy = useBookingCopy();
   const [quoteState, quoteAction, quotePending] = useActionState<
     BookingFormState,
     FormData
@@ -195,7 +200,9 @@ export function BookingRequestForm({
       <FormLoader />
 
       <div>
-        <Label htmlFor="providerServiceId">Service</Label>
+        <Label htmlFor="providerServiceId">
+          {copy("booking-customer.request.service-label")}
+        </Label>
         <Select
           id="providerServiceId"
           name="providerServiceId"
@@ -213,7 +220,7 @@ export function BookingRequestForm({
 
       <fieldset>
         <legend className="mb-2 block text-sm font-medium text-ink">
-          When do you need this?
+          {copy("booking-customer.request.schedule-label")}
         </legend>
         <SchedulePicker
           days={schedule.days}
@@ -228,14 +235,16 @@ export function BookingRequestForm({
         />
         <FieldHint>
           {isQuote
-            ? "Central Time. The time you pick is when the provider comes out; your final price is their flat quote."
-            : "Central Time. The range you pick is your estimate, billed in 15-minute increments with a one-hour minimum."}
+            ? copy("booking-customer.request.quote-schedule-hint")
+            : copy("booking-customer.request.schedule-hint")}
         </FieldHint>
       </fieldset>
 
       {isQuote ? (
         <div>
-          <Label htmlFor="responseWindowHours">Provider response window</Label>
+          <Label htmlFor="responseWindowHours">
+            {copy("booking-customer.request.response-label")}
+          </Label>
           <Select
             id="responseWindowHours"
             name="responseWindowHours"
@@ -245,7 +254,9 @@ export function BookingRequestForm({
             required
           >
             {responseOptions.length === 0 ? (
-              <option value="">Choose an eligible start time first</option>
+              <option value="">
+                {copy("booking-customer.request.response-empty")}
+              </option>
             ) : (
               responseOptions.map((hours) => (
                 <option key={hours} value={hours}>
@@ -255,14 +266,13 @@ export function BookingRequestForm({
             )}
           </Select>
           <FieldHint>
-            If there is no response by then, your request stays open and we show
-            optional replacements.
+            {copy("booking-customer.request.response-hint")}
           </FieldHint>
         </div>
       ) : (
         <fieldset>
           <legend className="mb-2 block text-sm font-medium text-ink">
-            If your student is busy at that exact time
+            {copy("booking-customer.request.flexibility-label")}
           </legend>
           <div className="space-y-2">
             <label className="flex gap-3 rounded-xl border border-line bg-court p-3 text-sm text-ink-soft">
@@ -275,11 +285,10 @@ export function BookingRequestForm({
               />
               <span>
                 <span className="font-medium text-ink">
-                  They can suggest a different time
+                  {copy("booking-customer.request.flexible-title")}
                 </span>
                 <br />
-                You decide whether to take it. Nothing is charged while you
-                decide, and your hold stays put.
+                {copy("booking-customer.request.flexible-body")}
               </span>
             </label>
             <label className="flex gap-3 rounded-xl border border-line bg-court p-3 text-sm text-ink-soft">
@@ -290,9 +299,11 @@ export function BookingRequestForm({
                 className="mt-1 h-4 w-4 border-line"
               />
               <span>
-                <span className="font-medium text-ink">This time only</span>
+                <span className="font-medium text-ink">
+                  {copy("booking-customer.request.fixed-title")}
+                </span>
                 <br />
-                They can accept or decline the time you picked, nothing else.
+                {copy("booking-customer.request.fixed-body")}
               </span>
             </label>
           </div>
@@ -308,7 +319,9 @@ export function BookingRequestForm({
       ) : null}
 
       <div>
-        <Label htmlFor="details">Job details</Label>
+        <Label htmlFor="details">
+          {copy("booking-customer.request.details-label")}
+        </Label>
         <Textarea
           id="details"
           name="details"
@@ -317,8 +330,8 @@ export function BookingRequestForm({
           defaultValue={initial?.details}
           placeholder={
             isQuote
-              ? "Describe the size or quantity, surfaces or items, access, and anything that affects the scope..."
-              : "Size of the job, access notes, pets, or supplies needed..."
+              ? copy("booking-customer.request.quote-details-placeholder")
+              : copy("booking-customer.request.details-placeholder")
           }
         />
       </div>
@@ -327,42 +340,44 @@ export function BookingRequestForm({
         {isQuote ? (
           <>
             <div className="flex items-center justify-between gap-4 font-semibold">
-              <span>Pricing</span>
+              <span>
+                {copy("booking-customer.request.quote-pricing-label")}
+              </span>
               <span className="text-right text-quad-700">
-                {selected ? formatOfferedPrice(selected) : "Quote required"}
+                {selected
+                  ? formatOfferedPrice(selected)
+                  : copy("booking-customer.request.quote-required")}
               </span>
             </div>
             <div className="rounded-lg border border-gold-300 bg-gold-100 p-3 text-gold-900">
               <p className="font-semibold">
-                Your photos decide the price.
+                {copy("booking-customer.request.quote-media-title")}
               </p>
               <p className="mt-1 text-xs leading-5">
-                Your student quotes from the photos above, so show anything that
-                changes the work. Once you send the request they&apos;re fixed,
-                but you can share more in the private booking chat.
+                {copy("booking-customer.request.quote-media-body")}
               </p>
             </div>
             <p className="border-t border-line pt-3 text-xs text-mist">
-              You are not charged when requesting a quote. The provider reviews
-              the job and sends a final flat price. You choose whether to
-              confirm and pay that price. College Crew&apos;s 5% fee comes from
-              provider earnings, with no added customer platform fee.
+              {copy("booking-customer.request.quote-policy", {
+                platform_fee_percent:
+                  (PLATFORM_FEE_BPS / BASIS_POINTS_SCALE) * 100,
+              })}
             </p>
           </>
         ) : (
           <>
             <div className="flex items-center justify-between font-semibold">
-              <span>Hourly rate</span>
+              <span>{copy("booking-customer.request.hourly-rate-label")}</span>
               <span className="text-quad-700">
                 {selected ? formatOfferedPrice(selected) : "-"}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Estimated subtotal</span>
+              <span>{copy("booking-customer.request.estimate-label")}</span>
               <span>{estimatedSubtotal == null ? "-" : formatMoney(estimatedSubtotal)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Held now (first hour)</span>
+              <span>{copy("booking-customer.request.hold-label")}</span>
               <span>
                 {selected?.hourly_rate_cents == null
                   ? "-"
@@ -370,12 +385,10 @@ export function BookingRequestForm({
               </span>
             </div>
             <p className="border-t border-line pt-3 text-xs text-mist">
-              We place a hold for the first hour now. Your student has 2 hours to
-              accept — if they accept, the hold is charged; if they decline or
-              time out, the hold is released and you&apos;re never charged. Final
-              billing uses the provider&apos;s submitted actual time, rounded to
-              15-minute increments. College Crew&apos;s fee comes from provider
-              earnings; there is no added customer platform fee.
+              {copy("booking-customer.request.hold-policy", {
+                response_hours: 2,
+                billing_increment: BILLING_INCREMENT_MINUTES,
+              })}
             </p>
           </>
         )}
@@ -385,10 +398,11 @@ export function BookingRequestForm({
 
       {unconfigured ? (
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
-          <p className="font-semibold">Payments aren&apos;t live yet.</p>
+          <p className="font-semibold">
+            {copy("booking-customer.request.payments-title")}
+          </p>
           <p className="mt-1">
-            Stripe isn&apos;t configured in this environment. This will run the
-            real (test-mode) authorization once it is.
+            {copy("booking-customer.request.payments-body")}
           </p>
         </div>
       ) : null}
@@ -407,14 +421,16 @@ export function BookingRequestForm({
       >
         {pending
           ? isQuote
-            ? "Sending request..."
-            : "Preparing hold..."
+            ? copy("booking-customer.request.quote-pending")
+            : copy("booking-customer.request.continue-pending")
           : isQuote
             ? jobPhotoCount < MIN_JOB_PHOTOS
-              ? "Add a job site photo to continue"
-              : "Request flat quote"
+              ? copy("booking-customer.request.quote-photo-required")
+              : copy("booking-customer.request.quote-submit")
             : selected?.hourly_rate_cents != null
-              ? `Continue to hold ${formatMoney(selected.hourly_rate_cents)}`
+              ? copy("booking-customer.request.continue-button", {
+                  hold_amount: formatMoney(selected.hourly_rate_cents),
+                })
               : "Continue"}
       </Button>
     </form>
@@ -435,6 +451,7 @@ function AuthorizeHoldForm({
   clientSecret: string;
   holdLabel: string;
 }) {
+  const copy = useBookingCopy();
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -466,7 +483,7 @@ function AuthorizeHoldForm({
 
       if (result.error) {
         setError(
-          result.error.message ?? "Card hold didn't go through. Please try again.",
+          result.error.message ?? copy("booking-customer.request.hold-error"),
         );
         setSubmitting(false);
         return;
@@ -487,8 +504,9 @@ function AuthorizeHoldForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <p className="text-sm text-ink-soft">
-        We&apos;ll place a {holdLabel} hold for the first hour. You&apos;re only
-        charged if your student accepts.
+        {copy("booking-customer.request.hold-intro", {
+          hold_amount: holdLabel,
+        })}
       </p>
       <PaymentElement />
       <Button
@@ -497,7 +515,11 @@ function AuthorizeHoldForm({
         className="w-full"
         disabled={!stripe || !elements || submitting}
       >
-        {submitting ? "Placing hold…" : `Place ${holdLabel} hold & request`}
+        {submitting
+          ? "Placing hold…"
+          : copy("booking-customer.request.hold-submit", {
+              hold_amount: holdLabel,
+            })}
       </Button>
       <p className="text-center text-xs text-mist">
         Test mode: use card 4242 4242 4242 4242, any future expiry, any CVC.

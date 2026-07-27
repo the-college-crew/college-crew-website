@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { StatusPill } from "@/components/status-pill";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,7 +11,12 @@ import {
   getOwnProviderProfile,
   requireProviderAccess,
 } from "@/lib/auth/session";
-import { billableMinutesFromElapsed } from "@/lib/booking/policy";
+import {
+  INVOICE_REVIEW_HOURS,
+  billableMinutesFromElapsed,
+} from "@/lib/booking/policy";
+import { bookingCopyValue } from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
@@ -31,7 +37,14 @@ export default async function CompleteJobPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, copyOverrides] = await Promise.all([
+    params,
+    getBookingCopyOverrides("provider"),
+  ]);
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   await requireProviderAccess(`/provider/jobs/${id}/complete`);
   const profile = await getOwnProviderProfile();
   if (!profile) notFound();
@@ -68,9 +81,10 @@ export default async function CompleteJobPage({
   const rateCents = booking.hourly_rate_cents_snapshot ?? 0;
 
   return (
-    <div className="space-y-6">
+    <BookingCopyProvider overrides={copyOverrides}>
+      <div className="space-y-6">
       <PageHeader
-        title="Complete job & invoice"
+        title={copy("booking-provider.invoice.title")}
         description={`${service?.name ?? "Service"} for ${customer?.full_name ?? "your customer"}`}
       />
 
@@ -90,18 +104,26 @@ export default async function CompleteJobPage({
 
       {invoice ? (
         <Card className="p-5">
-          <h2 className="font-display text-lg font-semibold">Invoice submitted</h2>
+          <h2 className="font-display text-lg font-semibold">
+            {copy("booking-provider.invoice.submitted-title")}
+          </h2>
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-mist">Billable time</dt>
+              <dt className="text-mist">
+                {copy("booking-provider.invoice.billable-label")}
+              </dt>
               <dd>{formatMinutes(invoice.submitted_minutes)}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-mist">Invoice total</dt>
+              <dt className="text-mist">
+                {copy("booking-provider.invoice.total-label")}
+              </dt>
               <dd>{formatMoney(invoice.subtotal_cents)}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="font-semibold">Your payout</dt>
+              <dt className="font-semibold">
+                {copy("booking-provider.invoice.payout-label")}
+              </dt>
               <dd className="font-semibold text-quad-700">
                 {formatMoney(
                   invoice.subtotal_cents - invoice.total_platform_fee_cents,
@@ -112,7 +134,9 @@ export default async function CompleteJobPage({
           <p className="mt-3 border-t border-line pt-3 text-xs text-mist">
             {booking.status === "completed"
               ? "Paid in full."
-              : "The customer has 24 hours to confirm; otherwise the saved card is charged automatically."}
+              : copy("booking-provider.invoice.waiting", {
+                  invoice_hours: INVOICE_REVIEW_HOURS,
+                })}
           </p>
           <Link
             href="/provider/jobs"
@@ -146,7 +170,7 @@ export default async function CompleteJobPage({
         />
       ) : booking.status === "booked" ? (
         <Card className="p-5 text-sm text-ink-soft">
-          <p>Mark yourself arrived from Jobs before submitting the invoice.</p>
+          <p>{copy("booking-provider.invoice.arrival-required")}</p>
           <Link
             href="/provider/jobs"
             className={buttonClasses({ variant: "secondary", size: "sm" })}
@@ -157,7 +181,7 @@ export default async function CompleteJobPage({
         </Card>
       ) : (
         <Card className="p-5 text-sm text-ink-soft">
-          <p>This job isn&apos;t ready to invoice.</p>
+          <p>{copy("booking-provider.invoice.not-ready")}</p>
           <Link
             href="/provider/jobs"
             className={buttonClasses({ variant: "secondary", size: "sm" })}
@@ -167,6 +191,7 @@ export default async function CompleteJobPage({
           </Link>
         </Card>
       )}
-    </div>
+      </div>
+    </BookingCopyProvider>
   );
 }

@@ -20,9 +20,11 @@ const SIGNED_URL_TTL_SECONDS = 3600;
 export function JobPhotoGrid({
   photos,
   label = "Job site photos",
+  unavailableText = "These photos are no longer available to you.",
 }: {
   photos: JobPhoto[];
   label?: string;
+  unavailableText?: string;
 }) {
   const [urls, setUrls] = useState<Record<string, string> | null>(null);
   const [failed, setFailed] = useState(false);
@@ -69,9 +71,7 @@ export function JobPhotoGrid({
       </p>
 
       {failed ? (
-        <p className="mt-1 text-xs text-mist">
-          These photos are no longer available to you.
-        </p>
+        <p className="mt-1 text-xs text-mist">{unavailableText}</p>
       ) : (
         <ul className="mt-1.5 flex gap-1.5">
           {visible.map((photo, index) => (

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { openConversationForBooking } from "@/app/actions/messaging";
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { JobPhotoGrid } from "@/components/booking/job-photo-grid";
 import { DeadlineCountdown } from "@/components/deadline-countdown";
@@ -22,11 +23,20 @@ import {
 } from "@/lib/booking/dashboard-groups";
 import { sweepInstantBookHolds } from "@/lib/booking/first-hour-hold";
 import {
+  CUSTOMER_REFUND_NOTICE_HOURS,
+  LATE_DISPUTE_DAYS,
+} from "@/lib/booking/policy";
+import {
   pickSuggestions,
   type ReplacementSuggestion,
 } from "@/lib/booking/replacement-ranking";
 import { getReplacementPool } from "@/lib/booking/replacement-suggestions";
 import { releaseExpiredAcceptances } from "@/lib/booking/requests";
+import {
+  bookingCopyValue,
+  type BookingCopyOverrides,
+} from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { demoBookings, getDemoPreview } from "@/lib/demo/sample-preview";
 import { bookingJobPhotos } from "@/lib/media/job-photos";
 import {
@@ -101,8 +111,15 @@ export default async function CustomerDashboardPage({
     reviewed?: string;
   }>;
 }) {
-  const [{ tab, requested, replaced, paid, reviewed }, session] =
-    await Promise.all([searchParams, requireRole("customer", "/dashboard")]);
+  const [
+    { tab, requested, replaced, paid, reviewed },
+    session,
+    copyOverrides,
+  ] = await Promise.all([
+    searchParams,
+    requireRole("customer", "/dashboard"),
+    getBookingCopyOverrides("customer"),
+  ]);
   const showPast = tab === "past";
   const now = new Date();
   const demoPreview = await getDemoPreview("customer");
@@ -115,16 +132,19 @@ export default async function CustomerDashboardPage({
       now,
     );
     return (
-      <CustomerDashboardView
-        groups={groups}
-        showPast={showPast}
-        requested={requested}
-        replaced={replaced}
-        paid={paid}
-        convoIndex={new Map()}
-        suggestions={new Map()}
-        demo
-      />
+      <BookingCopyProvider overrides={copyOverrides}>
+        <CustomerDashboardView
+          groups={groups}
+          showPast={showPast}
+          requested={requested}
+          replaced={replaced}
+          paid={paid}
+          convoIndex={new Map()}
+          suggestions={new Map()}
+          copyOverrides={copyOverrides}
+          demo
+        />
+      </BookingCopyProvider>
     );
   }
 
@@ -184,17 +204,20 @@ export default async function CustomerDashboardPage({
   ]);
 
   return (
-    <CustomerDashboardView
-      groups={groups}
-      showPast={showPast}
-      requested={requested}
-      replaced={replaced}
-      paid={paid}
-      reviewed={confirmedReviewedId}
-      convoIndex={convoIndex}
-      suggestions={suggestions}
-      customerId={session.user.id}
-    />
+    <BookingCopyProvider overrides={copyOverrides}>
+      <CustomerDashboardView
+        groups={groups}
+        showPast={showPast}
+        requested={requested}
+        replaced={replaced}
+        paid={paid}
+        reviewed={confirmedReviewedId}
+        convoIndex={convoIndex}
+        suggestions={suggestions}
+        customerId={session.user.id}
+        copyOverrides={copyOverrides}
+      />
+    </BookingCopyProvider>
   );
 }
 
@@ -208,6 +231,7 @@ function CustomerDashboardView({
   convoIndex,
   suggestions,
   customerId,
+  copyOverrides,
   demo = false,
 }: {
   groups: BookingGroups;
@@ -219,8 +243,13 @@ function CustomerDashboardView({
   convoIndex: Map<string, ConversationEntry>;
   suggestions: SuggestionIndex;
   customerId?: string;
+  copyOverrides: BookingCopyOverrides;
   demo?: boolean;
 }) {
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   const { attention, reviewable, upcoming, past } = groups;
   const list = showPast ? past : upcoming;
   const showAttention = !showPast && attention.length > 0;
@@ -254,7 +283,7 @@ function CustomerDashboardView({
         </>
       )}
       <PageHeader
-        title="My bookings"
+        title={copy("booking-customer.dashboard.title")}
         actions={
           <Link
             href={demo ? "/book/demo" : "/browse"}
@@ -271,8 +300,8 @@ function CustomerDashboardView({
           {demo
             ? "Sample request sent. No booking was created, but this is where the confirmation appears."
             : requested === "quote"
-              ? "Quote requested. Use the private chat to share any images or video the provider needs. You will review the final flat price before paying."
-              : "Request sent. The provider will accept or decline; once they accept, you'll confirm and pay here."}
+              ? copy("booking-customer.dashboard.quote-request-sent")
+              : copy("booking-customer.dashboard.request-sent")}
         </div>
       ) : null}
       {replaced ? (
@@ -284,7 +313,7 @@ function CustomerDashboardView({
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
           {demo
             ? "Sample payment confirmed. No payment was created."
-            : "Booking confirmed. You're on the schedule."}
+            : copy("booking-customer.dashboard.booking-confirmed")}
         </div>
       ) : null}
       {reviewed ? (
@@ -322,7 +351,8 @@ function CustomerDashboardView({
       {showAttention ? (
         <section aria-label="Needs attention" className="space-y-3">
           <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-red-800">
-            <span aria-hidden>⚠</span> Needs attention
+            <span aria-hidden>⚠</span>{" "}
+            {copy("booking-customer.dashboard.needs-attention")}
           </h2>
           <ul className="space-y-4">
             {attention.map((booking) => (
@@ -332,6 +362,7 @@ function CustomerDashboardView({
                   demo={demo}
                   convo={demo ? undefined : convoIndex.get(booking.id)}
                   suggestions={suggestions.get(booking.id) ?? []}
+                  copyOverrides={copyOverrides}
                   attention
                 />
               </li>
@@ -344,7 +375,7 @@ function CustomerDashboardView({
         <section aria-label="Waiting for your review" className="space-y-3">
           <div>
             <h2 className="font-display text-lg font-semibold text-ink">
-              How did the job go?
+              {copy("booking-customer.dashboard.awaiting-review")}
             </h2>
             <p className="mt-1 text-sm text-ink-soft">
               Your review helps neighbors choose confidently and helps students
@@ -359,6 +390,7 @@ function CustomerDashboardView({
                   demo={demo}
                   convo={demo ? undefined : convoIndex.get(booking.id)}
                   suggestions={[]}
+                  copyOverrides={copyOverrides}
                   reviewPrompt
                 />
               </li>
@@ -373,7 +405,9 @@ function CustomerDashboardView({
               ambiguous — name what these are. */}
           {showAttention || showReviewable ? (
             <h2 className="font-display text-lg font-semibold text-ink">
-              {showPast ? "Past" : "Scheduled"}
+              {showPast
+                ? "Past"
+                : copy("booking-customer.dashboard.scheduled")}
             </h2>
           ) : null}
           <ul className="space-y-4">
@@ -384,6 +418,7 @@ function CustomerDashboardView({
                   demo={demo}
                   convo={demo ? undefined : convoIndex.get(booking.id)}
                   suggestions={[]}
+                  copyOverrides={copyOverrides}
                 />
               </li>
             ))}
@@ -391,7 +426,11 @@ function CustomerDashboardView({
         </section>
       ) : showPast || (!showAttention && !showReviewable) ? (
         <EmptyState
-          title={showPast ? "No past bookings" : "Nothing booked yet"}
+          title={
+            showPast
+              ? "No past bookings"
+              : copy("booking-customer.dashboard.empty-title")
+          }
           action={
             <Link
               href={demo ? "/book/demo" : "/browse"}
@@ -403,7 +442,7 @@ function CustomerDashboardView({
         >
           {showPast
             ? "Completed and closed bookings will show up here."
-            : "Find a verified student and send your first request."}
+            : copy("booking-customer.dashboard.empty-body")}
         </EmptyState>
       ) : (
         // Only attention/review items exist: say plainly that the calendar is
@@ -432,6 +471,7 @@ function BookingCard({
   suggestions,
   attention = false,
   reviewPrompt = false,
+  copyOverrides,
 }: {
   booking: DashboardBooking;
   demo: boolean;
@@ -439,7 +479,12 @@ function BookingCard({
   suggestions: ReplacementSuggestion[];
   attention?: boolean;
   reviewPrompt?: boolean;
+  copyOverrides: BookingCopyOverrides;
 }) {
+  const copy = (
+    key: Parameters<typeof bookingCopyValue>[1],
+    values?: Record<string, string | number>,
+  ) => bookingCopyValue(copyOverrides, key, values);
   const providerName = booking.provider.display_name;
   const reason = booking.attentionReason;
   const isDeclined = booking.status === "declined";
@@ -477,21 +522,24 @@ function BookingCard({
       (booking.status === "booked" && !startPassed));
   const cancelOutcome: "full_refund" | "no_refund" | "no_payment" | undefined =
     booking.status === "booked"
-      ? startMs - nowMs >= 12 * 3_600_000
+      ? startMs - nowMs >= CUSTOMER_REFUND_NOTICE_HOURS * 3_600_000
         ? "full_refund"
         : "no_refund"
       : booking.status === "requested" || booking.status === "accepted"
         ? "no_payment"
         : undefined;
   const cancelLabel =
-    booking.status === "booked" ? "Cancel booking" : "Cancel request";
+    booking.status === "booked"
+      ? copy("booking-customer.dashboard.cancel-booking")
+      : copy("booking-customer.dashboard.cancel-request");
 
   const hasOpenDispute = booking.dispute?.status === "open";
   const finalChargeAt = booking.invoice?.resolved_at
     ? new Date(booking.invoice.resolved_at).getTime()
     : null;
   const withinLateWindow =
-    finalChargeAt != null && nowMs <= finalChargeAt + 7 * 24 * 3_600_000;
+    finalChargeAt != null &&
+    nowMs <= finalChargeAt + LATE_DISPUTE_DAYS * 24 * 3_600_000;
   const noShowEligible = isHourly && booking.status === "booked" && startPassed;
   const disputeEligible =
     isHourly &&
@@ -531,7 +579,7 @@ function BookingCard({
               ? `${formatMoney(booking.hourly_rate_cents_snapshot)}/hr · ${booking.estimated_minutes ?? 60} min estimate`
               : isQuote && booking.status === "requested"
                 ? booking.average_quote_cents_snapshot == null
-                  ? "Waiting for flat quote"
+                  ? copy("booking-customer.dashboard.quote-waiting")
                   : `Average shown ${formatMoney(booking.average_quote_cents_snapshot)} · final quote pending`
                 : formatMoney(booking.price_cents)}
           </p>
@@ -608,7 +656,9 @@ function BookingCard({
           role="status"
           className="mt-4 rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800"
         >
-          <p className="font-semibold">The response deadline has passed.</p>
+          <p className="font-semibold">
+            {copy("booking-customer.dashboard.response-passed")}
+          </p>
           <p className="mt-1">
             Your original request is still open. You can keep waiting, cancel,
             or atomically send one replacement request.
@@ -636,14 +686,16 @@ function BookingCard({
       {isQuote ? (
         <JobPhotoGrid
           photos={bookingJobPhotos(booking.job_photos)}
-          label="Photos you sent"
+          label={copy("booking-customer.dashboard.photo-label")}
+          unavailableText={copy(
+            "booking-customer.dashboard.photos-unavailable",
+          )}
         />
       ) : null}
 
       {isQuote && booking.status === "requested" ? (
         <div className="mt-3 rounded-lg border border-gold-300 bg-gold-100 p-3 text-xs leading-5 text-gold-900">
-          Your student quotes from these photos. They may ask for more in the
-          private chat before sending the final flat quote.
+          {copy("booking-customer.dashboard.quote-media-note")}
         </div>
       ) : null}
 
@@ -674,7 +726,9 @@ function BookingCard({
           role="alert"
           className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
         >
-          <p className="font-semibold">Your balance payment needs attention.</p>
+          <p className="font-semibold">
+            {copy("booking-customer.dashboard.balance-attention")}
+          </p>
           <p className="mt-1">
             The final charge didn&apos;t go through. Review the invoice and
             update your payment method.
@@ -714,7 +768,7 @@ function BookingCard({
           >
             {booking.invoice?.status === "requires_action"
               ? "Fix payment"
-              : "Review & pay"}
+              : copy("booking-customer.dashboard.review-pay")}
           </Link>
         ) : null}
 
@@ -797,7 +851,9 @@ function BookingCard({
             }
             className={buttonClasses({ variant: "secondary", size: "sm" })}
           >
-            {noShowEligible ? "Report a no-show" : "Report a problem"}
+            {noShowEligible
+              ? copy("booking-customer.dashboard.report-no-show")
+              : copy("booking-customer.dashboard.report-problem")}
           </Link>
         ) : null}
 

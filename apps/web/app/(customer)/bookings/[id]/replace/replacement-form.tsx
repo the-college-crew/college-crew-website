@@ -9,6 +9,7 @@ import {
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { useActionState, useState, useTransition } from "react";
 
+import { useBookingCopy } from "@/components/content/booking-copy-provider";
 import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -60,6 +61,7 @@ export function ReplacementForm({
   preselectedProviderServiceId?: string;
   preselectedStartAt?: string;
 }) {
+  const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState<
     ReplacementAuthState,
     FormData
@@ -163,7 +165,9 @@ export function ReplacementForm({
           role="status"
           className="rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-900"
         >
-          <p className="font-semibold">This changes your job time.</p>
+          <p className="font-semibold">
+            {copy("booking-customer.replace.time-change-title")}
+          </p>
           <p className="mt-1">
             {formatDateTime(originalStartAt)} →{" "}
             <span className="font-semibold">{formatDateTime(newStartAt)}</span>
@@ -198,7 +202,7 @@ export function ReplacementForm({
           ? "Preparing hold…"
           : selected
             ? `Continue to hold ${formatMoney(selected.hourlyRateCents)}`
-            : "Continue"}
+            : copy("booking-customer.replace.continue")}
       </Button>
     </form>
   );
@@ -267,6 +271,7 @@ function AuthorizeReplacementHold({
   holdLabel: string;
   newStartAt: string | null;
 }) {
+  const copy = useBookingCopy();
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -295,7 +300,7 @@ function AuthorizeReplacementHold({
       if (result.error) {
         setError(
           result.error.message ??
-            "Card hold didn't go through. Please try again.",
+            copy("booking-customer.replace.hold-error"),
         );
         setSubmitting(false);
         return;
@@ -330,7 +335,11 @@ function AuthorizeReplacementHold({
         className="w-full"
         disabled={!stripe || !elements || submitting}
       >
-        {submitting ? "Placing hold…" : `Place ${holdLabel} hold & request`}
+        {submitting
+          ? "Placing hold…"
+          : copy("booking-customer.replace.hold-submit", {
+              hold_amount: holdLabel,
+            })}
       </Button>
       <p className="text-center text-xs text-mist">
         Test mode: use card 4242 4242 4242 4242, any future expiry, any CVC.

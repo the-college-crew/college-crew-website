@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { FormLoader } from "@/components/form-loader";
+import { BookingCopyProvider } from "@/components/content/booking-copy-provider";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { SchedulePicker } from "@/components/scheduling/schedule-picker";
 import { buttonClasses } from "@/components/ui/button";
@@ -15,6 +16,11 @@ import {
   shiftDateKey,
 } from "@/lib/booking/availability-grid";
 import { MINIMUM_NOTICE_HOURS } from "@/lib/booking/policy";
+import {
+  bookingCopyValue,
+  type BookingCopyKey,
+} from "@/lib/content/booking-copy";
+import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import {
   demoAvailabilityWindows,
   demoOfferings,
@@ -30,6 +36,9 @@ export const metadata: Metadata = { title: "Sample booking request" };
 export default async function DemoBookingPage() {
   const preview = await getDemoPreview("customer");
   if (!preview) notFound();
+  const copyOverrides = await getBookingCopyOverrides("customer");
+  const copy = (key: BookingCopyKey) =>
+    bookingCopyValue(copyOverrides, key);
 
   // The sample uses the same picker as the real flow, driven off the sample
   // provider's weekly hours, so the preview can't drift from what customers see.
@@ -45,10 +54,11 @@ export default async function DemoBookingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <BookingCopyProvider overrides={copyOverrides}>
+      <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
         title={demoProviderProfile.display_name}
-        description="Sample booking request"
+        description={copy("booking-customer.demo-request.description")}
       />
       <SamplePreviewBanner role="customer" />
 
@@ -56,7 +66,9 @@ export default async function DemoBookingPage() {
         <form action={submitDemoBookingRequest} className="space-y-4">
           <FormLoader />
           <div>
-            <Label htmlFor="providerServiceId">Service</Label>
+            <Label htmlFor="providerServiceId">
+              {copy("booking-customer.demo-request.service-label")}
+            </Label>
             <Select id="providerServiceId" name="providerServiceId" required>
               {demoOfferings.map((offered) => (
                 <option key={offered.id} value={offered.id}>
@@ -68,7 +80,7 @@ export default async function DemoBookingPage() {
 
           <fieldset>
             <legend className="mb-2 block text-sm font-medium text-ink">
-              When do you need this?
+              {copy("booking-customer.demo-request.schedule-label")}
             </legend>
             <SchedulePicker
               days={demoSchedule.days}
@@ -77,12 +89,14 @@ export default async function DemoBookingPage() {
               minimumNoticeHours={MINIMUM_NOTICE_HOURS.default}
               horizonStart={demoSchedule.horizonStart}
               horizonEnd={demoSchedule.horizonEnd}
-              gridLabel="Choose a date to book"
+              gridLabel={copy("booking-customer.demo-request.calendar-label")}
             />
           </fieldset>
 
           <div>
-            <Label htmlFor="responseWindowHours">Response window</Label>
+            <Label htmlFor="responseWindowHours">
+              {copy("booking-customer.demo-request.response-label")}
+            </Label>
             <Select
               id="responseWindowHours"
               name="responseWindowHours"
@@ -96,7 +110,9 @@ export default async function DemoBookingPage() {
           </div>
 
           <div>
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="address">
+              {copy("booking-customer.demo-request.address-label")}
+            </Label>
             <Input
               id="address"
               name="address"
@@ -106,12 +122,16 @@ export default async function DemoBookingPage() {
           </div>
 
           <div>
-            <Label htmlFor="jobZip">Job ZIP</Label>
+            <Label htmlFor="jobZip">
+              {copy("booking-customer.demo-request.zip-label")}
+            </Label>
             <Input id="jobZip" name="jobZip" defaultValue="60614" required />
           </div>
 
           <div>
-            <Label htmlFor="details">Details</Label>
+            <Label htmlFor="details">
+              {copy("booking-customer.demo-request.details-label")}
+            </Label>
             <Textarea
               id="details"
               name="details"
@@ -122,20 +142,18 @@ export default async function DemoBookingPage() {
 
           <div className="rounded-lg border border-line bg-court p-4 text-sm">
             <div className="flex items-center justify-between font-semibold">
-              <span>Hourly rate</span>
+              <span>{copy("booking-customer.demo-request.rate-label")}</span>
               <span className="text-quad-700">
                 {formatOfferedPrice(demoOfferings[0])}
               </span>
             </div>
             <p className="mt-2 text-xs text-mist">
-              One-hour minimum, then 15-minute increments. After acceptance,
-              the first hour is due; final billing uses actual submitted time.
-              This sample submit only returns to the dashboard.
+              {copy("booking-customer.demo-request.policy-note")}
             </p>
           </div>
 
           <button type="submit" className={buttonClasses({ size: "lg", className: "w-full" })}>
-            Send sample request
+            {copy("booking-customer.demo-request.submit")}
           </button>
         </form>
       </Card>
@@ -145,9 +163,10 @@ export default async function DemoBookingPage() {
           href="/dashboard"
           className={buttonClasses({ variant: "ghost", size: "sm" })}
         >
-          Back to dashboard
+          {copy("booking-customer.demo-request.back")}
         </Link>
       </p>
-    </div>
+      </div>
+    </BookingCopyProvider>
   );
 }
