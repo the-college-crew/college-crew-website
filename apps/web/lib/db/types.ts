@@ -727,6 +727,7 @@ export type Database = {
           hourly_rate_cents_snapshot: number | null
           id: string
           initial_payment_due_at: string | null
+          job_photos: Json
           job_zip: string | null
           latitude: number | null
           longitude: number | null
@@ -792,6 +793,7 @@ export type Database = {
           hourly_rate_cents_snapshot?: number | null
           id?: string
           initial_payment_due_at?: string | null
+          job_photos?: Json
           job_zip?: string | null
           latitude?: number | null
           longitude?: number | null
@@ -857,6 +859,7 @@ export type Database = {
           hourly_rate_cents_snapshot?: number | null
           id?: string
           initial_payment_due_at?: string | null
+          job_photos?: Json
           job_zip?: string | null
           latitude?: number | null
           longitude?: number | null
@@ -2726,6 +2729,7 @@ export type Database = {
           p_address_kind?: string
           p_details?: string
           p_estimated_minutes: number
+          p_job_photos?: Json
           p_job_zip: string
           p_latitude?: number
           p_longitude?: number
