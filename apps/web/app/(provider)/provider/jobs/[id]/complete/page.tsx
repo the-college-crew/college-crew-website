@@ -20,7 +20,7 @@ import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
-import { ProviderInvoiceForm } from "./provider-invoice-form";
+import { ProviderInvoiceForm, QuoteInvoiceForm } from "./provider-invoice-form";
 
 export const metadata: Metadata = { title: "Complete job" };
 
@@ -54,18 +54,19 @@ export default async function CompleteJobPage({
     .from("bookings")
     .select(
       `id, provider_id, status, scheduled_at, arrived_at, work_completed_at,
+       booking_flow, price_cents, upfront_payment_cents,
        estimated_minutes, hourly_rate_cents_snapshot, service:services(name),
        customer:profiles!bookings_customer_id_fkey(full_name)`,
     )
     .eq("id", id)
     .eq("provider_id", profile.id)
     .maybeSingle();
-  if (!booking) notFound();
+  if (!booking || !booking.scheduled_at) notFound();
 
   const { data: invoice } = await supabase
     .from("booking_invoices")
     .select(
-      `submitted_minutes, provider_explanation, subtotal_cents,
+      `billing_basis, submitted_minutes, provider_explanation, subtotal_cents,
        total_platform_fee_cents, remaining_balance_cents, status`,
     )
     .eq("booking_id", id)
@@ -112,7 +113,11 @@ export default async function CompleteJobPage({
               <dt className="text-mist">
                 {copy("booking-provider.invoice.billable-label")}
               </dt>
-              <dd>{formatMinutes(invoice.submitted_minutes)}</dd>
+              <dd>
+                {invoice.submitted_minutes == null
+                  ? "Fixed quote"
+                  : formatMinutes(invoice.submitted_minutes)}
+              </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-mist">
@@ -146,6 +151,12 @@ export default async function CompleteJobPage({
             Back to jobs
           </Link>
         </Card>
+      ) : booking.status === "in_progress" && booking.booking_flow === "quote_v2" ? (
+        <QuoteInvoiceForm
+          bookingId={booking.id}
+          quoteTotalCents={booking.price_cents}
+          depositCents={booking.upfront_payment_cents ?? 0}
+        />
       ) : booking.status === "in_progress" ? (
         <ProviderInvoiceForm
           bookingId={booking.id}

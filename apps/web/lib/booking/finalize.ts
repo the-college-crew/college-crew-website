@@ -120,6 +120,7 @@ async function recordBookingLegal(
   const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer;
   if (
     !service ||
+    booking.scheduled_at == null ||
     booking.hourly_rate_cents_snapshot == null ||
     booking.estimated_minutes == null
   ) {

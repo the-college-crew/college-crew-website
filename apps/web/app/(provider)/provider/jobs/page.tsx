@@ -295,7 +295,7 @@ function ProviderJobsView({
                         </button>
                       </form>
                       <JobMilestoneActions job={job} />
-                      {job.booking_flow === "hourly_v1" &&
+                      {["hourly_v1", "quote_v2"].includes(job.booking_flow) &&
                       !job.arrived_at &&
                       (job.status === "accepted" || job.status === "booked") ? (
                         <ProviderCancelJob bookingId={job.id} />
@@ -357,7 +357,7 @@ function ProviderJobsView({
 
 /** Status-driven job actions: full-price completion + hourly work milestones. */
 function JobMilestoneActions({ job }: { job: JobRow }) {
-  if (job.booking_flow !== "hourly_v1") {
+  if (!["hourly_v1", "quote_v2"].includes(job.booking_flow)) {
     if (job.status === "paid") {
       return (
         <form action={completeBooking}>

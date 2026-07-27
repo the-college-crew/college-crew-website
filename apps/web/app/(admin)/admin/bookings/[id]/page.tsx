@@ -36,7 +36,8 @@ export default async function AdminBookingPage({
   const { data: booking } = await admin
     .from("bookings")
     .select(
-      `id, status, booking_flow, scheduled_at, arrived_at, work_completed_at,
+      `id, status, booking_flow, scheduled_at, requested_local_date,
+       arrived_at, work_completed_at,
        estimated_minutes, hourly_rate_cents_snapshot, cancellation_reason,
        cancellation_policy_result, cancelled_by_role,
        customer_name_snapshot, provider_display_name_snapshot,
@@ -123,7 +124,9 @@ export default async function AdminBookingPage({
       <Card className="p-5">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-ink-soft">
-            {formatDateTime(booking.scheduled_at)}
+            {booking.scheduled_at
+              ? formatDateTime(booking.scheduled_at)
+              : booking.requested_local_date ?? "Exact time pending"}
           </p>
           <StatusPill status={booking.status} />
         </div>

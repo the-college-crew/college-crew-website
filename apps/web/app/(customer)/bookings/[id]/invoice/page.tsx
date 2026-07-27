@@ -61,12 +61,16 @@ export default async function InvoicePage({
     .maybeSingle();
 
   if (!booking || booking.customer_id !== user.id) notFound();
-  if (booking.booking_flow !== "hourly_v1") redirect(`/bookings/${id}/confirm`);
+  if (!booking.scheduled_at) notFound();
+  if (!["hourly_v1", "quote_v2"].includes(booking.booking_flow)) {
+    redirect(`/bookings/${id}/confirm`);
+  }
+  const isQuote = booking.booking_flow === "quote_v2";
 
   const { data: invoice } = await supabase
     .from("booking_invoices")
     .select(
-      `id, submitted_minutes, provider_explanation, subtotal_cents,
+      `id, billing_basis, submitted_minutes, provider_explanation, subtotal_cents,
        total_platform_fee_cents, first_hour_credit_cents, remaining_balance_cents,
        status, submitted_at, autocharge_at, resolved_at`,
     )
@@ -116,12 +120,15 @@ export default async function InvoicePage({
   const isProcessing = invoice.status === "processing";
   const overEstimate =
     booking.estimated_minutes != null &&
+    invoice.submitted_minutes != null &&
     invoice.submitted_minutes > booking.estimated_minutes;
   // A revised invoice: the job didn't run the length that was booked. Call the
   // difference out explicitly rather than making the customer diff two numbers.
   const estimatedMinutes = booking.estimated_minutes;
   const durationChanged =
-    estimatedMinutes != null && invoice.submitted_minutes !== estimatedMinutes;
+    !isQuote &&
+    estimatedMinutes != null &&
+    invoice.submitted_minutes !== estimatedMinutes;
   const estimatedSubtotalCents =
     estimatedMinutes != null && booking.hourly_rate_cents_snapshot != null
       ? Math.round(
@@ -135,13 +142,17 @@ export default async function InvoicePage({
 
   const lines: Array<{ label: string; value: string; strong?: boolean }> = [
     {
-      label: `${formatMinutes(invoice.submitted_minutes)} at ${formatMoney(
-        booking.hourly_rate_cents_snapshot ?? 0,
-      )}/hr`,
+      label: isQuote
+        ? "Immutable final quote"
+        : `${formatMinutes(invoice.submitted_minutes ?? 0)} at ${formatMoney(
+            booking.hourly_rate_cents_snapshot ?? 0,
+          )}/hr`,
       value: formatMoney(invoice.subtotal_cents),
     },
     {
-      label: copy("booking-customer.invoice.first-hour-label"),
+      label: isQuote
+        ? "20% deposit already paid"
+        : copy("booking-customer.invoice.first-hour-label"),
       value: `- ${formatMoney(invoice.first_hour_credit_cents)}`,
     },
     {
@@ -210,7 +221,7 @@ export default async function InvoicePage({
             <p className="mt-1 text-xs text-ink-soft">
               Your provider recorded that you paid them directly, so we did
               not charge your card for this job. The only amount we collected is
-              the first hour taken when the booking was confirmed. If that
+              the {isQuote ? "deposit" : "first hour"} taken when the booking was confirmed. If that
               doesn&apos;t match what happened, report a problem below.
             </p>
           </div>
@@ -238,7 +249,7 @@ export default async function InvoicePage({
                   {copy("booking-customer.invoice.actual-label")}
                 </dt>
                 <dd>
-                  {formatMinutes(invoice.submitted_minutes)} ·{" "}
+                  {formatMinutes(invoice.submitted_minutes ?? 0)} ·{" "}
                   {formatMoney(invoice.subtotal_cents)}
                 </dd>
               </div>

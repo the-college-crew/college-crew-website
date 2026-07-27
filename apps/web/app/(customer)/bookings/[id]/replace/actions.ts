@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getSession, requireUser } from "@/lib/auth/session";
 import { finalizeHeldBooking } from "@/lib/booking/finalize";
 import { releaseFirstHourHold } from "@/lib/booking/first-hour-hold";
+import { QUOTE_DAYPARTS } from "@/lib/booking/quote-dayparts";
 import { isOfferedStartTime } from "@/lib/booking/replacement-ranking";
 import { getReplacementPool } from "@/lib/booking/replacement-suggestions";
 import { requestOperationMessage } from "@/lib/booking/requests";
@@ -37,6 +38,37 @@ export type ReplacementAuthState = {
   /** Lets the Payment Element show the customer's saved card (one confirm). */
   customerSessionClientSecret?: string;
 };
+
+export type QuoteReplacementState = { error?: string };
+
+export async function replaceQuoteRequest(
+  _prev: QuoteReplacementState,
+  formData: FormData,
+): Promise<QuoteReplacementState> {
+  await requireUser();
+  const originalBookingId = z.string().uuid().parse(formData.get("originalBookingId"));
+  const providerServiceId = z.string().uuid().parse(formData.get("providerServiceId"));
+  const requestedDate = z.string().date().parse(formData.get("requestedDate"));
+  const requestedDaypart = z.enum(QUOTE_DAYPARTS).parse(
+    formData.get("requestedDaypart"),
+  );
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("replace_quote_booking_request", {
+    p_original_booking_id: originalBookingId,
+    p_provider_service_id: providerServiceId,
+    p_requested_local_date: requestedDate,
+    p_requested_daypart: requestedDaypart,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(
+        error,
+        "Could not send the replacement quote request.",
+      ),
+    };
+  }
+  redirect("/dashboard?replaced=1");
+}
 
 const startSchema = z.object({
   originalBookingId: z.string().uuid(),
@@ -100,6 +132,9 @@ export async function startReplacementAuthorization(
     return {
       error: "Replacement suggestions appear after the response deadline.",
     };
+  }
+  if (!original.scheduled_at) {
+    return { error: "This hourly booking is missing its scheduled start." };
   }
   if (new Date(original.scheduled_at).getTime() <= now) {
     return { error: "The scheduled start has passed, so this request expired." };

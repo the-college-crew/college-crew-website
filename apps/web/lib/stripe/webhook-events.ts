@@ -28,7 +28,10 @@ export async function processStripeWebhookEvent(
   switch (event.type) {
     case "payment_intent.succeeded": {
       const intent = event.data.object as Stripe.PaymentIntent;
-      if (intent.metadata.payment_kind === "first_hour") {
+      if (
+        intent.metadata.payment_kind === "first_hour" ||
+        intent.metadata.payment_kind === "quote_deposit"
+      ) {
         await settleFirstHour(admin, event, intent);
       } else if (intent.metadata.payment_kind === "balance") {
         assertResult(
@@ -53,9 +56,12 @@ export async function processStripeWebhookEvent(
     }
     case "payment_intent.payment_failed": {
       const intent = event.data.object as Stripe.PaymentIntent;
-      if (intent.metadata.payment_kind === "first_hour") {
+      if (
+        intent.metadata.payment_kind === "first_hour" ||
+        intent.metadata.payment_kind === "quote_deposit"
+      ) {
         assertResult(
-          await admin.rpc("mark_first_hour_payment_unsuccessful", {
+          await admin.rpc("mark_upfront_payment_unsuccessful", {
             p_stripe_payment_intent_id: intent.id,
             p_target_status: "failed",
             p_failure_code: intent.last_payment_error?.code ?? undefined,
@@ -78,9 +84,12 @@ export async function processStripeWebhookEvent(
     }
     case "payment_intent.canceled": {
       const intent = event.data.object as Stripe.PaymentIntent;
-      if (intent.metadata.payment_kind === "first_hour") {
+      if (
+        intent.metadata.payment_kind === "first_hour" ||
+        intent.metadata.payment_kind === "quote_deposit"
+      ) {
         assertResult(
-          await admin.rpc("mark_first_hour_payment_unsuccessful", {
+          await admin.rpc("mark_upfront_payment_unsuccessful", {
             p_stripe_payment_intent_id: intent.id,
             p_target_status: "cancelled",
             p_failure_code: intent.cancellation_reason ?? "canceled",
@@ -182,13 +191,13 @@ async function settleFirstHour(
   });
   if (refund.configured) {
     assertResult(
-      await admin.rpc("record_first_hour_refund", {
+      await admin.rpc("reconcile_stripe_refund", {
         p_stripe_payment_intent_id: intent.id,
-        p_reason: "late_success_after_deadline",
         p_stripe_refund_id: refund.refundId,
         p_amount_cents: refund.amountCents,
+        p_reason: "late_success_after_deadline",
       }),
-      "record_first_hour_refund",
+      "reconcile_stripe_refund",
     );
   }
 }

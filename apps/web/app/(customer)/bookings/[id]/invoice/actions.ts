@@ -44,7 +44,7 @@ async function loadSavedMethod(
     .from("booking_payments")
     .select("stripe_customer_id, stripe_payment_method_id")
     .eq("booking_id", bookingId)
-    .eq("kind", "first_hour")
+    .in("kind", ["first_hour", "quote_deposit"])
     .maybeSingle();
   if (!firstHour?.stripe_customer_id) return null;
 
@@ -72,8 +72,8 @@ async function loadReviewableInvoice(bookingId: string, userId: string) {
   if (!booking || booking.customer_id !== userId) {
     return { error: "Booking not found." as const };
   }
-  if (booking.booking_flow !== "hourly_v1") {
-    return { error: "This booking doesn’t use hourly payment." as const };
+  if (!["hourly_v1", "quote_v2"].includes(booking.booking_flow)) {
+    return { error: "This booking doesn’t use post-job payment." as const };
   }
   if (booking.status !== "invoice_review") {
     return { error: "This booking isn’t awaiting payment review." as const };

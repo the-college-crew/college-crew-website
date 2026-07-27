@@ -10,7 +10,6 @@ import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import {
   useActionState,
   useCallback,
-  useMemo,
   useState,
   useTransition,
 } from "react";
@@ -18,6 +17,7 @@ import {
 import { JobPhotoPicker } from "@/components/booking/job-photo-picker";
 import { FormLoader } from "@/components/form-loader";
 import { useBookingCopy } from "@/components/content/booking-copy-provider";
+import { QuoteDaypartPicker } from "@/components/scheduling/quote-daypart-picker";
 import { SchedulePicker } from "@/components/scheduling/schedule-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,15 +29,12 @@ import {
 } from "@/components/ui/field";
 import {
   BASIS_POINTS_SCALE,
-  DEFAULT_RESPONSE_WINDOW_HOURS,
   BILLING_INCREMENT_MINUTES,
   PLATFORM_FEE_BPS,
-  RESPONSE_WINDOW_HOURS,
   calculateHourlySubtotalCents,
-  eligibleResponseWindowHours,
-  pilotLocalDateTimeToUtc,
 } from "@/lib/booking/policy";
 import type { OfferedService, ProviderSchedule } from "@/lib/db/queries";
+import type { QuoteDaypart } from "@/lib/booking/quote-dayparts";
 import { MIN_JOB_PHOTOS, type JobPhoto } from "@/lib/media/job-photos";
 import { formatMoney, formatOfferedPrice } from "@/lib/utils";
 
@@ -129,9 +126,10 @@ export function BookingRequestForm({
     scheduledLocal: string;
     estimatedMinutes: number;
   } | null>(null);
-  const [responseWindowHours, setResponseWindowHours] = useState<number>(
-    DEFAULT_RESPONSE_WINDOW_HOURS,
-  );
+  const [quoteSchedule, setQuoteSchedule] = useState<{
+    requestedDate: string;
+    requestedDaypart: QuoteDaypart;
+  } | null>(null);
   const [jobPhotoCount, setJobPhotoCount] = useState(0);
   const handleJobPhotosChange = useCallback(
     (photos: JobPhoto[]) => setJobPhotoCount(photos.length),
@@ -141,24 +139,6 @@ export function BookingRequestForm({
   const selected = services.find((service) => service.id === selectedId);
   const isQuote = selected?.pricing_mode === "quote";
   const estimatedMinutes = slot?.estimatedMinutes ?? 0;
-  const scheduled = useMemo(
-    () => pilotLocalDateTimeToUtc(slot?.scheduledLocal ?? ""),
-    [slot?.scheduledLocal],
-  );
-  const responseOptions = useMemo(
-    () =>
-      scheduled.ok
-        ? eligibleResponseWindowHours(new Date(), scheduled.date)
-        : ([] as (typeof RESPONSE_WINDOW_HOURS)[number][]),
-    [scheduled],
-  );
-  const effectiveResponseHours = responseOptions.includes(
-    responseWindowHours as (typeof RESPONSE_WINDOW_HOURS)[number],
-  )
-    ? responseWindowHours
-    : responseOptions.includes(DEFAULT_RESPONSE_WINDOW_HOURS)
-      ? DEFAULT_RESPONSE_WINDOW_HOURS
-      : responseOptions[0];
   // Only priceable once a full range is picked; the calculation rejects
   // durations outside the bookable band rather than guessing.
   const estimatedSubtotal =
@@ -222,17 +202,29 @@ export function BookingRequestForm({
         <legend className="mb-2 block text-sm font-medium text-ink">
           {copy("booking-customer.request.schedule-label")}
         </legend>
-        <SchedulePicker
-          days={schedule.days}
-          busy={schedule.busy}
-          nowIso={schedule.nowIso}
-          minimumNoticeHours={minimumNoticeHours}
-          horizonStart={schedule.horizonStart}
-          horizonEnd={schedule.horizonEnd}
-          onChange={setSlot}
-          preferredMinutes={initial?.estimatedMinutes}
-          gridLabel="Choose a date to book"
-        />
+        {isQuote ? (
+          <QuoteDaypartPicker
+            days={schedule.days}
+            busy={schedule.busy}
+            nowIso={schedule.nowIso}
+            minimumNoticeHours={Math.max(12, minimumNoticeHours)}
+            horizonStart={schedule.horizonStart}
+            horizonEnd={schedule.horizonEnd}
+            onChange={setQuoteSchedule}
+          />
+        ) : (
+          <SchedulePicker
+            days={schedule.days}
+            busy={schedule.busy}
+            nowIso={schedule.nowIso}
+            minimumNoticeHours={minimumNoticeHours}
+            horizonStart={schedule.horizonStart}
+            horizonEnd={schedule.horizonEnd}
+            onChange={setSlot}
+            preferredMinutes={initial?.estimatedMinutes}
+            gridLabel="Choose a date to book"
+          />
+        )}
         <FieldHint>
           {isQuote
             ? copy("booking-customer.request.quote-schedule-hint")
@@ -241,32 +233,11 @@ export function BookingRequestForm({
       </fieldset>
 
       {isQuote ? (
-        <div>
-          <Label htmlFor="responseWindowHours">
-            {copy("booking-customer.request.response-label")}
-          </Label>
-          <Select
-            id="responseWindowHours"
-            name="responseWindowHours"
-            value={effectiveResponseHours ?? ""}
-            onChange={(event) => setResponseWindowHours(Number(event.target.value))}
-            disabled={responseOptions.length === 0}
-            required
-          >
-            {responseOptions.length === 0 ? (
-              <option value="">
-                {copy("booking-customer.request.response-empty")}
-              </option>
-            ) : (
-              responseOptions.map((hours) => (
-                <option key={hours} value={hours}>
-                  {hours} hour{hours === 1 ? "" : "s"}
-                </option>
-              ))
-            )}
-          </Select>
+        <div className="rounded-xl border border-line bg-court p-4 text-sm">
+          <p className="font-medium text-ink">Quote response window: 2 hours</p>
           <FieldHint>
-            {copy("booking-customer.request.response-hint")}
+            Quote jobs require at least 12 hours&apos; notice; if the provider
+            misses the two-hour window, you can choose a replacement.
           </FieldHint>
         </div>
       ) : (
@@ -414,9 +385,8 @@ export function BookingRequestForm({
         disabled={
           pending ||
           !originReady ||
-          (isQuote && !effectiveResponseHours) ||
           (isQuote && jobPhotoCount < MIN_JOB_PHOTOS) ||
-          !slot
+          (isQuote ? !quoteSchedule : !slot)
         }
       >
         {pending

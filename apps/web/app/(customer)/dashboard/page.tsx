@@ -76,6 +76,7 @@ async function getSuggestionIndex(
     .filter(
       (booking) =>
         booking.booking_flow === "hourly_v1" &&
+        booking.scheduled_at != null &&
         needsReplacement(booking.attentionReason),
     )
     .slice(0, SUGGESTION_CARD_LIMIT);
@@ -89,7 +90,7 @@ async function getSuggestionIndex(
         });
         return [
           booking.id,
-          pickSuggestions(pool, booking.scheduled_at),
+          pickSuggestions(pool, booking.scheduled_at!),
         ] as const;
       } catch {
         return [booking.id, [] as ReplacementSuggestion[]] as const;
@@ -153,7 +154,8 @@ export default async function CustomerDashboardPage({
     supabase
       .from("bookings")
       .select(
-        `id, booking_flow, status, scheduled_at, address, price_cents,
+        `id, booking_flow, status, scheduled_at, requested_local_date,
+         requested_daypart, address, price_cents,
          estimated_minutes, hourly_rate_cents_snapshot,
          average_quote_cents_snapshot, job_photos, response_alert_at,
          initial_payment_due_at, en_route_at, dismissed_at,
@@ -493,14 +495,16 @@ function BookingCard({
     booking.status === "cancelled" && booking.cancelled_by_role === "provider";
   const isUpcoming = (UPCOMING_STATUSES as string[]).includes(booking.status);
   const isHourly = booking.booking_flow === "hourly_v1";
-  const isQuote = booking.booking_flow === "quote_v1";
+  const isQuote = ["quote_v1", "quote_v2"].includes(booking.booking_flow);
+  const usesPostJobPayment =
+    isHourly || booking.booking_flow === "quote_v2";
   const responseAlertReached = booking.responseAlertReached === true;
   const note = convo?.latest?.fromOther ? convo.latest : null;
   const hasProviderMessage = Boolean(note);
   // Where "Other options" goes: the full replacement list for a job we can
   // rebook in place, otherwise a fresh browse.
   const otherOptionsHref =
-    !demo && isHourly && needsReplacement(reason)
+    !demo && usesPostJobPayment && needsReplacement(reason)
       ? `/bookings/${booking.id}/replace`
       : demo
         ? "/book/demo"
@@ -509,13 +513,15 @@ function BookingCard({
   // Cancellation + dispute eligibility (Phase 6). The RPCs re-check everything
   // atomically; this only drives what the card offers and the outcome preview.
   const nowMs = new Date().getTime();
-  const startMs = new Date(booking.scheduled_at).getTime();
+  const startMs = booking.scheduled_at
+    ? new Date(booking.scheduled_at).getTime()
+    : Number.POSITIVE_INFINITY;
   const startPassed = startMs <= nowMs;
   const legacyCancel =
-    !isHourly &&
+    !usesPostJobPayment &&
     (booking.status === "requested" || booking.status === "accepted");
   const hourlyCancel =
-    isHourly &&
+    usesPostJobPayment &&
     !demo &&
     (booking.status === "requested" ||
       booking.status === "accepted" ||
@@ -540,9 +546,10 @@ function BookingCard({
   const withinLateWindow =
     finalChargeAt != null &&
     nowMs <= finalChargeAt + LATE_DISPUTE_DAYS * 24 * 3_600_000;
-  const noShowEligible = isHourly && booking.status === "booked" && startPassed;
+  const noShowEligible =
+    usesPostJobPayment && booking.status === "booked" && startPassed;
   const disputeEligible =
-    isHourly &&
+    usesPostJobPayment &&
     !demo &&
     !hasOpenDispute &&
     (noShowEligible ||
@@ -571,7 +578,12 @@ function BookingCard({
             {booking.service.name}
           </p>
           <p className="mt-0.5 text-sm text-ink-soft">
-            with {providerName} · {formatDateTime(booking.scheduled_at)}
+            with {providerName} ·{" "}
+            {booking.scheduled_at
+              ? formatDateTime(booking.scheduled_at)
+              : booking.requested_local_date && booking.requested_daypart
+                ? `${booking.requested_local_date} · ${booking.requested_daypart}`
+                : "Exact time pending"}
           </p>
           <p className="mt-0.5 text-xs text-mist">
             {booking.address} ·{" "}
@@ -614,7 +626,11 @@ function BookingCard({
             {providerName} suggested a different time.
           </p>
           <p className="mt-1">
-            You asked for {formatDateTime(booking.scheduled_at)}; they can do{" "}
+            You asked for{" "}
+            {booking.scheduled_at
+              ? formatDateTime(booking.scheduled_at)
+              : "the original time"}
+            ; they can do{" "}
             <span className="font-semibold">
               {formatDateTime(booking.proposed_start_at)}
             </span>
@@ -625,6 +641,21 @@ function BookingCard({
               “{booking.counter_note}”
             </p>
           ) : null}
+        </div>
+      ) : null}
+
+      {isCountered && booking.booking_flow === "quote_v2" ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p className="font-semibold">
+            {providerName} offered different date windows.
+          </p>
+          <p className="mt-1">
+            Review up to three available options and choose one to send the
+            saved request back.
+          </p>
         </div>
       ) : null}
 
@@ -666,7 +697,7 @@ function BookingCard({
         </div>
       ) : null}
 
-      {suggestions.length > 0 ? (
+      {suggestions.length > 0 && booking.scheduled_at ? (
         <QuickBookSuggestions
           bookingId={booking.id}
           suggestions={suggestions}
@@ -777,7 +808,9 @@ function BookingCard({
             href={`/bookings/${booking.id}/counter`}
             className={buttonClasses({ size: "sm" })}
           >
-            Review new time
+            {booking.booking_flow === "quote_v2"
+              ? "Review date options"
+              : "Review new time"}
           </Link>
         ) : null}
 

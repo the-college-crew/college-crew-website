@@ -12,6 +12,7 @@ import {
   type BookingCopyOverrides,
 } from "@/lib/content/booking-copy";
 import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
+import { getProviderSchedule } from "@/lib/db/queries";
 import {
   isOfferedStartTime,
   type ReplacementSuggestion,
@@ -22,9 +23,13 @@ import {
   legalDocumentPath,
 } from "@/lib/legal/acceptance";
 import { createClient } from "@/lib/supabase/server";
+import type { QuoteDaypart } from "@/lib/booking/quote-dayparts";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
-import { ReplacementForm } from "./replacement-form";
+import {
+  QuoteReplacementForm,
+  ReplacementForm,
+} from "./replacement-form";
 
 export const metadata: Metadata = { title: "Pick another student" };
 
@@ -121,18 +126,119 @@ export default async function ReplacementPage({
     .from("bookings")
     .select(
       `id, booking_flow, status, scheduled_at, response_alert_at,
+       provider_id, service_id, requested_local_date, requested_daypart,
        cancelled_by_role, estimated_minutes, time_flexibility,
        service:services(name, slug)`,
     )
     .eq("id", id)
     .eq("customer_id", session.user.id)
     .maybeSingle();
-  if (!booking || booking.booking_flow !== "hourly_v1") notFound();
+  if (
+    !booking ||
+    !["hourly_v1", "quote_v2"].includes(booking.booking_flow)
+  ) {
+    notFound();
+  }
 
   const service = Array.isArray(booking.service)
     ? booking.service[0]
     : booking.service;
   if (!service) notFound();
+
+  if (booking.booking_flow === "quote_v2") {
+    const providerCancelled =
+      booking.status === "cancelled" &&
+      booking.cancelled_by_role === "provider";
+    const replacementAvailable =
+      booking.status === "declined" ||
+      booking.status === "expired" ||
+      booking.status === "withdrawn" ||
+      providerCancelled;
+    const { data: offerings } = replacementAvailable
+      ? await supabase
+          .from("public_provider_offerings")
+          .select(
+            "provider_service_id, provider_id, average_quote_cents, is_quote_bookable",
+          )
+          .eq("service_id", booking.service_id)
+          .eq("pricing_mode", "quote")
+          .neq("provider_id", booking.provider_id)
+          .eq("is_quote_bookable", true)
+      : { data: [] };
+    const providerIds = (offerings ?? []).map((row) => row.provider_id);
+    const { data: providers } = providerIds.length
+      ? await supabase
+          .from("public_provider_directory")
+          .select("provider_id, display_name, minimum_notice_hours")
+          .in("provider_id", providerIds)
+      : { data: [] };
+    const names = new Map(
+      (providers ?? []).map((provider) => [
+        provider.provider_id,
+        provider.display_name ?? "Student provider",
+      ]),
+    );
+    const providerDetails = new Map(
+      (providers ?? []).map((provider) => [provider.provider_id, provider]),
+    );
+    const candidates = await Promise.all(
+      (offerings ?? []).flatMap((offering) =>
+        offering.provider_service_id
+          && offering.provider_id
+          ? [
+              getProviderSchedule(offering.provider_id).then((schedule) => ({
+                providerServiceId: offering.provider_service_id!,
+                providerName:
+                  names.get(offering.provider_id) ?? "Student provider",
+                averageQuoteCents: offering.average_quote_cents,
+                minimumNoticeHours:
+                  providerDetails.get(offering.provider_id)
+                    ?.minimum_notice_hours ?? 12,
+                schedule,
+              })),
+            ]
+          : [],
+      ),
+    );
+    if (!booking.requested_local_date || !booking.requested_daypart) notFound();
+    return (
+      <BookingCopyProvider overrides={copyOverrides}>
+        <div className="mx-auto max-w-2xl space-y-6">
+          <PageHeader
+            title="Pick another student"
+            description={`${service.name} · ${booking.requested_local_date}`}
+          />
+          {!replacementAvailable ? (
+            <Card className="p-6 text-sm text-ink-soft">
+              A replacement becomes available after the provider declines,
+              misses the two-hour response window, or cancels.
+            </Card>
+          ) : candidates.length ? (
+            <QuoteReplacementForm
+              bookingId={booking.id}
+              originalRequestedDate={booking.requested_local_date}
+              originalRequestedDaypart={
+                booking.requested_daypart as QuoteDaypart
+              }
+              candidates={candidates}
+            />
+          ) : (
+            <Card className="p-6 text-sm text-ink-soft">
+              No other quote provider is ready for this service right now.
+            </Card>
+          )}
+          <Link
+            href="/dashboard"
+            className={buttonClasses({ variant: "ghost", size: "sm" })}
+          >
+            ← Back to my bookings
+          </Link>
+        </div>
+      </BookingCopyProvider>
+    );
+  }
+
+  if (!booking.scheduled_at) notFound();
 
   // Alternatives surface for a timed-out request (past its response window), a
   // declined one, or one the provider cancelled — as long as the job itself

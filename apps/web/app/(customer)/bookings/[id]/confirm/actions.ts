@@ -25,8 +25,10 @@ import {
   QUOTE_BOOKING_RISK_VERSION,
 } from "@/lib/legal/waivers";
 import {
+  cancelFirstHourAuthorization,
   createBookingPaymentIntent,
   createFirstHourPaymentIntent,
+  createQuoteDepositPaymentIntent,
 } from "@/lib/stripe/connect";
 import { ensureStripeCustomerForUser } from "@/lib/stripe/customers";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -40,6 +42,55 @@ export type ConfirmPayState = {
   /** Set on success: mounts the Payment Element for this intent. */
   clientSecret?: string;
 };
+
+export type DeclineQuoteState = { error?: string };
+
+export async function declineQuoteOffer(
+  _previous: DeclineQuoteState,
+  formData: FormData,
+): Promise<DeclineQuoteState> {
+  const user = await requireUser();
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const supabase = await createClient();
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("id", bookingId)
+    .eq("customer_id", user.id)
+    .eq("booking_flow", "quote_v2")
+    .eq("status", "accepted")
+    .maybeSingle();
+  if (!booking) return { error: "This quote is no longer awaiting your decision." };
+
+  // Payment rows are intentionally not exposed through the browser-facing
+  // Data API. Ownership was established above before this server-only read.
+  const admin = createAdminClient();
+  const { data: payment } = await admin
+    .from("booking_payments")
+    .select("stripe_payment_intent_id")
+    .eq("booking_id", bookingId)
+    .eq("kind", "quote_deposit")
+    .maybeSingle();
+  const { error } = await supabase.rpc("withdraw_quote_negotiation", {
+    p_booking_id: bookingId,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not decline this quote."),
+    };
+  }
+
+  if (payment?.stripe_payment_intent_id) {
+    try {
+      await cancelFirstHourAuthorization({
+        paymentIntentId: payment.stripe_payment_intent_id,
+      });
+    } catch (cancelError) {
+      console.error("[quote] deposit intent cancellation failed", cancelError);
+    }
+  }
+  redirect(`/bookings/${bookingId}/replace`);
+}
 
 /**
  * Confirm & pay (SPEC §3/§6): runs when the customer confirms an accepted
@@ -63,7 +114,8 @@ export async function confirmAndPay(
     .from("bookings")
     .select(
       `id, customer_id, provider_id, booking_flow, status, scheduled_at, address, price_cents,
-       platform_fee_cents,
+       platform_fee_cents, upfront_payment_cents, initial_payment_due_at,
+       customer_authorization_version,
        service:services(name, slug),
        provider:provider_profiles(display_name),
        customer:profiles!bookings_customer_id_fkey(full_name)`,
@@ -76,12 +128,32 @@ export async function confirmAndPay(
   }
   if (
     booking.booking_flow !== "legacy" &&
-    booking.booking_flow !== "quote_v1"
+    booking.booking_flow !== "quote_v1" &&
+    booking.booking_flow !== "quote_v2"
   ) {
     return { error: "This booking uses the hourly payment flow." };
   }
   if (booking.status !== "accepted") {
     return { error: "This booking isn't awaiting payment." };
+  }
+  if (!booking.scheduled_at) {
+    return { error: "This quote is missing its exact start time." };
+  }
+  if (
+    booking.booking_flow === "quote_v2" &&
+    formData.get("authorizePayment") !== "on"
+  ) {
+    return {
+      error:
+        "Authorize the 20% deposit and saved method for the remaining balance.",
+    };
+  }
+  if (
+    booking.booking_flow === "quote_v2" &&
+    (!booking.initial_payment_due_at ||
+      new Date(booking.initial_payment_due_at) <= new Date())
+  ) {
+    return { error: "The quote deposit payment window has closed." };
   }
 
   const service = Array.isArray(booking.service)
@@ -95,7 +167,7 @@ export async function confirmAndPay(
     : booking.customer;
 
   const snapshot = service
-    ? booking.booking_flow === "quote_v1"
+    ? ["quote_v1", "quote_v2"].includes(booking.booking_flow)
       ? getQuoteBookingRiskSnapshot({
           bookingId: booking.id,
           finalQuoteCents: booking.price_cents,
@@ -131,7 +203,7 @@ export async function confirmAndPay(
       kind: "booking_addendum",
       role: "customer",
       version:
-        booking.booking_flow === "quote_v1"
+        ["quote_v1", "quote_v2"].includes(booking.booking_flow)
           ? QUOTE_BOOKING_RISK_VERSION
           : LEGAL_CONTENT_VERSION,
       content_hash: stableContentHash(snapshot),
@@ -156,6 +228,90 @@ export async function confirmAndPay(
 
   if (!providerPayout?.stripe_account_id) {
     return { unconfigured: true };
+  }
+
+  if (booking.booking_flow === "quote_v2") {
+    if (
+      !booking.upfront_payment_cents ||
+      !booking.customer_authorization_version
+    ) {
+      return { error: "This quote is missing its deposit terms." };
+    }
+    const authorization = {
+      version: booking.customer_authorization_version,
+      bookingId: booking.id,
+      quoteTotalCents: booking.price_cents,
+      depositCents: booking.upfront_payment_cents,
+      remainingBalanceCents:
+        booking.price_cents - booking.upfront_payment_cents,
+      dueAt: booking.initial_payment_due_at,
+      remainingBalanceAfterJob: true,
+      savedMethodScope: "booking_only",
+    };
+    const { error: authorizationError } = await supabase
+      .from("legal_acceptances")
+      .insert({
+        user_id: user.id,
+        booking_id: booking.id,
+        kind: "payment_authorization",
+        role: "customer",
+        version: booking.customer_authorization_version,
+        content_hash: stableContentHash(authorization),
+        signer_name: customer?.full_name ?? "Customer",
+        snapshot: authorization as Json,
+        ...audit,
+      });
+    if (authorizationError && authorizationError.code !== "23505") {
+      return { error: "Could not save the deposit authorization. Try again." };
+    }
+
+    const { data: begun, error: beginError } = await supabase
+      .rpc("begin_quote_deposit", {
+        p_booking_id: booking.id,
+        p_authorization_version: booking.customer_authorization_version,
+      })
+      .maybeSingle();
+    if (beginError || !begun) {
+      return {
+        error: requestOperationMessage(
+          beginError,
+          "Could not start the quote deposit. Try again.",
+        ),
+      };
+    }
+    const stripeCustomer = await ensureStripeCustomerForUser({
+      userId: user.id,
+      email: user.email ?? "",
+      name: customer?.full_name ?? null,
+    });
+    if (!stripeCustomer.configured) return { unconfigured: true };
+
+    const intent = await createQuoteDepositPaymentIntent({
+      bookingId: booking.id,
+      amountCents: begun.amount_cents,
+      stripeCustomerId: stripeCustomer.stripeCustomerId,
+      providerStripeAccountId: providerPayout.stripe_account_id,
+      idempotencyKey: begun.idempotency_key,
+    });
+    if (!intent.configured) return { unconfigured: true };
+
+    const { error: attachError } = await supabase.rpc(
+      "attach_quote_deposit_intent",
+      {
+        p_booking_id: booking.id,
+        p_stripe_payment_intent_id: intent.paymentIntentId,
+        p_stripe_customer_id: stripeCustomer.stripeCustomerId,
+      },
+    );
+    if (attachError) {
+      return {
+        error: requestOperationMessage(
+          attachError,
+          "Could not record the deposit. Try again.",
+        ),
+      };
+    }
+    return { clientSecret: intent.clientSecret };
   }
 
   const result = await createBookingPaymentIntent({
@@ -212,6 +368,9 @@ export async function confirmFirstHourPayment(
   }
   if (booking.status !== "accepted") {
     return { error: "This booking isn’t awaiting the first-hour payment." };
+  }
+  if (!booking.scheduled_at) {
+    return { error: "This booking is missing its start time." };
   }
   if (
     booking.initial_payment_due_at &&

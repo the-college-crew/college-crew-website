@@ -53,6 +53,21 @@ describe("partitionBookings — needs attention", () => {
     expect(past).toHaveLength(0);
   });
 
+  it("puts a date-window quote counter in attention before it has an exact time", () => {
+    const row = booking({
+      booking_flow: "quote_v2",
+      status: "countered",
+      scheduled_at: null,
+      requested_local_date: "2026-07-29",
+      requested_daypart: "morning",
+      proposed_start_at: null,
+    });
+    const { attention, past } = partitionBookings([row], NOW);
+
+    expect(attention[0]?.attentionReason).toBe("countered");
+    expect(past).toHaveLength(0);
+  });
+
   it("distinguishes each attention reason", () => {
     const rows = [
       booking({ status: "declined" }),

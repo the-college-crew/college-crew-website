@@ -38,9 +38,11 @@ export async function cancelBooking(
     .eq("id", bookingId)
     .maybeSingle();
 
-  if (booking?.booking_flow === "hourly_v1") {
+  if (["hourly_v1", "quote_v2"].includes(booking?.booking_flow ?? "")) {
     const { data: result, error } = await supabase.rpc(
-      "cancel_booking_as_customer",
+      booking?.booking_flow === "quote_v2"
+        ? "cancel_quote_booking_as_customer"
+        : "cancel_booking_as_customer",
       { p_booking_id: bookingId },
     );
     if (error) {

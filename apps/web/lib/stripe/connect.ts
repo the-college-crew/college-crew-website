@@ -197,6 +197,48 @@ export async function createFirstHourPaymentIntent(input: {
 }
 
 /**
+ * Capture the immutable 20% quote deposit on the platform and save the payment
+ * method for the fixed remaining balance after the job. The provider is paid
+ * later by the same separate-transfer payout rail used for hourly work.
+ */
+export async function createQuoteDepositPaymentIntent(input: {
+  bookingId: string;
+  amountCents: number;
+  stripeCustomerId: string;
+  providerStripeAccountId: string;
+  idempotencyKey: string;
+}): Promise<
+  | { configured: true; paymentIntentId: string; clientSecret: string }
+  | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const intent = await stripe.paymentIntents.create(
+    {
+      amount: input.amountCents,
+      currency: "usd",
+      customer: input.stripeCustomerId,
+      metadata: {
+        booking_id: input.bookingId,
+        payment_kind: "quote_deposit",
+        payee_account: input.providerStripeAccountId,
+      },
+      setup_future_usage: "off_session",
+      automatic_payment_methods: { enabled: true },
+    },
+    { idempotencyKey: input.idempotencyKey },
+  );
+
+  if (!intent.client_secret) return UNCONFIGURED;
+  return {
+    configured: true,
+    paymentIntentId: intent.id,
+    clientSecret: intent.client_secret,
+  };
+}
+
+/**
  * Capture a first-hour authorization when the provider accepts. Turns the hold
  * into an actual charge; the `payment_intent.succeeded` webhook then advances
  * the booking accepted → booked. Idempotent via the passed key.

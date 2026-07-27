@@ -15,7 +15,12 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { BOOKING_CONSENT_LABEL } from "@/lib/legal/waivers";
 
-import { confirmAndPay, simulatePayment, type ConfirmPayState } from "./actions";
+import {
+  confirmAndPay,
+  declineQuoteOffer,
+  simulatePayment,
+  type ConfirmPayState,
+} from "./actions";
 
 /**
  * Module-level so the Stripe.js script loads once per session, not per
@@ -41,10 +46,12 @@ export function ConfirmPayPanel({
   bookingId,
   simulateAllowed,
   consentLabel = BOOKING_CONSENT_LABEL,
+  requiresAuthorization = false,
 }: {
   bookingId: string;
   simulateAllowed: boolean;
   consentLabel?: string;
+  requiresAuthorization?: boolean;
 }) {
   const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState<
@@ -81,8 +88,26 @@ export function ConfirmPayPanel({
             />
             <span>{consentLabel}</span>
           </label>
+          {requiresAuthorization ? (
+            <label className="flex gap-3 rounded-xl border border-line bg-court p-4 text-sm text-ink-soft">
+              <input
+                type="checkbox"
+                name="authorizePayment"
+                className="mt-1 h-4 w-4 rounded border-line"
+              />
+              <span>
+                I authorize the 20% deposit now and allow this saved payment
+                method to be charged for the fixed remaining balance after the
+                invoice review period for this booking only.
+              </span>
+            </label>
+          ) : null}
           <Button type="submit" size="lg" className="w-full" disabled={pending}>
-            {pending ? "Preparing payment…" : "Confirm & pay"}
+            {pending
+              ? "Preparing payment…"
+              : requiresAuthorization
+                ? "Pay 20% deposit"
+                : "Confirm & pay"}
           </Button>
         </form>
       ) : (
@@ -107,6 +132,25 @@ export function ConfirmPayPanel({
 
       <FieldError>{state.error}</FieldError>
     </div>
+  );
+}
+
+export function DeclineQuoteOffer({ bookingId }: { bookingId: string }) {
+  const [state, action, pending] = useActionState(declineQuoteOffer, {});
+  return (
+    <form action={action} className="space-y-2">
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <Button
+        type="submit"
+        variant="secondary"
+        size="lg"
+        className="w-full"
+        disabled={pending}
+      >
+        {pending ? "Declining…" : "Decline quote and choose another provider"}
+      </Button>
+      <FieldError>{state.error}</FieldError>
+    </form>
   );
 }
 

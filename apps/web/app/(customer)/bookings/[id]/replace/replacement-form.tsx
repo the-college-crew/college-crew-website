@@ -14,14 +14,98 @@ import { FormLoader } from "@/components/form-loader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FieldError } from "@/components/ui/field";
+import { QuoteDaypartPicker } from "@/components/scheduling/quote-daypart-picker";
+import type { ProviderSchedule } from "@/lib/db/queries";
 import type { ReplacementSuggestion } from "@/lib/booking/replacement-ranking";
+import {
+  QUOTE_DAYPART_LABELS,
+  type QuoteDaypart,
+} from "@/lib/booking/quote-dayparts";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
 import {
   finalizeReplacement,
+  replaceQuoteRequest,
   startReplacementAuthorization,
   type ReplacementAuthState,
 } from "./actions";
+
+export function QuoteReplacementForm({
+  bookingId,
+  originalRequestedDate,
+  originalRequestedDaypart,
+  candidates,
+}: {
+  bookingId: string;
+  originalRequestedDate: string;
+  originalRequestedDaypart: QuoteDaypart;
+  candidates: Array<{
+    providerServiceId: string;
+    providerName: string;
+    averageQuoteCents: number | null;
+    minimumNoticeHours: number;
+    schedule: ProviderSchedule;
+  }>;
+}) {
+  const [state, action, pending] = useActionState(replaceQuoteRequest, {});
+  const [selectedId, setSelectedId] = useState(
+    candidates[0]?.providerServiceId ?? "",
+  );
+  const selected = candidates.find(
+    (candidate) => candidate.providerServiceId === selectedId,
+  );
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="originalBookingId" value={bookingId} />
+      <p className="text-sm text-ink-soft">
+        Your service, address, details, photos, and duration carry over to the
+        new student.
+      </p>
+      <label className="block text-sm font-medium">
+        Replacement student
+        <select
+          name="providerServiceId"
+          required
+          value={selectedId}
+          onChange={(event) => setSelectedId(event.target.value)}
+          className="mt-1 w-full rounded-lg border border-line bg-white p-3"
+        >
+          {candidates.map((candidate) => (
+            <option
+              key={candidate.providerServiceId}
+              value={candidate.providerServiceId}
+            >
+              {candidate.providerName}
+              {candidate.averageQuoteCents
+                ? ` · average ${formatMoney(candidate.averageQuoteCents)}`
+                : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="rounded-lg border border-line bg-court p-3 text-sm">
+        Your previous request was {originalRequestedDate} ·{" "}
+        {QUOTE_DAYPART_LABELS[originalRequestedDaypart]}; choose any available
+        window for the replacement student.
+      </p>
+      {selected ? (
+        <QuoteDaypartPicker
+          key={selected.providerServiceId}
+          days={selected.schedule.days}
+          busy={selected.schedule.busy}
+          nowIso={selected.schedule.nowIso}
+          minimumNoticeHours={Math.max(12, selected.minimumNoticeHours)}
+          horizonStart={selected.schedule.horizonStart}
+          horizonEnd={selected.schedule.horizonEnd}
+        />
+      ) : null}
+      <FieldError>{state.error}</FieldError>
+      <Button type="submit" size="lg" className="w-full" disabled={pending}>
+        {pending ? "Sending…" : "Send replacement quote request"}
+      </Button>
+    </form>
+  );
+}
 
 export type ReplacementCandidate = ReplacementSuggestion;
 

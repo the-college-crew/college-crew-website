@@ -35,7 +35,10 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
-import { ConfirmPayPanel } from "./confirm-pay-panel";
+import {
+  ConfirmPayPanel,
+  DeclineQuoteOffer,
+} from "./confirm-pay-panel";
 import { HourlyPayPanel } from "./hourly-pay-panel";
 
 export const metadata: Metadata = { title: "Confirm & pay" };
@@ -120,25 +123,44 @@ export default async function ConfirmPayPage({
   }
 
   // ---- Full-price flow: legacy fixed bookings and finalized quotes ------
-  const isQuote = booking.booking_flow === "quote_v1";
+  const isQuote = ["quote_v1", "quote_v2"].includes(booking.booking_flow);
+  const isDepositQuote = booking.booking_flow === "quote_v2";
+  const scheduledLabel = booking.scheduled_at
+    ? formatDateTime(booking.scheduled_at)
+    : booking.requested_local_date && booking.requested_daypart
+      ? `${booking.requested_local_date} · ${booking.requested_daypart}`
+      : "Exact time pending";
+  const depositCents = booking.upfront_payment_cents ?? 0;
+  const remainingQuoteCents = Math.max(0, booking.price_cents - depositCents);
   const rows = [
     { label: "Service", value: service.name },
     { label: "Provider", value: provider.display_name },
-    { label: "When", value: formatDateTime(booking.scheduled_at) },
+    { label: "When", value: scheduledLabel },
     { label: "Where", value: booking.address },
     {
       label: isQuote ? "Final flat quote" : "Price",
       value: formatMoney(booking.price_cents),
     },
+    ...(isDepositQuote
+      ? [
+          { label: "20% deposit due now", value: formatMoney(depositCents) },
+          {
+            label: "Remaining after the job",
+            value: formatMoney(remainingQuoteCents),
+          },
+        ]
+      : []),
   ];
-  const addendum = getBookingRiskSnapshot({
-    serviceSlug: service.slug,
-    serviceName: service.name,
-    scheduledAt: formatDateTime(booking.scheduled_at),
-    address: booking.address,
-    providerName: provider.display_name,
-    customerName: customer?.full_name ?? "Customer",
-  });
+  const addendum = booking.scheduled_at
+    ? getBookingRiskSnapshot({
+        serviceSlug: service.slug,
+        serviceName: service.name,
+        scheduledAt: formatDateTime(booking.scheduled_at),
+        address: booking.address,
+        providerName: provider.display_name,
+        customerName: customer?.full_name ?? "Customer",
+      })
+    : null;
 
   return (
     <BookingCopyProvider overrides={copyOverrides}>
@@ -174,7 +196,15 @@ export default async function ConfirmPayPage({
               Flat quote terms
             </h2>
             <ul className="mt-2 list-disc space-y-1 pl-5">
-              {QUOTE_PAYMENT_TERMS.map((term) => (
+              {(isDepositQuote
+                ? [
+                    "The final quote is fixed and cannot change at completion.",
+                    "College Crew charges 20% now and holds it until settlement.",
+                    "The remaining 80% is invoiced after the job and may be paid by card or in person.",
+                    "Invoice review, disputes, payment recovery, and provider payout follow the hourly booking process.",
+                  ]
+                : QUOTE_PAYMENT_TERMS
+              ).map((term) => (
                 <li key={term}>{term}</li>
               ))}
             </ul>
@@ -241,21 +271,41 @@ export default async function ConfirmPayPage({
               Payment received. Finalizing your booking. Refresh in a moment.
             </div>
           ) : booking.status === "accepted" && addendum ? (
-            <ConfirmPayPanel
-              bookingId={booking.id}
-              simulateAllowed={process.env.NODE_ENV !== "production"}
-              consentLabel={
-                isQuote ? QUOTE_PAYMENT_CONSENT_LABEL : undefined
-              }
-            />
+            <div className="space-y-3">
+              {isDepositQuote ? (
+                <DeadlineCountdown
+                  target={
+                    booking.initial_payment_due_at ??
+                    booking.scheduled_at ??
+                    new Date().toISOString()
+                  }
+                  label="20% deposit due"
+                />
+              ) : null}
+              <ConfirmPayPanel
+                bookingId={booking.id}
+                simulateAllowed={process.env.NODE_ENV !== "production"}
+                requiresAuthorization={isDepositQuote}
+                consentLabel={
+                  isQuote ? QUOTE_PAYMENT_CONSENT_LABEL : undefined
+                }
+              />
+              {isDepositQuote ? (
+                <DeclineQuoteOffer bookingId={booking.id} />
+              ) : null}
+            </div>
           ) : booking.status === "accepted" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
               This booking needs a service-specific risk addendum before payment
               can continue.
             </div>
-          ) : booking.status === "paid" || booking.status === "completed" ? (
+          ) : ["paid", "booked", "in_progress", "invoice_review", "completed"].includes(
+              booking.status,
+            ) ? (
             <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-              This booking is confirmed and paid. You&apos;re all set.
+              {isDepositQuote
+                ? "Deposit paid and booking confirmed; the remaining balance is due after the job."
+                : "This booking is confirmed and paid. You're all set."}
             </div>
           ) : booking.status === "requested" ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
@@ -295,6 +345,7 @@ function HourlyConfirmView({
   paidSucceeded: boolean;
   copyOverrides: BookingCopyOverrides;
 }) {
+  if (!booking.scheduled_at) notFound();
   const copy = (
     key: Parameters<typeof bookingCopyValue>[1],
     values?: Record<string, string | number>,
