@@ -113,17 +113,30 @@ create policy "Job photo participants read"
   );
 
 -- ---------------------------------------------------------------------------
--- Quote request RPC: now requires a photo manifest.
+-- Quote request RPC: a second overload that requires a photo manifest.
 --
--- Adding a defaulted parameter to the existing 11-arg function would create an
--- ambiguous overload rather than replace it, so the old signature is dropped.
--- The web booking action is the only caller; mobile has no quote flow.
+-- This is deliberately ADDITIVE so it can be applied while the currently
+-- deployed code is still running. `p_job_photos` has NO default, which is what
+-- keeps the two overloads unambiguous:
+--
+--   * a call naming the original 11 args matches ONLY the old signature, since
+--     the new one would leave p_job_photos unsupplied with nothing to fill it;
+--   * a call naming all 12 matches ONLY the new signature, since the old one
+--     has no p_job_photos parameter at all.
+--
+-- Give p_job_photos a default and both become candidates for the 11-arg call,
+-- which Postgres rejects as "function is not unique" - an outage for every
+-- quote booking until the new code ships.
+--
+-- FOLLOW-UP (required, after the new code is deployed): drop the legacy
+-- signature, or any authenticated caller can keep using it to create quote
+-- bookings with no photos, bypassing the requirement entirely.
+--
+--   drop function public.create_quote_booking_request(
+--     uuid, timestamptz, integer, integer, text, text, text, text, text,
+--     double precision, double precision
+--   );
 -- ---------------------------------------------------------------------------
-
-drop function if exists public.create_quote_booking_request(
-  uuid, timestamptz, integer, integer, text, text, text, text, text,
-  double precision, double precision
-);
 
 create function public.create_quote_booking_request(
   p_provider_service_id uuid,
@@ -132,14 +145,16 @@ create function public.create_quote_booking_request(
   p_response_window_hours integer,
   p_address text,
   p_job_zip text,
+  -- No default, on purpose. See the overload note above: a default here makes
+  -- the 11-arg call ambiguous and takes quote booking down. It sits ahead of
+  -- the defaulted parameters because Postgres forbids a non-defaulted one
+  -- after them; the client calls by name, so position is immaterial.
+  p_job_photos jsonb,
   p_details text default '',
   p_address_kind text default 'home',
   p_service_city text default '',
   p_latitude double precision default null,
-  p_longitude double precision default null,
-  -- Defaulted so a caller that forgets gets JOB_PHOTOS_REQUIRED (actionable)
-  -- instead of "function does not exist" (a 404 the UI can't explain).
-  p_job_photos jsonb default '[]'::jsonb
+  p_longitude double precision default null
 )
 returns uuid
 language plpgsql
@@ -335,17 +350,17 @@ end;
 $$;
 
 revoke all on function public.create_quote_booking_request(
-  uuid, timestamptz, integer, integer, text, text, text, text, text,
-  double precision, double precision, jsonb
+  uuid, timestamptz, integer, integer, text, text, jsonb, text, text, text,
+  double precision, double precision
 ) from public, anon, authenticated;
 grant execute on function public.create_quote_booking_request(
-  uuid, timestamptz, integer, integer, text, text, text, text, text,
-  double precision, double precision, jsonb
+  uuid, timestamptz, integer, integer, text, text, jsonb, text, text, text,
+  double precision, double precision
 ) to authenticated;
 
 comment on function public.create_quote_booking_request(
-  uuid, timestamptz, integer, integer, text, text, text, text, text,
-  double precision, double precision, jsonb
+  uuid, timestamptz, integer, integer, text, text, jsonb, text, text, text,
+  double precision, double precision
 ) is
   'Create a quote_v1 booking request. Requires 1-8 job-site photos whose storage '
   'paths belong to the calling customer. Photos are immutable once sent.';

@@ -2729,7 +2729,7 @@ export type Database = {
           p_address_kind?: string
           p_details?: string
           p_estimated_minutes: number
-          p_job_photos?: Json
+          p_job_photos: Json
           p_job_zip: string
           p_latitude?: number
           p_longitude?: number
