@@ -81,6 +81,7 @@ export function QuoteCounterOptionActions({
     FormData
   >(rejectQuoteCounter, {});
   const pending = selectPending || rejectPending;
+  const error = selectState.error ?? rejectState.error;
 
   return (
     <div className="space-y-3">
@@ -113,7 +114,15 @@ export function QuoteCounterOptionActions({
           Choose a different provider
         </Button>
       </form>
-      <FieldError>{selectState.error ?? rejectState.error}</FieldError>
+      {error ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800"
+        >
+          {error} Your saved request has not changed.
+        </div>
+      ) : null}
     </div>
   );
 }
