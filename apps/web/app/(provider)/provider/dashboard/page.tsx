@@ -722,6 +722,7 @@ function ProviderDashboardView({
                             ? booking.quote_estimate[0]?.estimated_minutes
                             : booking.quote_estimate?.estimated_minutes) ?? null,
                       }}
+                      schedule={schedule}
                     />
                   )}
                 </Card>

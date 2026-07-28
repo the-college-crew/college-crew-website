@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { openConversationForBooking } from "@/app/actions/messaging";
@@ -21,8 +21,16 @@ import {
 import {
   QUOTE_DAYPART_LABELS,
   QUOTE_DAYPARTS,
+  quoteDaypartContainsStart,
   type QuoteDaypart,
 } from "@/lib/booking/quote-dayparts";
+import {
+  buildDayRail,
+  groupScheduleDays,
+  minutesToClock,
+  validateRange,
+} from "@/lib/booking/availability-grid";
+import type { ProviderSchedule } from "@/lib/db/queries";
 import type { BookingFlow } from "@/lib/db/types";
 
 import {
@@ -53,7 +61,13 @@ type RequestJob = {
  * server actions redirect into the conversation, so there's no success state to
  * render here — the page navigates away.
  */
-export function RequestActions({ job }: { job: RequestJob }) {
+export function RequestActions({
+  job,
+  schedule,
+}: {
+  job: RequestJob;
+  schedule: ProviderSchedule;
+}) {
   const copy = useBookingCopy();
   const [mode, setMode] = useState<
     "idle" | "accept" | "quote" | "decline" | "counter" | "quoteCounter"
@@ -78,7 +92,13 @@ export function RequestActions({ job }: { job: RequestJob }) {
     return <CounterPanel job={job} onCancel={() => setMode("idle")} />;
   }
   if (mode === "quote") {
-    return <SendQuotePanel job={job} onCancel={() => setMode("idle")} />;
+    return (
+      <SendQuotePanel
+        job={job}
+        schedule={schedule}
+        onCancel={() => setMode("idle")}
+      />
+    );
   }
   if (mode === "quoteCounter") {
     return <QuoteCounterPanel job={job} onCancel={() => setMode("idle")} />;
@@ -199,13 +219,55 @@ function CounterPanel({
 
 function SendQuotePanel({
   job,
+  schedule,
   onCancel,
 }: {
   job: RequestJob;
+  schedule: ProviderSchedule;
   onCancel: () => void;
 }) {
   const copy = useBookingCopy();
   const [state, formAction] = useActionState(sendQuote, {});
+  const [estimatedMinutes, setEstimatedMinutes] = useState(
+    String(job.privateEstimatedMinutes ?? 120),
+  );
+  const [scheduledLocal, setScheduledLocal] = useState("");
+  const requestedDate = job.requestedDate;
+  const requestedDaypart = job.requestedDaypart;
+  const availableStartTimes = useMemo(() => {
+    const duration = Number(estimatedMinutes);
+    if (
+      !requestedDate ||
+      !requestedDaypart ||
+      !Number.isInteger(duration) ||
+      duration < 60 ||
+      duration > 720 ||
+      duration % 15 !== 0
+    ) {
+      return [];
+    }
+    const periods = groupScheduleDays(schedule.days).get(requestedDate);
+    if (!periods) return [];
+    const rail = buildDayRail({
+      day: periods,
+      busy: schedule.busy,
+      now: new Date(schedule.nowIso),
+      minimumNoticeHours: 0,
+    });
+    return rail.slots.filter(
+      (slot) =>
+        quoteDaypartContainsStart(requestedDaypart, slot.startMinutes) &&
+        validateRange(rail, slot.startMinutes, slot.startMinutes + duration, {
+          min: duration,
+          max: duration,
+        }).ok,
+    );
+  }, [estimatedMinutes, requestedDate, requestedDaypart, schedule]);
+
+  const selectedStartIsAvailable = availableStartTimes.some(
+    (slot) =>
+      scheduledLocal === `${requestedDate}T${minutesToClock(slot.startMinutes)}`,
+  );
 
   return (
     <div className="mt-3 rounded-xl border border-viridian/25 bg-honeydew/40 p-3">
@@ -236,20 +298,31 @@ function SendQuotePanel({
               htmlFor={`quote-start-${job.id}`}
               className="block text-sm font-medium text-ink"
             >
-              Exact start time
+              Exact start time on {requestedDate ?? "the requested date"}
             </label>
-            <Input
+            <Select
               id={`quote-start-${job.id}`}
               name="scheduledLocal"
-              type="datetime-local"
+              value={selectedStartIsAvailable ? scheduledLocal : ""}
+              onChange={(event) => setScheduledLocal(event.target.value)}
               required
-            />
+            >
+              <option value="">Choose a time</option>
+              {availableStartTimes.map((slot) => (
+                <option
+                  key={slot.startMinutes}
+                  value={`${requestedDate}T${minutesToClock(slot.startMinutes)}`}
+                >
+                  {slot.label}
+                </option>
+              ))}
+            </Select>
             <FieldHint>
-              Start within{" "}
+              Choose a 15-minute start within{" "}
               {job.requestedDaypart
                 ? QUOTE_DAYPART_LABELS[job.requestedDaypart]
-                : "the requested window"}{" "}
-              on {job.requestedDate ?? "the requested date"}.
+                : "the requested window"}. Only times that fit your current
+              availability and this estimate are shown.
             </FieldHint>
             <label
               htmlFor={`quote-duration-${job.id}`}
@@ -264,7 +337,8 @@ function SendQuotePanel({
               min={60}
               max={720}
               step={15}
-              defaultValue={job.privateEstimatedMinutes ?? 120}
+              value={estimatedMinutes}
+              onChange={(event) => setEstimatedMinutes(event.target.value)}
               required
             />
             <FieldHint>
