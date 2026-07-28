@@ -24,7 +24,7 @@ import {
 } from "@/lib/legal/acceptance";
 import { createClient } from "@/lib/supabase/server";
 import type { QuoteDaypart } from "@/lib/booking/quote-dayparts";
-import { formatDateTime, formatMoney } from "@/lib/utils";
+import { formatDateTime, formatLocalDate, formatMoney } from "@/lib/utils";
 
 import {
   QuoteReplacementForm,
@@ -206,7 +206,7 @@ export default async function ReplacementPage({
         <div className="mx-auto max-w-2xl space-y-6">
           <PageHeader
             title="Pick another student"
-            description={`${service.name} · ${booking.requested_local_date}`}
+            description={`${service.name} · ${formatLocalDate(booking.requested_local_date)}`}
           />
           {!replacementAvailable ? (
             <Card className="p-6 text-sm text-ink-soft">

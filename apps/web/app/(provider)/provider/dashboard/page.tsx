@@ -63,7 +63,7 @@ import {
 } from "@/lib/legal/acceptance";
 import { PROVIDER_TERMS_VERSION } from "@/lib/legal/waivers";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateTime, formatMoney } from "@/lib/utils";
+import { formatDateTime, formatLocalDate, formatMoney } from "@/lib/utils";
 
 import { ProviderAgreementBanner } from "../_components/provider-agreement-banner";
 import { connectStripe, refreshStripeReadiness } from "../actions";
@@ -613,7 +613,7 @@ function ProviderDashboardView({
                     {booking.booking_flow === "quote_v2" &&
                     booking.requested_local_date &&
                     booking.requested_daypart
-                      ? `${booking.requested_local_date} · ${QUOTE_DAYPART_LABELS[booking.requested_daypart]}`
+                      ? `${formatLocalDate(booking.requested_local_date)} · ${QUOTE_DAYPART_LABELS[booking.requested_daypart]}`
                       : booking.scheduled_at
                         ? formatDateTime(booking.scheduled_at)
                         : "Schedule pending"}
@@ -708,7 +708,7 @@ function ProviderDashboardView({
                           booking.booking_flow === "quote_v2" &&
                           booking.requested_local_date &&
                           booking.requested_daypart
-                            ? `${booking.requested_local_date} · ${QUOTE_DAYPART_LABELS[booking.requested_daypart]}`
+                            ? `${formatLocalDate(booking.requested_local_date)} · ${QUOTE_DAYPART_LABELS[booking.requested_daypart]}`
                             : booking.scheduled_at
                               ? formatDateTime(booking.scheduled_at)
                               : "Schedule pending",

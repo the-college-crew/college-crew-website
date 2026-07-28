@@ -15,7 +15,7 @@ import {
 import { bookingCopyValue } from "@/lib/content/booking-copy";
 import { getBookingCopyOverrides } from "@/lib/content/booking-copy.server";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateTime, formatMoney } from "@/lib/utils";
+import { formatDateTime, formatLocalDate, formatMoney } from "@/lib/utils";
 
 import {
   CounterOfferActions,
@@ -101,7 +101,9 @@ export default async function CounterOfferPage({
                     Your requested window
                   </p>
                   <p className="mt-1 font-medium">
-                    {booking.requested_local_date} ·{" "}
+                    {booking.requested_local_date
+                      ? formatLocalDate(booking.requested_local_date)
+                      : "Requested date"} ·{" "}
                     {booking.requested_daypart
                       ? QUOTE_DAYPART_LABELS[
                           booking.requested_daypart as QuoteDaypart

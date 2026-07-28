@@ -19,6 +19,7 @@ import {
   QUOTE_DAYPARTS,
   type QuoteDaypart,
 } from "@/lib/booking/quote-dayparts";
+import { formatLocalDate } from "@/lib/utils";
 
 export function CounterOfferActions({ bookingId }: { bookingId: string }) {
   const copy = useBookingCopy();
@@ -94,7 +95,7 @@ export function QuoteCounterOptionActions({
           {option.daypart === "either" ? (
             <fieldset className="space-y-3 rounded-xl border border-line bg-court p-4">
               <legend className="px-1 text-sm font-semibold text-ink">
-                {option.local_date} · choose what works for you
+                {formatLocalDate(option.local_date)} · choose what works for you
               </legend>
               <div className="grid gap-2 sm:grid-cols-3">
                 {QUOTE_DAYPARTS.map((daypart) => (
@@ -136,7 +137,7 @@ export function QuoteCounterOptionActions({
                 className="w-full justify-between"
                 disabled={pending}
               >
-                <span>{option.local_date}</span>
+                <span>{formatLocalDate(option.local_date)}</span>
                 <span>{QUOTE_DAYPART_LABELS[option.daypart]}</span>
               </Button>
             </>

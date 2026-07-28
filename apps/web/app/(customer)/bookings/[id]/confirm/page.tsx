@@ -33,7 +33,7 @@ import {
   QUOTE_PAYMENT_TERMS,
 } from "@/lib/legal/waivers";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateTime, formatMoney } from "@/lib/utils";
+import { formatDateTime, formatLocalDate, formatMoney } from "@/lib/utils";
 
 import {
   ConfirmPayPanel,
@@ -128,7 +128,7 @@ export default async function ConfirmPayPage({
   const scheduledLabel = booking.scheduled_at
     ? formatDateTime(booking.scheduled_at)
     : booking.requested_local_date && booking.requested_daypart
-      ? `${booking.requested_local_date} · ${booking.requested_daypart}`
+      ? `${formatLocalDate(booking.requested_local_date)} · ${booking.requested_daypart}`
       : "Exact time pending";
   const depositCents = booking.upfront_payment_cents ?? 0;
   const remainingQuoteCents = Math.max(0, booking.price_cents - depositCents);

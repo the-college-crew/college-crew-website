@@ -47,6 +47,24 @@ export function formatDate(iso: string) {
   }).format(new Date(iso));
 }
 
+/**
+ * Format a YYYY-MM-DD booking date without parsing it as a timestamp. These
+ * date keys represent the customer's local calendar day, so parsing them as
+ * UTC can display the prior day in Central time.
+ */
+export function formatLocalDate(date: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return date;
+
+  const [, year, month, day] = match;
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))));
+}
+
 export function formatDateTime(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "short",

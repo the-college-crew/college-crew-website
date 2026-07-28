@@ -44,7 +44,7 @@ import {
   type ConversationEntry,
 } from "@/lib/messaging/summaries";
 import { createClient } from "@/lib/supabase/server";
-import { cn, formatDateTime, formatMoney } from "@/lib/utils";
+import { cn, formatDateTime, formatLocalDate, formatMoney } from "@/lib/utils";
 
 import { CancelBookingButton } from "./cancel-booking-button";
 import { DismissBookingButton } from "./dismiss-booking-button";
@@ -582,7 +582,7 @@ function BookingCard({
             {booking.scheduled_at
               ? formatDateTime(booking.scheduled_at)
               : booking.requested_local_date && booking.requested_daypart
-                ? `${booking.requested_local_date} · ${booking.requested_daypart}`
+                ? `${formatLocalDate(booking.requested_local_date)} · ${booking.requested_daypart}`
                 : "Exact time pending"}
           </p>
           <p className="mt-0.5 text-xs text-mist">

@@ -21,7 +21,7 @@ import {
   QUOTE_DAYPART_LABELS,
   type QuoteDaypart,
 } from "@/lib/booking/quote-dayparts";
-import { formatDateTime, formatMoney } from "@/lib/utils";
+import { formatDateTime, formatLocalDate, formatMoney } from "@/lib/utils";
 
 import {
   finalizeReplacement,
@@ -84,7 +84,7 @@ export function QuoteReplacementForm({
         </select>
       </label>
       <p className="rounded-lg border border-line bg-court p-3 text-sm">
-        Your previous request was {originalRequestedDate} ·{" "}
+        Your previous request was {formatLocalDate(originalRequestedDate)} ·{" "}
         {QUOTE_DAYPART_LABELS[originalRequestedDaypart]}; choose any available
         window for the replacement student.
       </p>

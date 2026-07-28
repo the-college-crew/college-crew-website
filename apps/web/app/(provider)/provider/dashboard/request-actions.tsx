@@ -33,6 +33,7 @@ import {
 } from "@/lib/booking/availability-grid";
 import type { ProviderSchedule } from "@/lib/db/queries";
 import type { BookingFlow } from "@/lib/db/types";
+import { formatLocalDate } from "@/lib/utils";
 
 import {
   acceptBooking,
@@ -299,7 +300,7 @@ function SendQuotePanel({
               htmlFor={`quote-start-${job.id}`}
               className="block text-sm font-medium text-ink"
             >
-              Exact start time on {requestedDate ?? "the requested date"}
+              Exact start time on {requestedDate ? formatLocalDate(requestedDate) : "the requested date"}
             </label>
             <Select
               id={`quote-start-${job.id}`}
