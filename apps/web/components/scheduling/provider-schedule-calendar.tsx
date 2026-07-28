@@ -7,6 +7,7 @@ import {
   clockToMinutes,
   groupScheduleDays,
   minutesToClock,
+  pilotDateKey,
   pilotDatePosition,
   type BusyInterval,
   type ScheduleDay,
@@ -54,6 +55,7 @@ export function ProviderScheduleCalendar({
   minimumNoticeHours,
   overrideDates,
 }: ProviderScheduleCalendarProps) {
+  const today = pilotDateKey(nowIso);
   const { overlaysByDate, dottedDates, resolvedDays, byDay } = useMemo(() => {
     const overlays: Record<string, RailOverlay[]> = {};
     const dotted = new Set<string>();
@@ -64,7 +66,12 @@ export function ProviderScheduleCalendar({
 
     for (const booking of bookings) {
       const { date, minutes } = pilotDatePosition(booking.scheduled_at);
-      dotted.add(date);
+      // The red marker is an attention cue, not a record of every job. A
+      // completed job or one on an earlier calendar day remains viewable but
+      // should not compete with the day number.
+      if (booking.status !== "completed" && date >= today) {
+        dotted.add(date);
+      }
       (overlays[date] ??= []).push({
         key: booking.id,
         startMinutes: minutes,
@@ -114,7 +121,7 @@ export function ProviderScheduleCalendar({
         .flat()
         .sort((a, b) => a.date.localeCompare(b.date)),
     };
-  }, [bookings, days]);
+  }, [bookings, days, today]);
 
   return (
     <SchedulePicker
