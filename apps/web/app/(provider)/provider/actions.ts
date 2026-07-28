@@ -339,7 +339,13 @@ export async function suggestQuoteAnotherTime(
     p_quote_cents: quote.cents,
     p_estimated_minutes: parsed.data.estimatedMinutes,
   });
-  if (error) return { error: requestOperationMessage(error, "Could not start quote scheduling.") };
+  if (error) {
+    console.error("[quote-chat-reschedule] start failed", {
+      bookingId: parsed.data.bookingId,
+      message: error.message,
+    });
+    return { error: requestOperationMessage(error, "Could not start quote scheduling.") };
+  }
   const conversationId = await conversationIdFor(supabase, booking);
   const sent = await sendModeratedMessage(
     supabase,
