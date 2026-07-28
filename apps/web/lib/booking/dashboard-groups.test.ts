@@ -29,6 +29,7 @@ function booking(overrides: Partial<DashboardBooking> = {}): DashboardBooking {
     cancelled_by_role: null,
     proposed_start_at: null,
     counter_note: null,
+    declined_at: null,
     service: { name: "Tutoring", slug: "tutoring" },
     provider: { display_name: "Ari Schwartz" },
     review: null,
@@ -148,6 +149,34 @@ describe("partitionBookings — dismissal", () => {
 
     expect(attention).toHaveLength(0);
     expect(past).toHaveLength(1);
+  });
+});
+
+describe("partitionBookings — declined request retention", () => {
+  it("keeps a declined request visible for its first 48 hours", () => {
+    const row = booking({
+      status: "declined",
+      declined_at: new Date(NOW.getTime() - 47 * 60 * 60 * 1000).toISOString(),
+    });
+    const { attention } = partitionBookings([row], NOW);
+
+    expect(attention).toHaveLength(1);
+  });
+
+  it("hides a declined request at 48 hours without removing other history", () => {
+    const declined = booking({
+      status: "declined",
+      declined_at: new Date(NOW.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+    });
+    const completed = booking({
+      status: "completed",
+      scheduled_at: new Date(NOW.getTime() - DAY_MS).toISOString(),
+      work_completed_at: new Date(NOW.getTime() - DAY_MS).toISOString(),
+    });
+    const { attention, past } = partitionBookings([declined, completed], NOW);
+
+    expect(attention).toHaveLength(0);
+    expect(past.map((row) => row.id)).toEqual([completed.id]);
   });
 });
 

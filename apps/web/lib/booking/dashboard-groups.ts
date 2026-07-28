@@ -10,8 +10,11 @@ import type { BookingFlow, BookingStatus, Json } from "@/lib/db/types";
 
 /** How long after the job we keep asking for a review. */
 export const REVIEW_PROMPT_WINDOW_DAYS = 30;
+/** Declined requests remain available briefly, then leave the customer UI. */
+export const DECLINED_REQUEST_RETENTION_HOURS = 48;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 
 /**
  * Why a booking needs the customer to do something. Each one gets its own
@@ -65,6 +68,7 @@ export type DashboardBooking = {
   cancelled_by_role: string | null;
   proposed_start_at: string | null;
   counter_note: string | null;
+  declined_at: string | null;
   /** Present on real rows; absent in the sample-preview fixtures. */
   provider_id?: string;
   service: { name: string; slug: string };
@@ -162,6 +166,18 @@ export function partitionBookings(
   const past: DashboardBooking[] = [];
 
   for (const source of bookings) {
+    // A declined request has no completed work, payment, or review history to
+    // preserve in this view. Keep it long enough to act on a replacement, then
+    // hide it from My Bookings without deleting its underlying record.
+    if (
+      source.status === "declined" &&
+      source.declined_at != null &&
+      now.getTime() - new Date(source.declined_at).getTime() >=
+        DECLINED_REQUEST_RETENTION_HOURS * HOUR_MS
+    ) {
+      continue;
+    }
+
     const responseAlertReached = Boolean(
       source.booking_flow === "hourly_v1" &&
         source.status === "requested" &&

@@ -160,7 +160,7 @@ export default async function CustomerDashboardPage({
          average_quote_cents_snapshot, job_photos, response_alert_at,
          initial_payment_due_at, en_route_at, dismissed_at,
          review_prompt_dismissed_at, work_completed_at, cancelled_by_role,
-         proposed_start_at, counter_note, provider_id,
+         proposed_start_at, counter_note, declined_at, provider_id,
          service:services(name, slug),
          provider:provider_profiles(display_name),
          invoice:booking_invoices(status, remaining_balance_cents, resolved_at),
