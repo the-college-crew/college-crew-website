@@ -19,6 +19,11 @@ import { cn } from "@/lib/utils";
 
 import { MonthGrid } from "./month-grid";
 
+export type QuoteDaypartSelection = {
+  requestedDate: string | null;
+  requestedDaypart: QuoteDaypart | null;
+};
+
 function monthOf(date: string) {
   const [year, month] = date.split("-").map(Number);
   return new Date(year, month - 1, 1);
@@ -31,6 +36,8 @@ export function QuoteDaypartPicker({
   minimumNoticeHours,
   horizonStart,
   horizonEnd,
+  selection,
+  onSelectionChange,
   onChange,
 }: {
   days: readonly ScheduleDay[];
@@ -39,13 +46,25 @@ export function QuoteDaypartPicker({
   minimumNoticeHours: number;
   horizonStart: string;
   horizonEnd: string;
+  selection?: QuoteDaypartSelection;
+  onSelectionChange?: (value: QuoteDaypartSelection) => void;
   onChange?: (value: { requestedDate: string; requestedDaypart: QuoteDaypart } | null) => void;
 }) {
   const now = useMemo(() => new Date(nowIso), [nowIso]);
   const [monthStart, setMonthStart] = useState(() => monthOf(pilotDateKey(now)));
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedDaypart, setSelectedDaypart] = useState<QuoteDaypart | null>(null);
+  const [internalSelection, setInternalSelection] = useState<QuoteDaypartSelection>({
+    requestedDate: null,
+    requestedDaypart: null,
+  });
   const [notice, setNotice] = useState<string | null>(null);
+  const selectedDate =
+    selection === undefined
+      ? internalSelection.requestedDate
+      : selection.requestedDate;
+  const selectedDaypart =
+    selection === undefined
+      ? internalSelection.requestedDaypart
+      : selection.requestedDaypart;
   const cells = useMemo(
     () =>
       buildMonthCells({
@@ -78,14 +97,17 @@ export function QuoteDaypartPicker({
       return;
     }
     setNotice(null);
-    setSelectedDate(cell.date);
-    setSelectedDaypart(null);
+    const next = { requestedDate: cell.date, requestedDaypart: null };
+    setInternalSelection(next);
+    onSelectionChange?.(next);
     onChange?.(null);
   }
 
   function selectDaypart(daypart: QuoteDaypart) {
     if (!selectedDate || !available.includes(daypart)) return;
-    setSelectedDaypart(daypart);
+    const next = { requestedDate: selectedDate, requestedDaypart: daypart };
+    setInternalSelection(next);
+    onSelectionChange?.(next);
     onChange?.({ requestedDate: selectedDate, requestedDaypart: daypart });
   }
 

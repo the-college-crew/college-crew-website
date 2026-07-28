@@ -17,7 +17,10 @@ import {
 import { JobPhotoPicker } from "@/components/booking/job-photo-picker";
 import { FormLoader } from "@/components/form-loader";
 import { useBookingCopy } from "@/components/content/booking-copy-provider";
-import { QuoteDaypartPicker } from "@/components/scheduling/quote-daypart-picker";
+import {
+  QuoteDaypartPicker,
+  type QuoteDaypartSelection,
+} from "@/components/scheduling/quote-daypart-picker";
 import { SchedulePicker } from "@/components/scheduling/schedule-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -133,6 +136,11 @@ export function BookingRequestForm({
     requestedDate: string;
     requestedDaypart: QuoteDaypart;
   } | null>(null);
+  const [quoteSelection, setQuoteSelection] = useState<QuoteDaypartSelection>({
+    requestedDate: null,
+    requestedDaypart: null,
+  });
+  const [details, setDetails] = useState(initial?.details ?? "");
   const [jobPhotoCount, setJobPhotoCount] = useState(0);
   const handleJobPhotosChange = useCallback(
     (photos: JobPhoto[]) => setJobPhotoCount(photos.length),
@@ -215,6 +223,8 @@ export function BookingRequestForm({
             }
             horizonStart={schedule.horizonStart}
             horizonEnd={schedule.horizonEnd}
+            selection={quoteSelection}
+            onSelectionChange={setQuoteSelection}
             onChange={setQuoteSchedule}
           />
         ) : (
@@ -304,7 +314,8 @@ export function BookingRequestForm({
           name="details"
           rows={4}
           maxLength={2000}
-          defaultValue={initial?.details}
+          value={details}
+          onChange={(event) => setDetails(event.target.value)}
           placeholder={
             isQuote
               ? copy("booking-customer.request.quote-details-placeholder")

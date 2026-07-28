@@ -34,6 +34,14 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["OUTSIDE_PROVIDER_AVAILABILITY", "The full job estimate must fit the provider’s availability."],
   ["PROVIDER_SLOT_ALREADY_RESERVED", "That provider just reserved another job during this time."],
   ["QUOTE_DAYPART_UNAVAILABLE", "That date window is no longer available."],
+  [
+    "QUOTE_REQUEST_PROMOTION_FAILED",
+    "The quote request could not be saved. Your selections are still here—try again.",
+  ],
+  [
+    "booking identity, pricing, and policy snapshots are immutable",
+    "The quote request could not be saved. Your selections are still here—try again.",
+  ],
   ["EXACT_START_OUTSIDE_REQUEST", "Choose a start time inside the requested date window."],
   ["INVALID_COUNTER_OPTIONS", "Offer one to three valid date windows."],
   ["COUNTER_DATE_MUST_CHANGE", "Counter with a different date from the current request."],
