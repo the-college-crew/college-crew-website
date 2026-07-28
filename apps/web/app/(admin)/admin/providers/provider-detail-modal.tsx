@@ -15,7 +15,6 @@ import { ProviderReadinessChecklist } from "@/components/provider-readiness-chec
 import { SchoolIdentity } from "@/components/school-identity";
 import { Badge, VerifiedBadge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
-import { providerAvatarUrl } from "@/lib/media/provider-avatars";
 import type { VerificationStatus } from "@/lib/db/types";
 import { cn, formatDate, formatOfferedPrice } from "@/lib/utils";
 import {
@@ -23,6 +22,8 @@ import {
   formatAvailabilityWindow,
   groupAvailabilityWindows,
 } from "@/lib/provider/setup";
+
+import { AdminAvatarCropEditor } from "./admin-avatar-crop-editor";
 
 const statusTone = {
   pending: "gold",
@@ -344,21 +345,12 @@ export function ProviderDetailModal({
                       </dd>
                     </div>
                   ) : null}
-                  <div className="flex justify-between gap-3 sm:block">
-                    <dt className="text-mist">Profile photo</dt>
-                    <dd className="font-medium">
-                      {profile.avatar_image_path ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={providerAvatarUrl(profile.avatar_image_path) ?? ""}
-                          alt="Provider profile photo"
-                          className="h-12 w-12 rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-mist">Not uploaded</span>
-                      )}
-                    </dd>
-                  </div>
+                  <AdminAvatarCropEditor
+                    providerId={profile.id}
+                    imagePath={profile.avatar_image_path}
+                    focalX={profile.avatar_focal_x}
+                    focalY={profile.avatar_focal_y}
+                  />
                   <div className="flex justify-between gap-3 sm:block">
                     <dt className="text-mist">Service ZIP (private)</dt>
                     <dd className="font-medium">{profile.service_zip ?? "Not set"}</dd>

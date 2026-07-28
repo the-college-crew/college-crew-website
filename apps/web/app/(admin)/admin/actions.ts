@@ -12,6 +12,12 @@ import {
 import { hasServiceRoleEnv } from "@/lib/env";
 import { hasAcceptedCurrentLegalDocument } from "@/lib/legal/acceptance";
 import { PROVIDER_TERMS_VERSION } from "@/lib/legal/waivers";
+import { PROVIDER_AVATARS_BUCKET } from "@/lib/media/provider-avatars";
+import {
+  isOwnProviderPhotoPath,
+  PROVIDER_PHOTO_EXTENSION,
+} from "@/lib/media/provider-photos";
+import { uploadedObjectExists } from "@/lib/media/uploaded-object";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -252,6 +258,157 @@ export async function updateProviderText(
   revalidatePath("/admin/providers");
   revalidatePath("/browse");
   return { ok: true };
+}
+
+export type AdminAvatarUploadResult =
+  | { ok: true; path: string; token: string }
+  | { ok: false; error: string };
+
+export type AdminAvatarSaveResult =
+  | { ok: true; path: string; x: number; y: number }
+  | { ok: false; error: string };
+
+const adminAvatarUploadSchema = z.object({
+  providerId: z.string().uuid(),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+});
+
+const adminAvatarSaveSchema = z.object({
+  providerId: z.string().uuid(),
+  path: z.string().trim().default(""),
+  x: z.coerce.number().min(0).max(100),
+  y: z.coerce.number().min(0).max(100),
+});
+
+/**
+ * Mint a one-time upload capability for an admin replacing a provider avatar.
+ * The service-role credential stays on the server; the browser receives only
+ * a signed token scoped to the freshly generated object path.
+ */
+export async function createAdminProviderAvatarUpload(
+  formData: FormData,
+): Promise<AdminAvatarUploadResult> {
+  await requireRole("admin");
+  if (!hasServiceRoleEnv()) {
+    return { ok: false, error: "Server key missing. Check .env.local." };
+  }
+
+  const parsed = adminAvatarUploadSchema.safeParse({
+    providerId: formData.get("providerId"),
+    contentType: formData.get("contentType"),
+  });
+  if (!parsed.success) {
+    return { ok: false, error: "Choose a valid JPG, PNG, or WebP image." };
+  }
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileError } = await admin
+    .from("provider_profiles")
+    .select("user_id")
+    .eq("id", parsed.data.providerId)
+    .maybeSingle();
+  if (profileError || !profile) {
+    return { ok: false, error: "That provider could not be found." };
+  }
+
+  const extension = PROVIDER_PHOTO_EXTENSION[parsed.data.contentType];
+  const path = `${profile.user_id}/${crypto.randomUUID()}.${extension}`;
+  const { data, error } = await admin.storage
+    .from(PROVIDER_AVATARS_BUCKET)
+    .createSignedUploadUrl(path);
+  if (error || !data?.token) {
+    return { ok: false, error: "Could not prepare that upload. Try again." };
+  }
+
+  return { ok: true, path, token: data.token };
+}
+
+/**
+ * Save an admin-adjusted avatar crop and optionally promote a newly uploaded
+ * replacement. A replacement is verified before the database pointer changes;
+ * the old object is deleted only after the row update succeeds.
+ */
+export async function saveAdminProviderAvatar(
+  formData: FormData,
+): Promise<AdminAvatarSaveResult> {
+  await requireRole("admin");
+  if (!hasServiceRoleEnv()) {
+    return { ok: false, error: "Server key missing. Check .env.local." };
+  }
+
+  const parsed = adminAvatarSaveSchema.safeParse({
+    providerId: formData.get("providerId"),
+    path: formData.get("path") ?? "",
+    x: formData.get("x"),
+    y: formData.get("y"),
+  });
+  if (!parsed.success) {
+    return { ok: false, error: "Choose a valid photo position." };
+  }
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileError } = await admin
+    .from("provider_profiles")
+    .select("user_id, avatar_image_path")
+    .eq("id", parsed.data.providerId)
+    .maybeSingle();
+  if (profileError || !profile) {
+    return { ok: false, error: "That provider could not be found." };
+  }
+
+  const replacementPath = parsed.data.path || null;
+  if (
+    replacementPath &&
+    (!isOwnProviderPhotoPath(replacementPath, profile.user_id) ||
+      !(await uploadedObjectExists(PROVIDER_AVATARS_BUCKET, replacementPath)))
+  ) {
+    return { ok: false, error: "That replacement did not finish uploading." };
+  }
+  if (!replacementPath && !profile.avatar_image_path) {
+    return { ok: false, error: "Choose a profile photo first." };
+  }
+
+  const x = Math.round(parsed.data.x);
+  const y = Math.round(parsed.data.y);
+  const nextPath = replacementPath ?? profile.avatar_image_path;
+  if (!nextPath) {
+    return { ok: false, error: "Choose a profile photo first." };
+  }
+  const { data: updated, error: updateError } = await admin
+    .from("provider_profiles")
+    .update({
+      avatar_image_path: nextPath,
+      avatar_focal_x: x,
+      avatar_focal_y: y,
+    })
+    .eq("id", parsed.data.providerId)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError || !updated) {
+    if (replacementPath) {
+      await admin.storage.from(PROVIDER_AVATARS_BUCKET).remove([replacementPath]);
+    }
+    return { ok: false, error: "Could not save that profile photo." };
+  }
+
+  if (
+    replacementPath &&
+    profile.avatar_image_path &&
+    profile.avatar_image_path !== replacementPath
+  ) {
+    await admin.storage
+      .from(PROVIDER_AVATARS_BUCKET)
+      .remove([profile.avatar_image_path]);
+  }
+
+  revalidatePath("/admin/providers");
+  revalidatePath("/browse");
+  revalidatePath("/");
+  revalidatePath("/account");
+  revalidatePath(`/providers/${parsed.data.providerId}`);
+
+  return { ok: true, path: nextPath, x, y };
 }
 
 export type AdminProviderDetail = {
