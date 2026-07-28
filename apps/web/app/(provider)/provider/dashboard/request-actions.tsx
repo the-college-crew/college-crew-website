@@ -344,7 +344,7 @@ function SendQuotePanel({
               htmlFor={`quote-duration-${job.id}`}
               className="block text-sm font-medium text-ink"
             >
-              Private calendar estimate
+              How long do you think this job will take?
             </label>
             <Input
               id={`quote-duration-${job.id}`}
@@ -358,8 +358,10 @@ function SendQuotePanel({
               required
             />
             <FieldHint>
-              Minutes reserved on your calendar; the customer does not see this
-              estimate and it cannot change the fixed quote.
+              Enter your best estimate in minutes (15-minute increments). It
+              reserves time on your calendar and limits the available start
+              times; the customer never sees it and it does not change your
+              fixed quote.
             </FieldHint>
           </>
         ) : null}
@@ -437,7 +439,7 @@ function QuoteCounterPanel({
         htmlFor={`counter-duration-${job.id}`}
         className="block text-sm font-medium text-ink"
       >
-        Private job estimate
+        How long do you think this job will take?
       </label>
       <Input
         id={`counter-duration-${job.id}`}
@@ -449,6 +451,11 @@ function QuoteCounterPanel({
         defaultValue={job.privateEstimatedMinutes ?? 120}
         required
       />
+      <FieldHint>
+        Enter your best estimate in minutes (15-minute increments). It reserves
+        time on your calendar for whichever day the customer chooses; the
+        customer never sees it and it is not a price.
+      </FieldHint>
       {options.map((option, index) => (
         <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
           <Input
