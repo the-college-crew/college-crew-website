@@ -75,7 +75,13 @@ export default async function ProviderLayout({
               Dashboard
             </Link>
             <Link href="/provider/jobs" className="hover:text-viridian/60">
-              Jobs &amp; pricing
+              Jobs
+            </Link>
+            <Link
+              href="/account?tab=pricing"
+              className="hover:text-viridian/60"
+            >
+              Pricing
             </Link>
           </div>
         </nav>
