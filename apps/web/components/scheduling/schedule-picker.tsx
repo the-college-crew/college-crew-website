@@ -10,6 +10,7 @@ import {
   formatUsDate,
   pilotDateKey,
   toFormValues,
+  validateRange,
   type BusyInterval,
   type MonthCell,
   type ScheduleDay,
@@ -67,6 +68,8 @@ export type SchedulePickerProps = {
   preferredMinutes?: number;
   /** Keep the existing booking duration while choosing only a new start time. */
   fixedMinutes?: number;
+  /** Choose an exact fixed-duration start from a labeled dropdown. */
+  startTimeDropdown?: boolean;
   /** Read-only provider view: no selection, jobs drawn on the rail. */
   readOnly?: boolean;
   overlaysByDate?: Readonly<Record<string, readonly RailOverlay[]>>;
@@ -87,6 +90,7 @@ export function SchedulePicker({
   onChange,
   preferredMinutes,
   fixedMinutes,
+  startTimeDropdown = false,
   readOnly = false,
   overlaysByDate,
   dottedDates,
@@ -192,6 +196,29 @@ export function SchedulePicker({
       <div className="flex min-h-0 flex-col md:border-l md:border-stone md:pl-5">
         {rail && selectedDate ? (
           <>
+            {startTimeDropdown && fixedMinutes ? (
+              <label className="block text-sm font-medium text-ink">
+                Start time
+                <select
+                  className="mt-2 w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink focus:border-viridian focus:outline-none focus:ring-2 focus:ring-viridian/15"
+                  value={selection?.startMinutes ?? ""}
+                  onChange={(event) => {
+                    const start = Number(event.target.value);
+                    applySelection(selectedDate, Number.isFinite(start)
+                      ? { startMinutes: start, endMinutes: start + fixedMinutes }
+                      : null);
+                  }}
+                >
+                  <option value="">Choose a start time</option>
+                  {rail.slots.filter((slot) => validateRange(
+                    rail, slot.startMinutes, slot.startMinutes + fixedMinutes,
+                    { min: fixedMinutes, max: fixedMinutes },
+                  ).ok).map((slot) => (
+                    <option key={slot.startMinutes} value={slot.startMinutes}>{slot.label}</option>
+                  ))}
+                </select>
+              </label>
+            ) : (
             <DayRail
               key={selectedDate}
               rail={rail}
@@ -206,6 +233,7 @@ export function SchedulePicker({
               readOnly={readOnly}
               overlays={overlaysByDate?.[selectedDate]}
             />
+            )}
             {railFooter?.(selectedDate)}
           </>
         ) : readOnly && selectedDate ? (

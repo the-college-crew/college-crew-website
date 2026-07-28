@@ -12,6 +12,7 @@ import {
   hasAcceptedCurrentLegalDocument,
   legalDocumentPath,
 } from "@/lib/legal/acceptance";
+import { sendModeratedMessage } from "@/lib/messaging/conversation";
 import { createClient } from "@/lib/supabase/server";
 
 export type RescheduleActionState = { error?: string };
@@ -121,5 +122,43 @@ export async function respondToChatReschedule(
   revalidatePath(`/messages/${parsed.data.conversationId}`);
   revalidatePath("/provider/dashboard");
   revalidatePath("/dashboard");
+  redirect(`/messages/${parsed.data.conversationId}`);
+}
+
+export async function proposeQuoteChatReschedule(
+  _previous: RescheduleActionState, formData: FormData,
+): Promise<RescheduleActionState> {
+  await requireUser();
+  const parsed = proposalSchema.safeParse({ bookingId: formData.get("bookingId"), conversationId: formData.get("conversationId"), scheduledLocal: formData.get("scheduledLocal") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const proposed = pilotLocalDateTimeToUtc(parsed.data.scheduledLocal);
+  if (!proposed.ok) return { error: "Choose a valid date and start time." };
+  const supabase = await createClient();
+  const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
+  const { error } = await rpc("propose_quote_chat_reschedule", { p_booking_id: parsed.data.bookingId, p_proposed_start_at: proposed.date.toISOString() });
+  if (error) return { error: requestOperationMessage(error, "Could not suggest that time.") };
+  revalidatePath(`/messages/${parsed.data.conversationId}`);
+  redirect(`/messages/${parsed.data.conversationId}`);
+}
+
+export async function respondToQuoteChatReschedule(
+  _previous: RescheduleActionState, formData: FormData,
+): Promise<RescheduleActionState> {
+  await requireUser();
+  const parsed = responseSchema.safeParse({ proposalId: formData.get("proposalId"), bookingId: formData.get("bookingId"), conversationId: formData.get("conversationId"), accept: formData.get("accept") });
+  if (!parsed.success) return { error: "Could not respond to that suggestion." };
+  const supabase = await createClient();
+  const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
+  const { error } = await rpc("respond_to_quote_chat_reschedule", { p_proposal_id: parsed.data.proposalId, p_accept: parsed.data.accept === "true" });
+  if (error) return { error: requestOperationMessage(error, "Could not update that suggestion.") };
+  if (parsed.data.accept === "true") {
+    await sendModeratedMessage(
+      supabase,
+      parsed.data.conversationId,
+      "Your final quote is ready. Please visit My Bookings to review and accept the job.",
+    );
+  }
+  revalidatePath(`/messages/${parsed.data.conversationId}`);
+  revalidatePath("/provider/dashboard"); revalidatePath("/dashboard");
   redirect(`/messages/${parsed.data.conversationId}`);
 }

@@ -5,7 +5,9 @@ import { useActionState, useEffect, useState } from "react";
 
 import {
   proposeChatReschedule,
+  proposeQuoteChatReschedule,
   respondToChatReschedule,
+  respondToQuoteChatReschedule,
 } from "@/app/(shared)/messages/reschedule-actions";
 import { SchedulePicker } from "@/components/scheduling/schedule-picker";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ export function ChatReschedulePanel({
   schedule,
   estimatedMinutes,
   proposal,
+  quoteCents,
 }: {
   bookingId: string;
   conversationId: string;
@@ -35,13 +38,15 @@ export function ChatReschedulePanel({
   schedule: ProviderSchedule;
   estimatedMinutes: number;
   proposal: ChatRescheduleProposal | null;
+  quoteCents?: number | null;
 }) {
   const [slot, setSlot] = useState<{
     scheduledLocal: string;
     estimatedMinutes: number;
   } | null>(null);
-  const [proposalState, propose] = useActionState(proposeChatReschedule, {});
-  const [responseState, respond] = useActionState(respondToChatReschedule, {});
+  const quoteMode = quoteCents != null;
+  const [proposalState, propose] = useActionState(quoteMode ? proposeQuoteChatReschedule : proposeChatReschedule, {});
+  const [responseState, respond] = useActionState(quoteMode ? respondToQuoteChatReschedule : respondToChatReschedule, {});
   const [pickerOpen, setPickerOpen] = useState(false);
   const awaitingMe = proposal?.proposer_id !== currentUserId;
 
@@ -58,7 +63,7 @@ export function ChatReschedulePanel({
     <section className="border-b border-line bg-honeydew/30 px-4 py-2.5">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
         <p className="text-sm text-ink-soft">
-          Want to suggest a new time for this booking?
+          Want to suggest a new time for this booking?{quoteMode ? ` The quote is $${(quoteCents / 100).toFixed(2)}.` : ""}
         </p>
         <Button type="button" size="sm" variant="secondary" onClick={() => setPickerOpen(true)}>
           Suggest new time
@@ -136,7 +141,8 @@ export function ChatReschedulePanel({
                 horizonEnd={schedule.horizonEnd}
                 preferredMinutes={estimatedMinutes}
                 fixedMinutes={estimatedMinutes}
-                gridLabel="Choose a new date and time"
+                startTimeDropdown={quoteMode}
+                gridLabel={quoteMode ? "Choose a new date and start time" : "Choose a new date and time"}
                 onChange={setSlot}
               />
               <FieldError>{proposalState.error}</FieldError>

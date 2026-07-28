@@ -308,6 +308,49 @@ export async function suggestAnotherTime(
   redirect(`/messages/${conversationId}`);
 }
 
+const quoteChatRescheduleSchema = z.object({
+  bookingId: z.string().uuid(),
+  estimatedMinutes: z.coerce.number().int().min(60).max(720)
+    .refine((value) => value % 15 === 0, "Use 15-minute increments."),
+});
+
+/** Start quote scheduling in chat after the provider sets its fixed quote and estimate. */
+export async function suggestQuoteAnotherTime(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireProviderAccess();
+  const parsed = quoteChatRescheduleSchema.safeParse({
+    bookingId: formData.get("bookingId"),
+    estimatedMinutes: formData.get("estimatedMinutes"),
+  });
+  const quote = parseAverageQuoteInput(formData.get("quoteAmount"));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!quote.success || quote.cents === null) {
+    return { error: quote.success ? "Enter a final quote between $20 and $10,000." : "Enter a final quote." };
+  }
+  const supabase = await createClient();
+  const booking = await loadBookingParties(supabase, parsed.data.bookingId);
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    name: string, args: Record<string, unknown>,
+  ) => Promise<{ error: { message: string } | null }>;
+  const { error } = await rpc("start_quote_chat_rescheduling", {
+    p_booking_id: parsed.data.bookingId,
+    p_quote_cents: quote.cents,
+    p_estimated_minutes: parsed.data.estimatedMinutes,
+  });
+  if (error) return { error: requestOperationMessage(error, "Could not start quote scheduling.") };
+  const conversationId = await conversationIdFor(supabase, booking);
+  const sent = await sendModeratedMessage(
+    supabase,
+    conversationId,
+    `I can do this for ${formatMoney(quote.cents)} and estimate ${Math.floor(parsed.data.estimatedMinutes / 60)} hour${Math.floor(parsed.data.estimatedMinutes / 60) === 1 ? "" : "s"}${parsed.data.estimatedMinutes % 60 ? ` ${parsed.data.estimatedMinutes % 60} minutes` : ""}. Could we find a date and start time that works for both of us?`,
+  );
+  if (!sent) return { error: "Couldn’t start the scheduling conversation. Please try again." };
+  revalidatePath("/provider/dashboard");
+  redirect(`/messages/${conversationId}`);
+}
+
 /**
  * Send the assigned request's one final flat quote. The RPC atomically
  * snapshots the amount, reserves the slot, and moves requested to accepted.

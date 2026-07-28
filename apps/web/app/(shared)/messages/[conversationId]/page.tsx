@@ -40,6 +40,7 @@ type ConversationRow = {
     scheduled_at: string;
     provider_id: string;
     estimated_minutes: number | null;
+    booking_flow: string;
     rescheduling_started_at: string | null;
     service: { name: string } | null;
   } | null;
@@ -112,7 +113,7 @@ export default async function ConversationPage({
   const { data: conversationData, error } = await supabase
     .from("conversations")
     .select(
-      "id, customer_id, booking_id, customer:profiles!conversations_customer_id_fkey(full_name), provider:provider_profiles(display_name), booking:bookings(id, status, scheduled_at, provider_id, estimated_minutes, rescheduling_started_at, service:services(name))",
+      "id, customer_id, booking_id, customer:profiles!conversations_customer_id_fkey(full_name), provider:provider_profiles(display_name), booking:bookings(id, status, scheduled_at, provider_id, estimated_minutes, booking_flow, rescheduling_started_at, service:services(name))",
     )
     .eq("id", conversationId)
     .maybeSingle();
@@ -160,6 +161,12 @@ export default async function ConversationPage({
   const schedule = reschedulingActive && booking
     ? await getProviderSchedule(booking.provider_id)
     : null;
+  const quoteClient = supabase as unknown as {
+    from: (table: string) => { select: (columns: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: { quote_cents: number; estimated_minutes: number } | null }> } } };
+  };
+  const quoteReschedule = reschedulingActive && booking?.booking_flow === "quote_v2"
+    ? await quoteClient.from("booking_quote_chat_reschedules").select("quote_cents, estimated_minutes").eq("booking_id", booking.id).maybeSingle()
+    : { data: null as { quote_cents: number; estimated_minutes: number } | null };
   // Job-linked threads can't be reinitiated by whoever resolved them — see
   // moderate-message's matching guard. General threads have no such lock.
   const lockedForMe = Boolean(booking) && resolvedIds.has(conversation.id);
@@ -200,7 +207,8 @@ export default async function ConversationPage({
             currentUserId={user.id}
             otherName={otherName || "the other person"}
             schedule={schedule}
-            estimatedMinutes={booking.estimated_minutes ?? 60}
+            estimatedMinutes={quoteReschedule.data?.estimated_minutes ?? booking.estimated_minutes ?? 60}
+            quoteCents={quoteReschedule.data?.quote_cents ?? null}
             proposal={proposal.data}
           />
         ) : null}

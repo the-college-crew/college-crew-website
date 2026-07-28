@@ -20,7 +20,6 @@ import {
 } from "@/lib/booking/policy";
 import {
   QUOTE_DAYPART_LABELS,
-  QUOTE_DAYPARTS,
   quoteDaypartContainsStart,
   type QuoteDaypart,
 } from "@/lib/booking/quote-dayparts";
@@ -37,10 +36,10 @@ import { formatLocalDate } from "@/lib/utils";
 
 import {
   acceptBooking,
-  counterQuote,
   declineBooking,
   sendQuote,
   suggestAnotherTime,
+  suggestQuoteAnotherTime,
 } from "../actions";
 
 type RequestJob = {
@@ -72,7 +71,7 @@ export function RequestActions({
 }) {
   const copy = useBookingCopy();
   const [mode, setMode] = useState<
-    "idle" | "accept" | "quote" | "decline" | "quoteCounter"
+    "idle" | "accept" | "quote" | "decline" | "quoteReschedule"
   >("idle");
 
   // Only offered when the customer said a different time may be suggested; the
@@ -99,8 +98,8 @@ export function RequestActions({
       />
     );
   }
-  if (mode === "quoteCounter") {
-    return <QuoteCounterPanel job={job} onCancel={() => setMode("idle")} />;
+  if (mode === "quoteReschedule") {
+    return <QuoteReschedulePanel job={job} onCancel={() => setMode("idle")} />;
   }
 
   return (
@@ -129,9 +128,9 @@ export function RequestActions({
           type="button"
           variant="secondary"
           size="sm"
-          onClick={() => setMode("quoteCounter")}
+          onClick={() => setMode("quoteReschedule")}
         >
-          Offer other days
+          Suggest another time
         </Button>
       ) : null}
       <Button
@@ -405,17 +404,14 @@ function QuoteDurationPicker({
   );
 }
 
-function QuoteCounterPanel({
+function QuoteReschedulePanel({
   job,
   onCancel,
 }: {
   job: RequestJob;
   onCancel: () => void;
 }) {
-  const [state, formAction] = useActionState(counterQuote, {});
-  const [options, setOptions] = useState<
-    Array<{ localDate: string; daypart: QuoteDaypart }>
-  >([{ localDate: "", daypart: "either" }]);
+  const [state, formAction] = useActionState(suggestQuoteAnotherTime, {});
   const [estimatedMinutes, setEstimatedMinutes] = useState(
     job.privateEstimatedMinutes ?? 120,
   );
@@ -424,13 +420,19 @@ function QuoteCounterPanel({
     <form action={formAction} className="mt-3 space-y-3 rounded-xl border border-line bg-court p-3">
       <FormLoader />
       <input type="hidden" name="bookingId" value={job.id} />
-      <input type="hidden" name="options" value={JSON.stringify(options)} />
       <div>
-        <p className="text-sm font-medium text-ink">Offer other days</p>
+        <p className="text-sm font-medium text-ink">Suggest another time</p>
         <FieldHint>
-          Offer up to three different dates. The customer will choose one and
-          send the request back to you.
+          Set the final quote and your estimate first. Then you and the customer
+          can choose a date and start time together in chat.
         </FieldHint>
+      </div>
+      <label htmlFor={`reschedule-quote-${job.id}`} className="block text-sm font-medium text-ink">
+        Your quote
+      </label>
+      <div className="flex max-w-xs items-center rounded-xl border border-line bg-paper">
+        <span aria-hidden className="pl-3 text-sm font-semibold text-ink-soft">$</span>
+        <Input id={`reschedule-quote-${job.id}`} name="quoteAmount" type="number" min={20} max={10_000} step="0.01" inputMode="decimal" required className="border-0 bg-transparent focus:ring-0" />
       </div>
       <label
         htmlFor={`counter-duration-${job.id}-hours`}
@@ -443,81 +445,7 @@ function QuoteCounterPanel({
         minutes={estimatedMinutes}
         onChange={setEstimatedMinutes}
       />
-      <FieldHint>
-        Choose hours and minutes in 15-minute increments. It reserves time on
-        your calendar for whichever day the customer chooses; the customer
-        never sees it.
-      </FieldHint>
-      {options.map((option, index) => (
-        <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-          <Input
-            type="date"
-            aria-label={`Alternative date ${index + 1}`}
-            value={option.localDate}
-            required
-            onChange={(event) =>
-              setOptions((current) =>
-                current.map((item, itemIndex) =>
-                  itemIndex === index
-                    ? { ...item, localDate: event.target.value }
-                    : item,
-                ),
-              )
-            }
-          />
-          <Select
-            aria-label={`Alternative daypart ${index + 1}`}
-            value={option.daypart}
-            onChange={(event) =>
-              setOptions((current) =>
-                current.map((item, itemIndex) =>
-                  itemIndex === index
-                    ? {
-                        ...item,
-                        daypart: event.target.value as QuoteDaypart,
-                      }
-                    : item,
-                ),
-              )
-            }
-          >
-            {QUOTE_DAYPARTS.map((daypart) => (
-              <option key={daypart} value={daypart}>
-                {QUOTE_DAYPART_LABELS[daypart]}
-              </option>
-            ))}
-          </Select>
-          {options.length > 1 ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                setOptions((current) =>
-                  current.filter((_, itemIndex) => itemIndex !== index),
-                )
-              }
-            >
-              Remove
-            </Button>
-          ) : null}
-        </div>
-      ))}
-      {options.length < 3 ? (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() =>
-            setOptions((current) => [
-              ...current,
-              { localDate: "", daypart: "either" },
-            ])
-          }
-        >
-          Add another day
-        </Button>
-      ) : null}
+      <FieldHint>Choose hours and minutes in 15-minute increments. This duration is used to find start times that fit your calendar.</FieldHint>
       <Textarea
         name="note"
         rows={2}
@@ -527,7 +455,7 @@ function QuoteCounterPanel({
       <FieldError>{state.error}</FieldError>
       <div className="flex gap-2">
         <SubmitButton variant="primary" pendingLabel="Sending…">
-          Send alternatives
+          Continue to chat
         </SubmitButton>
         <button
           type="button"
