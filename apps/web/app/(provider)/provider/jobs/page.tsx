@@ -142,6 +142,7 @@ export default async function ProviderJobsPage({
         "booked",
         "in_progress",
         "invoice_review",
+        "disputed",
         "completed",
       ])
       .order("scheduled_at", { ascending: true }),
@@ -210,13 +211,17 @@ function ProviderJobsView({
     new Date(right.scheduled_at).getTime() -
     new Date(left.scheduled_at).getTime();
   const completedJobs = jobs
-    .filter((job) => job.status === "completed")
+    .filter((job) =>
+      ["invoice_review", "disputed", "completed"].includes(job.status),
+    )
     .sort(mostRecentFirst);
   const missedJobs = jobs.filter((job) => isMissedJob(job, now)).sort(mostRecentFirst);
   const missedJobIds = new Set(missedJobs.map((job) => job.id));
   const upcomingJobs = jobs
     .filter(
-      (job) => job.status !== "completed" && !missedJobIds.has(job.id),
+      (job) =>
+        !["invoice_review", "disputed", "completed"].includes(job.status) &&
+        !missedJobIds.has(job.id),
     )
     .sort(
       (left, right) =>
@@ -463,7 +468,7 @@ function emptyBody(
   tab: JobTab,
   copy: (key: Parameters<typeof bookingCopyValue>[1]) => string,
 ) {
-  if (tab === "completed") return "Completed jobs will appear here after payment is settled.";
+  if (tab === "completed") return "Jobs with an invoice or settled payment will appear here.";
   if (tab === "missed") return "Jobs without an invoice appear here 24 hours after their estimated end time.";
   return copy("booking-provider.jobs.empty-body");
 }

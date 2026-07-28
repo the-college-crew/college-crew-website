@@ -27,7 +27,7 @@ const config: Record<BookingStatus, { label: string; classes: string }> = {
     classes: "border-sky bg-sky text-viridian",
   },
   invoice_review: {
-    label: "Invoice review",
+    label: "Awaiting payment",
     classes: "border-amber-200 bg-amber-50 text-amber-900",
   },
   disputed: {
