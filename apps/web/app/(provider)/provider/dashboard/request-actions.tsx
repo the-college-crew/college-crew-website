@@ -230,13 +230,13 @@ function SendQuotePanel({
   const copy = useBookingCopy();
   const [state, formAction] = useActionState(sendQuote, {});
   const [estimatedMinutes, setEstimatedMinutes] = useState(
-    String(job.privateEstimatedMinutes ?? 120),
+    job.privateEstimatedMinutes ?? 120,
   );
   const [scheduledLocal, setScheduledLocal] = useState("");
   const requestedDate = job.requestedDate;
   const requestedDaypart = job.requestedDaypart;
   const availableStartTimes = useMemo(() => {
-    const duration = Number(estimatedMinutes);
+    const duration = estimatedMinutes;
     if (
       !requestedDate ||
       !requestedDaypart ||
@@ -330,7 +330,7 @@ function SendQuotePanel({
             </FieldHint>
             {availableStartTimes.length > 0 ? (
               <FieldHint>
-                With this {formatDurationLabel(Number(estimatedMinutes))} estimate,
+                With this {formatDurationLabel(estimatedMinutes)} estimate,
                 the latest available start is{" "}
                 {availableStartTimes[availableStartTimes.length - 1]?.label}.
               </FieldHint>
@@ -341,27 +341,20 @@ function SendQuotePanel({
               </FieldHint>
             )}
             <label
-              htmlFor={`quote-duration-${job.id}`}
+              htmlFor={`quote-duration-${job.id}-hours`}
               className="block text-sm font-medium text-ink"
             >
               How long do you think this job will take?
             </label>
-            <Input
+            <QuoteDurationPicker
               id={`quote-duration-${job.id}`}
-              name="estimatedMinutes"
-              type="number"
-              min={60}
-              max={720}
-              step={15}
-              value={estimatedMinutes}
-              onChange={(event) => setEstimatedMinutes(event.target.value)}
-              required
+              minutes={estimatedMinutes}
+              onChange={setEstimatedMinutes}
             />
             <FieldHint>
-              Enter your best estimate in minutes (15-minute increments). It
-              reserves time on your calendar and limits the available start
-              times; the customer never sees it and it does not change your
-              fixed quote.
+              Choose hours and minutes in 15-minute increments. It reserves
+              time on your calendar and limits the available start times; the
+              customer never sees it and it does not change your fixed quote.
             </FieldHint>
           </>
         ) : null}
@@ -411,6 +404,63 @@ function SendQuotePanel({
   );
 }
 
+function QuoteDurationPicker({
+  id,
+  minutes,
+  onChange,
+}: {
+  id: string;
+  minutes: number;
+  onChange: (minutes: number) => void;
+}) {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  const displayedMinutes = hours === 12 ? 0 : remainingMinutes;
+
+  return (
+    <>
+      <input type="hidden" name="estimatedMinutes" value={minutes} />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <span className="mb-1 block text-xs font-medium text-ink-soft">
+            Hours
+          </span>
+          <Select
+            id={`${id}-hours`}
+            value={String(hours)}
+            onChange={(event) => {
+              const nextHours = Number(event.target.value);
+              onChange(nextHours * 60 + (nextHours === 12 ? 0 : displayedMinutes));
+            }}
+          >
+            {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
+              <option key={value} value={value}>
+                {value} {value === 1 ? "hour" : "hours"}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <span className="mb-1 block text-xs font-medium text-ink-soft">
+            Minutes
+          </span>
+          <Select
+            id={`${id}-minutes`}
+            value={String(displayedMinutes)}
+            onChange={(event) => onChange(hours * 60 + Number(event.target.value))}
+          >
+            {[0, 15, 30, 45].map((value) => (
+              <option key={value} value={value} disabled={hours === 12 && value > 0}>
+                {value === 0 ? "0 min" : `${value} min`}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function QuoteCounterPanel({
   job,
   onCancel,
@@ -422,6 +472,9 @@ function QuoteCounterPanel({
   const [options, setOptions] = useState<
     Array<{ localDate: string; daypart: QuoteDaypart }>
   >([{ localDate: "", daypart: "either" }]);
+  const [estimatedMinutes, setEstimatedMinutes] = useState(
+    job.privateEstimatedMinutes ?? 120,
+  );
 
   return (
     <form action={formAction} className="mt-3 space-y-3 rounded-xl border border-line bg-court p-3">
@@ -436,25 +489,20 @@ function QuoteCounterPanel({
         </FieldHint>
       </div>
       <label
-        htmlFor={`counter-duration-${job.id}`}
+        htmlFor={`counter-duration-${job.id}-hours`}
         className="block text-sm font-medium text-ink"
       >
         How long do you think this job will take?
       </label>
-      <Input
+      <QuoteDurationPicker
         id={`counter-duration-${job.id}`}
-        name="estimatedMinutes"
-        type="number"
-        min={60}
-        max={720}
-        step={15}
-        defaultValue={job.privateEstimatedMinutes ?? 120}
-        required
+        minutes={estimatedMinutes}
+        onChange={setEstimatedMinutes}
       />
       <FieldHint>
-        Enter your best estimate in minutes (15-minute increments). It reserves
-        time on your calendar for whichever day the customer chooses; the
-        customer never sees it.
+        Choose hours and minutes in 15-minute increments. It reserves time on
+        your calendar for whichever day the customer chooses; the customer
+        never sees it.
       </FieldHint>
       {options.map((option, index) => (
         <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
