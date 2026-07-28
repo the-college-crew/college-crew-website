@@ -103,6 +103,13 @@ async function processJob(kind: string, bookingId: string, sourceId: string) {
     if (result.error) throw result.error;
     return;
   }
+  if (kind === "reschedule_provider_reminder") {
+    const result = await admin.rpc("send_hourly_chat_reschedule_provider_reminder", {
+      p_proposal_id: sourceId,
+    });
+    if (result.error) throw result.error;
+    return;
+  }
   if (kind === "request_expiration") {
     const result = await admin.rpc("expire_hourly_booking_request", {
       p_booking_id: bookingId,

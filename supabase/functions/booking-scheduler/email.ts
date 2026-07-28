@@ -41,6 +41,18 @@ const COPY: Record<
     body: "Your student can’t make the time you picked and suggested another one. Accept it or turn it down — you’re not charged either way until you accept.",
     ctaLabel: "Review the new time",
   },
+  reschedule_provider_new_suggestion: {
+    subject: "A customer suggested a new College Crew time",
+    heading: "A new time was suggested",
+    body: "Your customer suggested another time for this job. Review it in your booking chat and accept, decline, or suggest a different time.",
+    ctaLabel: "Open scheduling chat",
+  },
+  reschedule_provider_reminder: {
+    subject: "Reminder: a College Crew time suggestion is waiting",
+    heading: "A scheduling response is waiting",
+    body: "Your customer suggested a new time two hours ago. There is no deadline, but responding helps get the job scheduled.",
+    ctaLabel: "Open scheduling chat",
+  },
   quote_counter_options: {
     subject: "Your College Crew student offered other dates",
     heading: "Choose a new date window",
@@ -222,6 +234,14 @@ function dashboardPath(context: BookingEmailContext) {
     context.bookingId
   ) {
     return `/bookings/${encodeURIComponent(context.bookingId)}/counter`;
+  }
+  if (
+    ["reschedule_provider_new_suggestion", "reschedule_provider_reminder"].includes(
+      context.template,
+    ) &&
+    context.bookingId
+  ) {
+    return `/messages`; // The booking-specific thread is available from the inbox.
   }
   if (context.template === "final_payment_success" && context.bookingId) {
     return `/dashboard#booking-${encodeURIComponent(context.bookingId)}`;

@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { BackButton } from "@/components/back-button";
+import {
+  ChatReschedulePanel,
+  type ChatRescheduleProposal,
+} from "@/components/chat/chat-reschedule-panel";
 import { ChatThread } from "@/components/chat/chat-thread";
 import { DemoChatThread } from "@/components/demo-chat-thread";
 import { ResolveButton } from "@/components/messaging/resolve-button";
@@ -16,6 +20,7 @@ import {
   getDemoPreview,
 } from "@/lib/demo/sample-preview";
 import type { BookingStatus, Message } from "@/lib/db/types";
+import { getProviderSchedule } from "@/lib/db/queries";
 import { getOwnResolvedIds } from "@/lib/messaging/resolutions";
 import { markConversationRead } from "@/lib/messaging/unread";
 import { createClient } from "@/lib/supabase/server";
@@ -30,8 +35,12 @@ type ConversationRow = {
   customer: { full_name: string } | null;
   provider: { display_name: string } | null;
   booking: {
+    id: string;
     status: BookingStatus;
     scheduled_at: string;
+    provider_id: string;
+    estimated_minutes: number | null;
+    rescheduling_started_at: string | null;
     service: { name: string } | null;
   } | null;
 };
@@ -103,7 +112,7 @@ export default async function ConversationPage({
   const { data: conversationData, error } = await supabase
     .from("conversations")
     .select(
-      "id, customer_id, booking_id, customer:profiles!conversations_customer_id_fkey(full_name), provider:provider_profiles(display_name), booking:bookings(status, scheduled_at, service:services(name))",
+      "id, customer_id, booking_id, customer:profiles!conversations_customer_id_fkey(full_name), provider:provider_profiles(display_name), booking:bookings(id, status, scheduled_at, provider_id, estimated_minutes, rescheduling_started_at, service:services(name))",
     )
     .eq("id", conversationId)
     .maybeSingle();
@@ -127,6 +136,30 @@ export default async function ConversationPage({
     ? conversation.provider?.display_name
     : conversation.customer?.full_name;
   const booking = conversation.booking;
+  const reschedulingActive =
+    booking?.status === "requested" && booking.rescheduling_started_at != null;
+  const untyped = supabase as unknown as {
+    from: (table: string) => {
+      select: (columns: string) => {
+        eq: (column: string, value: string) => {
+          eq: (column: string, value: string) => {
+            maybeSingle: () => Promise<{ data: ChatRescheduleProposal | null }>;
+          };
+        };
+      };
+    };
+  };
+  const proposal = reschedulingActive && booking
+    ? await untyped
+        .from("booking_reschedule_proposals")
+        .select("id, proposer_id, proposed_start_at")
+        .eq("booking_id", booking.id)
+        .eq("status", "pending")
+        .maybeSingle()
+    : { data: null };
+  const schedule = reschedulingActive && booking
+    ? await getProviderSchedule(booking.provider_id)
+    : null;
   // Job-linked threads can't be reinitiated by whoever resolved them — see
   // moderate-message's matching guard. General threads have no such lock.
   const lockedForMe = Boolean(booking) && resolvedIds.has(conversation.id);
@@ -160,6 +193,17 @@ export default async function ConversationPage({
       </div>
 
       <Card pennant className="flex h-[min(34rem,calc(100dvh-10rem))] min-h-0 flex-col p-0 lg:h-full">
+        {reschedulingActive && booking && schedule ? (
+          <ChatReschedulePanel
+            bookingId={booking.id}
+            conversationId={conversation.id}
+            currentUserId={user.id}
+            otherName={otherName || "the other person"}
+            schedule={schedule}
+            estimatedMinutes={booking.estimated_minutes ?? 60}
+            proposal={proposal.data}
+          />
+        ) : null}
         <ChatThread
           conversationId={conversation.id}
           currentUserId={user.id}

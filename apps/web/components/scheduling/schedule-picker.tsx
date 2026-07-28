@@ -65,6 +65,8 @@ export type SchedulePickerProps = {
   ) => void;
   /** Preselect a range this long when a day is opened ("Book again"). */
   preferredMinutes?: number;
+  /** Keep the existing booking duration while choosing only a new start time. */
+  fixedMinutes?: number;
   /** Read-only provider view: no selection, jobs drawn on the rail. */
   readOnly?: boolean;
   overlaysByDate?: Readonly<Record<string, readonly RailOverlay[]>>;
@@ -84,6 +86,7 @@ export function SchedulePicker({
   horizonEnd,
   onChange,
   preferredMinutes,
+  fixedMinutes,
   readOnly = false,
   overlaysByDate,
   dottedDates,
@@ -195,6 +198,11 @@ export function SchedulePicker({
               heading={headingFor(selectedDate)}
               selection={selection}
               onSelectionChange={(next) => applySelection(selectedDate, next)}
+              bounds={
+                fixedMinutes
+                  ? { min: fixedMinutes, max: fixedMinutes }
+                  : undefined
+              }
               readOnly={readOnly}
               overlays={overlaysByDate?.[selectedDate]}
             />

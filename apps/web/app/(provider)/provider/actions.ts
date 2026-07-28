@@ -275,22 +275,24 @@ export async function suggestAnotherTime(
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
   const supabase = await createClient();
 
-  const { data: booking } = await supabase
-    .from("bookings")
-    .select("id, customer_id, provider_id, booking_flow, status, time_flexibility")
-    .eq("id", bookingId)
-    .maybeSingle();
-
-  if (!booking) return { error: "Booking not found." };
-  if (
-    booking.booking_flow !== "hourly_v1" ||
-    booking.status !== "requested" ||
-    booking.time_flexibility !== "flexible"
-  ) {
-    return { error: "This request can no longer be discussed as a time change." };
+  const booking = await loadBookingParties(supabase, bookingId);
+  const rpc = supabase.rpc as unknown as (
+    name: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ error: { message: string } | null }>;
+  const { error: startError } = await rpc("start_hourly_chat_rescheduling", {
+    p_booking_id: bookingId,
+  });
+  if (startError) {
+    return {
+      error: requestOperationMessage(
+        startError,
+        "This request can no longer be discussed as a time change.",
+      ),
+    };
   }
 
-  const conversationId = await conversationIdFor(supabase, booking as BookingParties);
+  const conversationId = await conversationIdFor(supabase, booking);
   const sent = await sendModeratedMessage(
     supabase,
     conversationId,
