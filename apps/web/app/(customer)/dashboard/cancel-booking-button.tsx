@@ -29,21 +29,27 @@ export function CancelBookingButton({
   };
   const [state, formAction, pending] = useActionState(cancelBooking, {});
   return (
-    <form action={formAction} className="flex flex-wrap items-center gap-2">
-      <input type="hidden" name="bookingId" value={bookingId} />
+    <>
+      <form action={formAction}>
+        <input type="hidden" name="bookingId" value={bookingId} />
+        {state.policyResult ? (
+          <p className="text-xs font-medium text-quad-700">
+            {outcomeCopy[state.policyResult] ?? "Booking cancelled."}
+          </p>
+        ) : (
+          <Button type="submit" variant="danger" size="sm" disabled={pending}>
+            {pending ? "Cancelling…" : label}
+          </Button>
+        )}
+      </form>
       {outcome && !state.policyResult ? (
-        <p className="text-xs text-ink-soft">{outcomeCopy[outcome]}</p>
+        <p className="w-full text-xs text-ink-soft">{outcomeCopy[outcome]}</p>
       ) : null}
-      {state.policyResult ? (
-        <p className="text-xs font-medium text-quad-700">
-          {outcomeCopy[state.policyResult] ?? "Booking cancelled."}
-        </p>
-      ) : (
-        <Button type="submit" variant="danger" size="sm" disabled={pending}>
-          {pending ? "Cancelling…" : label}
-        </Button>
-      )}
-      <FieldError>{state.error}</FieldError>
-    </form>
+      {state.error ? (
+        <div className="w-full">
+          <FieldError>{state.error}</FieldError>
+        </div>
+      ) : null}
+    </>
   );
 }
