@@ -35,7 +35,11 @@ export function ProviderNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={active ? "text-viridian" : "transition-colors hover:text-viridian/60"}
+              className={
+                active
+                  ? "underline decoration-viridian decoration-2 underline-offset-[6px]"
+                  : "transition-colors hover:text-viridian/60"
+              }
             >
               {item.label}
             </Link>
