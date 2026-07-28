@@ -300,23 +300,44 @@ function SendQuotePanel({
             >
               Exact start time on {requestedDate ?? "the requested date"}
             </label>
-            <Select
+            <input
               id={`quote-start-${job.id}`}
+              type="hidden"
               name="scheduledLocal"
               value={selectedStartIsAvailable ? scheduledLocal : ""}
-              onChange={(event) => setScheduledLocal(event.target.value)}
-              required
+            />
+            <div
+              role="radiogroup"
+              aria-label={`Available start times on ${requestedDate ?? "the requested date"}`}
+              className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-line bg-paper p-2 sm:grid-cols-3"
             >
-              <option value="">Choose a time</option>
-              {availableStartTimes.map((slot) => (
-                <option
-                  key={slot.startMinutes}
-                  value={`${requestedDate}T${minutesToClock(slot.startMinutes)}`}
-                >
-                  {slot.label}
-                </option>
-              ))}
-            </Select>
+              {availableStartTimes.map((slot) => {
+                const value = `${requestedDate}T${minutesToClock(slot.startMinutes)}`;
+                const selected = selectedStartIsAvailable && scheduledLocal === value;
+                return (
+                  <button
+                    key={slot.startMinutes}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setScheduledLocal(value)}
+                    className={buttonClasses({
+                      variant: selected ? "primary" : "secondary",
+                      size: "sm",
+                      className: "w-full justify-center",
+                    })}
+                  >
+                    {slot.label}
+                  </button>
+                );
+              })}
+              {availableStartTimes.length === 0 ? (
+                <p className="col-span-full px-2 py-3 text-center text-sm text-mist">
+                  No start times fit this estimate. Adjust the private estimate
+                  or offer other days.
+                </p>
+              ) : null}
+            </div>
             <FieldHint>
               Choose a 15-minute start within{" "}
               {job.requestedDaypart
