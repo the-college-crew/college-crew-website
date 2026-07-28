@@ -816,6 +816,7 @@ export type Database = {
           details: string
           deposit_bps: number | null
           dismissed_at: string | null
+          provider_cancellation_notice_dismissed_at: string | null
           en_route_at: string | null
           estimated_minutes: number | null
           expired_at: string | null
@@ -888,6 +889,7 @@ export type Database = {
           details?: string
           deposit_bps?: number | null
           dismissed_at?: string | null
+          provider_cancellation_notice_dismissed_at?: string | null
           en_route_at?: string | null
           estimated_minutes?: number | null
           expired_at?: string | null
@@ -960,6 +962,7 @@ export type Database = {
           details?: string
           deposit_bps?: number | null
           dismissed_at?: string | null
+          provider_cancellation_notice_dismissed_at?: string | null
           en_route_at?: string | null
           estimated_minutes?: number | null
           expired_at?: string | null
@@ -2931,6 +2934,10 @@ export type Database = {
         Returns: string
       }
       dismiss_booking: { Args: { p_booking_id: string }; Returns: string }
+      dismiss_provider_customer_cancellation_notice: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       dismiss_review_prompt: { Args: { p_booking_id: string }; Returns: string }
       email_is_confirmed: { Args: { p_email: string }; Returns: boolean }
       expire_hourly_booking_request: {

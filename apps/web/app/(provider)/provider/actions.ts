@@ -92,6 +92,23 @@ function conversationIdFor(supabase: ServerClient, booking: BookingParties) {
  */
 export type BookingRequestActionState = { error?: string };
 
+/** Clear a customer-cancellation notice from the provider's Jobs queue. */
+export async function dismissCustomerCancellationNotice(formData: FormData) {
+  await requireProviderAccess();
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const supabase = await createClient();
+  const { error } = await supabase.rpc(
+    "dismiss_provider_customer_cancellation_notice",
+    { p_booking_id: bookingId },
+  );
+
+  if (error) {
+    throw new Error(requestOperationMessage(error, "Could not dismiss the notice."));
+  }
+
+  revalidatePath("/provider/jobs");
+}
+
 export async function acceptBooking(
   _previous: BookingRequestActionState,
   formData: FormData,

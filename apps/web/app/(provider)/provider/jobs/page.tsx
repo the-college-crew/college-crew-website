@@ -34,6 +34,7 @@ import { formatDateTime, formatMoney } from "@/lib/utils";
 
 import { completeBooking, markArrived } from "../actions";
 import { ProviderCancelJob } from "../provider-cancel-job";
+import { DismissCustomerCancellationNotice } from "./dismiss-customer-cancellation-notice";
 import { OnMyWayButton } from "./on-my-way-button";
 
 export const metadata: Metadata = { title: "Jobs" };
@@ -70,6 +71,13 @@ type JobRow = {
     remaining_balance_cents: number;
     status: string;
   } | null;
+};
+
+type CustomerCancellationNotice = {
+  id: string;
+  scheduled_at: string;
+  cancelled_at: string | null;
+  service: { name: string } | { name: string }[] | null;
 };
 
 type JobTab = "upcoming" | "completed" | "missed";
@@ -114,7 +122,7 @@ export default async function ProviderJobsPage({
   if (!profile) redirect("/provider/onboarding/account");
 
   const supabase = await createClient();
-  const [{ data: jobsData }, { data: timeOverride }] = await Promise.all([
+  const [{ data: jobsData }, { data: cancellationNoticesData }, { data: timeOverride }] = await Promise.all([
     supabase
       .from("bookings")
       .select(
@@ -138,6 +146,16 @@ export default async function ProviderJobsPage({
       ])
       .order("scheduled_at", { ascending: true }),
     supabase
+      .from("bookings")
+      .select(
+        "id, scheduled_at, cancelled_at, service:services(name)",
+      )
+      .eq("provider_id", profile.id)
+      .eq("status", "cancelled")
+      .eq("cancelled_by_role", "customer")
+      .is("provider_cancellation_notice_dismissed_at", null)
+      .order("cancelled_at", { ascending: false }),
+    supabase
       .from("site_content")
       .select("value")
       .eq("key", "booking.test-time-restrictions-disabled")
@@ -157,6 +175,7 @@ export default async function ProviderJobsPage({
       <ProviderJobsView
         profile={profile}
         jobs={jobs}
+        cancellationNotices={(cancellationNoticesData ?? []) as CustomerCancellationNotice[]}
         copyOverrides={copyOverrides}
         activeTab={activeTab}
         timeRestrictionsDisabled={timeRestrictionsDisabled}
@@ -168,6 +187,7 @@ export default async function ProviderJobsPage({
 function ProviderJobsView({
   profile,
   jobs,
+  cancellationNotices = [],
   copyOverrides,
   activeTab,
   timeRestrictionsDisabled = false,
@@ -175,6 +195,7 @@ function ProviderJobsView({
 }: {
   profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
   jobs: JobRow[];
+  cancellationNotices?: CustomerCancellationNotice[];
   copyOverrides: BookingCopyOverrides;
   activeTab: JobTab;
   timeRestrictionsDisabled?: boolean;
@@ -233,6 +254,35 @@ function ProviderJobsView({
         description={copy("booking-provider.jobs.description")}
       />
       {demo ? <SamplePreviewBanner role="provider" /> : null}
+
+      {cancellationNotices.length > 0 ? (
+        <section aria-labelledby="customer-cancellation-notices" className="space-y-3">
+          <div>
+            <h2 id="customer-cancellation-notices" className="font-display text-xl font-semibold">
+              Cancellations to review
+            </h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              These customers cancelled scheduled jobs. Dismiss each notice when you&apos;ve seen it.
+            </p>
+          </div>
+          {cancellationNotices.map((notice) => (
+            <Card
+              key={notice.id}
+              className="flex flex-wrap items-center justify-between gap-3 border-red-200 bg-red-50 p-4"
+            >
+              <div>
+                <p className="font-semibold text-red-900">
+                  {serviceName(notice.service)} was cancelled by the customer
+                </p>
+                <p className="mt-1 text-sm text-red-800">
+                  Scheduled for {formatDateTime(notice.scheduled_at)}
+                </p>
+              </div>
+              <DismissCustomerCancellationNotice bookingId={notice.id} />
+            </Card>
+          ))}
+        </section>
+      ) : null}
 
       <section aria-labelledby={`${activeTab}-jobs`}>
         <div
@@ -372,6 +422,12 @@ function ProviderJobsView({
       </section>
     </div>
   );
+}
+
+function serviceName(
+  service: CustomerCancellationNotice["service"],
+) {
+  return Array.isArray(service) ? service[0]?.name ?? "This job" : service?.name ?? "This job";
 }
 
 function estimatedMinutes(job: JobRow) {
