@@ -90,6 +90,7 @@ export function BookingRequestForm({
   originReady,
   schedule,
   minimumNoticeHours,
+  timeRestrictionsDisabled,
   initial,
   userId,
 }: {
@@ -99,6 +100,8 @@ export function BookingRequestForm({
   /** The provider's open days and reserved ranges over the booking horizon. */
   schedule: ProviderSchedule;
   minimumNoticeHours: number;
+  /** Temporary founder-controlled testing override for timing gates only. */
+  timeRestrictionsDisabled: boolean;
   /** Set when the customer arrived via "Book again". */
   initial?: RebookDefaults;
   /** Job photos upload to this customer's own storage folder. */
@@ -207,7 +210,9 @@ export function BookingRequestForm({
             days={schedule.days}
             busy={schedule.busy}
             nowIso={schedule.nowIso}
-            minimumNoticeHours={Math.max(12, minimumNoticeHours)}
+            minimumNoticeHours={
+              timeRestrictionsDisabled ? 0 : Math.max(12, minimumNoticeHours)
+            }
             horizonStart={schedule.horizonStart}
             horizonEnd={schedule.horizonEnd}
             onChange={setQuoteSchedule}
@@ -236,8 +241,9 @@ export function BookingRequestForm({
         <div className="rounded-xl border border-line bg-court p-4 text-sm">
           <p className="font-medium text-ink">Quote response window: 2 hours</p>
           <FieldHint>
-            Quote jobs require at least 12 hours&apos; notice; if the provider
-            misses the two-hour window, you can choose a replacement.
+            {timeRestrictionsDisabled
+              ? "Testing mode: the usual quote scheduling notice is temporarily disabled."
+              : "Quote jobs require at least 12 hours’ notice; if the provider misses the two-hour window, you can choose a replacement."}
           </FieldHint>
         </div>
       ) : (

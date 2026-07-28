@@ -96,7 +96,7 @@ export default async function ProviderJobsPage() {
   if (!profile) redirect("/provider/onboarding/account");
 
   const supabase = await createClient();
-  const [{ data: jobsData }, { data: offerings }] = await Promise.all([
+  const [{ data: jobsData }, { data: offerings }, { data: timeOverride }] = await Promise.all([
     supabase
       .from("bookings")
       .select(
@@ -124,7 +124,14 @@ export default async function ProviderJobsPage() {
         "id, hourly_rate_cents, pricing_mode, average_quote_cents, service:services(name, is_live)",
       )
       .eq("provider_id", profile.id),
+    supabase
+      .from("site_content")
+      .select("value")
+      .eq("key", "booking.test-time-restrictions-disabled")
+      .maybeSingle(),
   ]);
+  const timeRestrictionsDisabled =
+    timeOverride?.value.trim().toLowerCase() === "true";
 
   // Distance from the provider's operating address, computed here so raw
   // coordinates never leave the server render.
@@ -143,6 +150,7 @@ export default async function ProviderJobsPage() {
         jobs={jobs}
         offerings={liveOfferings}
         copyOverrides={copyOverrides}
+        timeRestrictionsDisabled={timeRestrictionsDisabled}
       />
     </BookingCopyProvider>
   );
@@ -153,6 +161,7 @@ function ProviderJobsView({
   jobs,
   offerings,
   copyOverrides,
+  timeRestrictionsDisabled = false,
   demo = false,
 }: {
   profile: NonNullable<Awaited<ReturnType<typeof getOwnProviderProfile>>>;
@@ -165,6 +174,7 @@ function ProviderJobsView({
     service: { name: string; is_live?: boolean };
   }[];
   copyOverrides: BookingCopyOverrides;
+  timeRestrictionsDisabled?: boolean;
   demo?: boolean;
 }) {
   const copy = (
@@ -294,7 +304,10 @@ function ProviderJobsView({
                           Message customer
                         </button>
                       </form>
-                      <JobMilestoneActions job={job} />
+                      <JobMilestoneActions
+                        job={job}
+                        timeRestrictionsDisabled={timeRestrictionsDisabled}
+                      />
                       {["hourly_v1", "quote_v2"].includes(job.booking_flow) &&
                       !job.arrived_at &&
                       (job.status === "accepted" || job.status === "booked") ? (
@@ -356,7 +369,13 @@ function ProviderJobsView({
 }
 
 /** Status-driven job actions: full-price completion + hourly work milestones. */
-function JobMilestoneActions({ job }: { job: JobRow }) {
+function JobMilestoneActions({
+  job,
+  timeRestrictionsDisabled,
+}: {
+  job: JobRow;
+  timeRestrictionsDisabled: boolean;
+}) {
   if (!["hourly_v1", "quote_v2"].includes(job.booking_flow)) {
     if (job.status === "paid") {
       return (
@@ -387,8 +406,8 @@ function JobMilestoneActions({ job }: { job: JobRow }) {
       const start = new Date(job.scheduled_at).getTime();
       const enRouteUnlock = start - EN_ROUTE_GRACE_MS;
       const arrivalUnlock = start - ARRIVAL_GRACE_MS;
-      const canSendEnRoute = now >= enRouteUnlock;
-      const canArrive = now >= arrivalUnlock;
+      const canSendEnRoute = timeRestrictionsDisabled || now >= enRouteUnlock;
+      const canArrive = timeRestrictionsDisabled || now >= arrivalUnlock;
       return (
         <div className="flex flex-wrap items-start gap-3">
           {!canSendEnRoute ? (

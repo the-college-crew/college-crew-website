@@ -113,6 +113,14 @@ export default async function BookingPage({
   // The whole booking horizon in one shot, so month navigation and day
   // selection never wait on the network in front of a card authorization.
   const schedule = await getProviderSchedule(provider.id);
+  const contentClient = await createClient();
+  const { data: timeOverride } = await contentClient
+    .from("site_content")
+    .select("value")
+    .eq("key", "booking.test-time-restrictions-disabled")
+    .maybeSingle();
+  const timeRestrictionsDisabled =
+    timeOverride?.value.trim().toLowerCase() === "true";
 
   const ownProviderProfile = session ? await getOwnProviderProfile() : null;
   const isOwnListing = ownProviderProfile?.id === provider.id;
@@ -201,7 +209,10 @@ export default async function BookingPage({
             services={bookableServices}
             originReady={origin.isSet}
             schedule={schedule}
-            minimumNoticeHours={provider.minimum_notice_hours}
+            minimumNoticeHours={
+              timeRestrictionsDisabled ? 0 : provider.minimum_notice_hours
+            }
+            timeRestrictionsDisabled={timeRestrictionsDisabled}
             initial={rebookDefaults}
             userId={session.user.id}
           />

@@ -37,9 +37,11 @@ function monthOf(date: string) {
 }
 
 /** Why a day can't be picked, in the customer's words. */
-function unavailableReason(cell: MonthCell) {
+function unavailableReason(cell: MonthCell, minimumNoticeHours: number) {
   if (cell.state === "past") {
-    return "Too soon to book. Pick a date at least 12 hours out.";
+    return minimumNoticeHours > 0
+      ? `Too soon to book. Pick a date at least ${minimumNoticeHours} hours out.`
+      : "That time has already passed. Pick a future time.";
   }
   if (cell.state === "full") {
     return `Fully booked on ${formatUsDate(cell.date)}.`;
@@ -133,7 +135,7 @@ export function SchedulePicker({
     // turned-off and past days, because that's exactly where their finished
     // and booked jobs are.
     if (!readOnly && cell.state !== "open") {
-      setNotice(unavailableReason(cell));
+      setNotice(unavailableReason(cell, minimumNoticeHours));
       return;
     }
     setNotice(null);
