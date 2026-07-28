@@ -37,10 +37,10 @@ import { formatLocalDate } from "@/lib/utils";
 
 import {
   acceptBooking,
-  counterBooking,
   counterQuote,
   declineBooking,
   sendQuote,
+  suggestAnotherTime,
 } from "../actions";
 
 type RequestJob = {
@@ -72,7 +72,7 @@ export function RequestActions({
 }) {
   const copy = useBookingCopy();
   const [mode, setMode] = useState<
-    "idle" | "accept" | "quote" | "decline" | "counter" | "quoteCounter"
+    "idle" | "accept" | "quote" | "decline" | "quoteCounter"
   >("idle");
 
   // Only offered when the customer said a different time may be suggested; the
@@ -89,9 +89,6 @@ export function RequestActions({
     return (
       <DeclinePanel job={job} onCancel={() => setMode("idle")} />
     );
-  }
-  if (mode === "counter") {
-    return <CounterPanel job={job} onCancel={() => setMode("idle")} />;
   }
   if (mode === "quote") {
     return (
@@ -125,14 +122,7 @@ export function RequestActions({
           : copy("booking-provider.dashboard.accept")}
       </Button>
       {canCounter ? (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => setMode("counter")}
-        >
-          Suggest another time
-        </Button>
+        <SuggestAnotherTimeButton bookingId={job.id} />
       ) : null}
       {job.bookingFlow === "quote_v2" ? (
         <Button
@@ -156,65 +146,18 @@ export function RequestActions({
   );
 }
 
-/**
- * Propose a different start time. The customer keeps control — their hold stays
- * as-is and nothing is charged unless they accept the new time.
- */
-function CounterPanel({
-  job,
-  onCancel,
-}: {
-  job: RequestJob;
-  onCancel: () => void;
-}) {
-  const copy = useBookingCopy();
-  const [state, formAction] = useActionState(counterBooking, {});
+/** Send the standard scheduling prompt and take the provider straight to chat. */
+function SuggestAnotherTimeButton({ bookingId }: { bookingId: string }) {
+  const [state, formAction] = useActionState(suggestAnotherTime, {});
 
   return (
-    <form action={formAction} className="mt-3 space-y-2">
+    <form action={formAction}>
       <FormLoader />
-      <input type="hidden" name="bookingId" value={job.id} />
-      <label
-        htmlFor={`counter-${job.id}`}
-        className="block text-sm font-medium text-ink"
-      >
-        When could you do it?
-      </label>
-      <Input
-        id={`counter-${job.id}`}
-        name="proposedLocal"
-        type="datetime-local"
-        required
-      />
-      <FieldHint>
-        They asked for {job.whenLabel}. Suggest the closest time that works for
-        you.
-      </FieldHint>
-      <Textarea
-        name="note"
-        rows={2}
-        maxLength={500}
-        placeholder={copy(
-          "booking-provider.dashboard.counter-placeholder",
-        )}
-      />
-      <p className="text-xs text-mist">
-        {job.customerName} chooses whether to take it. Nothing is charged unless
-        they accept.
-      </p>
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <SubmitButton variant="secondary" pendingLabel="Opening chat…">
+        Suggest another time
+      </SubmitButton>
       <FieldError>{state.error}</FieldError>
-      <div className="flex gap-2">
-        <SubmitButton variant="primary" pendingLabel="Sending…">
-          {copy("booking-provider.dashboard.counter-submit")}
-        </SubmitButton>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={buttonClasses({ variant: "ghost", size: "sm" })}
-        >
-          Back
-        </button>
-      </div>
     </form>
   );
 }
@@ -727,7 +670,7 @@ function SubmitButton({
 }: {
   children: React.ReactNode;
   pendingLabel: string;
-  variant: "primary" | "success";
+  variant: "primary" | "secondary" | "success";
   disabled?: boolean;
 }) {
   const { pending } = useFormStatus();

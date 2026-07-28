@@ -262,6 +262,51 @@ export async function counterBooking(
 }
 
 /**
+ * Start a scheduling conversation for a flexible hourly request. Unlike the
+ * quote counter flow, this deliberately does not alter the booking's requested
+ * time or status: the pilot's lightweight path is for both people to agree on
+ * a new time in their existing, moderated booking thread.
+ */
+export async function suggestAnotherTime(
+  _previous: BookingRequestActionState,
+  formData: FormData,
+): Promise<BookingRequestActionState> {
+  await requireProviderAccess();
+  const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  const supabase = await createClient();
+
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, customer_id, provider_id, booking_flow, status, time_flexibility")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking) return { error: "Booking not found." };
+  if (
+    booking.booking_flow !== "hourly_v1" ||
+    booking.status !== "requested" ||
+    booking.time_flexibility !== "flexible"
+  ) {
+    return { error: "This request can no longer be discussed as a time change." };
+  }
+
+  const conversationId = await conversationIdFor(supabase, booking as BookingParties);
+  const sent = await sendModeratedMessage(
+    supabase,
+    conversationId,
+    "Hi! I’m not available at the requested time. Could we find another date and time that works for both of us?",
+  );
+  if (!sent) {
+    return {
+      error: "Couldn’t start the scheduling conversation. Please try again.",
+    };
+  }
+
+  revalidatePath("/provider/dashboard");
+  redirect(`/messages/${conversationId}`);
+}
+
+/**
  * Send the assigned request's one final flat quote. The RPC atomically
  * snapshots the amount, reserves the slot, and moves requested to accepted.
  * A plain-language chat message is added after commit so both parties can see
