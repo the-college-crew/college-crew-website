@@ -185,8 +185,13 @@ function ProviderJobsView({
     values?: Record<string, string | number>,
   ) => bookingCopyValue(copyOverrides, key, values);
   const now = new Date();
-  const completedJobs = jobs.filter((job) => job.status === "completed");
-  const missedJobs = jobs.filter((job) => isMissedJob(job, now));
+  const mostRecentFirst = (left: JobRow, right: JobRow) =>
+    new Date(right.scheduled_at).getTime() -
+    new Date(left.scheduled_at).getTime();
+  const completedJobs = jobs
+    .filter((job) => job.status === "completed")
+    .sort(mostRecentFirst);
+  const missedJobs = jobs.filter((job) => isMissedJob(job, now)).sort(mostRecentFirst);
   const missedJobIds = new Set(missedJobs.map((job) => job.id));
   const upcomingJobs = jobs
     .filter(

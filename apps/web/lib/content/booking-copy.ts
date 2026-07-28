@@ -1410,7 +1410,7 @@ export const BOOKING_COPY_SCREENS = [
       {
         key: "booking-provider.jobs.title",
         label: "Page title",
-        defaultValue: "Jobs & pricing",
+        defaultValue: "Jobs",
         style: "title",
       },
       {
