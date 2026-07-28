@@ -350,7 +350,7 @@ export async function suggestQuoteAnotherTime(
   const sent = await sendModeratedMessage(
     supabase,
     conversationId,
-    `I can do this for ${formatMoney(quote.cents)} and estimate ${Math.floor(parsed.data.estimatedMinutes / 60)} hour${Math.floor(parsed.data.estimatedMinutes / 60) === 1 ? "" : "s"}${parsed.data.estimatedMinutes % 60 ? ` ${parsed.data.estimatedMinutes % 60} minutes` : ""}. Could we find a date and start time that works for both of us?`,
+    `I can do this for ${formatMoney(quote.cents)} and estimate ${Math.floor(parsed.data.estimatedMinutes / 60)} hour${Math.floor(parsed.data.estimatedMinutes / 60) === 1 ? "" : "s"}${parsed.data.estimatedMinutes % 60 ? ` ${parsed.data.estimatedMinutes % 60} minutes` : ""}. The requested time doesn’t work for me. Could we find a different date and start time that works for both of us?`,
   );
   if (!sent) return { error: "Couldn’t start the scheduling conversation. Please try again." };
   revalidatePath("/provider/dashboard");
