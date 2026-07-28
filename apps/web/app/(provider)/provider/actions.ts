@@ -276,7 +276,7 @@ export async function suggestAnotherTime(
   const supabase = await createClient();
 
   const booking = await loadBookingParties(supabase, bookingId);
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     name: string,
     args: Record<string, unknown>,
   ) => Promise<{ error: { message: string } | null }>;

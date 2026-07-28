@@ -38,7 +38,7 @@ export async function proposeChatReschedule(
   if (!proposed.ok) return { error: "Choose a valid date and time." };
 
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as UntypedRpc;
+  const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
   const { error } = await rpc("propose_hourly_chat_reschedule", {
     p_booking_id: parsed.data.bookingId,
     p_proposed_start_at: proposed.date.toISOString(),
@@ -74,7 +74,7 @@ export async function respondToChatReschedule(
 
   const accepting = parsed.data.accept === "true";
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as UntypedRpc;
+  const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
   const { error } = await rpc("respond_to_hourly_chat_reschedule", {
     p_proposal_id: parsed.data.proposalId,
     p_accept: accepting,
