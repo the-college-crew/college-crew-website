@@ -5,12 +5,14 @@ import { z } from "zod";
 
 import { requireRole } from "@/lib/auth/session";
 import { captureFirstHourHold } from "@/lib/booking/first-hour-hold";
+import { QUOTE_DAYPARTS } from "@/lib/booking/quote-dayparts";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import { createClient } from "@/lib/supabase/server";
 
 export type CounterOfferState = { error?: string };
 
 const idSchema = z.string().uuid();
+const quoteDaypartSchema = z.enum(QUOTE_DAYPARTS);
 
 /**
  * Take the student's proposed time. The RPC moves the job to that time and flips
@@ -78,10 +80,14 @@ export async function selectQuoteCounterOption(
   await requireRole("customer", "/dashboard");
   const bookingId = idSchema.parse(formData.get("bookingId"));
   const optionId = idSchema.parse(formData.get("optionId"));
+  const requestedDaypart = quoteDaypartSchema.parse(
+    formData.get("requestedDaypart"),
+  );
   const supabase = await createClient();
   const { error } = await supabase.rpc("select_quote_counter_option", {
     p_booking_id: bookingId,
     p_option_id: optionId,
+    p_requested_daypart: requestedDaypart,
   });
   if (error) {
     return {

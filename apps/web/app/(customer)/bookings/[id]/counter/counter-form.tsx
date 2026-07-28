@@ -16,6 +16,7 @@ import {
 } from "./actions";
 import {
   QUOTE_DAYPART_LABELS,
+  QUOTE_DAYPARTS,
   type QuoteDaypart,
 } from "@/lib/booking/quote-dayparts";
 
@@ -90,16 +91,56 @@ export function QuoteCounterOptionActions({
           <FormLoader />
           <input type="hidden" name="bookingId" value={bookingId} />
           <input type="hidden" name="optionId" value={option.id} />
-          <Button
-            type="submit"
-            size="lg"
-            variant="secondary"
-            className="w-full justify-between"
-            disabled={pending}
-          >
-            <span>{option.local_date}</span>
-            <span>{QUOTE_DAYPART_LABELS[option.daypart]}</span>
-          </Button>
+          {option.daypart === "either" ? (
+            <fieldset className="space-y-3 rounded-xl border border-line bg-court p-4">
+              <legend className="px-1 text-sm font-semibold text-ink">
+                {option.local_date} · choose what works for you
+              </legend>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {QUOTE_DAYPARTS.map((daypart) => (
+                  <label
+                    key={daypart}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink-soft"
+                  >
+                    <input
+                      type="radio"
+                      name="requestedDaypart"
+                      value={daypart}
+                      required
+                    />
+                    {QUOTE_DAYPART_LABELS[daypart]}
+                  </label>
+                ))}
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                variant="secondary"
+                className="w-full"
+                disabled={pending}
+              >
+                Re-request this day
+              </Button>
+            </fieldset>
+          ) : (
+            <>
+              <input
+                type="hidden"
+                name="requestedDaypart"
+                value={option.daypart}
+              />
+              <Button
+                type="submit"
+                size="lg"
+                variant="secondary"
+                className="w-full justify-between"
+                disabled={pending}
+              >
+                <span>{option.local_date}</span>
+                <span>{QUOTE_DAYPART_LABELS[option.daypart]}</span>
+              </Button>
+            </>
+          )}
         </form>
       ))}
       <form action={rejectAction}>

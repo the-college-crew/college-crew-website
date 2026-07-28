@@ -3299,7 +3299,11 @@ export type Database = {
         Returns: string
       }
       select_quote_counter_option: {
-        Args: { p_booking_id: string; p_option_id: string }
+        Args: {
+          p_booking_id: string
+          p_option_id: string
+          p_requested_daypart: Database["public"]["Enums"]["quote_daypart"]
+        }
         Returns: string
       }
       settle_balance_payment: {

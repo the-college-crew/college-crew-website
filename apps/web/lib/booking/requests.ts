@@ -48,6 +48,7 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["DUPLICATE_COUNTER_DATE", "Each alternative must use a different date."],
   ["COUNTER_WINDOW_UNAVAILABLE", "Those options are too close to the start time."],
   ["COUNTER_OPTION_NOT_FOUND", "That date option is no longer available."],
+  ["COUNTER_DAYPART_NOT_ALLOWED", "Choose the time window the provider offered."],
   ["PROVIDER_NO_LONGER_READY", "This provider cannot accept new hourly work right now."],
   ["INVALID_FINAL_QUOTE", "Enter a final quote between $20 and $10,000."],
   ["FINAL_QUOTE_REQUIRED", "Send a final quote before accepting this request."],
