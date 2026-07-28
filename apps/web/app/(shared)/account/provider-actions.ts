@@ -446,6 +446,11 @@ export async function removeProviderBanner(
   return { success: "Banner photo removed. Your theme is back." };
 }
 
+const focalPointSchema = z.object({
+  x: z.coerce.number().min(0).max(100),
+  y: z.coerce.number().min(0).max(100),
+});
+
 /**
  * Save the provider's required public profile photo. One photo per provider,
  * shared across every offering. Uses a fresh object path on each replacement to
@@ -454,6 +459,7 @@ export async function removeProviderBanner(
  */
 export async function uploadProviderAvatar(
   path: string,
+  focalPoint: { x: number; y: number },
 ): Promise<ProviderSettingsFormState> {
   await requireProviderAccess();
   const profile = await getOwnProviderProfile();
@@ -469,12 +475,19 @@ export async function uploadProviderAvatar(
   }
 
   const supabase = await createClient();
+  const parsedFocalPoint = focalPointSchema.safeParse(focalPoint);
+  if (!parsedFocalPoint.success) {
+    await supabase.storage.from(PROVIDER_AVATARS_BUCKET).remove([path]);
+    return { error: "Choose a valid photo position." };
+  }
+
   const { error: updateError } = await supabase
     .from("provider_profiles")
-    // A new photo has an unknown composition, so any focal point saved
-    // against the old one would be meaningless (and invisibly wrong) against
-    // this one -- reset to center rather than carry it over.
-    .update({ avatar_image_path: path, avatar_focal_x: 50, avatar_focal_y: 50 })
+    .update({
+      avatar_image_path: path,
+      avatar_focal_x: Math.round(parsedFocalPoint.data.x),
+      avatar_focal_y: Math.round(parsedFocalPoint.data.y),
+    })
     .eq("id", profile.id);
 
   if (updateError) {
@@ -490,40 +503,6 @@ export async function uploadProviderAvatar(
 
   revalidateProviderStorefront(profile.id);
   return { success: "Profile photo saved." };
-}
-
-const focalPointSchema = z.object({
-  x: z.coerce.number().min(0).max(100),
-  y: z.coerce.number().min(0).max(100),
-});
-
-/** Save the avatar's drag-adjusted focal point (CSS object-position, 0-100%). */
-export async function updateProviderAvatarFocalPoint(
-  _prev: ProviderSettingsFormState,
-  formData: FormData,
-): Promise<ProviderSettingsFormState> {
-  await requireProviderAccess();
-  const profile = await getOwnProviderProfile();
-  if (!profile) redirect("/provider/onboarding/account");
-
-  const parsed = focalPointSchema.safeParse({
-    x: formData.get("x"),
-    y: formData.get("y"),
-  });
-  if (!parsed.success) return { error: "Invalid position." };
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("provider_profiles")
-    .update({
-      avatar_focal_x: Math.round(parsed.data.x),
-      avatar_focal_y: Math.round(parsed.data.y),
-    })
-    .eq("id", profile.id);
-  if (error) return { error: "Could not save that position. Try again." };
-
-  revalidateProviderStorefront(profile.id);
-  return { success: "Position saved." };
 }
 
 /** Save the banner's drag-adjusted focal point (CSS object-position, 0-100%). */
