@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { ProviderVerifyBanner } from "@/components/provider-verify-banner";
 import { SiteHeader } from "@/components/site-header";
 import {
@@ -8,6 +6,8 @@ import {
   getSession,
 } from "@/lib/auth/session";
 import { getVerifiedSchoolEmail } from "@/lib/db/school-email";
+
+import { ProviderNav } from "./_components/provider-nav";
 
 /**
  * Compute the "finish verifying" nudge for a provider whose onboarding is
@@ -62,30 +62,7 @@ export default async function ProviderLayout({
   return (
     <>
       <SiteHeader />
-      {showProviderNav ? (
-        <nav
-          aria-label="Provider"
-          className="border-b border-viridian/15 bg-shell"
-        >
-          <div className="mx-auto flex h-11 max-w-[1140px] items-center gap-6 px-5 text-sm font-semibold text-viridian sm:px-8">
-            <span className="rounded-full border border-viridian/20 bg-viridian/5 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-[0.14em]">
-              Provider
-            </span>
-            <Link href="/provider/dashboard" className="hover:text-viridian/60">
-              Dashboard
-            </Link>
-            <Link href="/provider/jobs" className="hover:text-viridian/60">
-              Jobs
-            </Link>
-            <Link
-              href="/account?tab=pricing"
-              className="hover:text-viridian/60"
-            >
-              Pricing
-            </Link>
-          </div>
-        </nav>
-      ) : null}
+      {showProviderNav ? <ProviderNav /> : null}
       {verifyNudge ? <ProviderVerifyBanner {...verifyNudge} /> : null}
       <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         {children}
