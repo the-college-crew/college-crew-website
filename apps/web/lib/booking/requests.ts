@@ -51,6 +51,14 @@ const REQUEST_ERROR_MESSAGES: Array<[string, string]> = [
   ["COUNTER_DAYPART_NOT_ALLOWED", "Choose the time window the provider offered."],
   ["PROVIDER_NO_LONGER_READY", "This provider cannot accept new hourly work right now."],
   ["INVALID_FINAL_QUOTE", "Enter a final quote between $20 and $10,000."],
+  [
+    "QUOTE_PAYMENT_WINDOW_UNAVAILABLE",
+    "This start time is too soon for the required deposit. Choose a later time.",
+  ],
+  [
+    "bookings_initial_payment_before_start",
+    "This start time is too soon for the required deposit. Choose a later time.",
+  ],
   ["FINAL_QUOTE_REQUIRED", "Send a final quote before accepting this request."],
   ["CASH_CONFIRMATION_REQUIRED", "Confirm the customer paid you in person first."],
   ["COUNTER_NOT_ALLOWED", "This customer asked for that exact time only."],
