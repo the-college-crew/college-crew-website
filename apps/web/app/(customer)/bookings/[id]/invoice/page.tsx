@@ -327,6 +327,7 @@ export default async function InvoicePage({
               bookingId={booking.id}
               payLabel={formatMoney(invoice.remaining_balance_cents)}
               isZeroBalance={invoice.remaining_balance_cents === 0}
+              isQuote={isQuote}
             />
           </div>
         ) : (

@@ -43,10 +43,12 @@ export function InvoicePayPanel({
   bookingId,
   payLabel,
   isZeroBalance,
+  isQuote = false,
 }: {
   bookingId: string;
   payLabel: string;
   isZeroBalance: boolean;
+  isQuote?: boolean;
 }) {
   const copy = useBookingCopy();
   const [state, formAction, pending] = useActionState<InvoicePayState, FormData>(
@@ -105,11 +107,13 @@ export function InvoicePayPanel({
       </Button>
       {isZeroBalance ? (
         <p className="text-center text-xs text-mist">
-          The first hour already covers this invoice; no additional charge.
+          {isQuote
+            ? "Your deposit already covers this invoice; no additional charge."
+            : "The first hour already covers this invoice; no additional charge."}
         </p>
       ) : (
         <p className="text-center text-xs text-mist">
-          Charges the card you saved when you paid the first hour.
+          Charges the card you saved when you {isQuote ? "paid the deposit" : "authorized the first hour"}.
         </p>
       )}
       <FieldError>{state.error}</FieldError>

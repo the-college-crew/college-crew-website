@@ -199,7 +199,7 @@ export default async function ConfirmPayPage({
               {(isDepositQuote
                 ? [
                     "The final quote is fixed and cannot change at completion.",
-                    "College Crew charges 20% now and holds it until settlement.",
+                    "College Crew charges the 20% deposit now and holds the funds until the job is settled.",
                     "The remaining 80% is invoiced after the job and may be paid by card or in person.",
                     "Invoice review, disputes, payment recovery, and provider payout follow the hourly booking process.",
                   ]

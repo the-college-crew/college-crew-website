@@ -52,7 +52,7 @@ export const BOOKING_COPY_SCREENS = [
     title: "Request booking & schedule",
     route: "/book/[providerId]",
     purpose:
-      "Choose the service, schedule, job details, flexibility, and first-hour card hold before sending a provider request.",
+      "Choose the service, schedule, job details, flexibility, and authorize a first-hour card hold before sending a provider request.",
     livePaths: [{ path: "/book/[providerId]", type: "page" }],
     fields: [
       {
@@ -307,14 +307,14 @@ export const BOOKING_COPY_SCREENS = [
       {
         key: "booking-customer.request.hold-label",
         label: "Hold row",
-        defaultValue: "Held now (first hour)",
+        defaultValue: "First-hour authorization",
         style: "label",
       },
       {
         key: "booking-customer.request.hold-policy",
         label: "Hold and billing explanation",
         defaultValue:
-          "We place a hold for the first hour now. Your student has {response_hours} hours to accept—if they accept, the hold is charged; if they decline or time out, the hold is released and you're never charged. Final billing uses the provider's submitted actual time, rounded to {billing_increment}-minute increments. College Crew's fee comes from provider earnings; there is no added customer platform fee.",
+          "We authorize a hold on your card for the first hour now. Your student has {response_hours} hours to accept—if they accept, we charge the first hour; if they decline or time out, we release the authorization and you are not charged. Final billing uses the provider's submitted actual time, rounded to {billing_increment}-minute increments. College Crew's fee comes from provider earnings; there is no added customer platform fee.",
         style: "callout",
       },
       {
@@ -333,13 +333,13 @@ export const BOOKING_COPY_SCREENS = [
       {
         key: "booking-customer.request.continue-button",
         label: "Continue button",
-        defaultValue: "Continue to hold {hold_amount}",
+        defaultValue: "Continue to authorize {hold_amount}",
         style: "button",
       },
       {
         key: "booking-customer.request.continue-pending",
         label: "Continue loading label",
-        defaultValue: "Preparing hold...",
+        defaultValue: "Preparing authorization...",
         style: "button",
       },
       {
@@ -364,19 +364,19 @@ export const BOOKING_COPY_SCREENS = [
         key: "booking-customer.request.hold-intro",
         label: "Card hold explanation",
         defaultValue:
-          "We'll place a {hold_amount} hold for the first hour. You're only charged if your student accepts.",
+          "We'll authorize a {hold_amount} hold for the first hour. You're charged only if your student accepts.",
         style: "body",
       },
       {
         key: "booking-customer.request.hold-submit",
         label: "Place hold button",
-        defaultValue: "Place {hold_amount} hold & request",
+        defaultValue: "Authorize {hold_amount} hold & request",
         style: "button",
       },
       {
         key: "booking-customer.request.hold-error",
         label: "Card hold error",
-        defaultValue: "Card hold didn't go through. Please try again.",
+        defaultValue: "First-hour authorization didn't go through. Please try again.",
         style: "error",
       },
     ],
@@ -812,13 +812,13 @@ export const BOOKING_COPY_SCREENS = [
       {
         key: "booking-customer.replace.hold-submit",
         label: "Replacement hold button",
-        defaultValue: "Place {hold_amount} hold & request",
+        defaultValue: "Authorize {hold_amount} hold & request",
         style: "button",
       },
       {
         key: "booking-customer.replace.hold-error",
         label: "Replacement hold error",
-        defaultValue: "Card hold didn't go through. Please try again.",
+        defaultValue: "First-hour authorization didn't go through. Please try again.",
         style: "error",
       },
     ],
