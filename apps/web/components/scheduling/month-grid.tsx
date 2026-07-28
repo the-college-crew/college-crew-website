@@ -165,7 +165,7 @@ export function MonthGrid({
                 <span
                   aria-hidden
                   className={cn(
-                    "absolute right-1 top-1 h-1.5 w-1.5 rounded-full",
+                    "absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full",
                     isSelected ? "bg-shell" : "bg-red-500",
                   )}
                 />
