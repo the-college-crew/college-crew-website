@@ -796,6 +796,8 @@ export type AdminProviderProfile = PublicProviderProfile &
     ProviderProfile,
     | "service_zip"
     | "stripe_account_id"
+    | "is_active"
+    | "admin_forced_inactive"
     | "stripe_transfers_active"
     | "stripe_transfers_checked_at"
   > & {
@@ -835,7 +837,8 @@ export async function getAdminProviderProfile(
         .from("provider_profiles")
         .select(
           `availability, availability_note, minimum_notice_hours,
-           service_zip, stripe_account_id, stripe_transfers_active,
+           service_zip, stripe_account_id, stripe_transfers_active, is_active,
+           admin_forced_inactive,
            stripe_transfers_checked_at, verification_status, id_document_url,
            id_document_back_url, verification_bypassed, verification_bypassed_at,
            created_at,
@@ -926,6 +929,8 @@ export async function getAdminProviderProfile(
     minimum_notice_hours: provider.minimum_notice_hours,
     service_zip: provider.service_zip,
     stripe_account_id: provider.stripe_account_id,
+    is_active: provider.is_active,
+    admin_forced_inactive: provider.admin_forced_inactive,
     stripe_transfers_active: provider.stripe_transfers_active,
     stripe_transfers_checked_at: provider.stripe_transfers_checked_at,
     verification_status: provider.verification_status,

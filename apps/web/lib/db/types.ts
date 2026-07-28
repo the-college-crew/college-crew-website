@@ -1766,6 +1766,7 @@ export type Database = {
       provider_profiles: {
         Row: {
           availability: Json
+          admin_forced_inactive: boolean
           availability_end_local: string | null
           availability_note: string
           availability_start_local: string | null
@@ -1786,6 +1787,7 @@ export type Database = {
           id: string
           id_document_back_url: string | null
           id_document_url: string | null
+          is_active: boolean
           minimum_notice_hours: number
           neighborhood: string
           provider_type: Database["public"]["Enums"]["provider_type"]
@@ -1804,6 +1806,7 @@ export type Database = {
         }
         Insert: {
           availability?: Json
+          admin_forced_inactive?: boolean
           availability_end_local?: string | null
           availability_note?: string
           availability_start_local?: string | null
@@ -1824,6 +1827,7 @@ export type Database = {
           id?: string
           id_document_back_url?: string | null
           id_document_url?: string | null
+          is_active?: boolean
           minimum_notice_hours?: number
           neighborhood?: string
           provider_type?: Database["public"]["Enums"]["provider_type"]
@@ -1842,6 +1846,7 @@ export type Database = {
         }
         Update: {
           availability?: Json
+          admin_forced_inactive?: boolean
           availability_end_local?: string | null
           availability_note?: string
           availability_start_local?: string | null
@@ -1862,6 +1867,7 @@ export type Database = {
           id?: string
           id_document_back_url?: string | null
           id_document_url?: string | null
+          is_active?: boolean
           minimum_notice_hours?: number
           neighborhood?: string
           provider_type?: Database["public"]["Enums"]["provider_type"]

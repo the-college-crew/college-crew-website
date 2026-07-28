@@ -15,6 +15,7 @@ import {
 import type { ProviderProfile } from "@/lib/db/types";
 
 import {
+  setOwnProviderActivity,
   updateProviderProfile,
   type ProviderSettingsFormState,
 } from "./provider-actions";
@@ -40,6 +41,51 @@ function SaveRow({
       ) : null}
       <FieldError>{state.error}</FieldError>
     </div>
+  );
+}
+
+export function ProviderActivityForm({
+  profile,
+}: {
+  profile: ProviderProfile;
+}) {
+  const [state, formAction, pending] = useActionState<
+    ProviderSettingsFormState,
+    FormData
+  >(setOwnProviderActivity, {});
+  const locked = profile.admin_forced_inactive;
+
+  return (
+    <form action={formAction} className="space-y-3">
+      <div className="flex items-start justify-between gap-4 rounded-2xl border border-line bg-court/40 p-4">
+        <div>
+          <Label htmlFor="provider-is-active">Accept new requests</Label>
+          <p className="mt-1 text-sm text-ink-soft">
+            {locked
+              ? "College Crew has made your listing inactive. Only an admin can reactivate it."
+              : "Pause your listing whenever you need a break. Your profile, verification, and existing jobs stay intact."}
+          </p>
+        </div>
+        <input
+          id="provider-is-active"
+          name="isActive"
+          type="checkbox"
+          value="true"
+          defaultChecked={profile.is_active && !locked}
+          disabled={locked || pending}
+          aria-label="Accept new requests"
+          className="mt-1 h-5 w-5 shrink-0 accent-viridian"
+        />
+      </div>
+      {locked ? (
+        <p className="text-sm font-medium text-red-700">
+          Listing inactive by College Crew
+        </p>
+      ) : (
+        <SaveRow state={state} pending={pending} label="Save listing status" />
+      )}
+      {locked ? <FieldError>{state.error}</FieldError> : null}
+    </form>
   );
 }
 

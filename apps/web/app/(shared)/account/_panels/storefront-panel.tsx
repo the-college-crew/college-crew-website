@@ -5,7 +5,10 @@ import { toBannerStyle } from "@/lib/media/provider-banners";
 import { Section } from "../_components/section";
 import { AvatarUploadForm } from "../avatar-upload-form";
 import { BannerUploadForm } from "../banner-upload-form";
-import { ProviderProfileForm } from "../provider-settings-forms";
+import {
+  ProviderActivityForm,
+  ProviderProfileForm,
+} from "../provider-settings-forms";
 
 export function StorefrontPanel({
   providerProfile,
@@ -14,6 +17,13 @@ export function StorefrontPanel({
 }) {
   return (
     <>
+      <Section
+        title="Listing status"
+        description="Control whether neighbors can find you and send new requests."
+      >
+        <ProviderActivityForm profile={providerProfile} />
+      </Section>
+
       <Section
         title="Profile photo"
         description="Your public headshot on Browse and your profile. Required to stay visible to neighbors."
