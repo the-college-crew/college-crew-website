@@ -792,7 +792,7 @@ function BookingCard({
           </Link>
         ) : null}
 
-        {isHourly && booking.status === "invoice_review" && !demo ? (
+        {usesPostJobPayment && booking.status === "invoice_review" && !demo ? (
           <Link
             href={`/bookings/${booking.id}/invoice`}
             className={buttonClasses({ size: "sm" })}
