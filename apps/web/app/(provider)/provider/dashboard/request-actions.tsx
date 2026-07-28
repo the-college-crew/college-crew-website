@@ -446,12 +446,6 @@ function QuoteReschedulePanel({
         onChange={setEstimatedMinutes}
       />
       <FieldHint>Choose hours and minutes in 15-minute increments. This duration is used to find start times that fit your calendar.</FieldHint>
-      <Textarea
-        name="note"
-        rows={2}
-        maxLength={500}
-        placeholder="Optional note for the customer"
-      />
       <FieldError>{state.error}</FieldError>
       <div className="flex gap-2">
         <SubmitButton variant="primary" pendingLabel="Sending…">
