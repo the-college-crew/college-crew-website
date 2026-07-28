@@ -139,7 +139,7 @@ export function ChatReschedulePanel({
                 minimumNoticeHours={12}
                 horizonStart={schedule.horizonStart}
                 horizonEnd={schedule.horizonEnd}
-                preferredMinutes={estimatedMinutes}
+                preferredMinutes={quoteMode ? undefined : estimatedMinutes}
                 fixedMinutes={estimatedMinutes}
                 startTimeDropdown={quoteMode}
                 gridLabel={quoteMode ? "Choose a new date and start time" : "Choose a new date and time"}
