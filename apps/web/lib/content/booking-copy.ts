@@ -563,7 +563,7 @@ export const BOOKING_COPY_SCREENS = [
         key: "booking-customer.dashboard.quote-request-sent",
         label: "Quote request confirmation",
         defaultValue:
-          "Quote requested. Use the private chat to share any images or video the provider needs. You will review the final flat price before paying.",
+          "Quote requested. Use the private chat to share any images, videos, or details the provider needs. You will review the final flat price before paying.",
         style: "success",
       },
       {
