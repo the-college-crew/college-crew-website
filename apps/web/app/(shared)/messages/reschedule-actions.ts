@@ -8,6 +8,10 @@ import { requireUser } from "@/lib/auth/session";
 import { captureFirstHourHold } from "@/lib/booking/first-hour-hold";
 import { pilotLocalDateTimeToUtc } from "@/lib/booking/policy";
 import { requestOperationMessage } from "@/lib/booking/requests";
+import {
+  hasAcceptedCurrentLegalDocument,
+  legalDocumentPath,
+} from "@/lib/legal/acceptance";
 import { createClient } from "@/lib/supabase/server";
 
 export type RescheduleActionState = { error?: string };
@@ -63,7 +67,7 @@ export async function respondToChatReschedule(
   _previous: RescheduleActionState,
   formData: FormData,
 ): Promise<RescheduleActionState> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = responseSchema.safeParse({
     proposalId: formData.get("proposalId"),
     bookingId: formData.get("bookingId"),
@@ -74,6 +78,26 @@ export async function respondToChatReschedule(
 
   const accepting = parsed.data.accept === "true";
   const supabase = await createClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (
+    accepting &&
+    profile?.role === "customer" &&
+    !(await hasAcceptedCurrentLegalDocument(supabase, {
+      userId: user.id,
+      kind: "customer_booking_terms",
+    }))
+  ) {
+    redirect(
+      legalDocumentPath(
+        "customer_booking_terms",
+        `/messages/${parsed.data.conversationId}`,
+      ),
+    );
+  }
   const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
   const { error } = await rpc("respond_to_hourly_chat_reschedule", {
     p_proposal_id: parsed.data.proposalId,
