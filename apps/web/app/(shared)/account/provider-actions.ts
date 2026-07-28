@@ -334,6 +334,8 @@ export async function saveSettingsPricing(
   revalidateProviderStorefront(profile.id);
   revalidatePath("/provider/jobs");
   revalidatePath("/provider/dashboard");
+  revalidatePath("/provider/pricing");
+  revalidatePath("/account");
   return { success: "Hourly rates saved. Your public profile is updated." };
 }
 

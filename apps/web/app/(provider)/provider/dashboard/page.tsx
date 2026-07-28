@@ -516,7 +516,7 @@ function ProviderDashboardView({
             ? undefined
             : legalDocumentPath("provider_terms", "/provider/dashboard")
         }
-        offeringsHref={demo ? undefined : "/account?tab=pricing"}
+        offeringsHref={demo ? undefined : "/provider/pricing"}
       />
 
       {/* Earnings summary */}

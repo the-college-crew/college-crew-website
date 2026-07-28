@@ -1,25 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/provider/dashboard", label: "Dashboard" },
   { href: "/provider/jobs", label: "Jobs" },
-  { href: "/account?tab=pricing", label: "Pricing" },
+  { href: "/provider/pricing", label: "Pricing" },
 ] as const;
 
 export function ProviderNav() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  function isActive(href: (typeof navItems)[number]["href"]) {
-    if (href === "/account?tab=pricing") {
-      return pathname === "/account" && searchParams.get("tab") === "pricing";
-    }
-
-    return pathname === href || pathname.startsWith(`${href}/`);
-  }
+  const isActive = (href: (typeof navItems)[number]["href"]) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <nav aria-label="Provider" className="border-b border-viridian/15 bg-shell">
