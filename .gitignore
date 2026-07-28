@@ -69,7 +69,7 @@ docs/SPEC.md
 docs/internal/
 
 # project-level claude instructions (local only)
-CLAUDE.md
+CLAUDE.local.md
 
 # ruflo (claude-flow) — installed locally, runtime kept out of the repo
 # (.claude/ itself is already blanket-ignored above; these lines are kept as
