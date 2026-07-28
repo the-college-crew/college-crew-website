@@ -808,6 +808,7 @@ export type Database = {
           counter_note: string | null
           countered_at: string | null
           created_at: string
+          declined_at: string | null
           customer_authorization_snapshot: Json | null
           customer_authorization_version: string | null
           customer_id: string
@@ -879,6 +880,7 @@ export type Database = {
           counter_note?: string | null
           countered_at?: string | null
           created_at?: string
+          declined_at?: string | null
           customer_authorization_snapshot?: Json | null
           customer_authorization_version?: string | null
           customer_id: string
@@ -950,6 +952,7 @@ export type Database = {
           counter_note?: string | null
           countered_at?: string | null
           created_at?: string
+          declined_at?: string | null
           customer_authorization_snapshot?: Json | null
           customer_authorization_version?: string | null
           customer_id?: string
