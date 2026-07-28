@@ -9,10 +9,11 @@ type Size = "sm" | "md" | "lg";
  */
 const variantClasses: Record<Variant, string> = {
   primary: "border-viridian bg-viridian text-shell hover:bg-viridian-ink",
-  secondary: "border-viridian text-viridian hover:bg-viridian/5",
+  secondary:
+    "border-viridian bg-paper text-viridian hover:bg-viridian hover:text-shell",
   success: "border-honeydew bg-honeydew text-viridian hover:bg-honeydew/80",
   ghost: "border-transparent text-viridian hover:bg-stone/45",
-  danger: "border-red-200 bg-paper text-red-700 hover:bg-red-50",
+  danger: "border-red-500 bg-paper text-red-700 hover:bg-red-600 hover:text-white",
 };
 
 const sizeClasses: Record<Size, string> = {

@@ -313,7 +313,7 @@ function ProviderJobsView({
                     </span>
                   </p>
                 )}
-                <div className="mt-auto flex min-h-14 flex-wrap items-start gap-2 border-t border-line pt-3">
+                <div className="mt-auto flex min-h-14 flex-wrap items-end gap-2 border-t border-line pt-3">
                   {demo ? (
                     <>
                       <Link
@@ -448,7 +448,7 @@ function JobMilestoneActions({
       const canSendEnRoute = timeRestrictionsDisabled || now >= enRouteUnlock;
       const canArrive = timeRestrictionsDisabled || now >= arrivalUnlock;
       return (
-        <div className="flex flex-wrap items-start gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {!canSendEnRoute ? (
             <>
               <span className="self-center text-xs text-mist">
@@ -465,14 +465,14 @@ function JobMilestoneActions({
           )}
 
           {canArrive ? (
-            <div>
+            <div className="flex flex-wrap items-center gap-2">
               <form action={markArrived}>
                 <input type="hidden" name="bookingId" value={job.id} />
-                <Button type="submit" size="sm">
+                <Button type="submit" variant="secondary" size="sm">
                   Arrived
                 </Button>
               </form>
-              <p className="mt-1 max-w-48 text-xs text-mist">
+              <p className="max-w-48 text-xs text-mist">
                 Marks work started and opens the invoice screen.
               </p>
             </div>

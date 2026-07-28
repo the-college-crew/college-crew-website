@@ -25,8 +25,9 @@ export function ProviderCancelJob({ bookingId }: { bookingId: string }) {
     return (
       <Button
         type="button"
-        variant="ghost"
+        variant="danger"
         size="sm"
+        className="ml-auto self-end"
         onClick={() => setOpen(true)}
       >
         Cancel job
