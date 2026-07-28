@@ -454,7 +454,7 @@ function QuoteCounterPanel({
       <FieldHint>
         Enter your best estimate in minutes (15-minute increments). It reserves
         time on your calendar for whichever day the customer chooses; the
-        customer never sees it and it is not a price.
+        customer never sees it.
       </FieldHint>
       {options.map((option, index) => (
         <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
