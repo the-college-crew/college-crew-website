@@ -82,6 +82,10 @@ export function DayRail({
   const [preview, setPreview] = useState<TimeRange | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const dragAnchor = useRef<number | null>(null);
+  // React state is intentionally used to render the preview, but a pointer can
+  // be released before its most recent setState has rendered. Keep the same
+  // range in a ref so the final drag always commits the range the provider saw.
+  const dragPreview = useRef<TimeRange | null>(null);
   const didDrag = useRef(false);
   const scrollBox = useRef<HTMLDivElement>(null);
 
@@ -182,6 +186,7 @@ export function DayRail({
     if (!slot || slot.blocked) return;
     didDrag.current = false;
     dragAnchor.current = slot.startMinutes;
+    dragPreview.current = null;
     // Only a mouse or pen captures the gesture. Capturing a touch would mean
     // owning vertical movement, and vertical movement in a scrollable rail is
     // the user trying to scroll it. Touch gets tap-start-then-tap-end instead,
@@ -197,7 +202,9 @@ export function DayRail({
     const slot = slotAt(event.clientX, event.clientY);
     if (!slot || slot.startMinutes === anchor) return;
     didDrag.current = true;
-    setPreview(clampRange(anchor, slot.startMinutes));
+    const nextPreview = clampRange(anchor, slot.startMinutes);
+    dragPreview.current = nextPreview;
+    setPreview(nextPreview);
   }
 
   function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
@@ -209,17 +216,26 @@ export function DayRail({
     dragAnchor.current = null;
 
     if (didDrag.current) {
-      commit(preview);
+      // Calculate from the release point whenever possible. The ref is the
+      // fallback for a release just outside the rail after pointer capture.
+      const releaseSlot = slotAt(event.clientX, event.clientY);
+      commit(
+        releaseSlot
+          ? clampRange(anchor, releaseSlot.startMinutes)
+          : dragPreview.current,
+      );
       setPendingStart(null);
     } else {
       // A press that never moved is a tap, wherever the pointer came to rest.
       tapSlot(anchor, false);
     }
+    dragPreview.current = null;
     setPreview(null);
   }
 
   function handlePointerCancel() {
     dragAnchor.current = null;
+    dragPreview.current = null;
     didDrag.current = false;
     setPreview(null);
   }
