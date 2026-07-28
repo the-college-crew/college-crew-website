@@ -22,6 +22,47 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 
 const statusSchema = z.enum(["pending", "approved", "rejected"]);
+const booleanSchema = z.enum(["true", "false"]).transform((value) => value === "true");
+
+/** Admin may set the provider's normal listing preference; they can later turn it back on. */
+export async function setProviderActivity(formData: FormData) {
+  await requireRole("admin");
+  if (!hasServiceRoleEnv()) redirect("/admin/providers?err=env");
+
+  const providerId = z.string().uuid().parse(formData.get("providerId"));
+  const isActive = booleanSchema.parse(formData.get("isActive"));
+  const { error } = await createAdminClient()
+    .from("provider_profiles")
+    .update({ is_active: isActive })
+    .eq("id", providerId);
+  if (error) throw new Error(`Could not update listing status: ${error.message}`);
+
+  revalidatePath("/admin/providers");
+  revalidatePath("/account");
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/browse");
+  revalidatePath("/");
+}
+
+/** Founder-only lock. While set, the provider cannot reactivate their listing. */
+export async function setProviderForcedInactive(formData: FormData) {
+  await requireRole("admin");
+  if (!hasServiceRoleEnv()) redirect("/admin/providers?err=env");
+
+  const providerId = z.string().uuid().parse(formData.get("providerId"));
+  const forcedInactive = booleanSchema.parse(formData.get("forcedInactive"));
+  const { error } = await createAdminClient()
+    .from("provider_profiles")
+    .update({ admin_forced_inactive: forcedInactive })
+    .eq("id", providerId);
+  if (error) throw new Error(`Could not update inactive lock: ${error.message}`);
+
+  revalidatePath("/admin/providers");
+  revalidatePath("/account");
+  revalidatePath("/provider/dashboard");
+  revalidatePath("/browse");
+  revalidatePath("/");
+}
 
 /**
  * Set a provider's verification status to any state. Approving still requires

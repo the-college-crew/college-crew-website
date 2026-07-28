@@ -83,6 +83,8 @@ export const demoProviderProfile: ProviderProfile = {
   school_domain: "northwestern.edu",
   greek_organization: "",
   verification_status: "approved",
+  is_active: true,
+  admin_forced_inactive: false,
   verification_bypassed: false,
   verification_bypassed_at: null,
   verification_bypassed_by: null,

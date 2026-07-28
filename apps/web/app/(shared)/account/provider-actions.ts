@@ -49,6 +49,43 @@ function revalidateProviderStorefront(providerId: string) {
   revalidatePath("/account");
 }
 
+/**
+ * Providers can pause their own listing without undoing verification, pricing,
+ * availability, or Stripe onboarding. A founder-imposed inactive lock always
+ * wins and is intentionally not writable from this action.
+ */
+export async function setOwnProviderActivity(
+  _prev: ProviderSettingsFormState,
+  formData: FormData,
+): Promise<ProviderSettingsFormState> {
+  await requireProviderAccess();
+  const profile = await getOwnProviderProfile();
+  if (!profile) redirect("/provider/onboarding/account");
+
+  if (profile.admin_forced_inactive) {
+    return {
+      error:
+        "Your listing has been set inactive by College Crew. Contact support if you need help.",
+    };
+  }
+
+  const isActive = formData.get("isActive") === "true";
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("provider_profiles")
+    .update({ is_active: isActive })
+    .eq("id", profile.id);
+  if (error) return { error: "Could not update your listing. Try again." };
+
+  revalidateProviderStorefront(profile.id);
+  revalidatePath("/provider/dashboard");
+  return {
+    success: isActive
+      ? "Your listing is active again."
+      : "Your listing is paused. You will not receive new requests.",
+  };
+}
+
 const profileSchema = z.object({
   displayName: z.string().trim().min(1, "Enter a display name."),
   companyName: z.string().trim().max(120).optional().default(""),

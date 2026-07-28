@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 
 import {
   bypassProviderVerification,
+  setProviderActivity,
+  setProviderForcedInactive,
   setProviderStatus,
 } from "@/app/(admin)/admin/actions";
 import type { AdminProviderDetail } from "@/app/(admin)/admin/actions";
@@ -105,6 +107,40 @@ export function ProviderDetailModal({
         const fd = new FormData();
         fd.set("providerId", providerId);
         await bypassProviderVerification(fd);
+        onClose();
+      });
+    },
+    [onClose],
+  );
+
+  const changeActivity = useCallback(
+    (providerId: string, isActive: boolean) => {
+      startTransition(async () => {
+        const fd = new FormData();
+        fd.set("providerId", providerId);
+        fd.set("isActive", String(isActive));
+        await setProviderActivity(fd);
+        onClose();
+      });
+    },
+    [onClose],
+  );
+
+  const changeForcedInactive = useCallback(
+    (providerId: string, forcedInactive: boolean) => {
+      if (
+        forcedInactive &&
+        !window.confirm(
+          "Force this provider inactive? They will be removed from discovery and cannot reactivate themselves until an admin removes this lock.",
+        )
+      ) {
+        return;
+      }
+      startTransition(async () => {
+        const fd = new FormData();
+        fd.set("providerId", providerId);
+        fd.set("forcedInactive", String(forcedInactive));
+        await setProviderForcedInactive(fd);
         onClose();
       });
     },
@@ -437,6 +473,61 @@ export function ProviderDetailModal({
                     )}
                   </div>
                 ) : null}
+              </section>
+
+              <section className="border-t border-line px-6 py-5 sm:px-8">
+                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-mist">
+                  Listing availability
+                </h2>
+                <div className="mt-3 rounded-xl border border-line bg-court/40 p-4 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-ink">
+                        Provider setting: {profile.is_active ? "Active" : "Paused"}
+                      </p>
+                      <p className="mt-1 text-ink-soft">
+                        {profile.is_active
+                          ? "They can be discovered and receive new requests unless the admin lock is on."
+                          : "They are hidden from discovery, but can reactivate their listing themselves."}
+                      </p>
+                    </div>
+                    <Button
+                      variant={profile.is_active ? "secondary" : "success"}
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => changeActivity(profile.id, !profile.is_active)}
+                    >
+                      {profile.is_active ? "Pause listing" : "Activate listing"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-red-900">
+                        Founder lock: {profile.admin_forced_inactive ? "Forced inactive" : "Off"}
+                      </p>
+                      <p className="mt-1 text-red-800">
+                        {profile.admin_forced_inactive
+                          ? "This provider cannot reactivate their listing until an admin removes the lock."
+                          : "Use only when College Crew must keep a provider inactive regardless of their setting."}
+                      </p>
+                    </div>
+                    <Button
+                      variant={profile.admin_forced_inactive ? "secondary" : "danger"}
+                      size="sm"
+                      disabled={pending}
+                      onClick={() =>
+                        changeForcedInactive(profile.id, !profile.admin_forced_inactive)
+                      }
+                    >
+                      {profile.admin_forced_inactive
+                        ? "Remove inactive lock"
+                        : "Force inactive"}
+                    </Button>
+                  </div>
+                </div>
               </section>
 
               {/* Services & pricing */}
