@@ -212,6 +212,11 @@ const COPY: Record<
     heading: "Automation needs review",
     body: "A booking automation task reached terminal failure. Review and retry it in founder operations.",
   },
+  payout_after_dispute_admin: {
+    subject: "College Crew operations: dispute on an already-paid booking",
+    heading: "A dispute landed after the payout",
+    body: "The provider payout for this booking had already been transferred when the dispute arrived, so it could not be held. Recovering the funds needs manual follow-up with the provider.",
+  },
 };
 
 function escapeHtml(value: string) {

@@ -11,7 +11,17 @@ import { requireRole } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
+import { PayoutReleaseButton } from "./payout-panel";
 import { ResolutionPanel } from "./resolution-panel";
+
+const PAYOUT_LABELS: Record<string, string> = {
+  pending: "Scheduled",
+  retry: "Retrying",
+  processing: "Paying out now",
+  succeeded: "Paid",
+  failed: "Failed",
+  blocked: "Held — dispute",
+};
 
 export const metadata: Metadata = { title: "Booking oversight" };
 
@@ -84,6 +94,25 @@ export default async function AdminBookingPage({
       .eq("booking_id", id)
       .order("created_at", { ascending: true }),
   ]);
+
+  // Payout state comes from the automation job rather than the RPC: this page
+  // already runs behind requireRole("admin") on the admin client, and reading
+  // the row directly avoids a second round trip through the auth'd client.
+  const { data: payoutJob } = await admin
+    .from("booking_automation_jobs")
+    .select("status, run_at, last_error_class")
+    .eq("booking_id", id)
+    .eq("kind", "provider_payout")
+    .maybeSingle();
+  const { data: paidLegs } = await admin
+    .from("booking_provider_payouts")
+    .select("amount_cents")
+    .eq("booking_id", id)
+    .eq("status", "paid");
+  const paidCents = (paidLegs ?? []).reduce(
+    (sum, leg) => sum + leg.amount_cents,
+    0,
+  );
 
   const overEstimate =
     invoice?.submitted_minutes != null &&
@@ -254,6 +283,48 @@ export default async function AdminBookingPage({
               </p>
             </div>
           )}
+        </Card>
+      ) : null}
+
+      {payoutJob ? (
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold">
+              Provider payout
+            </h2>
+            <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+              {PAYOUT_LABELS[payoutJob.status] ?? payoutJob.status}
+            </span>
+          </div>
+          <dl className="mt-3 space-y-1 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-mist">
+                {payoutJob.status === "succeeded" ? "Paid" : "Scheduled for"}
+              </dt>
+              <dd>{formatDateTime(payoutJob.run_at)}</dd>
+            </div>
+            {paidCents > 0 ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-mist">Transferred</dt>
+                <dd>{formatMoney(paidCents)}</dd>
+              </div>
+            ) : null}
+          </dl>
+          {payoutJob.status === "blocked" ? (
+            <div className="mt-3 rounded-lg border border-line bg-stone/40 p-3 text-sm">
+              <p className="font-semibold">
+                Held because this booking is disputed.
+              </p>
+              <p className="mt-1 text-mist">
+                Nothing has been transferred. Resolve the dispute first — release
+                only when the provider is owed the money.
+                {payoutJob.last_error_class
+                  ? ` (${payoutJob.last_error_class})`
+                  : null}
+              </p>
+              <PayoutReleaseButton bookingId={booking.id} />
+            </div>
+          ) : null}
         </Card>
       ) : null}
 

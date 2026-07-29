@@ -538,6 +538,11 @@ function ProviderDashboardView({
         ))}
       </div>
 
+      <p className="text-center text-xs text-mist">
+        Payouts arrive 3 days after a job is marked complete. If a customer
+        disputes a job, its payout is held until we review it.
+      </p>
+
       {awaitingPayment.length > 0 ? (
         <section aria-labelledby="awaiting-payment">
           <h2

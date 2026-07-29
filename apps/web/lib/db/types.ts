@@ -429,7 +429,7 @@ export type Database = {
           booking_id: string
           created_at?: string
           customer_confirmed_at?: string | null
-          estimated_minutes_snapshot: number | null
+          estimated_minutes_snapshot?: number | null
           first_hour_credit_cents: number
           hourly_rate_cents_snapshot?: number | null
           id?: string
@@ -470,76 +470,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "booking_invoices_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: true
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      booking_quote_counter_options: {
-        Row: {
-          booking_id: string
-          daypart: Database["public"]["Enums"]["quote_daypart"]
-          expires_at: string
-          id: string
-          local_date: string
-          offered_at: string
-          ordinal: number
-          round_number: number
-          selected_at: string | null
-        }
-        Insert: {
-          booking_id: string
-          daypart: Database["public"]["Enums"]["quote_daypart"]
-          expires_at: string
-          id?: string
-          local_date: string
-          offered_at?: string
-          ordinal: number
-          round_number: number
-          selected_at?: string | null
-        }
-        Update: {
-          booking_id?: string
-          daypart?: Database["public"]["Enums"]["quote_daypart"]
-          expires_at?: string
-          id?: string
-          local_date?: string
-          offered_at?: string
-          ordinal?: number
-          round_number?: number
-          selected_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "booking_quote_counter_options_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      booking_quote_provider_estimates: {
-        Row: {
-          booking_id: string
-          estimated_minutes: number
-          updated_at: string
-        }
-        Insert: {
-          booking_id: string
-          estimated_minutes: number
-          updated_at?: string
-        }
-        Update: {
-          booking_id?: string
-          estimated_minutes?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "booking_quote_provider_estimates_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: true
             referencedRelation: "bookings"
@@ -709,6 +639,105 @@ export type Database = {
           },
         ]
       }
+      booking_quote_chat_reschedules: {
+        Row: {
+          booking_id: string
+          created_at: string
+          estimated_minutes: number
+          quote_cents: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          estimated_minutes: number
+          quote_cents: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          estimated_minutes?: number
+          quote_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_quote_chat_reschedules_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_quote_counter_options: {
+        Row: {
+          booking_id: string
+          daypart: Database["public"]["Enums"]["quote_daypart"]
+          expires_at: string
+          id: string
+          local_date: string
+          offered_at: string
+          ordinal: number
+          round_number: number
+          selected_at: string | null
+        }
+        Insert: {
+          booking_id: string
+          daypart: Database["public"]["Enums"]["quote_daypart"]
+          expires_at: string
+          id?: string
+          local_date: string
+          offered_at?: string
+          ordinal: number
+          round_number: number
+          selected_at?: string | null
+        }
+        Update: {
+          booking_id?: string
+          daypart?: Database["public"]["Enums"]["quote_daypart"]
+          expires_at?: string
+          id?: string
+          local_date?: string
+          offered_at?: string
+          ordinal?: number
+          round_number?: number
+          selected_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_quote_counter_options_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_quote_provider_estimates: {
+        Row: {
+          booking_id: string
+          estimated_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          estimated_minutes: number
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          estimated_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_quote_provider_estimates_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_refunds: {
         Row: {
           amount_cents: number
@@ -787,6 +816,54 @@ export type Database = {
           },
         ]
       }
+      booking_reschedule_proposals: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          proposed_start_at: string
+          proposer_id: string
+          responded_at: string | null
+          status: string
+          superseded_at: string | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          proposed_start_at: string
+          proposer_id: string
+          responded_at?: string | null
+          status?: string
+          superseded_at?: string | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          proposed_start_at?: string
+          proposer_id?: string
+          responded_at?: string | null
+          status?: string
+          superseded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_reschedule_proposals_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_reschedule_proposals_proposer_id_fkey"
+            columns: ["proposer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           accepted_at: string | null
@@ -808,15 +885,14 @@ export type Database = {
           counter_note: string | null
           countered_at: string | null
           created_at: string
-          declined_at: string | null
           customer_authorization_snapshot: Json | null
           customer_authorization_version: string | null
           customer_id: string
           customer_name_snapshot: string | null
-          details: string
+          declined_at: string | null
           deposit_bps: number | null
+          details: string
           dismissed_at: string | null
-          provider_cancellation_notice_dismissed_at: string | null
           en_route_at: string | null
           estimated_minutes: number | null
           expired_at: string | null
@@ -835,18 +911,20 @@ export type Database = {
           policy_snapshot: Json | null
           price_cents: number
           proposed_start_at: string | null
+          provider_cancellation_notice_dismissed_at: string | null
           provider_display_name_snapshot: string | null
           provider_id: string
-          quote_sent_at: string | null
           quote_negotiation_round: number
+          quote_sent_at: string | null
           replaced_by_booking_id: string | null
           replacement_for_booking_id: string | null
+          requested_daypart: Database["public"]["Enums"]["quote_daypart"] | null
+          requested_local_date: string | null
+          rescheduling_started_at: string | null
           response_alert_at: string | null
           response_alerted_at: string | null
           response_window_hours: number | null
           review_prompt_dismissed_at: string | null
-          requested_daypart: Database["public"]["Enums"]["quote_daypart"] | null
-          requested_local_date: string | null
           scheduled_at: string | null
           service_city: string
           service_id: string
@@ -881,15 +959,14 @@ export type Database = {
           counter_note?: string | null
           countered_at?: string | null
           created_at?: string
-          declined_at?: string | null
           customer_authorization_snapshot?: Json | null
           customer_authorization_version?: string | null
           customer_id: string
           customer_name_snapshot?: string | null
-          details?: string
+          declined_at?: string | null
           deposit_bps?: number | null
+          details?: string
           dismissed_at?: string | null
-          provider_cancellation_notice_dismissed_at?: string | null
           en_route_at?: string | null
           estimated_minutes?: number | null
           expired_at?: string | null
@@ -908,18 +985,22 @@ export type Database = {
           policy_snapshot?: Json | null
           price_cents: number
           proposed_start_at?: string | null
+          provider_cancellation_notice_dismissed_at?: string | null
           provider_display_name_snapshot?: string | null
           provider_id: string
-          quote_sent_at?: string | null
           quote_negotiation_round?: number
+          quote_sent_at?: string | null
           replaced_by_booking_id?: string | null
           replacement_for_booking_id?: string | null
+          requested_daypart?:
+            | Database["public"]["Enums"]["quote_daypart"]
+            | null
+          requested_local_date?: string | null
+          rescheduling_started_at?: string | null
           response_alert_at?: string | null
           response_alerted_at?: string | null
           response_window_hours?: number | null
           review_prompt_dismissed_at?: string | null
-          requested_daypart?: Database["public"]["Enums"]["quote_daypart"] | null
-          requested_local_date?: string | null
           scheduled_at?: string | null
           service_city?: string
           service_id: string
@@ -954,15 +1035,14 @@ export type Database = {
           counter_note?: string | null
           countered_at?: string | null
           created_at?: string
-          declined_at?: string | null
           customer_authorization_snapshot?: Json | null
           customer_authorization_version?: string | null
           customer_id?: string
           customer_name_snapshot?: string | null
-          details?: string
+          declined_at?: string | null
           deposit_bps?: number | null
+          details?: string
           dismissed_at?: string | null
-          provider_cancellation_notice_dismissed_at?: string | null
           en_route_at?: string | null
           estimated_minutes?: number | null
           expired_at?: string | null
@@ -981,18 +1061,22 @@ export type Database = {
           policy_snapshot?: Json | null
           price_cents?: number
           proposed_start_at?: string | null
+          provider_cancellation_notice_dismissed_at?: string | null
           provider_display_name_snapshot?: string | null
           provider_id?: string
-          quote_sent_at?: string | null
           quote_negotiation_round?: number
+          quote_sent_at?: string | null
           replaced_by_booking_id?: string | null
           replacement_for_booking_id?: string | null
+          requested_daypart?:
+            | Database["public"]["Enums"]["quote_daypart"]
+            | null
+          requested_local_date?: string | null
+          rescheduling_started_at?: string | null
           response_alert_at?: string | null
           response_alerted_at?: string | null
           response_window_hours?: number | null
           review_prompt_dismissed_at?: string | null
-          requested_daypart?: Database["public"]["Enums"]["quote_daypart"] | null
-          requested_local_date?: string | null
           scheduled_at?: string | null
           service_city?: string
           service_id?: string
@@ -1771,8 +1855,8 @@ export type Database = {
       }
       provider_profiles: {
         Row: {
-          availability: Json
           admin_forced_inactive: boolean
+          availability: Json
           availability_end_local: string | null
           availability_note: string
           availability_start_local: string | null
@@ -1811,8 +1895,8 @@ export type Database = {
           verification_status: Database["public"]["Enums"]["verification_status"]
         }
         Insert: {
-          availability?: Json
           admin_forced_inactive?: boolean
+          availability?: Json
           availability_end_local?: string | null
           availability_note?: string
           availability_start_local?: string | null
@@ -1851,8 +1935,8 @@ export type Database = {
           verification_status?: Database["public"]["Enums"]["verification_status"]
         }
         Update: {
-          availability?: Json
           admin_forced_inactive?: boolean
+          availability?: Json
           availability_end_local?: string | null
           availability_note?: string
           availability_start_local?: string | null
@@ -2660,6 +2744,15 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      admin_booking_payout_state: {
+        Args: { p_booking_id: string }
+        Returns: {
+          hold_reason: string
+          job_status: string
+          paid_cents: number
+          run_at: string
+        }[]
+      }
       admin_retry_booking_automation_job: {
         Args: { p_job_id: string }
         Returns: boolean
@@ -2692,11 +2785,11 @@ export type Database = {
         }
         Returns: undefined
       }
-      auto_complete_quote_job: {
+      auto_complete_hourly_job: {
         Args: { p_booking_id: string }
         Returns: string
       }
-      auto_complete_hourly_job: {
+      auto_complete_quote_job: {
         Args: { p_booking_id: string }
         Returns: string
       }
@@ -2727,6 +2820,11 @@ export type Database = {
           payment_id: string
         }[]
       }
+      block_booking_automation_job: {
+        Args: { p_job_id: string; p_lease_token: string; p_reason: string }
+        Returns: boolean
+      }
+      can_read_job_photo: { Args: { p_name: string }; Returns: boolean }
       cancel_booking_as_customer: {
         Args: { p_booking_id: string }
         Returns: string
@@ -2735,16 +2833,16 @@ export type Database = {
         Args: { p_booking_id: string; p_reason: string }
         Returns: string
       }
+      cancel_booking_request: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       cancel_quote_booking_as_customer: {
         Args: { p_booking_id: string }
         Returns: string
       }
       cancel_quote_booking_as_provider: {
         Args: { p_booking_id: string; p_reason: string }
-        Returns: string
-      }
-      cancel_booking_request: {
-        Args: { p_booking_id: string }
         Returns: string
       }
       claim_booking_automation_jobs: {
@@ -2826,6 +2924,15 @@ export type Database = {
         }
         Returns: string
       }
+      counter_quote_booking_request: {
+        Args: {
+          p_booking_id: string
+          p_estimated_minutes: number
+          p_note?: string
+          p_options: Json
+        }
+        Returns: number
+      }
       create_booking_draft:
         | {
             Args: {
@@ -2903,31 +3010,39 @@ export type Database = {
         }
         Returns: string
       }
-      create_quote_deposit_booking_request: {
-        Args: {
-          p_address: string
-          p_address_kind?: string
-          p_details?: string
-          p_job_photos: Json
-          p_job_zip: string
-          p_latitude?: number
-          p_longitude?: number
-          p_provider_service_id: string
-          p_requested_daypart: Database["public"]["Enums"]["quote_daypart"]
-          p_requested_local_date: string
-          p_service_city?: string
-        }
-        Returns: string
-      }
-      counter_quote_booking_request: {
-        Args: {
-          p_booking_id: string
-          p_estimated_minutes: number
-          p_note?: string
-          p_options: Json
-        }
-        Returns: number
-      }
+      create_quote_deposit_booking_request:
+        | {
+            Args: {
+              p_address: string
+              p_address_kind?: string
+              p_details?: string
+              p_job_photos: Json
+              p_job_zip: string
+              p_latitude?: number
+              p_longitude?: number
+              p_provider_service_id: string
+              p_requested_daypart: Database["public"]["Enums"]["quote_daypart"]
+              p_requested_local_date: string
+              p_service_city?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_address: string
+              p_address_kind?: string
+              p_details?: string
+              p_estimated_minutes: number
+              p_job_photos: Json
+              p_job_zip: string
+              p_latitude?: number
+              p_longitude?: number
+              p_provider_service_id: string
+              p_scheduled_at: string
+              p_service_city?: string
+            }
+            Returns: string
+          }
       current_user_is_adult: { Args: never; Returns: boolean }
       decline_booking_request: {
         Args: { p_booking_id: string }
@@ -2940,11 +3055,11 @@ export type Database = {
       }
       dismiss_review_prompt: { Args: { p_booking_id: string }; Returns: string }
       email_is_confirmed: { Args: { p_email: string }; Returns: boolean }
-      expire_hourly_booking_request: {
+      expire_failed_hourly_capture: {
         Args: { p_booking_id: string }
         Returns: string
       }
-      expire_failed_hourly_capture: {
+      expire_hourly_booking_request: {
         Args: { p_booking_id: string }
         Returns: string
       }
@@ -3054,6 +3169,10 @@ export type Database = {
         }
         Returns: string
       }
+      mark_hourly_response_alert: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       mark_upfront_payment_unsuccessful: {
         Args: {
           p_failure_code?: string
@@ -3061,10 +3180,6 @@ export type Database = {
           p_stripe_payment_intent_id: string
           p_target_status: Database["public"]["Enums"]["booking_payment_status"]
         }
-        Returns: string
-      }
-      mark_hourly_response_alert: {
-        Args: { p_booking_id: string }
         Returns: string
       }
       open_booking_dispute: {
@@ -3076,6 +3191,14 @@ export type Database = {
         Returns: string
       }
       owns_provider_profile: { Args: { pp_id: string }; Returns: boolean }
+      propose_hourly_chat_reschedule: {
+        Args: { p_booking_id: string; p_proposed_start_at: string }
+        Returns: string
+      }
+      propose_quote_chat_reschedule: {
+        Args: { p_booking_id: string; p_proposed_start_at: string }
+        Returns: string
+      }
       provider_busy_intervals: {
         Args: { p_from: string; p_provider_id: string; p_to: string }
         Returns: {
@@ -3179,6 +3302,10 @@ export type Database = {
         Args: { p_invoice_id: string }
         Returns: boolean
       }
+      release_provider_payout: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       replace_hourly_booking_request: {
         Args: {
           p_original_booking_id: string
@@ -3187,15 +3314,24 @@ export type Database = {
         }
         Returns: string
       }
-      replace_quote_booking_request: {
-        Args: {
-          p_original_booking_id: string
-          p_provider_service_id: string
-          p_requested_daypart: Database["public"]["Enums"]["quote_daypart"]
-          p_requested_local_date: string
-        }
-        Returns: string
-      }
+      replace_quote_booking_request:
+        | {
+            Args: {
+              p_original_booking_id: string
+              p_provider_service_id: string
+              p_requested_daypart: Database["public"]["Enums"]["quote_daypart"]
+              p_requested_local_date: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_original_booking_id: string
+              p_provider_service_id: string
+              p_scheduled_at?: string
+            }
+            Returns: string
+          }
       reset_balance_payment_for_retry: {
         Args: { p_invoice_id: string }
         Returns: {
@@ -3240,6 +3376,14 @@ export type Database = {
           refund_idempotency_key: string
           refund_payment_id: string
         }[]
+      }
+      respond_to_hourly_chat_reschedule: {
+        Args: { p_accept: boolean; p_proposal_id: string }
+        Returns: string
+      }
+      respond_to_quote_chat_reschedule: {
+        Args: { p_accept: boolean; p_proposal_id: string }
+        Returns: string
       }
       retry_booking_automation_job: {
         Args: {
@@ -3299,22 +3443,36 @@ export type Database = {
         }
         Returns: undefined
       }
-      send_booking_quote: {
-        Args: {
-          p_booking_id: string
-          p_estimated_minutes: number
-          p_quote_cents: number
-          p_scheduled_at: string
-        }
-        Returns: string
-      }
-      select_quote_counter_option: {
-        Args: {
-          p_booking_id: string
-          p_option_id: string
-          p_requested_daypart: Database["public"]["Enums"]["quote_daypart"]
-        }
-        Returns: string
+      select_quote_counter_option:
+        | {
+            Args: { p_booking_id: string; p_option_id: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_booking_id: string
+              p_option_id: string
+              p_requested_daypart: Database["public"]["Enums"]["quote_daypart"]
+            }
+            Returns: string
+          }
+      send_booking_quote:
+        | {
+            Args: { p_booking_id: string; p_quote_cents: number }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_booking_id: string
+              p_estimated_minutes: number
+              p_quote_cents: number
+              p_scheduled_at: string
+            }
+            Returns: string
+          }
+      send_hourly_chat_reschedule_provider_reminder: {
+        Args: { p_proposal_id: string }
+        Returns: boolean
       }
       settle_balance_payment: {
         Args: { p_stripe_payment_intent_id: string; p_succeeded_at?: string }
@@ -3339,19 +3497,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      withdraw_quote_negotiation: {
-        Args: { p_booking_id: string }
-        Returns: string
-      }
       settle_first_hour_payment: {
-        Args: {
-          p_stripe_payment_intent_id: string
-          p_stripe_payment_method_id?: string
-          p_succeeded_at?: string
-        }
-        Returns: string
-      }
-      settle_upfront_payment: {
         Args: {
           p_stripe_payment_intent_id: string
           p_stripe_payment_method_id?: string
@@ -3372,12 +3518,32 @@ export type Database = {
         Args: { p_booking_id: string; p_confirmed?: boolean }
         Returns: string
       }
+      settle_upfront_payment: {
+        Args: {
+          p_stripe_payment_intent_id: string
+          p_stripe_payment_method_id?: string
+          p_succeeded_at?: string
+        }
+        Returns: string
+      }
       settle_zero_balance_invoice: {
         Args: { p_invoice_id: string }
         Returns: string
       }
       shares_thread_with: { Args: { profile_id: string }; Returns: boolean }
       signup_intent_for_email: { Args: { p_email: string }; Returns: string }
+      start_hourly_chat_rescheduling: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
+      start_quote_chat_rescheduling: {
+        Args: {
+          p_booking_id: string
+          p_estimated_minutes: number
+          p_quote_cents: number
+        }
+        Returns: string
+      }
       submit_job_invoice: {
         Args: {
           p_booking_id: string
@@ -3386,10 +3552,7 @@ export type Database = {
         }
         Returns: string
       }
-      submit_quote_invoice: {
-        Args: { p_booking_id: string }
-        Returns: string
-      }
+      submit_quote_invoice: { Args: { p_booking_id: string }; Returns: string }
       transition_legacy_booking: {
         Args: {
           p_booking_id: string
@@ -3403,6 +3566,10 @@ export type Database = {
           conversation_id: string
           unread_count: number
         }[]
+      }
+      withdraw_quote_negotiation: {
+        Args: { p_booking_id: string }
+        Returns: string
       }
     }
     Enums: {
@@ -3463,7 +3630,6 @@ export type Database = {
         | "cancelled"
         | "countered"
       booking_time_flexibility: "flexible" | "fixed"
-      quote_daypart: "morning" | "afternoon" | "either"
       email_delivery_status:
         | "accepted"
         | "delivered"
@@ -3484,6 +3650,7 @@ export type Database = {
       price_type: "fixed" | "quote"
       price_unit: "per_job" | "per_hour"
       provider_type: "business" | "individual"
+      quote_daypart: "morning" | "afternoon" | "either"
       user_role: "customer" | "provider" | "admin"
       verification_status: "pending" | "approved" | "rejected"
     }
@@ -3676,7 +3843,6 @@ export const Constants = {
         "countered",
       ],
       booking_time_flexibility: ["flexible", "fixed"],
-      quote_daypart: ["morning", "afternoon", "either"],
       email_delivery_status: [
         "accepted",
         "delivered",
@@ -3699,6 +3865,7 @@ export const Constants = {
       price_type: ["fixed", "quote"],
       price_unit: ["per_job", "per_hour"],
       provider_type: ["business", "individual"],
+      quote_daypart: ["morning", "afternoon", "either"],
       user_role: ["customer", "provider", "admin"],
       verification_status: ["pending", "approved", "rejected"],
     },

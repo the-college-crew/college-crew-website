@@ -125,6 +125,39 @@ export async function resolveDispute(
   return { success: "Resolved." };
 }
 
+export type ReleasePayoutState = { error?: string; success?: string };
+
+/**
+ * Release a payout that a dispute froze.
+ *
+ * A payout is queued 3 days after completion and blocked if a dispute lands in
+ * that window, so the student is not paid while a job is contested. This puts a
+ * blocked job back in line to run on the next scheduler tick. Admin is
+ * re-checked inside `release_provider_payout`.
+ */
+export async function releasePayout(
+  _previous: ReleasePayoutState,
+  formData: FormData,
+): Promise<ReleasePayoutState> {
+  await requireRole("admin");
+
+  const bookingId = z.string().uuid().safeParse(formData.get("bookingId"));
+  if (!bookingId.success) return { error: "Check the form." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("release_provider_payout", {
+    p_booking_id: bookingId.data,
+  });
+  if (error) {
+    return {
+      error: requestOperationMessage(error, "Could not release the payout."),
+    };
+  }
+
+  revalidatePath(`/admin/bookings/${bookingId.data}`);
+  return { success: "Released — the payout runs on the next scheduler cycle." };
+}
+
 /**
  * Off-session balance charge for an approved/reduced resolution. Mirrors the
  * scheduled-autocharge path: read the saved method + connected account with the

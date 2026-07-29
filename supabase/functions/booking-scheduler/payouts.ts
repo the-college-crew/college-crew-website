@@ -2,6 +2,38 @@ import { createAdminClient } from "./admin.ts";
 import { getChargeIdForPaymentIntent, transferToProvider } from "./stripe.ts";
 
 /**
+ * Whether a dispute makes this booking's payout unsafe to run.
+ *
+ * `hold_provider_payout` already blocks a *queued* job when a dispute lands, so
+ * this only catches the race where the scheduler claimed the job in the same
+ * tick the dispute arrived. A Stripe dispute counts regardless of its status:
+ * even a `lost` one must not pay the student, because the customer has already
+ * been made whole out of the platform balance.
+ */
+async function hasBlockingDispute(bookingId: string): Promise<boolean> {
+  const admin = createAdminClient();
+
+  const [booking, stripe] = await Promise.all([
+    admin
+      .from("booking_disputes")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .neq("status", "resolved")
+      .limit(1),
+    admin
+      .from("stripe_disputes")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .limit(1),
+  ]);
+
+  if (booking.error) throw booking.error;
+  if (stripe.error) throw stripe.error;
+
+  return Boolean(booking.data?.length) || Boolean(stripe.data?.length);
+}
+
+/**
  * Port of apps/web/lib/booking/payouts.ts — these two must stay in step, and the
  * EDGE copy is the one that actually runs (the cron targets this function).
  *
@@ -10,14 +42,21 @@ import { getChargeIdForPaymentIntent, transferToProvider } from "./stripe.ts";
  * needs no clawback and a cancellation is a plain refund with nothing to reverse.
  * This is the one place money leaves the platform.
  *
+ * The payout is queued 3 days after completion (`private.queue_provider_payout`)
+ * so a quick refund or chargeback lands while the money is still ours. A dispute
+ * in that window blocks the job; `"held"` is returned if one is somehow still
+ * open by the time the job runs.
+ *
  * Idempotent three ways because it moves real money: legs already recorded
  * `paid` are skipped, the Stripe idempotency key collapses a retried transfer to
  * the same one, and `record_provider_payout` upserts on that same key.
  */
 export async function attemptProviderPayout(
   bookingId: string,
-): Promise<"paid" | "nothing" | "unconfigured"> {
+): Promise<"paid" | "nothing" | "unconfigured" | "held"> {
   const admin = createAdminClient();
+
+  if (await hasBlockingDispute(bookingId)) return "held";
 
   const { data: plan, error } = await admin.rpc("provider_payout_plan", {
     p_booking_id: bookingId,
