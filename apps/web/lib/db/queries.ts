@@ -78,7 +78,7 @@ export type ProviderCard = {
   banner_focal_y: number;
   services: OfferedService[];
   rating: { avg: number; count: number } | null;
-  /** Short pull-quote for the Browse card: the best recent 4-5★ review, or null. */
+  /** Short pull-quote for the Browse card: its highest-rated review, or null. */
   quote: string | null;
 };
 
@@ -304,15 +304,14 @@ function mapReviews(
 }
 
 /**
- * Best recent positive review line for card pull-quotes: highest rating wins,
- * recency breaks ties (callers pass rows newest-first). Ratings under 4 never
- * surface here; a card with no glowing review simply shows no quote.
+ * Best review line for Browse card pull-quotes: highest rating wins, with
+ * recency breaking ties (callers pass rows newest-first).
  */
 function pickQuote(reviews: { rating: number; text: string }[]): string | null {
   let best: { rating: number; text: string } | null = null;
   for (const review of reviews) {
     const text = review.text.trim();
-    if (review.rating < 4 || !text) continue;
+    if (!text) continue;
     if (!best || review.rating > best.rating) best = { rating: review.rating, text };
   }
   return best?.text ?? null;
@@ -350,14 +349,12 @@ export async function getApprovedProviders(
         .in("provider_id", providerIds),
       supabase.from("provider_ratings").select("*"),
       // Newest-first so pickQuote's tie-break lands on the most recent review.
-      // The cap keeps the read bounded as history grows; older reviews stop
-      // being quote candidates, which is fine — quotes should feel current.
+      // Fetch every public review: an older higher-rated review must still win.
       supabase
         .from("provider_reviews")
         .select("provider_id, rating, text, created_at")
         .in("provider_id", providerIds)
-        .order("created_at", { ascending: false })
-        .limit(200),
+        .order("created_at", { ascending: false }),
       getProviderLocationFacts(providerIds),
     ]);
 
