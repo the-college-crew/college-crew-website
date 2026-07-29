@@ -21,6 +21,9 @@ const displayFont = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.thecollegecrew.com",
+  ),
   title: {
     default: `${SITE.name} · student help for your home`,
     template: `%s · ${SITE.name}`,

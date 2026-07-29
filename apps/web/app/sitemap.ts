@@ -1,11 +1,20 @@
 import type { MetadataRoute } from "next";
 
+import { createClient } from "@/lib/supabase/server";
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.thecollegecrew.com";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const supabase = await createClient();
+  const [{ data: providers }, { data: posts }] = await Promise.all([
+    supabase
+      .from("public_provider_directory")
+      .select("provider_id, created_at"),
+    supabase.from("blog_posts").select("slug, updated_at"),
+  ]);
 
-  return [
+  const staticRoutes: MetadataRoute.Sitemap = [
     { url: SITE_URL, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/browse`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
     { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
@@ -24,4 +33,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
     { url: `${SITE_URL}/faq`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
   ];
+
+  const providerRoutes: MetadataRoute.Sitemap = (providers ?? []).map(
+    (provider) => ({
+      url: `${SITE_URL}/providers/${provider.provider_id}`,
+      lastModified: provider.created_at
+        ? new Date(provider.created_at)
+        : now,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }),
+  );
+  const blogRoutes: MetadataRoute.Sitemap = (posts ?? []).map((post) => ({
+    url: `${SITE_URL}/blog/${post.slug}`,
+    lastModified: post.updated_at ? new Date(post.updated_at) : now,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...providerRoutes, ...blogRoutes];
 }

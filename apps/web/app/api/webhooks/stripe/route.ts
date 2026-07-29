@@ -3,9 +3,10 @@ import type Stripe from "stripe";
 
 import type { Json } from "@/lib/db/types";
 import { hasServiceRoleEnv } from "@/lib/env";
-import { getStripe } from "@/lib/stripe/server";
+import { getStripe, isStripeLiveMode } from "@/lib/stripe/server";
 import {
   processStripeWebhookEvent,
+  processStripeV2EventNotification,
   stripeWebhookFailureCode,
 } from "@/lib/stripe/webhook-events";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -13,8 +14,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 /** Verify, durably record, atomically claim, and process a Stripe event. */
 export async function POST(request: Request) {
   const stripe = getStripe();
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!stripe || !webhookSecret || !hasServiceRoleEnv()) {
+  const webhookSecrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
+  ].filter((value): value is string => Boolean(value));
+  if (!stripe || webhookSecrets.length === 0 || !hasServiceRoleEnv()) {
     return NextResponse.json(
       { error: "Stripe isn't configured yet." },
       { status: 503 },
@@ -26,15 +30,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing signature." }, { status: 400 });
   }
 
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(
-      await request.text(),
-      signature,
-      webhookSecret,
-    );
-  } catch {
+  const payload = await request.text();
+  let event: Stripe.Event | Stripe.V2.Core.EventNotification | undefined;
+  let isV2Event = false;
+  for (const webhookSecret of webhookSecrets) {
+    try {
+      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      break;
+    } catch {
+      // The payload may be an Accounts v2 thin event, or may have been signed
+      // by the other configured destination. Try every trusted secret below.
+    }
+  }
+  if (!event) {
+    for (const webhookSecret of webhookSecrets) {
+      try {
+        event = stripe.parseEventNotification(
+          payload,
+          signature,
+          webhookSecret,
+        );
+        isV2Event = true;
+        break;
+      } catch {
+        // Keep trying the bounded configured secret set.
+      }
+    }
+  }
+  if (!event) {
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
+  }
+  if (event.livemode !== isStripeLiveMode()) {
+    return NextResponse.json(
+      { error: "Stripe event mode does not match this deployment." },
+      { status: 400 },
+    );
   }
 
   const admin = createAdminClient();
@@ -43,7 +73,9 @@ export async function POST(request: Request) {
     stripe_event_id: event.id,
     event_type: event.type,
     livemode: event.livemode,
-    api_version: event.api_version ?? null,
+    api_version: isV2Event
+      ? null
+      : (event as Stripe.Event).api_version ?? null,
     payload: event as unknown as Json,
     processing_started_at: nowIso,
     attempt_count: 1,
@@ -82,14 +114,30 @@ export async function POST(request: Request) {
         { status: 202 },
       );
     }
-    eventToProcess = claimed.payload as unknown as Stripe.Event;
+    eventToProcess = claimed.payload as unknown as
+      | Stripe.Event
+      | Stripe.V2.Core.EventNotification;
     if (eventToProcess.id !== event.id) {
       return NextResponse.json({ error: "Receipt mismatch." }, { status: 500 });
     }
   }
 
   try {
-    await processStripeWebhookEvent(admin, stripe, eventToProcess);
+    if (
+      isV2Event ||
+      (eventToProcess as { object?: string }).object === "v2.core.event"
+    ) {
+      await processStripeV2EventNotification(
+        admin,
+        eventToProcess as Stripe.V2.Core.EventNotification,
+      );
+    } else {
+      await processStripeWebhookEvent(
+        admin,
+        stripe,
+        eventToProcess as Stripe.Event,
+      );
+    }
   } catch (error) {
     await admin
       .from("stripe_webhook_receipts")

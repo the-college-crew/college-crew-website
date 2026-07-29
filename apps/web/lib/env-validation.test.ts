@@ -29,13 +29,23 @@ describe("server environment validation", () => {
     expect(() => validateServerEnvironment(validRolloutEnvironment)).not.toThrow();
   });
 
+  it("accepts a complete live-mode hourly environment", () => {
+    expect(
+      getServerEnvironmentIssues({
+        ...validRolloutEnvironment,
+        STRIPE_SECRET_KEY: "rk_live_placeholder",
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_live_placeholder",
+      }),
+    ).toEqual([]);
+  });
+
   it("fails closed when requests are enabled without the hourly surface", () => {
     expect(
       getServerEnvironmentIssues({ BOOKING_REQUESTS_ENABLED: "true" }),
     ).toContain("BOOKING_REQUESTS_ENABLED requires HOURLY_BOOKING_ENABLED=true");
   });
 
-  it("rejects live Stripe keys and malformed scheduler configuration by name only", () => {
+  it("rejects mismatched Stripe modes and malformed scheduler configuration by name only", () => {
     const issues = getServerEnvironmentIssues({
       ...validRolloutEnvironment,
       STRIPE_SECRET_KEY: "sk_live_do-not-print",
@@ -44,7 +54,7 @@ describe("server environment validation", () => {
       BOOKING_CRON_SECRET: "short",
     });
     expect(issues).toContain(
-      "STRIPE_SECRET_KEY must be a Stripe test-mode secret or restricted key",
+      "Stripe secret and publishable keys must use the same mode",
     );
     expect(issues).toContain(
       "NEXT_PUBLIC_SITE_URL must be a canonical HTTPS origin with no path",
