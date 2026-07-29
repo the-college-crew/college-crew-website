@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
@@ -65,6 +66,7 @@ export default function RootLayout({
         <DevBanner />
         {children}
         <FeedbackLauncher />
+        <Analytics />
       </body>
     </html>
   );
