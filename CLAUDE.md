@@ -49,7 +49,7 @@ When a request is ambiguous, ask clarifying questions instead of guessing.
 - **Framework:** Next.js **16.2.9** (App Router, TypeScript) + **React 19**, on
   **Vercel**
 - **Backend:** **Supabase** — Postgres, Auth, Storage, Row-Level Security
-- **Payments:** **Stripe Connect (Express)** — test mode during the pilot
+- **Payments:** **Stripe Connect (Express)** — live mode in production
 - **Realtime/chat:** Supabase Realtime + a Supabase Edge Function for moderation
 
 > **Framework versions are newer than your training data.** Next.js 16 / React
@@ -101,7 +101,8 @@ dead — never assign or read it.
 Supporting directories:
 
 - `lib/supabase/` — the three Supabase clients (see Code conventions).
-- `lib/stripe/` — Stripe server client + Connect helpers (test mode).
+- `lib/stripe/` — Stripe server client + Connect helpers (live in production,
+  test mode permitted locally and in previews).
 - `lib/db/types.ts` — generated Supabase DB types (single source of truth for
   row shapes).
 - `components/` — shared UI; area-specific components co-locate under their
@@ -113,11 +114,10 @@ Supporting directories:
 required vars — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 `SUPABASE_SERVICE_ROLE_KEY`, plus Stripe (`STRIPE_SECRET_KEY`,
 `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`). Real values live
-in `.env.local` only. **Both the Supabase project and the Stripe test sandbox
-are provisioned** (sandbox "College Crew sandbox", Connect enabled with a test
-connected account onboarded; keys in `.env.local`). The `lib/stripe/` code
-(server client, Connect onboarding, checkout, webhook route) is **not built
-yet** — build it plan-first when ready, test mode only regardless.
+in `.env.local` only. Supabase and Stripe Connect are provisioned. The complete
+Stripe integration lives under `lib/stripe/` and `app/api/webhooks/stripe/`;
+production uses live credentials while local and preview environments may use
+the separate Stripe sandbox.
 
 ## Conventions
 
@@ -145,13 +145,12 @@ yet** — build it plan-first when ready, test mode only regardless.
   the subscription.
 - **RLS on by default.** Every table has row-level security; customers and
   providers can only read/write their own rows. Admin role bypasses via policy.
-- **Stripe is test mode** for the pilot. Do not flip to live keys without an
-  explicit decision.
+- **Stripe is live in production.** Local and preview environments may use
+  test mode, but server and publishable keys must always use the same mode.
 - **No real PII in seed/test data.**
-- **`noindex` is ON during the pilot.** `app/layout.tsx` sets a site-wide
-  `robots: { index: false, follow: false }` so Google doesn't index thin,
-  unfinished pages. **On launch day, REMOVE that `robots` block** (and add a
-  sitemap) so the finished site can be indexed. Don't leave it on by accident.
+- **Production indexing is enabled.** `app/layout.tsx` must not add a
+  site-wide `noindex`. Keep `app/robots.ts` and `app/sitemap.ts` aligned with
+  public routes; never include authenticated dashboards or unlisted providers.
 - **Test/synthetic data hygiene.** There is no separate staging Supabase
   project — dev and prod point at the same database, so any script or test
   that inserts rows there is live the instant it runs. This has already let a

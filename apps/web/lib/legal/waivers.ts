@@ -1,7 +1,7 @@
 import type { UserRole } from "@/lib/db/types";
 
-export const LEGAL_CONTENT_VERSION = "2026-07-20";
-export const PLATFORM_TERMS_VERSION = "2026-07-20";
+export const LEGAL_CONTENT_VERSION = "2026-07-29";
+export const PLATFORM_TERMS_VERSION = "2026-07-29";
 export const CUSTOMER_BOOKING_TERMS_VERSION = "2026-07-27";
 export const PROVIDER_TERMS_VERSION = "2026-07-15";
 export const BOOKING_RISK_VERSION = "2026-07-15";
@@ -33,7 +33,7 @@ export type HourlyTermsSection = {
 };
 
 export const MASTER_INTRO = [
-  "This Master Service Agreement (\"Agreement\") is entered into between College Crew LLC, an Illinois limited liability company (formation pending; upon formation, the \"Company\" or \"College Crew\") and the undersigned individual (\"User\"). By creating an account, User agrees to the terms below.",
+  "This Master Service Agreement (\"Agreement\") is entered into between College Crew LLC, an Illinois limited liability company (the \"Company\" or \"College Crew\") and the undersigned individual (\"User\"). By creating an account, User agrees to the terms below.",
 ] as const;
 
 export const MASTER_SECTIONS: LegalSection[] = [

@@ -717,8 +717,9 @@ export async function settleQuoteJobInCash(
 
 /**
  * Post-approval "Connect Stripe" (SPEC §6): hosted Express onboarding.
- * While the Stripe test account is unprovisioned this lands back on the
- * dashboard with a pending notice.
+ * The configured key selects Stripe test or live mode. At launch the sandbox
+ * account ids are cleared so every provider creates a fresh live account and
+ * supplies real payout details before their public listing returns.
  */
 export async function connectStripe() {
   const session = await requireProviderAccess();

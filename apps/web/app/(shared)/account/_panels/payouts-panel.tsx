@@ -28,13 +28,14 @@ export function PayoutsPanel({
     <>
       {stripeConnected ? (
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-          Stripe onboarding finished. Payouts will land in your bank account.
+          Stripe onboarding finished. Your profile can appear in Browse and
+          payouts will land in your bank account.
         </div>
       ) : null}
       {stripeIncomplete ? (
         <div className="rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
-          Stripe still needs information before payouts can turn on. Resume
-          onboarding below after reviewing any Stripe requirements.
+          Stripe still needs information before your profile can appear in
+          Browse or payouts can turn on. Resume onboarding below.
         </div>
       ) : null}
 
@@ -79,7 +80,8 @@ export function PayoutsPanel({
               </Button>
             </form>
             <span className="text-xs text-mist">
-              Hosted by Stripe; we never see your bank details.
+              Required to appear in Browse. Hosted by Stripe; we never see your
+              bank details.
             </span>
           </div>
         )}

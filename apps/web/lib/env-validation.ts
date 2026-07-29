@@ -72,16 +72,31 @@ export function getServerEnvironmentIssues(env: Environment = process.env) {
   }
 
   const stripeSecret = env.STRIPE_SECRET_KEY?.trim();
-  if (stripeSecret && !/^(sk|rk)_test_/.test(stripeSecret)) {
-    issues.push("STRIPE_SECRET_KEY must be a Stripe test-mode secret or restricted key");
+  const stripeSecretMode = stripeSecret?.match(/^(?:sk|rk)_(test|live)_/)?.[1];
+  if (stripeSecret && !stripeSecretMode) {
+    issues.push("STRIPE_SECRET_KEY must be a Stripe secret or restricted key");
   }
   const publishable = env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
-  if (publishable && !publishable.startsWith("pk_test_")) {
-    issues.push("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY must be a Stripe test-mode key");
+  const publishableMode = publishable?.match(/^pk_(test|live)_/)?.[1];
+  if (publishable && !publishableMode) {
+    issues.push("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY must be a Stripe publishable key");
+  }
+  if (
+    stripeSecretMode &&
+    publishableMode &&
+    stripeSecretMode !== publishableMode
+  ) {
+    issues.push("Stripe secret and publishable keys must use the same mode");
   }
   const webhookSecret = env.STRIPE_WEBHOOK_SECRET?.trim();
   if (webhookSecret && !webhookSecret.startsWith("whsec_")) {
     issues.push("STRIPE_WEBHOOK_SECRET must be a webhook signing secret");
+  }
+  const connectWebhookSecret = env.STRIPE_CONNECT_WEBHOOK_SECRET?.trim();
+  if (connectWebhookSecret && !connectWebhookSecret.startsWith("whsec_")) {
+    issues.push(
+      "STRIPE_CONNECT_WEBHOOK_SECRET must be a webhook signing secret",
+    );
   }
 
   const cronSecret = env.BOOKING_CRON_SECRET?.trim();

@@ -3,10 +3,22 @@ import "server-only";
 import type Stripe from "stripe";
 
 import type { Json } from "@/lib/db/types";
-import { refundFirstHourFull } from "@/lib/stripe/connect";
+import {
+  getProviderPayoutStatus,
+  refundFirstHourFull,
+} from "@/lib/stripe/connect";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
+
+const PROVIDER_ACCOUNT_EVENT_TYPES = new Set([
+  "v2.core.account.closed",
+  "v2.core.account.updated",
+  "v2.core.account[configuration.recipient].capability_status_updated",
+  "v2.core.account[configuration.recipient].updated",
+  "v2.core.account[future_requirements].updated",
+  "v2.core.account[requirements].updated",
+]);
 
 function assertResult(
   result: { error: { code?: string } | null },
@@ -150,6 +162,44 @@ export async function processStripeWebhookEvent(
     default:
       break;
   }
+}
+
+/**
+ * Keep the public-listing payout gate synchronized with Accounts v2 thin
+ * events. The live Stripe destination must subscribe to the recipient
+ * capability and account requirement events in PROVIDER_ACCOUNT_EVENT_TYPES.
+ */
+export async function processStripeV2EventNotification(
+  admin: AdminClient,
+  event: Stripe.V2.Core.EventNotification,
+) {
+  if (!PROVIDER_ACCOUNT_EVENT_TYPES.has(event.type)) return;
+  const accountId = (
+    event as Stripe.V2.Core.EventNotification & {
+      related_object?: { id?: string } | null;
+    }
+  ).related_object?.id;
+  if (!accountId) return;
+
+  let transfersActive = false;
+  if (event.type !== "v2.core.account.closed") {
+    const payout = await getProviderPayoutStatus(accountId);
+    if (!payout.configured) {
+      throw new Error("Stripe payout status is unconfigured");
+    }
+    transfersActive = payout.transfersActive;
+  }
+
+  assertResult(
+    await admin
+      .from("provider_profiles")
+      .update({
+        stripe_transfers_active: transfersActive,
+        stripe_transfers_checked_at: new Date().toISOString(),
+      })
+      .eq("stripe_account_id", accountId),
+    "sync_provider_payout_capability",
+  );
 }
 
 /** Store a bounded operational code, never a raw Stripe object or secret. */

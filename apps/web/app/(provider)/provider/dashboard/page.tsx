@@ -426,7 +426,7 @@ function ProviderDashboardView({
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-crew-200 bg-crew-100 p-4 text-sm text-crew-800">
           <p>
             <span className="font-semibold">You&apos;re approved!</span> Connect
-            Stripe to get paid — payouts go straight to your bank.
+            your bank account through Stripe to get paid and appear in Browse.
           </p>
           <form action={connectStripe}>
             <Button type="submit" size="sm">
@@ -441,8 +441,8 @@ function ProviderDashboardView({
       !demo ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
           <p>
-            Stripe still needs information before your services can accept
-            hourly bookings.
+            Finish Stripe&apos;s bank and identity setup before your profile can
+            appear in Browse or accept bookings.
           </p>
           <div className="flex flex-wrap gap-2">
             <form action={connectStripe}>
@@ -460,8 +460,8 @@ function ProviderDashboardView({
       ) : null}
       {stripe === "pending" && !demo ? (
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
-          Stripe isn&apos;t live yet — the platform&apos;s test account is
-          still being set up. You&apos;ll be able to connect soon.
+          Stripe onboarding is temporarily unavailable. Please try again later
+          or contact College Crew.
         </div>
       ) : null}
       {stripe === "noemail" && !demo ? (
