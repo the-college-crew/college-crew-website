@@ -11,6 +11,7 @@ const EXPLORE = [
   { href: "/blog", label: "Blog" },
   { href: "/faq", label: "FAQ" },
   { href: "/support", label: "Feedback & support" },
+  { href: "/privacy", label: "Privacy Policy" },
   { href: "/legal", label: "Legal documents" },
 ];
 
