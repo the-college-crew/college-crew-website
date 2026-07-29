@@ -7,12 +7,49 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
+ * Whether a dispute makes this booking's payout unsafe to run.
+ *
+ * `hold_provider_payout` already blocks a *queued* job when a dispute lands, so
+ * this only catches the race where the scheduler claimed the job in the same
+ * tick the dispute arrived. A Stripe dispute counts regardless of its status:
+ * even a `lost` one must not pay the student, because the customer has already
+ * been made whole out of the platform balance.
+ */
+async function hasBlockingDispute(bookingId: string): Promise<boolean> {
+  const admin = createAdminClient();
+
+  const [booking, stripe] = await Promise.all([
+    admin
+      .from("booking_disputes")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .neq("status", "resolved")
+      .limit(1),
+    admin
+      .from("stripe_disputes")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .limit(1),
+  ]);
+
+  if (booking.error) throw booking.error;
+  if (stripe.error) throw stripe.error;
+
+  return Boolean(booking.data?.length) || Boolean(stripe.data?.length);
+}
+
+/**
  * Pay the student once the job is complete.
  *
  * Under the held-funds model nothing is transferred while the job is in flight:
  * the first hour and the balance both sit in the PLATFORM balance, so a job that
  * settles in cash needs no clawback and a cancellation is a plain refund with no
  * transfer to reverse. This is the one place money leaves the platform.
+ *
+ * The payout is queued 3 days after completion (`private.queue_provider_payout`)
+ * so a quick refund or chargeback lands while the money is still ours. A dispute
+ * in that window blocks the job; `"held"` is returned if one is somehow still
+ * open by the time the job runs.
  *
  * `provider_payout_plan` decides the amounts — the whole rake is withheld from
  * the first hour and the balance passes through in full — and returns one leg per
@@ -24,8 +61,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 export async function attemptProviderPayout(
   bookingId: string,
-): Promise<"paid" | "nothing" | "unconfigured"> {
+): Promise<"paid" | "nothing" | "unconfigured" | "held"> {
   const admin = createAdminClient();
+
+  if (await hasBlockingDispute(bookingId)) return "held";
 
   const { data: plan, error } = await admin.rpc("provider_payout_plan", {
     p_booking_id: bookingId,

@@ -15,7 +15,20 @@ type Counters = {
   succeeded: number;
   retried: number;
   failed: number;
+  /** Deliberately parked, not attempted — see `PayoutHeldError`. */
+  held: number;
 };
+
+/**
+ * A job that must stop without succeeding and without consuming a retry.
+ * Raised when a payout is reached while its booking has an open dispute.
+ */
+class PayoutHeldError extends Error {
+  constructor() {
+    super("PayoutHeld");
+    this.name = "PayoutHeldError";
+  }
+}
 
 export type SchedulerSummary = {
   jobs: Counters;
@@ -149,6 +162,12 @@ async function processJob(kind: string, bookingId: string, sourceId: string) {
     const { attemptProviderPayout } = await import("@/lib/booking/payouts");
     const outcome = await attemptProviderPayout(bookingId);
     if (outcome === "unconfigured") throw new Error("StripeUnconfigured");
+    // A dispute landed while this job was already claimed. Signal the drain loop
+    // to block the job instead of completing it: completing would mark it
+    // `succeeded` and strand the payout, and a plain throw would burn the retry
+    // budget until it went terminal. An admin releases it with
+    // `release_provider_payout` once the dispute is settled.
+    if (outcome === "held") throw new PayoutHeldError();
     return;
   }
   throw new Error("UnknownAutomationKind");
@@ -178,7 +197,7 @@ async function enqueueTerminalSchedulerAlert(jobId: string, bookingId: string) {
 }
 
 async function drainJobs(): Promise<Counters> {
-  const counters: Counters = { claimed: 0, succeeded: 0, retried: 0, failed: 0 };
+  const counters: Counters = { claimed: 0, succeeded: 0, retried: 0, failed: 0, held: 0 };
   const admin = createAdminClient();
   const draftsClaim = await admin.rpc("claim_expired_booking_drafts", {
     p_limit: JOB_BATCH_SIZE,
@@ -234,6 +253,15 @@ async function drainJobs(): Promise<Counters> {
         if (settled.error || !settled.data) throw settled.error ?? new Error("LeaseLost");
         counters.succeeded += 1;
       } catch (error) {
+        if (error instanceof PayoutHeldError) {
+          await admin.rpc("block_booking_automation_job", {
+            p_job_id: job.id,
+            p_lease_token: job.lease_token,
+            p_reason: "dispute_hold",
+          });
+          counters.held += 1;
+          return;
+        }
         const terminal = job.attempt_count >= MAX_ATTEMPTS;
         await admin.rpc("retry_booking_automation_job", {
           p_job_id: job.id,
@@ -255,7 +283,7 @@ async function drainJobs(): Promise<Counters> {
 }
 
 async function drainEmail(): Promise<Counters> {
-  const counters: Counters = { claimed: 0, succeeded: 0, retried: 0, failed: 0 };
+  const counters: Counters = { claimed: 0, succeeded: 0, retried: 0, failed: 0, held: 0 };
   const admin = createAdminClient();
   const claim = await admin.rpc("claim_email_outbox", {
     p_limit: EMAIL_BATCH_SIZE,
