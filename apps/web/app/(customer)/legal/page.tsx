@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -23,6 +24,15 @@ export default function LegalOverviewPage() {
         title="College Crew legal terms"
         description="The platform-wide and action-specific agreements, shown here for reference."
       />
+
+      <Card className="p-5 text-sm leading-6 text-ink-soft">
+        College Crew&apos;s collection, use, disclosure, retention, and
+        protection of personal information are described in the{" "}
+        <Link href="/privacy" className="font-semibold text-crew-700 underline">
+          Privacy Policy
+        </Link>
+        .
+      </Card>
 
       <Card id="platform-terms" pennant className="scroll-mt-24 p-6">
         <div className="space-y-5 text-sm leading-6 text-ink-soft">

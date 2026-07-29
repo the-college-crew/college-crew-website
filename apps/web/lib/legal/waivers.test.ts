@@ -20,15 +20,15 @@ function hash(value: unknown) {
 
 describe("published legal content", () => {
   it("keeps the application snapshots aligned with the database contract", () => {
-    expect(LEGAL_CONTENT_VERSION).toBe("2026-07-29");
+    expect(LEGAL_CONTENT_VERSION).toBe("2026-07-29.1");
     expect(hash(getMasterAgreementSnapshot("customer"))).toBe(
-      "3f8ba9f91f0ced97509417e12bfadcd50094e466e07356fc6265b791152e10cd",
+      "f7b23598cd7228059da9cfd0d55fc2f2f1ba5a8ba6a69325d37c863b263ecad5",
     );
     expect(hash(getMasterAgreementSnapshot("provider"))).toBe(
-      "253bc1676a56cb66ebf9e326c9f80056606ab20d84e9ca768bb1ed67dc0fa027",
+      "fcacd2a7cfbc9fd65dce5a86ef251735dc9660fe565c086c93e052d8ecd1f880",
     );
     expect(hash(getPlatformTermsSnapshot())).toBe(
-      "c8d21c1f8d64f46884ba65bce4ecc7808f3c45c4a20d39f06b368d19225f757b",
+      "28eaacafe053ee7d5bde0001210d65a960c417be15cef5b157c19e5425f9a99c",
     );
     expect(hash(getCustomerBookingTermsSnapshot())).toBe(
       "4d0c985ce3809af8b6dacd25728ae38677164470553f2f2ac440d7a2e79f7c9d",

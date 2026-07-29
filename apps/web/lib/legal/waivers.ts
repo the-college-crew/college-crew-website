@@ -1,7 +1,7 @@
 import type { UserRole } from "@/lib/db/types";
 
-export const LEGAL_CONTENT_VERSION = "2026-07-29";
-export const PLATFORM_TERMS_VERSION = "2026-07-29";
+export const LEGAL_CONTENT_VERSION = "2026-07-29.1";
+export const PLATFORM_TERMS_VERSION = "2026-07-29.1";
 export const CUSTOMER_BOOKING_TERMS_VERSION = "2026-07-27";
 export const PROVIDER_TERMS_VERSION = "2026-07-15";
 export const BOOKING_RISK_VERSION = "2026-07-15";
@@ -116,7 +116,7 @@ export const MASTER_SECTIONS: LegalSection[] = [
     appliesTo: "all",
     body: [
       "If any provision of this Agreement is held invalid or unenforceable, the remaining provisions shall remain in full force and effect. College Crew may amend this Agreement from time to time; material changes will be communicated by email to the address on file and require re-acceptance before continued use of the Platform. This Agreement, together with the Fee Schedule and Terms of Service, constitutes the entire agreement between the parties regarding its subject matter.",
-      "Notices under this Agreement should be directed to max@collegecrew.com.",
+      "Notices under this Agreement should be submitted through College Crew's public support form at https://www.thecollegecrew.com/support. The sender should include current contact information and enough detail to identify the account and matter.",
     ],
   },
 ];

@@ -109,6 +109,13 @@ export default async function SignupPage({
           Log in
         </Link>
       </p>
+      <p className="mt-3 text-center text-xs leading-5 text-ink-soft">
+        Learn how we handle personal information in our{" "}
+        <Link href="/privacy" className="font-semibold text-crew-700 underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </div>
   );
 }
