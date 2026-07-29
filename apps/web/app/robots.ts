@@ -14,6 +14,10 @@ export default function robots(): MetadataRoute.Robots {
         "/api",
         "/book",
         "/dashboard",
+        // Flyer tracking paths rewrite to /browse, so indexing them would
+        // duplicate that page. Trailing slash matters: bare "/f" is a prefix
+        // match that would also deindex /faq and /forgot-password.
+        "/f/",
         "/login",
         "/messages",
         "/provider",

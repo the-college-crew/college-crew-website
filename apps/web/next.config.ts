@@ -14,6 +14,16 @@ const nextConfig: NextConfig = {
     // <ViewTransition>. Removing it degrades navigation to an instant swap.
     viewTransition: true,
   },
+  // Flyer / campaign tracking paths. `/f/<name>` serves Browse directly — a
+  // rewrite, not a redirect, so the visitor sees Browse instantly while the
+  // URL stays `/f/<name>`. That's the whole point: Vercel Analytics records
+  // the pageview under the flyer path, giving per-batch scan counts in the
+  // Pages tab without the UTM breakdown that the free plan doesn't include.
+  // A redirect would record nothing, since a 307 runs no client JavaScript.
+  // Deliberately open-ended: a new flyer batch needs a new QR, not a deploy.
+  async rewrites() {
+    return [{ source: "/f/:slug", destination: "/browse" }];
+  },
 };
 
 export default nextConfig;
