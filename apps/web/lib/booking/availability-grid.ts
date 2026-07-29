@@ -397,6 +397,8 @@ export function buildMonthCells(input: {
   minimumNoticeHours: number;
   /** Shortest bookable job; a day with no run this long counts as full. */
   minMinutes?: number;
+  /** A fixed-duration quote may run this far past the end of one work period. */
+  availabilityEndOverrunMinutes?: number;
 }): Array<MonthCell | null> {
   const {
     monthStart,
@@ -405,6 +407,7 @@ export function buildMonthCells(input: {
     busy,
     minimumNoticeHours,
     minMinutes = CUSTOMER_ESTIMATE_MINUTES.min,
+    availabilityEndOverrunMinutes = 0,
   } = input;
 
   const year = monthStart.getFullYear();
@@ -430,7 +433,19 @@ export function buildMonthCells(input: {
       state = "closed";
     } else {
       const rail = buildDayRail({ day: periods, busy, now, minimumNoticeHours });
-      if (longestFreeRunMinutes(rail.slots) >= minMinutes) {
+      const hasFittingTime = availabilityEndOverrunMinutes > 0
+        ? rail.slots.some((slot) =>
+            fixedDurationStartIsAvailable({
+              rail,
+              periods,
+              busy,
+              startMinutes: slot.startMinutes,
+              durationMinutes: minMinutes,
+              availabilityEndOverrunMinutes,
+            }),
+          )
+        : longestFreeRunMinutes(rail.slots) >= minMinutes;
+      if (hasFittingTime) {
         state = "open";
       } else if (rail.slots.some((slot) => slot.reason === "busy")) {
         // Someone else has the day. Worth saying so, since it may free up.
@@ -503,6 +518,48 @@ export function validateRange(
   if (crossesBlocked) return { ok: false, reason: "crosses-blocked" };
 
   return { ok: true };
+}
+
+/**
+ * Whether one fixed-duration start can be offered for a quote reschedule.
+ * The start must be in a single provider work period, but the job may finish
+ * shortly after that period ends. Busy intervals still block the whole job.
+ */
+export function fixedDurationStartIsAvailable(input: {
+  rail: DayRail;
+  periods: readonly ScheduleDay[];
+  busy: readonly BusyInterval[];
+  startMinutes: number;
+  durationMinutes: number;
+  availabilityEndOverrunMinutes?: number;
+}) {
+  const {
+    rail,
+    periods,
+    busy,
+    startMinutes,
+    durationMinutes,
+    availabilityEndOverrunMinutes = 0,
+  } = input;
+  const endMinutes = startMinutes + durationMinutes;
+  const hasWindow = periods.some((period) => {
+    const start = clockToMinutes(period.startLocal);
+    const end = clockToMinutes(period.endLocal);
+    return startMinutes >= start && endMinutes <= end + availabilityEndOverrunMinutes;
+  });
+  if (!hasWindow) return false;
+
+  const startSlot = rail.slots.find((slot) => slot.startMinutes === startMinutes);
+  if (!startSlot || startSlot.blocked) return false;
+
+  const startInstant = localSlotInstant(rail.date, startMinutes);
+  const endInstant = localSlotInstant(rail.date, endMinutes);
+  if (!startInstant || !endInstant) return false;
+  return !overlapsBusy(
+    toEpochRanges(busy),
+    startInstant.getTime(),
+    endInstant.getTime(),
+  );
 }
 
 /** How far a selection starting at `startMinutes` may run before it hits something blocked. */

@@ -14,6 +14,7 @@ import {
 } from "@/lib/legal/acceptance";
 import { sendModeratedMessage } from "@/lib/messaging/conversation";
 import { createClient } from "@/lib/supabase/server";
+import { formatDateTime } from "@/lib/utils";
 
 export type RescheduleActionState = { error?: string };
 
@@ -53,6 +54,12 @@ export async function proposeChatReschedule(
       error: requestOperationMessage(error, "Could not suggest that time."),
     };
   }
+  const sent = await sendModeratedMessage(
+    supabase,
+    parsed.data.conversationId,
+    `I suggested ${formatDateTime(proposed.date.toISOString())}. Please accept, decline, or suggest another time in this chat.`,
+  );
+  if (!sent) console.error("[chat-reschedule] could not send proposal notice");
   revalidatePath(`/messages/${parsed.data.conversationId}`);
   redirect(`/messages/${parsed.data.conversationId}`);
 }
@@ -137,6 +144,12 @@ export async function proposeQuoteChatReschedule(
   const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
   const { error } = await rpc("propose_quote_chat_reschedule", { p_booking_id: parsed.data.bookingId, p_proposed_start_at: proposed.date.toISOString() });
   if (error) return { error: requestOperationMessage(error, "Could not suggest that time.") };
+  const sent = await sendModeratedMessage(
+    supabase,
+    parsed.data.conversationId,
+    `I suggested ${formatDateTime(proposed.date.toISOString())}. Please accept, decline, or suggest another time in this chat.`,
+  );
+  if (!sent) console.error("[quote-chat-reschedule] could not send proposal notice");
   revalidatePath(`/messages/${parsed.data.conversationId}`);
   redirect(`/messages/${parsed.data.conversationId}`);
 }

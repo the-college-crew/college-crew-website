@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import {
   buildDayRail,
   buildMonthCells,
+  fixedDurationStartIsAvailable,
   firstRunFitting,
   groupScheduleDays,
   formatUsDate,
@@ -70,6 +71,8 @@ export type SchedulePickerProps = {
   fixedMinutes?: number;
   /** Choose an exact fixed-duration start from a labeled dropdown. */
   startTimeDropdown?: boolean;
+  /** Quote-only allowance to finish shortly after a provider work period ends. */
+  availabilityEndOverrunMinutes?: number;
   /** Read-only provider view: no selection, jobs drawn on the rail. */
   readOnly?: boolean;
   overlaysByDate?: Readonly<Record<string, readonly RailOverlay[]>>;
@@ -91,6 +94,7 @@ export function SchedulePicker({
   preferredMinutes,
   fixedMinutes,
   startTimeDropdown = false,
+  availabilityEndOverrunMinutes = 0,
   readOnly = false,
   overlaysByDate,
   dottedDates,
@@ -113,8 +117,16 @@ export function SchedulePicker({
   const dayByDate = useMemo(() => groupScheduleDays(days), [days]);
 
   const cells = useMemo(
-    () => buildMonthCells({ monthStart, now, days, busy, minimumNoticeHours }),
-    [busy, days, minimumNoticeHours, monthStart, now],
+    () => buildMonthCells({
+      monthStart,
+      now,
+      days,
+      busy,
+      minimumNoticeHours,
+      minMinutes: fixedMinutes,
+      availabilityEndOverrunMinutes,
+    }),
+    [availabilityEndOverrunMinutes, busy, days, fixedMinutes, minimumNoticeHours, monthStart, now],
   );
 
   const selectedDay = selectedDate ? dayByDate.get(selectedDate) : undefined;
@@ -210,10 +222,21 @@ export function SchedulePicker({
                   }}
                 >
                   <option value="">Choose a start time</option>
-                  {rail.slots.filter((slot) => validateRange(
-                    rail, slot.startMinutes, slot.startMinutes + fixedMinutes,
-                    { min: fixedMinutes, max: fixedMinutes },
-                  ).ok).map((slot) => (
+                  {rail.slots.filter((slot) =>
+                    availabilityEndOverrunMinutes > 0
+                      ? fixedDurationStartIsAvailable({
+                          rail,
+                          periods: selectedDay ?? [],
+                          busy,
+                          startMinutes: slot.startMinutes,
+                          durationMinutes: fixedMinutes,
+                          availabilityEndOverrunMinutes,
+                        })
+                      : validateRange(
+                          rail, slot.startMinutes, slot.startMinutes + fixedMinutes,
+                          { min: fixedMinutes, max: fixedMinutes },
+                        ).ok,
+                  ).map((slot) => (
                     <option key={slot.startMinutes} value={slot.startMinutes}>{slot.label}</option>
                   ))}
                 </select>

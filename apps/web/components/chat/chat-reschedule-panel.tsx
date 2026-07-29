@@ -142,6 +142,7 @@ export function ChatReschedulePanel({
                 preferredMinutes={quoteMode ? undefined : estimatedMinutes}
                 fixedMinutes={estimatedMinutes}
                 startTimeDropdown={quoteMode}
+                availabilityEndOverrunMinutes={quoteMode ? 60 : 0}
                 gridLabel={quoteMode ? "Choose a new date and start time" : "Choose a new date and time"}
                 onChange={setSlot}
               />
