@@ -83,7 +83,7 @@ In Stripe Workbench, with test mode off:
    (`rk_live_…` or `sk_live_…`) into the secret manager. Never paste them into
    the repository, tickets, chat, or this runbook.
 3. Create the live snapshot-event destination:
-   - URL: `https://thecollegecrew.com/api/webhooks/stripe`
+   - URL: `https://www.thecollegecrew.com/api/webhooks/stripe`
    - account events required by the application:
      `payment_intent.succeeded`, `payment_intent.payment_failed`,
      `payment_intent.canceled`, `charge.refunded`,
