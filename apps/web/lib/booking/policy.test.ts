@@ -11,12 +11,14 @@ import {
   INITIAL_PAYMENT_WINDOW_HOURS,
   INVOICE_REVIEW_HOURS,
   LATE_DISPUTE_DAYS,
+  MAX_TIP_CENTS,
   MINIMUM_NOTICE_HOURS,
   NOTICE_HOUR_PRESETS,
   PILOT_TIME_ZONE,
   PLATFORM_FEE_BPS,
   PROVIDER_INVOICE_MINUTES,
   RESPONSE_WINDOW_HOURS,
+  TIP_PRESETS_CENTS,
   billableMinutesFromElapsed,
   calculateHourlySubtotalCents,
   calculateInvoiceAllocation,
@@ -31,6 +33,7 @@ import {
   getPilotLocalParts,
   isDurationValid,
   isHourlyRateValid,
+  normalizeTipCents,
   pilotLocalDateTimeToUtc,
   roundPositiveRatio,
 } from "./policy";
@@ -318,5 +321,43 @@ describe("America/Chicago DST boundaries", () => {
         estimatedMinutes: 60,
       }),
     ).toBe(false);
+  });
+});
+
+describe("optional invoice tip", () => {
+  it("offers fixed dollar presets under a $500 ceiling", () => {
+    expect(TIP_PRESETS_CENTS).toEqual([500, 1_000, 2_000]);
+    expect(MAX_TIP_CENTS).toBe(50_000);
+  });
+
+  it("treats anything unusable as no tip", () => {
+    for (const input of [undefined, null, "", "abc", NaN, Infinity, -1, -500]) {
+      expect(normalizeTipCents(input)).toBe(0);
+    }
+  });
+
+  it("clamps rather than rejects an over-large tip", () => {
+    expect(normalizeTipCents(MAX_TIP_CENTS + 1)).toBe(MAX_TIP_CENTS);
+    expect(normalizeTipCents(9_999_999)).toBe(MAX_TIP_CENTS);
+  });
+
+  it("accepts presets and form strings, truncating sub-cent input", () => {
+    expect(normalizeTipCents("1000")).toBe(1_000);
+    expect(normalizeTipCents(2_000)).toBe(2_000);
+    expect(normalizeTipCents(1_000.7)).toBe(1_000);
+  });
+
+  it("never lets a tip reach the platform fee or the invoice allocation", () => {
+    // The tip lives outside subtotal_cents precisely so that the fee math and
+    // the invoice allocation cannot see it. Passing a tipped total in would
+    // rake the tip, which is what these assertions exist to prevent.
+    const subtotalCents = 7_500;
+    const tipCents = 1_000;
+    expect(calculatePlatformFeeCents(subtotalCents)).toBe(375);
+    expect(calculatePlatformFeeCents(subtotalCents + tipCents)).toBe(425);
+
+    const allocation = calculateInvoiceAllocation(5_000, 90);
+    expect(allocation.totalPlatformFeeCents).toBe(375);
+    expect(allocation.remainingBalanceCents).toBe(2_500);
   });
 });

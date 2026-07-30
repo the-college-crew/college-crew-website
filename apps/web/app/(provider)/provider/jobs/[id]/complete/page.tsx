@@ -67,7 +67,7 @@ export default async function CompleteJobPage({
     .from("booking_invoices")
     .select(
       `billing_basis, submitted_minutes, provider_explanation, subtotal_cents,
-       total_platform_fee_cents, remaining_balance_cents, status`,
+       total_platform_fee_cents, remaining_balance_cents, tip_cents, status`,
     )
     .eq("booking_id", id)
     .maybeSingle();
@@ -125,17 +125,33 @@ export default async function CompleteJobPage({
               </dt>
               <dd>{formatMoney(invoice.subtotal_cents)}</dd>
             </div>
+            {invoice.tip_cents > 0 ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-mist">Tip from your customer</dt>
+                <dd className="text-quad-700">
+                  {formatMoney(invoice.tip_cents)}
+                </dd>
+              </div>
+            ) : null}
             <div className="flex justify-between gap-4">
               <dt className="font-semibold">
                 {copy("booking-provider.invoice.payout-label")}
               </dt>
               <dd className="font-semibold text-quad-700">
+                {/* The tip is added whole: no platform fee is taken on it. */}
                 {formatMoney(
-                  invoice.subtotal_cents - invoice.total_platform_fee_cents,
+                  invoice.subtotal_cents -
+                    invoice.total_platform_fee_cents +
+                    invoice.tip_cents,
                 )}
               </dd>
             </div>
           </dl>
+          {invoice.tip_cents > 0 ? (
+            <p className="mt-2 text-xs text-quad-700">
+              You keep 100% of the tip — we take no fee on it.
+            </p>
+          ) : null}
           <p className="mt-3 border-t border-line pt-3 text-xs text-mist">
             {booking.status === "completed"
               ? "Paid in full."

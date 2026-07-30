@@ -166,7 +166,7 @@ Deno.serve(async (request) => {
     }
     const { data: invoice } = await userClient
       .from("booking_invoices")
-      .select("id, status, remaining_balance_cents")
+      .select("id, status, remaining_balance_cents, tip_cents")
       .eq("booking_id", bookingId)
       .maybeSingle();
     if (!invoice) {
@@ -181,7 +181,12 @@ Deno.serve(async (request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    if (mode === "confirm" && invoice.remaining_balance_cents === 0) {
+    // A tip recorded on the web makes this a real charge even when the job
+    // balance is zero, so only a genuinely zero total takes the no-Stripe path.
+    const chargeableCents =
+      invoice.remaining_balance_cents + (invoice.tip_cents ?? 0);
+
+    if (mode === "confirm" && chargeableCents === 0) {
       const { error } = await userClient.rpc("settle_zero_balance_invoice", {
         p_invoice_id: invoice.id,
       });
@@ -190,7 +195,7 @@ Deno.serve(async (request) => {
       }
       return json({ outcome: "settled" });
     }
-    if (mode === "recover" && invoice.remaining_balance_cents === 0) {
+    if (mode === "recover" && chargeableCents === 0) {
       return fail("no_balance_due", "There’s no remaining balance to pay.", 409);
     }
 

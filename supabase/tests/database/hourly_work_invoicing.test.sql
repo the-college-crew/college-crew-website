@@ -33,7 +33,7 @@ select is(
   true, 'providers can submit an invoice'
 );
 select is(
-  has_function_privilege('authenticated', 'public.begin_balance_payment(uuid)', 'execute'),
+  has_function_privilege('authenticated', 'public.begin_balance_payment(uuid,integer)', 'execute'),
   true, 'customers can begin a balance payment'
 );
 select is(

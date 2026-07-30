@@ -1084,6 +1084,31 @@ export const BOOKING_COPY_SCREENS = [
         style: "label",
       },
       {
+        key: "booking-customer.invoice.tip-prompt",
+        label: "Tip prompt",
+        defaultValue: "Add a tip? (optional)",
+        style: "label",
+      },
+      {
+        key: "booking-customer.invoice.tip-note",
+        label: "Tip fee disclosure",
+        defaultValue:
+          "Your student keeps 100% of the tip — we take no fee on it. Tipping is always optional, and cash in person is just as welcome.",
+        style: "muted",
+      },
+      {
+        key: "booking-customer.invoice.tip-label",
+        label: "Tip row",
+        defaultValue: "Tip (100% to your student)",
+        style: "label",
+      },
+      {
+        key: "booking-customer.invoice.total-label",
+        label: "Total row",
+        defaultValue: "Total",
+        style: "label",
+      },
+      {
         key: "booking-customer.invoice.over-estimate",
         label: "Extra-time explanation heading",
         defaultValue: "Time beyond the estimate",
