@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Only `.spec.ts` — `tests/e2e/support/*.test.ts` are vitest unit tests.
+  testMatch: /\.spec\.ts$/,
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
