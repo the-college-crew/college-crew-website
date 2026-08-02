@@ -113,8 +113,36 @@ while asleep. Reasoning *generates* things needing approval, so it must finish
 
 ### The approval loop
 
-Approval is a text edit: flip `proposed` → `approved` in `backlog.md`, or edit a
-plan file. Both work from GitHub's mobile web editor in about thirty seconds.
+**Zach tried the GitHub mobile path on 2026-08-02 and rejected it.** It works,
+but it takes more than one edit and requires tapping through folder trees on
+mobile Safari, which is exactly the friction that kills a daily habit. The
+markdown format is fine; the *access path* is the problem.
+
+A second lesson from the same feedback: **replying in prose is strictly better
+than flipping a status.** "No to CC-001, we're not touching the schema until
+after the pilot" is simultaneously a rejection and its `decisions.md` entry,
+written once. Status-flipping forces the reason to be typed separately, which
+means it won't be.
+
+Options, ranked:
+
+1. **Talk to Claude in the phone app** — "approve CC-002, reject CC-001
+   because…" and a cloud session edits `backlog.md` and `decisions.md`. Zero
+   infrastructure, available immediately. Downside: Zach must open the app
+   rather than being pulled in by a notification. **Start here.**
+2. **Digest email with one-tap approve/reject links** hitting a signed API route
+   in the app. Lowest friction of any option; loses the prose reasoning.
+3. **Full email round-trip** — the model Zach's uncle uses, and the eventual
+   target. Proposer emails the day's items; Zach replies in plain English; a
+   Resend inbound webhook at `/api/webhooks/resend` parses the reply and updates
+   the backlog. Most work, best daily experience. Resend, a verified domain, and
+   the webhook route already exist.
+4. **Reply to a mailbox the next routine reads** — avoids the webhook but
+   requires the agent to hold mailbox credentials, which this plan deliberately
+   keeps out of the environment. Rejected for now.
+
+**All four require an agent to write to GitHub**, so they are gated on the same
+MCP-write question as the Worker.
 
 **On eventually removing the human:** graduate by *class of change* rather than
 removing the gate. Auto-approve dependency bumps, test additions, and doc fixes
