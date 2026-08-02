@@ -248,3 +248,42 @@ consequence is a rate limit far above current usage.
 
 ---
 
+## 2026-08-02 — CC-001 deferred to a human, revisit before launch
+
+Splitting Preview off the production Supabase project is **not rejected on the
+merits.** The exposure is real and confirmed: `vercel env ls` shows
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
+`SUPABASE_SERVICE_ROLE_KEY` each scoped to **Preview and Production**, so every
+preview deployment runs against the production database with a key that
+bypasses RLS. It is the most likely mechanism behind synthetic providers
+reaching the live Browse page twice.
+
+It is marked `rejected` for one mechanical reason: a `proposed` item blocks the
+Proposer from running at all, and the queue must keep moving. The status is
+bookkeeping, not a verdict.
+
+**Why a human does this, not a Worker.** It needs a second Supabase project
+created by hand, and then the genuinely hard part — reconciling the drift
+between the 118 files in `supabase/migrations/` and the live schema, which is
+unscoped until production's schema is dumped and diffed. A Worker has
+placeholder credentials by design and cannot reach either project. This is the
+same category as CC-002: the fix lives outside the repo.
+
+**Revisit trigger: before launch.** Deliberately not "before onboarding more
+providers" — onboarding is already blocked on provider Stripe setup and could
+unblock at any time, which would force this work at the worst possible moment.
+Launch is the point where a preview deployment writing to production stops
+being embarrassing and starts being a real customer's data.
+
+**Do not re-propose before then.** The bar for raising it early: evidence of an
+*actual* write reaching production from a preview deployment — a row nobody
+created deliberately, not a theoretical path. That evidence changes it from
+scheduled work into an incident, and it should be raised immediately if found.
+
+Note that the nightly agent loop modestly raises the surface: each Worker PR
+spins up a preview deployment pointed at production. The agents cannot touch
+the database themselves, but the number of live previews aimed at it goes from
+"when someone pushes" to "most nights."
+
+---
+

@@ -10,7 +10,7 @@ The queue. See `README.md` for statuses and rules.
 
 ## CC-001 — Split Preview environment off the production Supabase project
 
-**Status:** proposed
+**Status:** rejected — deferred to a human, before launch. See `decisions.md`.
 **Proposed:** 2026-08-02 — seeded by hand, not by an agent
 **Effort:** L
 
