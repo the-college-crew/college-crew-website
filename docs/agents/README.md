@@ -102,6 +102,15 @@ that an open PR is not the test. See "Work must survive a dead session" below:
 the signal is whether the item's status is `in-progress`, since completed work
 sits in an open PR for as long as it takes Zach to merge it.
 
+**Keep going until nothing is buildable.** A run is not one item — after
+finishing an item, check the queue again and start the next. Stop only when
+nothing qualifies or the session is cut off. Each item gets its own branch and
+its own PR.
+
+**But finish each item completely before starting the next.** Never work two in
+parallel. A session cut off mid-flight then leaves at most *one* item partially
+done, with everything before it a clean, reviewable PR.
+
 The effect: if Zach ignores the system for three days, he returns to exactly the
 stage he left, not to nine unread proposals. **The queue never grows past what
 he has handled.** This is deliberate — the scarce resource is his judgment, not
@@ -134,9 +143,14 @@ zero-context session can continue what the last one started.
 
 So the Worker must:
 
-1. **Commit incrementally to its branch as it goes** — never hold a night's work
-   in an uncommitted working tree. A session that dies mid-task must leave its
-   progress behind.
+There is **no way to see how much usage budget remains.** No tool reports "you
+are at 87% of your window" — the platform simply stops the session, possibly
+without a chance to shut down cleanly. So do not try to pace against a budget.
+**Make the cutoff harmless instead:**
+
+1. **Commit after every meaningful step**, not at the end of an item — never
+   hold a night's work in an uncommitted working tree. Whether the session dies
+   at 40% or 95%, everything up to that moment is already on the branch.
 2. **Keep a running progress record in the PR description** — what is done, what
    is next, what is untested. This is what the next session reads first.
 3. **Before starting anything new, look for genuinely unfinished work and resume
