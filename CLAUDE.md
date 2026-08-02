@@ -21,30 +21,24 @@ commit secrets or confidential info — keys live in `.env.local` (gitignored).
 
 ---
 
-## Workflow: plan and confirm before building
+## Standing working conventions
 
-Before writing or editing ANY code for a new page, feature, route, component,
-database table, or any change spanning more than one file, you MUST:
+The **plan-first workflow** (restate → propose → list assumptions → STOP and
+wait for approval before editing files), **feature branch + PR instead of
+direct pushes**, small present-tense commits, never committing secrets, and
+using a service's MCP server where one is authenticated are **standing
+conventions across all of Zach's projects**, not College Crew rules. Zach's
+Claude Code carries them in `~/.claude/CLAUDE.md`.
 
-1. Restate the request in your own words so we can confirm you understood it.
-2. Propose a short plan: which files you'll create or change, the approach,
-   any database/schema impact, and anything that depends on a decision not
-   yet made.
-3. List your assumptions and any open questions — ask them before proceeding.
-4. STOP and wait for explicit approval ("go" / "approved"). Do NOT create or
-   edit files until you receive it.
+They are not repeated here, with one exception worth stating plainly for any
+agent or contributor whose environment lacks them:
 
-This applies even when plan mode is NOT active. Treat every non-trivial task
-as plan-first by default.
+> **Do not create or edit files for a new page, feature, route, component,
+> table, or any change spanning more than one file until you have proposed a
+> plan and received explicit approval.** Trivial changes — a typo, a one-line
+> fix, formatting — are exempt.
 
-Proceed without a plan ONLY for trivial changes: a typo, an obvious one-line
-fix, formatting, or something explicitly described as "just do it."
-
-If, while building, reality diverges from the approved plan (a wrong
-assumption, a missing file, an unexpected dependency), STOP and surface it.
-Do not improvise around it — return to planning and get agreement first.
-
-When a request is ambiguous, ask clarifying questions instead of guessing.
+Everything below this line is specific to College Crew.
 
 ### Handing work between agents
 
@@ -137,11 +131,6 @@ the separate Stripe sandbox.
 
 ## Conventions
 
-- **Branching:** commit work through a feature branch + PR into `main`, not
-  direct pushes. Direct-to-`main` only when explicitly agreed for a given
-  change (e.g. a quick doc fix). This supersedes the earlier "direct to main
-  is OK" guidance now that branch + PR is the standing convention.
-- **Commits:** small and frequent, present-tense messages ("add booking form").
 - **Module ownership (to minimize merge conflicts — confirm/adjust):**
   - Zach → customer-facing (landing, browse, public profile, booking,
     confirm & pay, customer dashboard, about, blog)
@@ -154,16 +143,13 @@ the separate Stripe sandbox.
 
 ## Guardrails
 
-- **Never commit secrets.** All keys live in `.env.local` (gitignored) and are
-  shared out-of-band, never in the repo.
-- **Watch provider API keys in the shell.** If `ANTHROPIC_API_KEY` is set,
-  Claude Code bills the API instead of the Pro plan — use `/login` to stay on
-  the subscription. Same idea for Codex and its own key.
+- **Never commit secrets — this repo is public.** All keys live in
+  `.env.local` (gitignored), including `apps/web/.env.local`, and are shared
+  out-of-band.
 - **RLS on by default.** Every table has row-level security; customers and
   providers can only read/write their own rows. Admin role bypasses via policy.
 - **Stripe is live in production.** Local and preview environments may use
   test mode, but server and publishable keys must always use the same mode.
-- **No real PII in seed/test data.**
 - **Production indexing is enabled.** `app/layout.tsx` must not add a
   site-wide `noindex`. Keep `app/robots.ts` and `app/sitemap.ts` aligned with
   public routes; never include authenticated dashboards or unlisted providers.
@@ -194,14 +180,12 @@ the separate Stripe sandbox.
 
 ## Agent integrations
 
-When using Stripe, Vercel, Resend, or Supabase, use the MCP server for that
-service (if one exists and is authenticated) for any read or write needed, and
-load any corresponding skill or plugin. Applies to Claude Code and Codex alike.
+Use the MCP server for Stripe, Vercel, Resend, or Supabase where one is
+authenticated, and load the corresponding skill or plugin.
 
 The Stripe MCP is authenticated **read-only** against the live account
 (2026-08-01) — reads are fine, but any write goes through the app's own Stripe
 code paths or the dashboard, never a side channel.
-
 
 ## Pilot scope discipline
 
