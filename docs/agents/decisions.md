@@ -10,6 +10,48 @@ Newest first.
 
 ---
 
+## 2026-08-02 — GitHub MCP writes are 403'd: an App permission problem, not a wall
+
+Probe `trig_01Jn9Uftr1csKntM7nLmjdZD` answered the remaining blocker.
+
+The **full GitHub MCP write toolset is present** — `create_branch`,
+`create_or_update_file`, `create_pull_request`, `push_files`, `delete_file`,
+`merge_pull_request`, `update_pull_request`, `issue_write`,
+`enable_pr_auto_merge`, and more, alongside the read tools.
+
+All three write attempts failed identically:
+
+```
+create_branch:         POST .../git/refs      403 Resource not accessible by integration
+create_or_update_file: PUT  .../contents/...  403 Resource not accessible by integration
+create_pull_request:   POST .../pulls         403 Resource not accessible by integration
+```
+
+**`Resource not accessible by integration` is GitHub telling us the App
+installation lacks the permission scope** — it is not Anthropic blocking the
+operation. Reads work; writes are refused at GitHub's API layer. This also
+explains the earlier `git push` 403: the sandbox proxy authenticates with the
+same App credentials.
+
+**Therefore this is very likely fixable** by the org owner, at
+`https://github.com/organizations/the-college-crew/settings/installations`:
+
+1. Check for a **pending permission request** banner — approving it may be the
+   entire fix.
+2. Confirm **repository access** includes `college-crew-website`.
+3. Confirm **Contents: Read & write** and **Pull requests: Read & write**.
+
+Caveat: an App can only hold permissions it requests. If Anthropic's App is
+read-only by design there is nothing to grant — but it ships `push_files` and
+`merge_pull_request`, so that seems unlikely.
+
+**Until this is resolved:** the Proposer and Planner work fully (they run on
+schedule, reason, and notify the phone — all verified). The Worker cannot
+publish. Do not redesign around a thinking-only system until the App permissions
+have actually been checked.
+
+---
+
 ## 2026-08-02 — Cloud agents CANNOT `git push`; writes go through GitHub MCP
 
 Probe `trig_01CYoGg6hwLt9GGTTgBrFeps` ran end to end and answered definitively.
