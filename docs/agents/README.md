@@ -257,6 +257,11 @@ That last line is the point of the message, and it depends on who is writing:
 |---|---|
 | Planner (6:03 PM) | *"Approve before 11:07 PM and Worker 1 builds it tonight."* |
 | Worker 1 (~11:15 PM) | *"Approve before 4:12 AM and Worker 2 builds it tonight."* |
+| Worker 2 (~4:20 AM) | *"Approve today and tonight's 11:07 PM Worker builds it."* |
+
+Worker 2's row is the fallback's fallback — it only fires if the Planner *and*
+Worker 1 both failed to write the plan. There is no same-night deadline left to
+offer by then, so it names the next one.
 
 Approving is changing one word in the plan's Status. Stating the deadline turns
 a notification into a recoverable day.
