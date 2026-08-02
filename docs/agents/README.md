@@ -82,7 +82,22 @@ to justify a run.
 |---|---|
 | Proposer | Any item is still `proposed`, **or** any plan is awaiting approval. Unhandled work means Zach has not caught up — do not add more. |
 | Planner | No item is `approved` with effort above `S` and no plan yet |
-| Worker | No approved plan is ready to build |
+| Worker | Nothing buildable (see the Worker's trigger conditions below) |
+
+### The Worker's trigger conditions
+
+Build an item when **either** holds:
+
+1. Its plan at `docs/agents/plans/<ID>.md` has **Status: approved**, **or**
+2. The backlog item is **`approved`** with effort **pure `S`** — these skip
+   planning by design, so waiting for a plan means waiting forever.
+
+⚠ Condition 2 is not optional. `S` items never get a plan, so a Worker that
+only looks for approved plans will silently never build them. CC-003 was
+approved on 2026-08-02 and would have sat untouched forever under the
+plan-only rule.
+
+Also always resume an in-progress branch before starting anything new.
 
 The effect: if Zach ignores the system for three days, he returns to exactly the
 stage he left, not to nine unread proposals. **The queue never grows past what
@@ -107,6 +122,35 @@ to ask, so it must never pause for input.
 4. **Stay inside the plan's scope.** The plan's *Out of scope* section is
    binding, not advisory. Finding something else worth fixing is a reason to
    propose it, not to build it.
+
+## Work must survive a dead session
+
+The Worker gets **two scheduled attempts a night**, spaced more than five hours
+apart so the second lands in a fresh usage window. That only helps if a fresh
+zero-context session can continue what the last one started.
+
+So the Worker must:
+
+1. **Commit incrementally to its branch as it goes** — never hold a night's work
+   in an uncommitted working tree. A session that dies mid-task must leave its
+   progress behind.
+2. **Keep a running progress record in the PR description** — what is done, what
+   is next, what is untested. This is what the next session reads first.
+3. **Before starting anything new, look for an existing `agents/` branch with an
+   open PR and resume it.** Finishing started work always beats beginning more.
+4. **Commit partial work before marking anything `blocked`.** A block should
+   cost the diagnosis, not the work already done.
+
+## Every notification leads with what needs Zach
+
+Any routine that notifies — Slack or otherwise — must **open** with open PRs
+awaiting his merge, listed by number and title, before reporting its own work.
+
+Agents cannot merge application code, so PRs accumulate silently unless
+something surfaces them. A nightly build that nobody merges is a queue, not
+progress.
+
+If nothing is awaiting merge, say so in one line and move on.
 
 ## Curator
 
