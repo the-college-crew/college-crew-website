@@ -10,6 +10,23 @@ Newest first.
 
 ---
 
+## 2026-08-02 — REJECTED: CC-005 (cache Browse catalog reads with `"use cache"`)
+
+Caching a query that isn't slow yet adds staleness risk for no gain at pilot
+traffic. At 6 providers in one neighborhood, the Browse catalog reads
+(`getLiveServices()` / `getServiceProviderCounts()`) were never a bottleneck,
+so a `"use cache"` layer optimizes nothing measurable — while introducing a
+window where an admin's service-table toggle doesn't take effect until the
+revalidate interval elapses. Not worth the added staleness for zero performance
+gain at this scale.
+
+If re-proposed, it must show that these catalog reads are an actual measured
+bottleneck at real traffic.
+
+CC-003 and CC-004 from the same trial run were approved.
+
+---
+
 ## 2026-08-02 — RESOLVED: GitHub MCP writes now work
 
 The Claude GitHub App was **not installed on the `the-college-crew` org at all** —
