@@ -170,6 +170,11 @@ the separate Stripe sandbox.
     comment, and should be deleted once it's served its purpose — don't
     leave it in the repo where a later run (by either of us, or another
     agent) can re-trigger the same leak.
+  - **Full playbook: `docs/SHARED_DB_SAFETY.md`** — the live exposure gate that
+    puts a provider on Browse, the sweep query, and the verified FK cleanup
+    order. E2E specs must build their service-role client with
+    `createLocalAdminClient()` from `tests/e2e/support/admin.ts`, which refuses
+    any URL that is not localhost.
 
 ## Claude Code integrations
 

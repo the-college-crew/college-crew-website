@@ -1,13 +1,17 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
 
-import type { BookingStatus, Database, UserRole } from "../../lib/db/types";
+import type { BookingStatus, UserRole } from "../../lib/db/types";
 import {
   getMasterAgreementSnapshot,
   LEGAL_CONTENT_VERSION,
 } from "../../lib/legal/waivers";
+import {
+  createLocalAdminClient,
+  deleteCustomerBookings,
+  runTeardown,
+} from "./support/admin";
 
 const password = "Synthetic-Phase6!Pass9";
 const runId = randomUUID().slice(0, 8);
@@ -22,11 +26,7 @@ const adminEmail = `phase6-admin-${runId}@example.test`;
 const cancelJob = randomUUID();
 const disputeJob = randomUUID();
 
-const admin = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false, autoRefreshToken: false } },
-);
+const admin = createLocalAdminClient();
 
 let customerId: string;
 let providerUserId: string;
@@ -250,14 +250,23 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await admin.from("bookings").delete().eq("customer_id", customerId);
-  await admin.from("provider_services").delete().eq("service_id", serviceId);
-  await admin.from("services").delete().eq("id", serviceId);
-  await admin.from("provider_profiles").delete().eq("id", providerProfileId);
-  await Promise.all([
-    admin.auth.admin.deleteUser(customerId),
-    admin.auth.admin.deleteUser(providerUserId),
-    admin.auth.admin.deleteUser(adminId),
+  await runTeardown([
+    {
+      label: "bookings + booking_payments",
+      run: () => deleteCustomerBookings(admin, customerId),
+    },
+    {
+      label: "provider_services",
+      run: () => admin.from("provider_services").delete().eq("service_id", serviceId),
+    },
+    { label: "services", run: () => admin.from("services").delete().eq("id", serviceId) },
+    {
+      label: "provider_profiles",
+      run: () => admin.from("provider_profiles").delete().eq("id", providerProfileId),
+    },
+    { label: "auth.users customer", run: () => admin.auth.admin.deleteUser(customerId) },
+    { label: "auth.users provider", run: () => admin.auth.admin.deleteUser(providerUserId) },
+    { label: "auth.users admin", run: () => admin.auth.admin.deleteUser(adminId) },
   ]);
 });
 
