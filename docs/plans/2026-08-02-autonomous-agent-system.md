@@ -188,29 +188,44 @@ Claude acts on the repo — nothing to build.
 
 **Caveats:**
 
-- ⚠ **PLAN GATING — verify before building on this.** Claude in Slack switches to
-  the **Claude Tag** experience on **2026-08-03**, and Claude Tag is documented as
-  available on **Team and Enterprise plans, in beta**. Zach is on an individual
-  plan. Channel mentions under Claude Tag are **billed to the organization**;
-  only DMs bill to individual accounts — a different model from the current
-  integration, where each session runs under the mentioning user's own plan
+- **Plan availability — checked 2026-08-02, no blocker.** An earlier draft of
+  this plan worried that the 2026-08-03 Claude Tag switchover would gate this
+  behind a Team plan. It does not. The official docs are explicit: Anthropic is
+  retiring the earlier Claude Code in Slack **for Team and Enterprise workspaces
+  only**, and *"Pro and Max plans: Claude Tag isn't available on individual
+  plans, so this page remains the setup path."*
+
+  The Pro path is also the better fit here: Claude Tag runs `@Claude` as an
+  organization's shared identity with mentions billed to the org, whereas the Pro
+  integration runs **each session under the mentioning user's own account and
+  plan limits** — which is exactly the behavior wanted for Zach and Ari sharing a
+  workspace.
+
+  Prerequisites, all already met except the last: a Pro/Max plan with Claude Code
+  access, Claude Code on the web enabled, GitHub connected with at least one
+  repository, and a Slack account linked to the Claude account.
+
+  **Setup:** a workspace admin installs the Claude app from the Slack App
+  Marketplace → App Home → **Connect** → choose a Routing Mode (`Code only` or
+  `Code + Chat`) → `/invite @Claude` into the channel. Claude joins no channels
+  by default.
+
+  **Bonus:** sessions started this way appear in the normal Claude Code history
+  on `claude.ai/code`, because they are sessions Zach started — which solves the
+  discoverability problem that killed the routine-session approach. Slack also
+  gets action buttons (View Session, **Create PR**, Change Repo) and posts
+  progress updates into the thread.
+
+- ⚠ **Prompt injection via channel context.** The docs warn: *"Claude may follow
+  directions from other messages in the context, so users should make sure to
+  only use Claude in trusted Slack conversations."* `@Claude` reads the
+  surrounding thread, so anything posted in that channel can steer it. Fine for a
+  two-person workspace; revisit before adding people or piping external service
+  alerts into the same channel.
+
+- Other limits: one PR per session, and sessions count against normal plan rate
   limits.
 
-  **Therefore: do not set Slack up before 2026-08-03.** After the switchover,
-  spend ten minutes confirming `@Claude` in a channel actually works on an
-  individual plan. If it is Team-gated, the Team plan is real recurring money for
-  two people — which conflicts with the explicit goal of building this at no
-  additional cost.
-
-  **Fallback if Team-gated:** email (option 3 above). More work, but Zach owns
-  the entire path — Resend, the verified domain, and the
-  `/api/webhooks/resend` route are already his, and nothing can be
-  plan-gated out from under him later.
-
-  Worth noting Claude Tag's capabilities are a genuine step up and align closely
-  with the goal: it remembers context across days, schedules its own follow-ups,
-  checks in proactively, and acts under its own identity. If it is affordable, it
-  is the better answer.
 - Requires a Slack workspace. Free tier is fine, but "one surface" does mean one
   *new* tool.
 - iMessage was considered and rejected: Apple has no bot platform, so it would
