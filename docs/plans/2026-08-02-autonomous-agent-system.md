@@ -126,10 +126,22 @@ means it won't be.
 
 Options, ranked:
 
-1. **Talk to Claude in the phone app** — "approve CC-002, reject CC-001
-   because…" and a cloud session edits `backlog.md` and `decisions.md`. Zero
-   infrastructure, available immediately. Downside: Zach must open the app
-   rather than being pulled in by a notification. **Start here.**
+1. **Notification out, phone app back** — the Proposer pushes a notification
+   when the day's items are ready; Zach taps it and replies in prose ("approve
+   CC-002, reject CC-001 because…"); a cloud session edits `backlog.md` and
+   `decisions.md`. **This is the chosen path.** Zero infrastructure, available
+   immediately, and no secrets — which matters, because sending real email
+   needs a Resend API key and the environment variable field is plaintext.
+
+   **Verified 2026-08-02:** cloud routines send notifications natively and they
+   reached Zach's phone (two arrived during the probe runs). This removes the
+   only real objection to app-based approval, and makes email a nice-to-have
+   rather than a prerequisite.
+
+   Remaining downsides, accepted: each approval spins up a cloud session, so it
+   costs usage where a file edit costs nothing; it takes 30–60s rather than
+   being instant; and prose is ambiguous about *what* even while it is better at
+   *why*. Mitigation: always refer to items by ID (`CC-002`), never by position.
 2. **Digest email with one-tap approve/reject links** hitting a signed API route
    in the app. Lowest friction of any option; loses the prose reasoning.
 3. **Full email round-trip** — the model Zach's uncle uses, and the eventual
