@@ -10,6 +10,24 @@ Newest first.
 
 ---
 
+## 2026-08-02 — REJECTED (deferred): CC-001 (split Preview off the production Supabase project)
+
+Too big for this week. Standing up a second Supabase project, reconciling the
+drift between the 118 files in `supabase/migrations/` and the live schema,
+applying them, seeding synthetic data, and repointing the three Preview
+variables is `Effort: L` — and the reconciliation step is unscoped: it could be
+an afternoon or a week, and there's no way to know until production's schema is
+dumped and diffed. Not something to start this week.
+
+The underlying exposure is real and still stands: every preview deployment runs
+against the production database with the service-role key that bypasses RLS —
+the most likely mechanism behind synthetic providers reaching the live Browse
+page. So this is deferred, not dismissed. If re-proposed, the reconciliation
+must be scoped first (dump prod schema, diff it against `supabase/migrations/`,
+size the delta) so the work provably fits a week.
+
+---
+
 ## 2026-08-02 — REJECTED: CC-005 (cache Browse catalog reads with `"use cache"`)
 
 Caching a query that isn't slow yet adds staleness risk for no gain at pilot
