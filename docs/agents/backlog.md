@@ -101,6 +101,7 @@ lift turns out to be small.
 **Status:** approved
 **Proposed:** 2026-08-02 — Proposer (trial run)
 **Effort:** S/M
+**Plan:** docs/agents/plans/CC-004.md
 
 `app/(customer)/providers/[id]/page.tsx` exports one static
 `metadata: Metadata = { title: "Provider profile" }` for every provider —
