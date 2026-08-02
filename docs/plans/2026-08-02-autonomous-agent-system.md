@@ -154,7 +154,106 @@ Options, ranked:
    keeps out of the environment. Rejected for now.
 
 **All four require an agent to write to GitHub**, so they are gated on the same
-MCP-write question as the Worker.
+MCP-write question as the Worker. *(Resolved 2026-08-02 — writes work.)*
+
+### Chosen delivery surface: Slack
+
+**Superseded option 1 above.** After the first Proposer run, the app-based path
+proved too fragmented in practice: notification → GitHub PR → start a new cloud
+session. Three surfaces for one decision. Worse, **routine-created sessions do
+not appear in the Claude iOS app's Code tab** — only on web — so the notification
+was the only way in, and notifications are ephemeral.
+
+Slack collapses this to one place.
+
+**Claude Code runs in Slack natively.** Mentioning `@Claude` in a channel with a
+coding task creates a Claude Code session on the web, running under the
+mentioning user's own account, plan limits, and connected repositories. It picks
+the repo from conversation context. Channels only — not DMs.
+
+**This is why Slack beats email.** The expensive part of the email design is the
+reply-parsing layer: an inbound webhook, prose interpretation, translating that
+into file edits, and a GitHub token living in the app. Roughly a day of work and
+a new secret to manage. Slack already has that layer. Zach replies in-thread and
+Claude acts on the repo — nothing to build.
+
+**The loop:**
+
+1. Proposer posts its proposals to an `#agents` channel (routines inherit
+   account connectors, so this is configuration, not code)
+2. Slack notifies Zach's phone
+3. He replies in-thread: *"@Claude approve CC-003, reject CC-004 — SEO doesn't
+   matter until after the pilot"*
+4. Claude edits `backlog.md` and `decisions.md`, opens the PR
+
+**Caveats:**
+
+- **Plan availability — checked 2026-08-02, no blocker.** An earlier draft of
+  this plan worried that the 2026-08-03 Claude Tag switchover would gate this
+  behind a Team plan. It does not. The official docs are explicit: Anthropic is
+  retiring the earlier Claude Code in Slack **for Team and Enterprise workspaces
+  only**, and *"Pro and Max plans: Claude Tag isn't available on individual
+  plans, so this page remains the setup path."*
+
+  The Pro path is also the better fit here: Claude Tag runs `@Claude` as an
+  organization's shared identity with mentions billed to the org, whereas the Pro
+  integration runs **each session under the mentioning user's own account and
+  plan limits** — which is exactly the behavior wanted for Zach and Ari sharing a
+  workspace.
+
+  Prerequisites, all already met except the last: a Pro/Max plan with Claude Code
+  access, Claude Code on the web enabled, GitHub connected with at least one
+  repository, and a Slack account linked to the Claude account.
+
+  **Setup:** a workspace admin installs the Claude app from the Slack App
+  Marketplace → App Home → **Connect** → choose a Routing Mode (`Code only` or
+  `Code + Chat`) → `/invite @Claude` into the channel. Claude joins no channels
+  by default.
+
+  **Bonus:** sessions started this way appear in the normal Claude Code history
+  on `claude.ai/code`, because they are sessions Zach started — which solves the
+  discoverability problem that killed the routine-session approach. Slack also
+  gets action buttons (View Session, **Create PR**, Change Repo) and posts
+  progress updates into the thread.
+
+- ⚠ **Prompt injection via channel context.** The docs warn: *"Claude may follow
+  directions from other messages in the context, so users should make sure to
+  only use Claude in trusted Slack conversations."* `@Claude` reads the
+  surrounding thread, so anything posted in that channel can steer it. Fine for a
+  two-person workspace; revisit before adding people or piping external service
+  alerts into the same channel.
+
+- Other limits: one PR per session, and sessions count against normal plan rate
+  limits.
+
+- Requires a Slack workspace. Free tier is fine, but "one surface" does mean one
+  *new* tool.
+- iMessage was considered and rejected: Apple has no bot platform, so it would
+  mean SMS via a third party — losing threading, formatting, and the ability for
+  Claude to act at all.
+
+### Shared workspace with Ari
+
+A single College Crew workspace works, and is worth doing:
+
+- **Sessions bill to the mentioning user.** Each `@Claude` runs under that
+  person's own account and plan limits, so Ari cannot drain Zach's usage and
+  vice versa. Ari needs their own Claude subscription to use it.
+- **Shared visibility.** Today neither dev can see what the other's agents are
+  doing. A common `#agents` channel fixes that at zero cost.
+- Ari's separate RuFlo/VPS setup stays separate; Slack is just where both can
+  surface what happened.
+- Personal workspaces are independent — Zach can run his own alongside this one
+  and switch between them in the same app.
+
+> **Rule, carried over from `CLAUDE.md`: Slack is a notification and discussion
+> surface, never the source of truth.** Decisions still get written to
+> `decisions.md`; state still lives in git. Letting Slack hold state would
+> recreate exactly the problem the RuFlo SQLite bridge caused — invisible to
+> git, unreadable by the other agent, scoped to one tool.
+
+Sources: [Claude Code in Slack](https://code.claude.com/docs/en/slack) ·
+[What is Claude Tag?](https://support.claude.com/en/articles/15594475-what-is-claude-tag)
 
 **On eventually removing the human:** graduate by *class of change* rather than
 removing the gate. Auto-approve dependency bumps, test additions, and doc fixes
