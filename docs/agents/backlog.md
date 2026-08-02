@@ -38,7 +38,7 @@ regardless, so the work has value even if the agent system never ships.
 
 ## CC-002 — Give Preview its own Resend key
 
-**Status:** proposed
+**Status:** approved
 **Proposed:** 2026-08-02 — seeded by hand, not by an agent
 **Effort:** S
 
