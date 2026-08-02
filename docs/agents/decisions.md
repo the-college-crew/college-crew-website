@@ -10,7 +10,31 @@ Newest first.
 
 ---
 
-## 2026-08-02 — GitHub MCP writes are 403'd: an App permission problem, not a wall
+## 2026-08-02 — RESOLVED: GitHub MCP writes now work
+
+The Claude GitHub App was **not installed on the `the-college-crew` org at all** —
+the org's installed-apps page listed only Supabase and Vercel. The earlier
+GitHub connection was an OAuth grant (account-scoped, read-only), which is why
+reads succeeded and every write 403'd.
+
+Zach installed the App with read **and write** access. Recheck probe
+`trig_01DLpnuBkD7F3MQ1aa7p88By` then confirmed, end to end:
+
+- `mcp__github__create_branch` — **succeeded**
+- `mcp__github__create_or_update_file` — **succeeded**
+- `mcp__github__create_pull_request` — **succeeded** (PR #120, since closed)
+
+**Cloud agents can publish work to GitHub.** The Worker is unblocked, and so is
+every approval path that needs an agent to edit `backlog.md`.
+
+`git push` remains blocked (the sandbox proxy 403s regardless) — that part of
+the finding below still stands. **Always use GitHub MCP tools, never git push.**
+
+The entry below is kept for the diagnostic trail. Its conclusion is superseded.
+
+---
+
+## 2026-08-02 — [SUPERSEDED] GitHub MCP writes are 403'd: an App permission problem, not a wall
 
 Probe `trig_01Jn9Uftr1csKntM7nLmjdZD` answered the remaining blocker.
 
