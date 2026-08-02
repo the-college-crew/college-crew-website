@@ -53,13 +53,15 @@ a phone on GitHub's mobile editor in under a minute, or it will not happen.
    credentials by design. If a task seems to need real ones, mark it `blocked`
    and say so — do not work around it.
 6. **One PR per plan.** Branch from `main`, never commit to it directly.
-7. **Proposers must land their proposals on `main`, not leave them in a PR.**
-   Open the PR, then **merge it yourself**. `main` requires a pull request but
-   needs **zero approving reviews**, so this works without a human.
+7. **Self-merge any PR whose diff touches nothing outside `docs/agents/`.**
+   Open the PR, wait for checks, then **merge it yourself**. `main` requires a
+   pull request but needs **zero approving reviews**, so this works without a
+   human. Applies to every agent — Proposers landing proposals, approval
+   sessions recording decisions, curators compacting the log.
 
-   **Bound it strictly: self-merge only when the diff touches nothing outside
-   `docs/agents/`.** If any other path appears in the diff, stop and leave the
-   PR open for Zach.
+   **The bound is strict and absolute: if even one path outside
+   `docs/agents/` appears in the diff, do not merge.** Leave the PR open for
+   Zach and say so. No exceptions for "it's only a small change elsewhere."
 
    Why: proposals sitting in an unmerged PR are invisible to anything reading
    `main` — including `@Claude` in Slack, which is where approval happens. On
