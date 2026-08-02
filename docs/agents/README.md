@@ -237,6 +237,46 @@ progress.
 
 If nothing is awaiting merge, say so in one line and move on.
 
+### Never invent something waiting on Zach
+
+A notification may ask for approval **only on something actually unapproved.**
+Before writing any line asking Zach to approve, establish the item's real state
+by reading **both**:
+
+- the item's `**Status:**` in `backlog.md`, and
+- the `**Status:**` line inside `plans/<ID>.md` — **a plan file existing is not
+  the same as that plan being approved.**
+
+Those are different questions. The Planner's skip condition turns on whether a
+plan *exists*; what needs Zach turns on whether it is *approved*. Checking the
+first and reporting on the second is how a routine ends up asking for approval
+that already happened.
+
+Then state which is true, naming the item:
+
+| Real state | What to write |
+|---|---|
+| Item `approved`, effort pure `S` | *"CC-003 is approved and buildable — Worker 1 builds it tonight, nothing needed from you."* |
+| Plan `Status: approved` | *"CC-004's plan is approved — Worker 1 builds it tonight."* |
+| Plan `Status: proposed` | *"CC-004's plan needs approval — approve before 11:07 PM and Worker 1 builds it tonight."* |
+| Nothing pending | *"Nothing needs your judgment beyond the PRs above."* |
+
+⚠ On 2026-08-02 the Planner closed an otherwise-correct skip notice with
+*"approving CC-003/CC-004 for the Worker whenever you're ready."* Both had been
+approved hours earlier — the backlog items at 1:53 PM (PR #125), CC-004's plan
+at 4:19 PM (PR #136). Its run-log table recorded only `Plan exists? yes`, never
+the plan's `Status:`, so it defaulted to asking. The message contradicted its
+own body, which had already reported both as `approved`.
+
+This matters more than a cosmetic slip: the entire reason notifications go to
+Slack is that **anything reaching Zach's phone genuinely needs him.** A routine
+that manufactures work trains him to skim, and a skimmed notification is
+indistinguishable from one that never fired — which is the exact failure the
+"silence must mean failure" rule exists to prevent.
+
+**When a run needs nothing from Zach, say so plainly and stop.** "Nothing needs
+your judgment" is a complete, correct, useful notification.
+
 ### Every plan created gets its own Slack post
 
 Whoever writes a plan — the Planner, or a Worker running step 1 — must post it
