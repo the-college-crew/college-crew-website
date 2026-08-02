@@ -1,4 +1,8 @@
-# College Crew — CLAUDE.md
+# College Crew — agent instructions
+
+> This one file is the project's instructions for **every** coding agent.
+> `AGENTS.md` is a symlink to it, so Claude Code and Codex read the same rules
+> and cannot drift apart. Edit this file; both names follow.
 
 Student-only home-services marketplace (named "College Crew"). A curated,
 hyperlocal web app connecting neighbors with verified student providers (18+)
@@ -42,6 +46,18 @@ Do not improvise around it — return to planning and get agreement first.
 
 When a request is ambiguous, ask clarifying questions instead of guessing.
 
+### Handing work between agents
+
+Claude Code and Codex share this repo but not a memory. **Git is the sync
+layer.** When work spans a session, an agent, or a day, write the plan to
+`docs/plans/` and commit it — see `docs/plans/README.md` for the convention.
+
+Do not route cross-agent state through a database, a daemon, or a tool-specific
+memory store. That was the previous arrangement (a RuFlo SQLite bridge with a
+hardcoded path); it was invisible to git, unreadable by the other agent, and
+scoped to one project's directory. A committed markdown file is legible to both
+agents, to both devs, and to a future venture that shares neither.
+
 ---
 
 ## Stack
@@ -54,7 +70,7 @@ When a request is ambiguous, ask clarifying questions instead of guessing.
 
 > **Framework versions are newer than your training data.** Next.js 16 / React
 > 19 have breaking changes (async request APIs, caching defaults, file
-> conventions). `AGENTS.md` and `node_modules/next/dist/docs/` are
+> conventions). `node_modules/next/dist/docs/` is
 > **authoritative over anything you remember** — read the relevant guide before
 > writing route, server-component, or data-fetching code.
 
@@ -140,9 +156,9 @@ the separate Stripe sandbox.
 
 - **Never commit secrets.** All keys live in `.env.local` (gitignored) and are
   shared out-of-band, never in the repo.
-- **Watch `ANTHROPIC_API_KEY`:** if either dev has it set in their shell,
-  Claude Code bills the API instead of the Pro plan. Use `/login` to stay on
-  the subscription.
+- **Watch provider API keys in the shell.** If `ANTHROPIC_API_KEY` is set,
+  Claude Code bills the API instead of the Pro plan — use `/login` to stay on
+  the subscription. Same idea for Codex and its own key.
 - **RLS on by default.** Every table has row-level security; customers and
   providers can only read/write their own rows. Admin role bypasses via policy.
 - **Stripe is live in production.** Local and preview environments may use
@@ -168,7 +184,7 @@ the separate Stripe sandbox.
   - A one-off verification script (an E2E test written to check a single
     feature once, not meant to join the standing suite) must say so in a
     comment, and should be deleted once it's served its purpose — don't
-    leave it in the repo where a later run (by either of us, or another
+    leave it in the repo where a later run (by either dev, or another
     agent) can re-trigger the same leak.
   - **Full playbook: `docs/SHARED_DB_SAFETY.md`** — the live exposure gate that
     puts a provider on Browse, the sweep query, and the verified FK cleanup
@@ -176,9 +192,15 @@ the separate Stripe sandbox.
     `createLocalAdminClient()` from `tests/e2e/support/admin.ts`, which refuses
     any URL that is not localhost.
 
-## Claude Code integrations
+## Agent integrations
 
-When using Stripe, Vercel, Resend, or Supabase in Claude Code utilize MCP (if it exists) for any necessary read or write needed. If applicable, load any corresponding skill/plugins downloaded.
+When using Stripe, Vercel, Resend, or Supabase, use the MCP server for that
+service (if one exists and is authenticated) for any read or write needed, and
+load any corresponding skill or plugin. Applies to Claude Code and Codex alike.
+
+The Stripe MCP is authenticated **read-only** against the live account
+(2026-08-01) — reads are fine, but any write goes through the app's own Stripe
+code paths or the dashboard, never a side channel.
 
 
 ## Pilot scope discipline
