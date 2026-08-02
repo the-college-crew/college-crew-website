@@ -53,6 +53,20 @@ a phone on GitHub's mobile editor in under a minute, or it will not happen.
    credentials by design. If a task seems to need real ones, mark it `blocked`
    and say so — do not work around it.
 6. **One PR per plan.** Branch from `main`, never commit to it directly.
+7. **Proposers must land their proposals on `main`, not leave them in a PR.**
+   Open the PR, then **merge it yourself**. `main` requires a pull request but
+   needs **zero approving reviews**, so this works without a human.
+
+   **Bound it strictly: self-merge only when the diff touches nothing outside
+   `docs/agents/`.** If any other path appears in the diff, stop and leave the
+   PR open for Zach.
+
+   Why: proposals sitting in an unmerged PR are invisible to anything reading
+   `main` — including `@Claude` in Slack, which is where approval happens. On
+   2026-08-02 this cost a round trip: Claude was asked to summarize CC-003 to
+   CC-005 and correctly reported they did not exist, because they were stranded
+   on an unmerged branch. Everything lands as `proposed`, and nothing acts on a
+   `proposed` item, so merging early is safe.
 7. **If reality diverges from the plan, stop and mark it `blocked`.** Do not
    improvise. Same rule the humans follow.
 
