@@ -72,6 +72,42 @@ a phone on GitHub's mobile editor in under a minute, or it will not happen.
 7. **If reality diverges from the plan, stop and mark it `blocked`.** Do not
    improvise. Same rule the humans follow.
 
+## Backpressure — the queue must not grow while Zach isn't looking
+
+Every routine is scheduled, and every routine **no-ops quietly when there is
+nothing for it to do.** Silence is a valid, correct outcome. Never invent work
+to justify a run.
+
+| Routine | Skips entirely when |
+|---|---|
+| Proposer | Any item is still `proposed`, **or** any plan is awaiting approval. Unhandled work means Zach has not caught up — do not add more. |
+| Planner | No item is `approved` with effort above `S` and no plan yet |
+| Worker | No approved plan is ready to build |
+
+The effect: if Zach ignores the system for three days, he returns to exactly the
+stage he left, not to nine unread proposals. **The queue never grows past what
+he has handled.** This is deliberate — the scarce resource is his judgment, not
+ideas.
+
+When a routine skips, say so plainly in one line and stop.
+
+## Worker autonomy — no questions mid-flight
+
+Approving a plan approves the approach. The Worker runs unattended with no human
+to ask, so it must never pause for input.
+
+1. **Never ask a question mid-task.** There is nobody there.
+2. **On any divergence from the plan — a wrong assumption, a missing file, an
+   unexpected dependency — stop and mark the item `blocked`**, with a line
+   saying what would unblock it. Do not improvise a way around it. This is the
+   same rule the humans follow.
+3. **Never self-merge a PR touching application code.** Rule 7 permits
+   self-merge only for diffs confined to `docs/agents/`. Every code PR waits for
+   Zach.
+4. **Stay inside the plan's scope.** The plan's *Out of scope* section is
+   binding, not advisory. Finding something else worth fixing is a reason to
+   propose it, not to build it.
+
 ## Curator
 
 `decisions.md` grows without bound and will eventually crowd the context
