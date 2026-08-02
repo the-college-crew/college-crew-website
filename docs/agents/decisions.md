@@ -10,6 +10,63 @@ Newest first.
 
 ---
 
+## 2026-08-02 — Cloud agents CANNOT `git push`; writes go through GitHub MCP
+
+Probe `trig_01CYoGg6hwLt9GGTTgBrFeps` ran end to end and answered definitively.
+
+`origin` in the sandbox is not GitHub. It is a local git proxy
+(`http://127.0.0.1:41729/git/...`) that returns **HTTP 403 on write**, with no
+credential helper configured. Two attempts, identical failure. This is a
+platform restriction, not a misconfiguration — no environment setting works
+around it.
+
+`gh` is not installed either. The environment instead exposes a **GitHub MCP
+server**, so branch/commit/PR creation happens through the API.
+
+**Consequence for the Worker:** it commits locally, then publishes via GitHub
+MCP tools. It must never rely on `git push`.
+
+Notably the probe ran with `clear_mcp_connections: true` and still had GitHub
+MCP available — that server comes from the platform, not from Zach's account
+connectors, so stripping Gmail and Drive does not break the Worker.
+
+Other facts from the same run:
+
+- Repo checkout: `/home/user/college-crew-website` — one level below where the
+  setup script runs. A setup script could locate it with a search.
+- Git identity reported as `Claude <noreply@anthropic.com>`, **not** the
+  `College Crew Agent` identity configured in the setup script and env vars.
+  Either the script did not apply or the platform overrides it. Unresolved;
+  cosmetic.
+- `npm install` from the repo root: ~41s, 1038 packages. Cheap enough per
+  firing; no caching needed.
+- Outbound HTTPS works (npm registry returned 200).
+- npm reported 13 vulnerabilities (12 moderate, 1 high), matching Dependabot
+  alert #26.
+
+---
+
+## 2026-08-02 — `npm run typecheck` cannot pass on a fresh clone
+
+The probe reported six missing image modules under `apps/web/public/` and
+concluded assets were missing from the repo. **That diagnosis was wrong** — all
+six are tracked and present.
+
+The real cause: `next-env.d.ts` is gitignored (`.gitignore:63`) and generated
+by `next build` / `next dev`. It carries
+`/// <reference types="next/image-types/global" />`, the declaration that makes
+`.jpg` imports legal in TypeScript, and it also imports `./.next/types/
+routes.d.ts`, which only exists after a build.
+
+So on any fresh checkout, `tsc` reports every image import as a missing module
+until a build has run.
+
+**How to apply:** any routine that runs `npm run typecheck` must run a build
+first, or skip typecheck entirely. Without this an agent will conclude the repo
+is broken and "fix" imports that were never wrong. Applies to CI too.
+
+---
+
 ## 2026-08-02 — Agent commit identity is separate from Zach's
 
 Cloud agents commit as `College Crew Agent <agent@thecollegecrew.com>`, not as

@@ -405,17 +405,22 @@ Worker degrades to writing patch files.
 
 ## Open questions
 
-- **Can cloud agents push? STILL UNKNOWN.** Two probes have run
-  (`trig_01SH7w2ngur67XzMhZEt33pE`, `trig_01DNdqD1vrkGdPzFbpjuz8r9`) and neither
-  produced a branch — but **neither was a valid test.** The second died in the
-  setup script (see above) before Claude Code launched; the first ran in an
-  environment with no git identity at all. Re-probe once the corrected setup
-  script is in place. Blocks Phase 2.
+- ~~Can cloud agents push?~~ **ANSWERED 2026-08-02: no.** `git push` returns 403
+  from the sandbox's local git proxy. Writes must go through the GitHub MCP
+  server. See `docs/agents/decisions.md`. Phase 2 is unblocked, but the Worker
+  design changes.
+- **Does GitHub MCP actually permit writes?** The probe confirmed the server is
+  *present* but only exercised `git push`, which failed. Whether MCP can create
+  a branch, commit, and open a PR is **untested** — and it is now the single
+  remaining blocker for the Worker. Next probe should test exactly this and
+  nothing else.
 - **Routine output is invisible outside the claude.ai UI.** The RemoteTrigger
   API exposes list/get/create/update/run and returns no session transcript, so
-  neither Claude Code locally nor Codex can read what a routine did. **Every
-  real routine must commit its own run log into the repo** or Zach is the only
-  one who can see what happened. Design this in from the start.
+  neither Claude Code locally nor Codex can read what a routine did. Three
+  probes required hand-relaying transcripts through Zach before this was
+  understood. **Every real routine must publish its own run log** — and since
+  `git push` is blocked, that publication has to go through GitHub MCP too.
+  Design this in from the start.
 - **What triggers a proposal?** Should the Proposer read open PRs, issues, and
   recent commits for context, or work only from the repo state? *Zach decides.*
 - **Codex's role.** Currently a daytime fallback when Claude usage runs out. It
