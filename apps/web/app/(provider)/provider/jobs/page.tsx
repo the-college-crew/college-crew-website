@@ -69,6 +69,7 @@ type JobRow = {
     subtotal_cents: number;
     total_platform_fee_cents: number;
     remaining_balance_cents: number;
+    tip_cents: number;
     status: string;
   } | null;
 };
@@ -133,7 +134,7 @@ export default async function ProviderJobsPage({
          customer:profiles!bookings_customer_id_fkey(full_name),
          quote_estimate:booking_quote_provider_estimates(estimated_minutes),
          invoice:booking_invoices(subtotal_cents, total_platform_fee_cents,
-           remaining_balance_cents, status)`,
+           remaining_balance_cents, tip_cents, status)`,
       )
       .eq("provider_id", profile.id)
       .in("status", [
@@ -338,7 +339,8 @@ function ProviderJobsView({
                     <p className="mt-2 text-sm font-semibold text-quad-700">
                       {formatMoney(
                         job.invoice.subtotal_cents -
-                          job.invoice.total_platform_fee_cents,
+                          job.invoice.total_platform_fee_cents +
+                          job.invoice.tip_cents,
                       )}{" "}
                       <span className="text-xs font-normal text-mist">
                         your payout

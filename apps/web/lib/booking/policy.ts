@@ -25,6 +25,14 @@ export const DEFAULT_RESPONSE_WINDOW_HOURS = 3;
 export const NOTICE_HOUR_PRESETS = [3, 6, 12, 24, 48, 72, 168] as const;
 export const MINIMUM_NOTICE_HOURS = { min: 3, max: 168, default: 24 } as const;
 
+/**
+ * Optional invoice tip. The provider receives 100% of it: the tip is never part
+ * of the invoice subtotal, so no platform fee is ever derived from it. The
+ * ceiling mirrors the `booking_invoices_tip_valid` CHECK.
+ */
+export const TIP_PRESETS_CENTS = [500, 1_000, 2_000] as const;
+export const MAX_TIP_CENTS = 50_000;
+
 export const INITIAL_PAYMENT_WINDOW_HOURS = 12;
 export const CUSTOMER_REFUND_NOTICE_HOURS = 12;
 export const INVOICE_REVIEW_HOURS = 24;
@@ -57,6 +65,18 @@ export function roundPositiveRatio(numerator: number, denominator: number) {
     throw new RangeError("Ratio inputs must be positive.");
   }
   return Math.floor((numerator + Math.floor(denominator / 2)) / denominator);
+}
+
+/**
+ * Coerce anything a form or client can hand us into a usable tip in cents.
+ * A tip is a courtesy, not a gate, so garbage becomes "no tip" and an
+ * over-large amount is clamped rather than rejected — the same rule the
+ * `begin_balance_payment` RPC applies server-side.
+ */
+export function normalizeTipCents(input: unknown): number {
+  const value = typeof input === "string" ? Number(input) : input;
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+  return Math.min(Math.max(Math.trunc(value), 0), MAX_TIP_CENTS);
 }
 
 export function isHourlyRateValid(rateCents: number) {

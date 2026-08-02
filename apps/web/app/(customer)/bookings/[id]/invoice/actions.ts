@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
+import { normalizeTipCents } from "@/lib/booking/policy";
 import { requestOperationMessage } from "@/lib/booking/requests";
 import {
   confirmBalancePaymentIntent,
@@ -80,7 +81,7 @@ async function loadReviewableInvoice(bookingId: string, userId: string) {
   }
   const { data: invoice } = await supabase
     .from("booking_invoices")
-    .select("id, status, remaining_balance_cents")
+    .select("id, status, remaining_balance_cents, tip_cents")
     .eq("booking_id", bookingId)
     .maybeSingle();
   if (!invoice) return { error: "That invoice no longer exists." as const };
@@ -100,6 +101,8 @@ export async function confirmInvoiceBalance(
   // Existing jobs remain finishable while new requests are rolled back.
   const user = await requireUser();
   const bookingId = z.string().uuid().parse(formData.get("bookingId"));
+  // The tip is optional by design: a missing or unparseable value is no tip.
+  const tipCents = normalizeTipCents(formData.get("tipCents"));
 
   const loaded = await loadReviewableInvoice(bookingId, user.id);
   if ("error" in loaded) return { error: loaded.error };
@@ -108,7 +111,9 @@ export async function confirmInvoiceBalance(
   const supabase = await createClient();
   const admin = createAdminClient();
 
-  if (invoice.remaining_balance_cents === 0) {
+  // A tip on an otherwise-settled invoice is still a real charge, so only a
+  // genuinely zero total takes the no-Stripe path.
+  if (invoice.remaining_balance_cents === 0 && tipCents === 0) {
     const { error } = await supabase.rpc("settle_zero_balance_invoice", {
       p_invoice_id: invoice.id,
     });
@@ -120,7 +125,10 @@ export async function confirmInvoiceBalance(
   }
 
   const { data: begun, error: beginError } = await supabase
-    .rpc("begin_balance_payment", { p_invoice_id: invoice.id })
+    .rpc("begin_balance_payment", {
+      p_invoice_id: invoice.id,
+      p_tip_cents: tipCents,
+    })
     .maybeSingle();
   if (beginError || !begun) {
     return {
@@ -201,11 +209,13 @@ export async function recoverInvoicePayment(
   const loaded = await loadReviewableInvoice(bookingId, user.id);
   if ("error" in loaded) return { error: loaded.error };
   const { booking, invoice } = loaded;
-  if (invoice.remaining_balance_cents === 0) {
+  if (invoice.remaining_balance_cents + invoice.tip_cents === 0) {
     return { error: "There’s no remaining balance to pay." };
   }
 
   const supabase = await createClient();
+  // Omitting p_tip_cents keeps the tip the customer already chose, so recovery
+  // re-charges exactly what they authorized.
   const { data: reset, error: resetError } = await supabase
     .rpc("reset_balance_payment_for_retry", { p_invoice_id: invoice.id })
     .maybeSingle();
