@@ -61,7 +61,7 @@ this is just bringing Resend in line with an existing pattern.
 
 ## CC-003 — Surface the cancellation policy on the provider profile page, not just at confirm
 
-**Status:** proposed
+**Status:** approved
 **Proposed:** 2026-08-02 — Proposer (trial run)
 **Effort:** S
 
@@ -98,7 +98,7 @@ lift turns out to be small.
 
 ## CC-004 — Give provider profile pages real metadata and Service structured data
 
-**Status:** proposed
+**Status:** approved
 **Proposed:** 2026-08-02 — Proposer (trial run)
 **Effort:** S/M
 
@@ -132,7 +132,7 @@ retrofit once there are dozens of provider pages.
 
 ## CC-005 — Cache the Browse page's catalog reads with Next 16's `"use cache"`
 
-**Status:** proposed
+**Status:** rejected
 **Proposed:** 2026-08-02 — Proposer (trial run)
 **Effort:** S
 
