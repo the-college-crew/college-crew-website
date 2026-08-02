@@ -97,7 +97,10 @@ only looks for approved plans will silently never build them. CC-003 was
 approved on 2026-08-02 and would have sat untouched forever under the
 plan-only rule.
 
-Also always resume an in-progress branch before starting anything new.
+Always resume genuinely unfinished work before starting anything new — but note
+that an open PR is not the test. See "Work must survive a dead session" below:
+the signal is whether the item's status is `in-progress`, since completed work
+sits in an open PR for as long as it takes Zach to merge it.
 
 The effect: if Zach ignores the system for three days, he returns to exactly the
 stage he left, not to nine unread proposals. **The queue never grows past what
@@ -136,8 +139,20 @@ So the Worker must:
    progress behind.
 2. **Keep a running progress record in the PR description** — what is done, what
    is next, what is untested. This is what the next session reads first.
-3. **Before starting anything new, look for an existing `agents/` branch with an
-   open PR and resume it.** Finishing started work always beats beginning more.
+3. **Before starting anything new, look for genuinely unfinished work and resume
+   it.** Finishing started work always beats beginning more.
+
+   ⚠ **An open PR does not mean unfinished.** Agents cannot merge application
+   code, so completed work sits in an open PR waiting for Zach — possibly for
+   days. The signal is the **backlog item's status**, not the PR's state:
+
+   - Item is **`in-progress`** → genuinely unfinished. Resume it.
+   - Item is **`done`**, or its PR description says the work is complete →
+     finished, just awaiting Zach's merge. **Leave it alone** and move to the
+     next buildable item.
+
+   Getting this wrong means a Worker re-opens finished work instead of building
+   the next thing, and the queue stops moving while looking busy.
 4. **Commit partial work before marking anything `blocked`.** A block should
    cost the diagnosis, not the work already done.
 
