@@ -327,13 +327,36 @@ branch-hour.
 
 ### Everything else needing the same split
 
-1. **Vercel Preview env vars → staging.** Biggest risk reduction, smallest
-   effort. Today every agent-pushed branch previews against production. Do this
-   even if nothing else in this plan ships.
-2. **Resend** — agent-triggered email hits real inboxes. Test key or sandbox
-   domain.
-3. **Stripe webhooks** — separate endpoint and `STRIPE_WEBHOOK_SECRET` for the
-   sandbox. `.env.local` is already on test keys; confirm Vercel Preview is too.
+**Verified 2026-08-02 via `vercel env ls` — this is measured, not assumed.**
+
+| Var | Scope today | Verdict |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Preview, Production | ❌ shared |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Preview, Production | ❌ shared |
+| `SUPABASE_SERVICE_ROLE_KEY` | Preview, Production | ❌ **shared — RLS bypass** |
+| `RESEND_API_KEY` | Preview, Production | ❌ shared |
+| `OPENAI_API_KEY` | Preview, Production | ⚠ shared (cost only) |
+| `STRIPE_SECRET_KEY` | separate Preview + Production | ✅ split |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | separate Preview + Production | ✅ split |
+| `STRIPE_WEBHOOK_SECRET` | separate Preview + Production | ✅ split |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | Production only | ⚠ no Preview entry |
+| `NEXT_PUBLIC_SITE_URL`, `EMAIL_FROM`, `BOOKING_CRON_SECRET`, `FOUNDER_OPERATIONS_EMAILS` | separate per env | ✅ split |
+
+**This is a live exposure in the current workflow, independent of this plan.**
+Every preview deployment — every branch, every PR, Zach's or Ari's — runs
+against the **production** Supabase project using the service-role key that
+bypasses RLS, and can send real email with the production Resend key. This is
+the most likely mechanism behind synthetic providers reaching the live Browse
+page twice.
+
+Priority order:
+
+1. **Supabase Preview vars → staging project.** Highest value; fixes a
+   real exposure that exists today with or without agents.
+2. **Resend** — give Preview its own key or a sandbox domain so a preview
+   deploy cannot email a real customer.
+3. **Stripe** — already correct. Model the other two on it. Optionally add a
+   Preview `STRIPE_CONNECT_WEBHOOK_SECRET`.
 4. **Supabase Edge Functions** — the moderation function deploys per project;
    staging needs its own copy.
 
