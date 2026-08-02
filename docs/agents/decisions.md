@@ -218,3 +218,33 @@ Related: the current bottleneck is provider Stripe onboarding (6 providers, 22
 offerings blocked on it), which is a people problem no agent system solves.
 
 ---
+## 2026-08-02 — CC-002 done by hand: Preview no longer holds the Resend key
+
+`RESEND_API_KEY` is now scoped **Production only**. Zach unchecked Preview in
+the Vercel dashboard; verified with `vercel env ls`. `OPENAI_API_KEY` was
+shared the same way and was fixed in the same pass.
+
+**Why it never reached the Worker:** this is a dashboard change, and the cloud
+environment holds placeholder credentials by design. An agent cannot make it,
+and would have had to mark the item `blocked` — so a human doing it directly was
+always the right path, not a fallback.
+
+**The general rule this establishes:** an item whose fix lives in a provider's
+dashboard rather than in the repo is not Worker work. Propose it if it matters,
+but expect to do it by hand, and close it out here rather than leaving it
+`approved` where a Worker will pick it up and block on it.
+
+Still open from the same review: the three Supabase vars
+(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY`) remain scoped to Preview and Production, so every
+preview deployment still runs against the production database with an
+RLS-bypassing key. That is CC-001, rejected for this week because it needs a
+second Supabase project, not a checkbox. Left deliberately, not forgotten.
+
+`NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` and `COLLEGE_SCORECARD_API_KEY` stay shared
+on purpose: the first is publishable by design and already visible in page
+source, the second is a free read-only api.data.gov key whose only shared
+consequence is a rate limit far above current usage.
+
+---
+

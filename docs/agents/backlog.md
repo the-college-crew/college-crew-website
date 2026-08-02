@@ -36,29 +36,6 @@ regardless, so the work has value even if the agent system never ships.
 
 ---
 
-## CC-002 — Give Preview its own Resend key
-
-**Status:** approved
-**Proposed:** 2026-08-02 — seeded by hand, not by an agent
-**Effort:** S
-
-`RESEND_API_KEY` is scoped to **Preview and Production**, so a preview
-deployment can send real email to real customers and providers using the
-production sender. `EMAIL_FROM` is already split per environment; the API key
-is not.
-
-Add a Preview-scoped key — a sandbox domain, or simply no key at all, since
-`.env.example` documents that a missing key keeps email testable without
-delivery.
-
-**Why it matters:** small change, removes an entire category of accident.
-Unlike CC-001 it has no prerequisites and could be done in ten minutes.
-
-**Devil's advocate:** no real objection. Stripe is already split this way, so
-this is just bringing Resend in line with an existing pattern.
-
----
-
 ## CC-003 — Surface the cancellation policy on the provider profile page, not just at confirm
 
 **Status:** approved
