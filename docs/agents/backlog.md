@@ -36,41 +36,6 @@ regardless, so the work has value even if the agent system never ships.
 
 ---
 
-## CC-004 — Give provider profile pages real metadata and Service structured data
-
-**Status:** in-progress — PR #149 open, awaiting Zach's merge
-**Proposed:** 2026-08-02 — Proposer (trial run)
-**Effort:** S/M
-**Plan:** docs/agents/plans/CC-004.md
-
-`app/(customer)/providers/[id]/page.tsx` exports one static
-`metadata: Metadata = { title: "Provider profile" }` for every provider —
-identical title for all of them — and a repo-wide search turns up zero
-`application/ld+json` or schema.org markup anywhere in the app. Meanwhile
-`app/sitemap.ts` already lists every approved provider's public profile, and
-`CLAUDE.md` treats production indexing as a standing guardrail ("must not add
-a site-wide `noindex`"). The infrastructure assumes these pages are meant to
-rank; the on-page signals search engines and AI answer engines actually use
-are missing.
-
-Add `generateMetadata` (provider name, primary service, town) and a `Service`
-JSON-LD block with `aggregateRating` sourced from the rating data
-`lib/browse/ranking.ts` already computes. Metadata-only change — no data
-mutation, no schema change.
-
-**Why this one:** it's the cheapest fix for a guardrail the project already
-committed to (indexing on) but never followed through on for the one page
-type — provider profiles — that's actually meant to be found externally.
-
-**Devil's advocate:** with ~6 providers in one neighborhood, no amount of
-markup makes Google send meaningful traffic in a 7-week pilot — this is real,
-and it's the strongest objection of the three survivors. It survives anyway
-because the fix is well under a day, carries zero product risk, and is the
-kind of thing that's far cheaper to do now (one profile template) than to
-retrofit once there are dozens of provider pages.
-
----
-
 ## CC-005 — Cache the Browse page's catalog reads with Next 16's `"use cache"`
 
 **Status:** rejected
