@@ -420,7 +420,6 @@ export type Database = {
           submitted_at: string | null
           submitted_minutes: number | null
           subtotal_cents: number
-          tip_cents: number
           total_platform_fee_cents: number
           updated_at: string
         }
@@ -443,7 +442,6 @@ export type Database = {
           submitted_at?: string | null
           submitted_minutes?: number | null
           subtotal_cents: number
-          tip_cents?: number
           total_platform_fee_cents: number
           updated_at?: string
         }
@@ -466,7 +464,6 @@ export type Database = {
           submitted_at?: string | null
           submitted_minutes?: number | null
           subtotal_cents?: number
-          tip_cents?: number
           total_platform_fee_cents?: number
           updated_at?: string
         }
@@ -2797,7 +2794,7 @@ export type Database = {
         Returns: string
       }
       begin_balance_payment: {
-        Args: { p_invoice_id: string; p_tip_cents?: number | null }
+        Args: { p_invoice_id: string }
         Returns: {
           amount_cents: number
           application_fee_cents: number
@@ -3336,7 +3333,7 @@ export type Database = {
             Returns: string
           }
       reset_balance_payment_for_retry: {
-        Args: { p_invoice_id: string; p_tip_cents?: number | null }
+        Args: { p_invoice_id: string }
         Returns: {
           amount_cents: number
           application_fee_cents: number

@@ -104,7 +104,6 @@ type ProviderBookingRow = {
   invoice: {
     subtotal_cents: number;
     total_platform_fee_cents: number;
-    tip_cents: number;
     status: string;
   } | null;
 };
@@ -113,14 +112,11 @@ const legacyNet = (b: ProviderBookingRow) =>
   b.price_cents - b.platform_fee_cents;
 
 /** Settled provider revenue. Hourly counts the paid invoice's net, never an
- * estimate or the reserved first hour; legacy counts the confirmed price net.
- * A customer tip is added whole — the platform takes no fee on it. */
+ * estimate or the reserved first hour; legacy counts the confirmed price net. */
 function providerEarnedCents(b: ProviderBookingRow) {
   if (b.booking_flow === "hourly_v1") {
     return b.invoice
-      ? b.invoice.subtotal_cents -
-          b.invoice.total_platform_fee_cents +
-          b.invoice.tip_cents
+      ? b.invoice.subtotal_cents - b.invoice.total_platform_fee_cents
       : 0;
   }
   return legacyNet(b);
@@ -226,8 +222,7 @@ export default async function ProviderDashboardPage({
          quote_estimate:booking_quote_provider_estimates(estimated_minutes),
          response_alert_at, accepted_at, initial_payment_due_at, service:services(name),
          customer:profiles!bookings_customer_id_fkey(full_name),
-         invoice:booking_invoices(subtotal_cents, total_platform_fee_cents,
-           tip_cents, status)`,
+         invoice:booking_invoices(subtotal_cents, total_platform_fee_cents, status)`,
       )
       .eq("provider_id", profile.id)
       .order("scheduled_at", { ascending: true }),
