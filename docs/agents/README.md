@@ -77,6 +77,24 @@ to say.
    CC-005 and correctly reported they did not exist, because they were stranded
    on an unmerged branch. Everything lands as `proposed`, and nothing acts on a
    `proposed` item, so merging early is safe.
+
+   ### 7b. Blog content is the one other self-mergeable diff
+
+   A diff confined to **`apps/web/content/blog/**`, `apps/web/public/blog/**`,
+   and `docs/blog/published.md`** is also self-mergeable. That is published blog
+   content and its artwork — prose and a photograph. It cannot change how the
+   application behaves.
+
+   The human gate is already there and it is earlier: Gianna reads the draft,
+   edits it, and ticks an approval checkbox in the Slack canvas before anything
+   is committed. Requiring Zach to also merge would mean a post she approved on
+   Tuesday sits until he happens to look, which defeats the point of her
+   approving it at all.
+
+   **The same absolute bound applies.** One path outside those three and the PR
+   waits for Zach — including anything under `apps/web/app/`, `apps/web/lib/`,
+   `supabase/`, or a change to the blog *code* as opposed to blog *content*.
+   A PR that adds a post and touches the renderer is a code PR.
 8. **If reality diverges from the plan, stop and mark it `blocked`.** Do not
    improvise. Same rule the humans follow.
 
