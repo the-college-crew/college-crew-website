@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ViewTransition } from "react";
 
 import { openConversationWithProvider } from "@/app/actions/messaging";
+import { CUSTOMER_REFUND_NOTICE_HOURS } from "@/lib/booking/policy";
 import { FormLoader } from "@/components/form-loader";
 import { LocationLine, Rating } from "@/components/provider-card";
 import { SchoolIdentity } from "@/components/school-identity";
@@ -185,6 +186,12 @@ export async function ProviderProfile({
                   ? "Customer requests remain disabled during setup."
                   : "This provider is still finishing booking setup."}
             </p>
+            {canRequest ? (
+              <p className="mt-1 text-xs text-mist">
+                Free cancellation up to {CUSTOMER_REFUND_NOTICE_HOURS} hours
+                before the booking starts.
+              </p>
+            ) : null}
           </div>
         </section>
       </ViewTransition>
