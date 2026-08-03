@@ -10,6 +10,19 @@ Newest first.
 
 ---
 
+## 2026-08-03 — DONE: CC-003 (surface the cancellation window on the provider profile page)
+
+Merged in PR #148. Added a one-line "Free cancellation up to 12 hours before
+the booking starts" note to `components/provider-profile.tsx`, next to the
+booking CTA, sourced from the existing `CUSTOMER_REFUND_NOTICE_HOURS`
+constant (`lib/booking/policy.ts`) — the same constant already shown at final
+confirm. Built directly by Worker 1 on 2026-08-03 (pure effort `S`, no plan
+required per `docs/agents/README.md`). `npm run build`/`lint`/`typecheck` all
+passed before opening the PR; Vercel preview deploy was green. Zach merged it
+the same day.
+
+---
+
 ## 2026-08-02 — REJECTED: CC-005 (cache Browse catalog reads with `"use cache"`)
 
 Caching a query that isn't slow yet adds staleness risk for no gain at pilot
@@ -286,4 +299,3 @@ the database themselves, but the number of live previews aimed at it goes from
 "when someone pushes" to "most nights."
 
 ---
-
