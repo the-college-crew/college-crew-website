@@ -97,6 +97,8 @@ The message, in order:
 
 Then a short phone-readable close. No preamble, no filler.
 
+⚠ **Ping him only if this run produced something needing his decision.** Include `<@U0BMD6360GM>` when you wrote a new plan awaiting approval, raised an open question, or marked something `blocked` — put it on the line saying what he has to do, so the ping and its reason arrive together. Leave it out when the only thing pending is the standing open-PR list, or when nothing is pending. A ping that fires every run carries no information. See **"Ping Zach only when the run produced something needing his decision"** in `docs/agents/README.md`.
+
 ⚠ **Before writing any line that asks Zach to approve something**, follow **"Never invent something waiting on Zach"** in `docs/agents/README.md`. Read BOTH the backlog item's `Status:` and the `Status:` line inside `plans/<ID>.md`. A plan file existing is not the same as that plan being approved. On 2026-08-02 this routine closed an otherwise-correct skip notice by asking Zach to approve two items he had approved hours earlier — because it had checked only that the plan file existed. When nothing is pending, say so plainly; "Nothing needs your judgment" is a complete and correct notification.
 
 ⚠ Refer to your run log by **path, not PR number** — the message is committed inside that PR, so the number does not exist yet when you write it.
