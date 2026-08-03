@@ -7,7 +7,7 @@
 
 | | |
 |---|---|
-| **Routine ID** | `TBD — fill in after creation` |
+| **Routine ID** | `trig_01EvgEGuhKANPq89NtWs2Kwp` |
 | **Cron (UTC)** | `3 13 * * 1` |
 | **Local** | 8:03 AM CDT Mondays (7:03 AM once CST starts) |
 | **Environment** | `college-crew` (`env_01GVbfpobQPXhiYtjhwmqwZb`) |
@@ -25,7 +25,7 @@ Your job has two halves, in this order: **publish last week's approved draft, th
 
 ## Step 1 — Read
 
-1. `docs/agents/README.md` — **the rules you operate under.** Read it fully before doing anything. Pay particular attention to rule 7 (self-merge) and its **content-only extension**, which is what lets you publish a post without waiting for Zach.
+1. `docs/agents/README.md` — **the rules you operate under.** Read it fully before doing anything. Pay particular attention to rule 7 (self-merge) and its **content-only extension, rule 7b**, which is what lets you publish a post without waiting for Zach.
 2. `CLAUDE.md` — project rules, stack, guardrails.
 3. `docs/blog/STRATEGY.md` — **your entire brief for what to write and how.** Audience, topic selection, post shape, voice, banned phrases, and the honesty rules.
 4. `docs/blog/published.md` — every post already written. Your only memory.
@@ -111,12 +111,10 @@ Always `@`-mention Gianna as `<@U0BMH9KBZ2P>` — she is the one who has to act.
 
 What to say, depending on what happened:
 
-| Outcome | Message |
-|---|---|
-| Published + new draft | What went live (title + URL), then the new draft's title and a canvas link, then what she needs to do: edit, tick the box, add a photo. |
-| Gate closed | One line naming the missing half — "still waiting on the checkbox" or "approved, but no photo yet" — and that the draft is untouched and still there. Nothing new was written. |
-| Refused under Step 3 | Exactly what to fix, quoting the marker or naming the problem. |
-| First run | Just the new draft and what to do with it. |
+- **Published + new draft** — what went live (title + URL), then the new draft's title and a canvas link, then what she needs to do: edit, tick the box, add a photo.
+- **Gate closed** — one line naming the missing half ("still waiting on the checkbox", or "approved, but no photo yet") and that the draft is untouched and still there. Nothing new was written.
+- **Refused under Step 3** — exactly what to fix, quoting the marker or naming the problem.
+- **First run** — just the new draft and what to do with it.
 
 Do not invent something needing her attention. If the run was a clean no-op, one line saying so is a complete and correct message.
 
