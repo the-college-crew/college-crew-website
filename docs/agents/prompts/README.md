@@ -33,6 +33,26 @@ attached connectors. Disabled test and first-run routines are not tracked.
 There are two Worker attempts, spaced 5h05m apart, because usage limits reset on
 a rolling five-hour window — a closer retry would share the exhausted one.
 
+## Checking they are in sync
+
+```
+RemoteTrigger {action: "list"}      # save the response to a file
+python3 scripts/agents/check_prompt_sync.py routines.json
+```
+
+Prints one line per routine, a unified diff for anything that drifted, and exits
+non-zero if there is anything to fix. It also flags an **enabled routine that is
+not tracked here** — a routine running with no versioned prompt is the exact
+failure this directory exists to prevent.
+
+The script takes a file rather than fetching, because the routines API needs an
+OAuth token that only the `RemoteTrigger` tool holds. Putting a token anywhere a
+script could reach it means putting it in a public repo or in the cloud
+environment's plaintext variable field, so the fetch stays with the agent and the
+script does the comparison.
+
+Run it after editing any routine.
+
 ## Keeping them in sync
 
 Read a live prompt:
