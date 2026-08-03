@@ -1,0 +1,51 @@
+name: Post agent run to Slack
+
+# Sends the `## Slack` block from an agent run log to #agents, so routines never
+# need a Slack credential inside the cloud sandbox (whose env var field is
+# plaintext, on a public repo).
+# See docs/plans/2026-08-02-slack-agent-identity.md
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/agents/runs/**'
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Text to post to #agents (manual test)'
+        required: true
+        default: 'College Crew Agents — webhook test'
+
+concurrency:
+  # Serialize so two quick pushes can't interleave their posts out of order.
+  group: agent-slack-notify
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Full history: github.event.before can be several commits back, and
+          # the script diffs before..after to decide what actually changed.
+          fetch-depth: 0
+
+      - name: Post changed run logs
+        if: github.event_name == 'push'
+        env:
+          SLACK_AGENTS_WEBHOOK: ${{ secrets.SLACK_AGENTS_WEBHOOK }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: python3 scripts/agents/post_run_to_slack.py
+
+      - name: Post manual test message
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          SLACK_AGENTS_WEBHOOK: ${{ secrets.SLACK_AGENTS_WEBHOOK }}
+          TEST_MESSAGE: ${{ inputs.message }}
+        run: python3 scripts/agents/post_run_to_slack.py --text "$TEST_MESSAGE"
