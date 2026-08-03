@@ -241,6 +241,19 @@ progress.
 
 If nothing is awaiting merge, say so in one line and move on.
 
+### The one exception: a Worker's start notice
+
+A Worker posts one short line when it **begins**, naming what it is about to
+build. That line does not lead with open PRs and does not `@`-mention Zach.
+
+It is a heartbeat, not a report. Everything else a routine sends arrives at the
+*end* of a run, which means a session killed by an exhausted usage window at 1 AM
+looks exactly like one that never launched — and those have completely different
+fixes. The start notice is the only thing that tells them apart. It also leaves a
+record of what the Worker was mid-way through if it never reports back.
+
+Everything else a Worker posts comes at the end and follows the rule above.
+
 ### How a notification reaches Slack
 
 **Routines do not post to Slack.** They write the message into their run log,

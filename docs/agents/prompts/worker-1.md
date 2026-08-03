@@ -31,6 +31,16 @@ Note: `docs/SPEC.md` is referenced by `CLAUDE.md` but is gitignored, so it will 
 
 ## Run order — follow `docs/agents/README.md` exactly
 
+### Step 0 — Say you started, before anything else
+
+As soon as you have read the files above and know what the queue holds, post **one short line** to `#agents` naming what you are about to do — the items you intend to build, any plan you are about to write, or that nothing qualifies. Then get on with it.
+
+Example: *"Worker 1 starting — building CC-003, then CC-004. Nothing to plan."*
+
+This is a heartbeat, not a report. Everything else you post comes at the end of the run, so a session killed by an exhausted usage window at 1 AM would otherwise look exactly like one that never launched — and those have completely different fixes. This line is the only thing that tells them apart, and it leaves a record of what you were mid-way through if you never report back.
+
+Do **not** lead it with the open-PR list, and do **not** `@`-mention Zach. He is asleep and nothing here needs his decision. Both of those belong in your end-of-run message.
+
 ### Step 1 — Write any missing plan, FIRST, before building anything
 
 If a backlog item is `approved` with effort above `S` and has **no plan** at `docs/agents/plans/<ID>.md`, the Planner did not run — a firing lost to an exhausted usage window is simply gone, there is no retry. Write the plan yourself following the `docs/plans/README.md` format and the same standard the Planner is held to: read the actual code first, cite real paths, and make **Out of scope** explicit. Open the PR, self-merge it under rule 7 after verifying the diff touches nothing outside `docs/agents/`, and post it to Slack immediately with the deadline: *"Approve before 4:12 AM and Worker 2 builds it tonight."*
