@@ -36,43 +36,6 @@ regardless, so the work has value even if the agent system never ships.
 
 ---
 
-## CC-003 — Surface the cancellation policy on the provider profile page, not just at confirm
-
-**Status:** in-progress — PR open, awaiting Zach's merge (see PR)
-**Proposed:** 2026-08-02 — Proposer (trial run)
-**Effort:** S
-
-`lib/booking/policy.ts` already computes `CUSTOMER_REFUND_NOTICE_HOURS` (12h)
-and the full pre-arrival cancellation classification, and it's shown to the
-customer exactly once — at `app/(customer)/bookings/[id]/confirm/page.tsx`,
-via the `booking-customer.confirm.cancellation-policy` copy key. Nothing
-mentions it earlier: `components/provider-profile.tsx`, the page a customer
-reads while deciding whether to book at all, shows rating, verification
-badge, and services, but no cancellation terms.
-
-2026 marketplace trust-signal research is consistent that a visible
-cancellation/refund policy is a foundational trust signal for a new
-marketplace's first-booking funnel, and that it needs to show up before the
-commitment step, not only at final payment. Add a one-line "Free cancellation
-up to 12 hours before" note to the profile page, sourced from the same
-constant already used at confirm — no new policy, no new copy to invent, just
-moving an existing fact earlier in the read.
-
-**Why this one:** it's the only survivor that touches actual first-booking
-conversion, which is the one thing this 7-week pilot exists to measure — but
-unlike a marketing/financial proposal (deliberately deferred per
-`decisions.md` until there's real booking data), it doesn't require inventing
-a strategy. It surfaces a fact the codebase already computes and already
-trusts enough to show at confirm; the risk of being wrong is close to zero.
-
-**Devil's advocate:** with 6 providers on a curated, admin-approved roster,
-customers may already trust the platform via the curation itself, making this
-marginal. It survives anyway because it's a same-constant, same-copy-pattern,
-near-zero-risk change — there's no real downside to shipping it even if the
-lift turns out to be small.
-
----
-
 ## CC-004 — Give provider profile pages real metadata and Service structured data
 
 **Status:** approved
