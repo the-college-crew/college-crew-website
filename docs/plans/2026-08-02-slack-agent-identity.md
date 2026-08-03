@@ -1,9 +1,9 @@
 # Give agent routines their own Slack identity, without a credential in the sandbox
 
-**Status:** in progress
+**Status:** done — all four routines migrated 2026-08-03
 **Owner:** Zach
-**Branch:** feat/agent-slack-notify
-**Updated:** 2026-08-02
+**Branch:** feat/agent-slack-notify, then feat/migrate-routines-to-agent-identity
+**Updated:** 2026-08-03
 
 ## Goal
 
@@ -225,6 +225,49 @@ path, where "total silence" points nowhere.
 
 **Zach makes the migration call by hand** (agreed 2026-08-02) rather than it
 triggering automatically on a clean run — the evidence is worth a human look.
+
+### Step 7 as it actually happened — 2026-08-03
+
+Zach called the migration on the morning of 2026-08-03, **before** the Planner
+pilot had run even once. Worth recording plainly, because the staging argument
+above says not to:
+
+- The Planner fired 2026-08-02 at 6:04 PM CDT and posted through the
+  **connector** — the workflow merged at 7:09 PM and the prompt requiring a
+  `## Slack` block at 7:36 PM, both *after* that firing. Its run log has no
+  block. The only bot-authored messages in `#agents` were two manual
+  `workflow_dispatch` webhook tests.
+- What made migrating anyway defensible: every link had been exercised
+  separately. The webhook and posting path by the manual tests; the trigger,
+  checkout, `before..after` diff and `routine_name()` matching by two real
+  pushes (the Action logs show `skip …worker-2.md: 'worker-2' is not in the
+  notify pilot yet`); and `slack_block()` extraction by running it locally
+  against both Workers' real run logs — 974 and 697 chars, clean.
+- Both Workers were already emitting correct `## Slack` blocks while still
+  posting via the connector, so for them migration genuinely was two strings.
+- **The schedule supplies the staging the plan asked for, for free.** Planner
+  6:03 PM → Worker 1 11:07 PM → Worker 2 4:12 AM → Proposer 6:57 AM. The
+  Planner is still the first real run, five hours ahead of anything else, and
+  the revert is one line in `NOTIFY_ROUTINES`.
+
+**The Proposer needed more than an allowlist entry.** It wrote no run log at
+all — PR #152 touched only `backlog.md` — and the workflow triggers solely on
+`docs/agents/runs/**`, so there was nothing to fire on. Its prompt now writes
+`docs/agents/runs/<date>-proposer.md` into the same PR as the backlog append,
+including on skip runs.
+
+**The Worker start notice moved too** (Step 7's point 3 above, decided
+explicitly rather than inherited). Chosen: one identity everywhere, accepting
+that a Worker dying during its opening commit → PR → merge sequence now sends
+nothing. Recorded in `docs/agents/README.md` under the start-notice exception so
+a future missing heartbeat gets diagnosed here first.
+
+**Still on the connector:** nothing outbound. All four routines keep the Slack
+MCP connector attached, now unused for posting — deliberately not stripped in
+the same change, so that if tonight goes wrong there is one variable to examine
+rather than two. Worth revisiting: an attached connector is a live path for a
+routine to improvise around a broken Action and post directly, which would mask
+exactly the failure this design wants loud.
 
 ### Step 8 — README updates
 

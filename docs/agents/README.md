@@ -243,7 +243,7 @@ If nothing is awaiting merge, say so in one line and move on.
 
 ### The one exception: a Worker's start notice
 
-A Worker posts one short line when it **begins**, naming what it is about to
+A Worker sends one short line when it **begins**, naming what it is about to
 build. That line does not lead with open PRs and does not `@`-mention Zach.
 
 It is a heartbeat, not a report. Everything else a routine sends arrives at the
@@ -252,7 +252,19 @@ looks exactly like one that never launched — and those have completely differe
 fixes. The start notice is the only thing that tells them apart. It also leaves a
 record of what the Worker was mid-way through if it never reports back.
 
-Everything else a Worker posts comes at the end and follows the rule above.
+Mechanically the Worker creates its run log first, with the start line as the
+`## Slack` block, and self-merges that under rule 7 before building anything.
+Later notifications rewrite the same block in the same file.
+
+⚠ **This heartbeat travels through the pipeline it is meant to vouch for**
+(commit → PR → checks → self-merge), so a Worker that dies during that opening
+sequence sends nothing at all — the exact ambiguity the notice exists to remove.
+Accepted deliberately on 2026-08-03 in exchange for one identity everywhere;
+the residue is an unmerged run-log PR, which is visible on GitHub but will not
+reach a phone. If start notices ever start going missing, suspect this before
+suspecting the routine.
+
+Everything else a Worker sends comes at the end and follows the rule above.
 
 ### How a notification reaches Slack
 
@@ -284,11 +296,21 @@ _Nothing to plan this run._ CC-003 is `approved` but pure effort `S`...
 
 **Which routines this applies to** is controlled by `NOTIFY_ROUTINES` in
 `scripts/agents/post_run_to_slack.py`. A routine outside that set is ignored
-entirely and keeps using the claude.ai connector. As of 2026-08-02 the set is
-`{"planner"}` — the pilot. Migrating a routine is adding its name.
+entirely and keeps using the claude.ai connector. **As of 2026-08-03 all four
+are in the set** — the Planner piloted it, and the Proposer and both Workers
+migrated the same day. Removing a name is the revert switch.
 
 For a routine in the set, the block is **required output**. A run log without
 one fails the Action, and nothing reaches Zach's phone.
+
+**One run log can send several messages.** The Action posts when the `## Slack`
+block's *content changes* in a push, so a routine notifies again by rewriting
+that block and merging. A Worker uses this for its start notice, any plan it
+writes, and its end-of-run report — all in one file across the night.
+
+⚠ The corollary is the trap: **an unchanged block sends nothing.** A run that
+ends without rewriting its block reports as silence, and silence here means the
+routine died.
 
 #### Slack mrkdwn is not GitHub markdown
 
