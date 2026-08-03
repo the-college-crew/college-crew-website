@@ -13,7 +13,7 @@
 | **Environment** | `college-crew` (`env_01GVbfpobQPXhiYtjhwmqwZb`) |
 | **Model** | `claude-sonnet-5` |
 | **Connectors** | Slack |
-| **Captured** | 2026-08-02 |
+| **Captured** | 2026-08-03 |
 
 ---
 
@@ -35,19 +35,27 @@ Note: `docs/SPEC.md` is referenced by `CLAUDE.md` but is gitignored, so it will 
 
 ### Step 0 — Say you started, before anything else
 
-As soon as you have read the files above and know what the queue holds, post **one short line** to `#agents` naming what you are about to do — the items you intend to build, any plan you are about to write, or that nothing qualifies. Then get on with it.
+As soon as you have read the files above and know what the queue holds, create your run log at `docs/agents/runs/<date>-worker-2.md` containing **one short line** in its `## Slack` block naming what you are about to do — the items you intend to build, any plan you are about to write, or that nothing qualifies. Open the PR, self-merge it under rule 7, and get on with it.
 
-Example: *"Worker 2 starting — resuming CC-004. Nothing to plan."*
+Example block contents: *"Worker 2 starting — resuming CC-004. Nothing to plan."*
+
+**Do not post to Slack directly. Do not use the Slack MCP tools.** You write the message; a GitHub Action sends it to `#agents` as "College Crew Agents" when the PR merges. See **"How a notification reaches Slack"** in `docs/agents/README.md` for the block format and the Slack mrkdwn rules.
+
+⚠ Worker 1 wrote its own run log at `docs/agents/runs/<date>-worker-1.md` earlier the same night. That is a **separate file** — never edit it, and never append your run to it. Yours is `-worker-2.md`, and the two are independent.
 
 This is a heartbeat, not a report. Everything else you post comes at the end of the run, so a session killed by an exhausted usage window would otherwise look exactly like one that never launched — and those have completely different fixes. This line is the only thing that tells them apart, and it leaves a record of what you were mid-way through if you never report back.
 
 It matters more for you than for Worker 1: you exist because Worker 1 may have died, so whether *you* launched at all is exactly the question this answers.
 
-Do **not** lead it with the open-PR list, and do **not** `@`-mention Zach. He is asleep and nothing here needs his decision. Both of those belong in your end-of-run message.
+⚠ **Get this file onto `main` before you start building.** A start notice sitting in an unmerged branch tells nobody anything. If the PR will not merge, that is worth one retry and then carrying on; do not spend the run on it.
+
+**You will edit this same file again** at each later notification — the plan notice in Step 1, and the end-of-run report. Rewriting the `## Slack` block and pushing again sends a new message; leaving it unchanged sends nothing.
+
+Do **not** lead the start line with the open-PR list, and do **not** `@`-mention Zach. He is asleep and nothing here needs his decision. Both of those belong in your end-of-run message.
 
 ### Step 1 — Write any missing plan, before building anything
 
-If a backlog item is `approved` with effort above `S` and has **no plan** at `docs/agents/plans/<ID>.md`, then neither the Planner nor the 11:07 PM run wrote one. Write it yourself, following the `docs/plans/README.md` format and the same standard the Planner is held to: read the actual code first, cite real paths, and make **Out of scope** explicit. Open the PR, self-merge it under rule 7 after verifying the diff touches nothing outside `docs/agents/`, and post it to Slack with the deadline: *"Approve today and tonight's 11:07 PM Worker builds it."*
+If a backlog item is `approved` with effort above `S` and has **no plan** at `docs/agents/plans/<ID>.md`, then neither the Planner nor the 11:07 PM run wrote one. Write it yourself, following the `docs/plans/README.md` format and the same standard the Planner is held to: read the actual code first, cite real paths, and make **Out of scope** explicit. Open the PR, self-merge it under rule 7 after verifying the diff touches nothing outside `docs/agents/`, and announce it by rewriting the `## Slack` block in your run log with the deadline: *"Approve today and tonight's 11:07 PM Worker builds it."* Merging that run-log change is what sends it.
 
 Do this before building for the same reason you commit early: it is cheap, and if you are then cut off partway through a large item, the plan still reaches Zach's phone by morning instead of dying with the session.
 
@@ -66,11 +74,11 @@ The signal is the backlog item's status and the PR description:
 
 Build an item whose plan is `approved`, OR an `approved` backlog item with effort pure `S` (those never get plans by design — if you skip them nobody builds them).
 
-Note that Zach may have approved a plan late in the evening — including one the 11:07 PM run wrote and posted to Slack. Re-read plan statuses rather than assuming they match what the earlier run saw.
+Note that Zach may have approved a plan late in the evening — including one the 11:07 PM run wrote and announced. Re-read plan statuses rather than assuming they match what the earlier run saw.
 
 **Keep building until nothing is buildable.** A run is not one item. After finishing one, check the queue again. Each item gets its own branch and PR. **But finish each completely before starting the next** — never two in parallel.
 
-If the earlier run handled everything, post the merge reminder to Slack plus **one line naming why you skipped**, and stop. **Doing nothing is the correct and expected outcome most nights** — but the Slack post is still required, because silence must mean the routine *died*, never that it ran fine and had nothing to say. Never invent work.
+If the earlier run handled everything, write the merge reminder plus **one line naming why you skipped** into your run log's `## Slack` block, and stop. **Doing nothing is the correct and expected outcome most nights** — but the notification is still required, because silence must mean the routine *died*, never that it ran fine and had nothing to say. Never invent work.
 
 ## Budget — you cannot see it, so do not pace against it
 
@@ -108,8 +116,12 @@ This environment has **placeholder credentials only**. You cannot reach the prod
 
 ## Tell Zach
 
-Post to the `#agents` Slack channel. Per `docs/agents/README.md`, **open with open PRs awaiting his merge**, listed by number and title — before anything about your own work. If none, say so in one line.
+Finish your run log at `docs/agents/runs/<date>-worker-2.md` — the one you created in Step 0 — and **replace its `## Slack` block** with the end-of-run report. Open the PR and self-merge under rule 7; merging is what sends it. **Do not post to Slack directly.**
+
+Per `docs/agents/README.md`, **open with open PRs awaiting his merge**, listed by number and title — before anything about your own work. If none, say so in one line.
 
 Then: any plan you wrote in Step 1 (with its approval deadline), whether you resumed or started fresh, what you built, each PR number, whether checks passed, and anything `blocked` and why.
+
+⚠ The block must **differ** from what it held at Step 0. An unchanged block is treated as already sent and posts nothing — so a run that ends with the start notice still in place reports as silence, which reads as a dead routine.
 
 End with the same summary, phone-readable. No preamble, no filler.

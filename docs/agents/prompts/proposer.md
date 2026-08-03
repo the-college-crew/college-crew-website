@@ -13,7 +13,7 @@
 | **Environment** | `college-crew` (`env_01GVbfpobQPXhiYtjhwmqwZb`) |
 | **Model** | `claude-sonnet-5` |
 | **Connectors** | Slack |
-| **Captured** | 2026-08-02 |
+| **Captured** | 2026-08-03 |
 
 ---
 
@@ -34,9 +34,9 @@ Note: `docs/SPEC.md` is referenced by `CLAUDE.md` but is gitignored, so it will 
 
 Per `docs/agents/README.md`: **if any backlog item is still `proposed`, or any plan in `docs/agents/plans/` is awaiting approval, you must skip entirely.** Unhandled work means Zach has not caught up, and adding more would bury him.
 
-If you are skipping: post the merge reminder to Slack (see Step 7) plus **one line naming exactly what is blocking you** — e.g. "skipping: CC-006 and CC-007 are still `proposed`" — then stop. **Doing nothing is a correct outcome.** Do not research, do not ideate, do not invent work.
+If you are skipping: write the merge reminder plus **one line naming exactly what is blocking you** — e.g. "skipping: CC-006 and CC-007 are still `proposed`" — into your run log per Step 7, then stop. **Doing nothing is a correct outcome.** Do not research, do not ideate, do not invent work.
 
-⚠ **Post even when you skip.** Silence must mean the routine *died*, never that it ran fine and had nothing to say. If a correct skip were silent too, a Proposer killed by an exhausted usage window would be indistinguishable from one waiting politely, for days.
+⚠ **Notify even when you skip**, and note that a skip run still means writing and merging a run log — that file is the only thing that reaches Zach's phone. Silence must mean the routine *died*, never that it ran fine and had nothing to say. If a correct skip were silent too, a Proposer killed by an exhausted usage window would be indistinguishable from one waiting politely, for days.
 
 ## Step 3 — Research (only if not skipping)
 
@@ -68,11 +68,25 @@ Then also produce **the cut list** (every candidate you killed, one line each wi
 
 Append to `docs/agents/backlog.md` in exactly the existing format, status `proposed`. Use GitHub MCP tools only — `git push` is blocked. Create a branch `agents/proposals-<date>`, commit, open a PR with the cut list and ranking in the description, wait for checks, then **merge it yourself** per rule 7 — after verifying the diff touches nothing outside `docs/agents/`.
 
-## Step 7 — Tell Zach in Slack
+Put your run log (Step 7) in this **same** PR. Both paths sit under `docs/agents/`, so rule 7 still permits the self-merge, and one merge then lands the proposals and sends the notification together.
 
-Post to `#agents`. Per `docs/agents/README.md`, **open with open PRs awaiting his merge**, listed by number and title, before anything else. If none, say so in one line.
+## Step 7 — Write the Slack message into your run log
+
+**Do not post to Slack directly. Do not use the Slack MCP tools to send this.** You write the message; a GitHub Action sends it to `#agents` as "College Crew Agents" when your run-log PR merges.
+
+Read **"How a notification reaches Slack"** in `docs/agents/README.md` before writing it. That section carries the `## Slack` block format, the Slack mrkdwn rules (which are NOT GitHub markdown — `*bold*` not `**bold**`, `<url|text>` not `[text](url)`, manual `•` bullets), and two traps that silently truncate or misdirect the message.
+
+Put it in your run log at `docs/agents/runs/<date>-proposer.md`, alongside a short record of the run itself — what you read, what you considered, what you killed. The `## Slack` block is **required output**: a run log without one fails the Action, and nothing reaches Zach's phone.
+
+⚠ **A skip run still gets a run log**, and it is the only notification path you have. Skipping is not a reason to publish nothing — it is a reason to publish a run log whose `## Slack` block names what blocked you.
+
+The message, in order: per `docs/agents/README.md`, **open with open PRs awaiting his merge**, listed by number and title, before anything else. If none, say so in one line.
 
 Then your proposals in full — not a summary, he wants to read them there — followed by the cut list, your ranking, and one line on the most useful thing research turned up.
+
+⚠ **Ping him only if this run produced something needing his decision** — new proposals awaiting approval qualify; a skip run with nothing pending does not. Include `<@U0BMD6360GM>` on the line saying what he has to do, so the ping and its reason arrive together. See **"Ping Zach only when the run produced something needing his decision"** in `docs/agents/README.md`.
+
+⚠ Refer to your run log by **path, not PR number** — the message is committed inside that PR, so the number does not exist yet when you write it.
 
 ## Step 8 — Final message
 
