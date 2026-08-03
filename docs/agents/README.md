@@ -51,6 +51,8 @@ to say.
 1. **Never act on a `proposed` item.** Only `approved` work gets built.
 2. **Always commit a run log** to `runs/`. Routine output is not readable
    outside the claude.ai UI — an uncommitted run is a run nobody can review.
+   For routines in the notify pilot the run log also *carries* the Slack
+   message — see "How a notification reaches Slack".
 3. **Read `decisions.md` before proposing.** Re-proposing a rejected idea is
    the most likely way this system becomes annoying.
 4. **Cap the Proposer at 3 items per run.** The scarce resource is Zach's
@@ -159,8 +161,10 @@ indistinguishable from a phone, and a routine could be dead for a week without
 anyone noticing. Posting on skip is what makes the absence of a message
 diagnostic.
 
-A run log in `runs/` is still required (rule 2). The Slack line is in addition to
-it, not instead of it.
+A run log in `runs/` is still required (rule 2). For a routine still on the
+claude.ai connector the Slack line is in addition to it; for one in the notify
+pilot the line lives *inside* it, in the `## Slack` block. Either way, skipping
+without notifying is not an option.
 
 ### When the Planner doesn't run
 
@@ -236,6 +240,60 @@ something surfaces them. A nightly build that nobody merges is a queue, not
 progress.
 
 If nothing is awaiting merge, say so in one line and move on.
+
+### How a notification reaches Slack
+
+**Routines do not post to Slack.** They write the message into their run log,
+and a GitHub Action posts it as **College Crew Agents** when the run-log PR
+merges. Design and rationale:
+`docs/plans/2026-08-02-slack-agent-identity.md`.
+
+Why it works this way: the cloud environment's variable field is plaintext and
+this repo is public, so a routine holding a Slack credential is one careless
+`env` dump away from publishing it. It also means the message *is* the committed
+artifact — a run log and its notification cannot disagree, which is the failure
+recorded under "Never invent something waiting on Zach" below.
+
+Put the message in a fenced block under a `## Slack` heading:
+
+~~~markdown
+## Slack
+
+```text
+*Planner — 2026-08-02*
+
+*Open PRs awaiting your merge:*
+• #112 — add optional customer tip on the invoice, 100% to the student
+
+_Nothing to plan this run._ CC-003 is `approved` but pure effort `S`...
+```
+~~~
+
+**Which routines this applies to** is controlled by `NOTIFY_ROUTINES` in
+`scripts/agents/post_run_to_slack.py`. A routine outside that set is ignored
+entirely and keeps using the claude.ai connector. As of 2026-08-02 the set is
+`{"planner"}` — the pilot. Migrating a routine is adding its name.
+
+For a routine in the set, the block is **required output**. A run log without
+one fails the Action, and nothing reaches Zach's phone.
+
+#### Slack mrkdwn is not GitHub markdown
+
+| Want | Write | Not |
+|---|---|---|
+| bold | `*bold*` | `**bold**` |
+| italic | `_italic_` | `*italic*` |
+| code | `` `code` `` | — |
+| link | `<https://x\|text>` | `[text](https://x)` |
+| bullet | `•` typed manually | `-` or `*` |
+
+No headings, no tables — they render as literal characters.
+
+⚠ **Never use a ``` fence inside the message.** It terminates the block early
+and silently truncates what gets sent.
+
+⚠ **Refer to the run log by path, not by PR number.** The message is committed
+inside that PR, so the number does not exist yet when the message is written.
 
 ### Never invent something waiting on Zach
 
