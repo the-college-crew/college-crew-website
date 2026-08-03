@@ -26,11 +26,16 @@ import urllib.request
 
 RUNS_DIR = "docs/agents/runs/"
 
-# Pilot scope. A run log for a routine outside this set is ignored entirely —
-# including the "missing block" failure below — so routines can migrate off the
-# claude.ai connector one at a time. Add a name here when that routine starts
-# emitting a `## Slack` block.
-NOTIFY_ROUTINES = {"planner"}
+# A run log for a routine outside this set is ignored entirely — including the
+# "missing block" failure below — so routines can migrate off the claude.ai
+# connector one at a time. Add a name here when that routine starts emitting a
+# `## Slack` block.
+#
+# All four migrated 2026-08-03. The set is kept (rather than dropped for an
+# allow-everything default) because it is the revert switch: removing a name
+# puts that routine back on the connector in one line, without touching the
+# extraction logic or a live routine prompt.
+NOTIFY_ROUTINES = {"planner", "proposer", "worker-1", "worker-2"}
 
 SLACK_HEADING = re.compile(r"^##\s+Slack\s*$", re.MULTILINE)
 FENCE = re.compile(r"^```[^\n]*\n(.*?)^```", re.DOTALL | re.MULTILINE)
