@@ -313,11 +313,21 @@ inside that PR, so the number does not exist yet when the message is written.
 Include `<@U0BMD6360GM>` in the message **only** when this run created something
 he has to act on. Leave it out otherwise.
 
-This is not cosmetic. A plain channel message from an app does not notify a
-phone unless `#agents` happens to be set to *All new messages* — one accidental
-tap from silently breaking the whole notification path. A mention notifies
-regardless of channel preference. Confirmed 2026-08-02: a bot post with no
-mention produced no push.
+This is not cosmetic. A plain channel message from an app only notifies a phone
+if `#agents` is set to *All new messages* — one accidental tap from silently
+breaking the whole notification path. A mention notifies regardless of channel
+preference.
+
+⚠ An earlier version of this rule cited *"a bot post with no mention produced no
+push"* as the evidence. That was a **misdiagnosis**. Retested 2026-08-02 with
+Slack closed on the desktop: an unmentioned bot post pushed fine. The original
+silence was Slack suppressing mobile notifications while the same user is active
+on another device — nothing to do with the mention.
+
+The rule stands anyway, on the channel-preference argument alone. It is recorded
+because the wrong reason is the more memorable one, and a future reader
+troubleshooting a missing notification should suspect desktop-active suppression
+first.
 
 | This run produced | Ping? |
 |---|---|
