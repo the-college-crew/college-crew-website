@@ -72,7 +72,7 @@ export default async function InvoicePage({
     .select(
       `id, billing_basis, submitted_minutes, provider_explanation, subtotal_cents,
        total_platform_fee_cents, first_hour_credit_cents, remaining_balance_cents,
-       tip_cents, status, submitted_at, autocharge_at, resolved_at`,
+       status, submitted_at, autocharge_at, resolved_at`,
     )
     .eq("booking_id", id)
     .maybeSingle();
@@ -162,23 +162,9 @@ export default async function InvoicePage({
           ? "Balance paid"
           : copy("booking-customer.invoice.balance-label"),
       value: formatMoney(invoice.remaining_balance_cents),
-      strong: invoice.tip_cents === 0,
+      strong: true,
     },
   ];
-
-  // A recorded tip only ever means one the customer chose at payment time, so
-  // showing it turns a paid invoice into an honest receipt.
-  if (invoice.tip_cents > 0) {
-    lines.push({
-      label: copy("booking-customer.invoice.tip-label"),
-      value: formatMoney(invoice.tip_cents),
-    });
-    lines.push({
-      label: copy("booking-customer.invoice.total-label"),
-      value: formatMoney(invoice.remaining_balance_cents + invoice.tip_cents),
-      strong: true,
-    });
-  }
 
   return (
     <BookingCopyProvider overrides={copyOverrides}>
@@ -339,7 +325,8 @@ export default async function InvoicePage({
             ) : null}
             <InvoicePayPanel
               bookingId={booking.id}
-              remainingBalanceCents={invoice.remaining_balance_cents}
+              payLabel={formatMoney(invoice.remaining_balance_cents)}
+              isZeroBalance={invoice.remaining_balance_cents === 0}
               isQuote={isQuote}
             />
           </div>

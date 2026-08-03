@@ -67,7 +67,7 @@ export default async function AdminBookingPage({
     admin
       .from("booking_invoices")
       .select(
-        "submitted_minutes, subtotal_cents, total_platform_fee_cents, remaining_balance_cents, first_hour_credit_cents, tip_cents, status, provider_explanation",
+        "submitted_minutes, subtotal_cents, total_platform_fee_cents, remaining_balance_cents, first_hour_credit_cents, status, provider_explanation",
       )
       .eq("booking_id", id)
       .maybeSingle(),
@@ -217,10 +217,6 @@ export default async function AdminBookingPage({
             <div className="flex justify-between">
               <dt className="text-mist">Remaining balance</dt>
               <dd>{formatMoney(invoice.remaining_balance_cents)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-mist">Customer tip (unraked)</dt>
-              <dd>{formatMoney(invoice.tip_cents)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-mist">Invoice status</dt>
