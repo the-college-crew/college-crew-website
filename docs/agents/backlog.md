@@ -38,7 +38,7 @@ regardless, so the work has value even if the agent system never ships.
 
 ## CC-004 — Give provider profile pages real metadata and Service structured data
 
-**Status:** approved
+**Status:** in-progress — PR #149 open, awaiting Zach's merge
 **Proposed:** 2026-08-02 — Proposer (trial run)
 **Effort:** S/M
 **Plan:** docs/agents/plans/CC-004.md
