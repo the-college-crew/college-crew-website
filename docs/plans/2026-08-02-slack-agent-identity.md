@@ -1,8 +1,8 @@
 # Give agent routines their own Slack identity, without a credential in the sandbox
 
-**Status:** proposed
+**Status:** in progress
 **Owner:** Zach
-**Branch:** none yet
+**Branch:** feat/agent-slack-notify
 **Updated:** 2026-08-02
 
 ## Goal
@@ -241,6 +241,33 @@ into `#agents`," not production data.
   staggering costs two more README edits.
 
 ## Notes
+
+### Diverged during the build (Steps 3–6, branch `feat/agent-slack-notify`)
+
+- **Step 6 as written would have broken the Step 7 pilot.** "Fail loudly when a
+  changed run log has no `## Slack` section" is correct once every routine has
+  migrated — but during a Planner-only pilot the Proposer and both Workers keep
+  committing run logs without that section, so every one of their runs would
+  have turned the workflow red and emailed Zach. Resolved with a
+  `NOTIFY_ROUTINES` allowlist in the script (`{"planner"}` today): a run log for
+  a routine outside the set is skipped entirely, missing-block check included.
+  Migrating a routine is adding its name to that set.
+- **Python, not bash.** The plan specified
+  `scripts/agents/post-run-to-slack.sh`; it shipped as
+  `scripts/agents/post_run_to_slack.py`. Extracting a fenced block and
+  JSON-escaping arbitrary text are both things shell does badly and unsafely.
+- **`fetch-depth: 0`, not `2`.** `github.event.before` can be several commits
+  back, and the script diffs `before..after`; depth 2 would fail on any push
+  carrying more than one commit.
+- **Added a `workflow_dispatch` trigger.** Lets Zach post an arbitrary test line
+  to `#agents` from the Actions tab without inventing a run log — which is also
+  the cheapest way to run the Step 0 thread test.
+- **Guard against leaking the webhook in public Action logs:** `urllib`'s
+  `HTTPError` stringifies to include the request URL, so failures are reported
+  by `e.code`/`e.reason` only, never by printing the exception. GitHub masks
+  registered secrets anyway; this is the second layer.
+
+### Verified during planning
 
 - Verified against Slack's docs 2026-08-02: app-based incoming webhooks ignore
   `username`/`icon_emoji`/`icon_url` and always inherit the app's configuration
