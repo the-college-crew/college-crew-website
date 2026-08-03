@@ -295,6 +295,33 @@ and silently truncates what gets sent.
 ⚠ **Refer to the run log by path, not by PR number.** The message is committed
 inside that PR, so the number does not exist yet when the message is written.
 
+#### Ping Zach only when the run produced something needing his decision
+
+Include `<@U0BMD6360GM>` in the message **only** when this run created something
+he has to act on. Leave it out otherwise.
+
+This is not cosmetic. A plain channel message from an app does not notify a
+phone unless `#agents` happens to be set to *All new messages* — one accidental
+tap from silently breaking the whole notification path. A mention notifies
+regardless of channel preference. Confirmed 2026-08-02: a bot post with no
+mention produced no push.
+
+| This run produced | Ping? |
+|---|---|
+| A new plan awaiting approval | **yes** — it has a same-night deadline |
+| A new open question, or an item newly `blocked` | **yes** — work is stalled on him |
+| Only the standing list of open PRs | **no** |
+| Nothing pending | **no** |
+
+The standing open-PR list is deliberately excluded. It leads every message by
+design, so pinging on it would ping every single run — and a ping that fires
+every time carries no information, which is the same failure as inventing work.
+Put the mention on the line that says what he has to do, so the ping and its
+reason arrive together.
+
+`U0BMD6360GM` is Zach's Slack member ID. Member IDs are visible to the whole
+workspace and are not credentials.
+
 ### Never invent something waiting on Zach
 
 A notification may ask for approval **only on something actually unapproved.**
