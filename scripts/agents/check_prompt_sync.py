@@ -36,6 +36,7 @@ TRACKED = {
     "trig_014pkNEPduunGTJKTLPAQkbC": "planner",
     "trig_01EQxUThVh42fVrk6oVVtQ4M": "worker-1",
     "trig_01WbSJt6KTYPVWjuzAmeCDBA": "worker-2",
+    "trig_01EvgEGuhKANPq89NtWs2Kwp": "weekly-blog",
 }
 
 
