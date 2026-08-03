@@ -71,7 +71,7 @@ action), and there's no cost to having it in place before it's needed.
 
 ## CC-006 — Label reviews as "Verified booking" on the provider profile page
 
-**Status:** proposed
+**Status:** approved
 **Proposed:** 2026-08-03 — Proposer
 **Effort:** S
 
@@ -109,7 +109,7 @@ no future point at which shipping it early turns out to have been wrong.
 
 ## CC-007 — Add `role="alert"` to the shared `FieldError` component
 
-**Status:** proposed
+**Status:** approved
 **Proposed:** 2026-08-03 — Proposer
 **Effort:** S
 
