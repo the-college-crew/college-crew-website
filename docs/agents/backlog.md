@@ -38,7 +38,7 @@ regardless, so the work has value even if the agent system never ships.
 
 ## CC-003 — Surface the cancellation policy on the provider profile page, not just at confirm
 
-**Status:** approved
+**Status:** in-progress — PR open, awaiting Zach's merge (see PR)
 **Proposed:** 2026-08-02 — Proposer (trial run)
 **Effort:** S
 
