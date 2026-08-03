@@ -73,5 +73,11 @@ Two things that are easy to break:
   account connector silently — an early probe came back with Gmail and Drive
   attached unasked.
 
+**A 403 on update can be spurious.** `"You don't have access to a repository this
+routine uses"` came back once on 2026-08-02 for Worker 2, on a payload whose
+`sources` was byte-identical to the Worker 1 update that had just succeeded. The
+same request went through unchanged on retry. Retry once before believing it and
+going hunting for a permissions problem that isn't there.
+
 Routines cannot be deleted through the API. That is done at
 <https://claude.ai/code/routines>.
