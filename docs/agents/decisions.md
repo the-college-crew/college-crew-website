@@ -10,6 +10,39 @@ Newest first.
 
 ---
 
+## 2026-08-03 — DONE: CC-004 (give provider profile pages real metadata and Service structured data)
+
+Merged in PR #149. Replaced the static `{ title: "Provider profile" }`
+metadata (identical for every provider) with a per-provider
+`generateMetadata` (name, primary service, town, canonical URL) and added a
+`Service` JSON-LD block (`aggregateRating` when the provider has reviews) to
+`app/(customer)/providers/[id]/page.tsx`. Built by Worker 1 on 2026-08-03 from
+the plan at `docs/agents/plans/CC-004.md` (already approved — no planning
+needed this run). `npm run build`/`lint`/`typecheck` all passed before opening
+the PR; Vercel preview deploy was green. Zach merged it the same day.
+
+Open judgment call from the plan, never resolved either way: whether
+`"@type": "Organization"` is the right schema.org type for
+`provider_type === "business"` providers (vs. `LocalBusiness` or something
+else) had no existing precedent in the codebase. Shipped as `Organization`
+since these providers don't have a public street address; revisit if it ever
+matters for how a provider's markup renders in search results.
+
+---
+
+## 2026-08-03 — DONE: CC-003 (surface the cancellation window on the provider profile page)
+
+Merged in PR #148. Added a one-line "Free cancellation up to 12 hours before
+the booking starts" note to `components/provider-profile.tsx`, next to the
+booking CTA, sourced from the existing `CUSTOMER_REFUND_NOTICE_HOURS`
+constant (`lib/booking/policy.ts`) — the same constant already shown at final
+confirm. Built directly by Worker 1 on 2026-08-03 (pure effort `S`, no plan
+required per `docs/agents/README.md`). `npm run build`/`lint`/`typecheck` all
+passed before opening the PR; Vercel preview deploy was green. Zach merged it
+the same day.
+
+---
+
 ## 2026-08-02 — REJECTED: CC-005 (cache Browse catalog reads with `"use cache"`)
 
 Caching a query that isn't slow yet adds staleness risk for no gain at pilot
@@ -286,4 +319,3 @@ the database themselves, but the number of live previews aimed at it goes from
 "when someone pushes" to "most nights."
 
 ---
-
