@@ -264,3 +264,101 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/*
+ * Blog post bodies are markdown rendered to HTML (lib/blog/markdown.ts), so
+ * the elements arrive without classes and have to be styled by tag here.
+ */
+@utility blog-body {
+  color: color-mix(in srgb, var(--color-viridian) 80%, transparent);
+  font-size: 1rem;
+  line-height: 1.85;
+
+  & > * + * {
+    margin-top: 1.5rem;
+  }
+
+  & h2 {
+    margin-top: 3rem;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.75rem;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-viridian);
+  }
+
+  & h3 {
+    margin-top: 2.25rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--color-viridian);
+  }
+
+  & a {
+    color: var(--color-viridian);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: opacity 150ms;
+  }
+
+  & a:hover {
+    opacity: 0.65;
+  }
+
+  & strong {
+    font-weight: 700;
+    color: var(--color-viridian);
+  }
+
+  & ul,
+  & ol {
+    padding-left: 1.35rem;
+  }
+
+  & ul {
+    list-style: disc;
+  }
+
+  & ol {
+    list-style: decimal;
+  }
+
+  & li + li {
+    margin-top: 0.6rem;
+  }
+
+  & blockquote {
+    border-left: 2px solid color-mix(in srgb, var(--color-viridian) 30%, transparent);
+    padding-left: 1.1rem;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+  }
+
+  & hr {
+    border-color: color-mix(in srgb, var(--color-viridian) 20%, transparent);
+  }
+
+  & table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+
+  & th,
+  & td {
+    border-bottom: 1px solid color-mix(in srgb, var(--color-viridian) 18%, transparent);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+  }
+
+  & th {
+    color: var(--color-viridian);
+    font-weight: 700;
+  }
+
+  @variant sm {
+    font-size: 1.0625rem;
+  }
+}

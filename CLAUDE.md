@@ -217,9 +217,24 @@ code paths or the dashboard, never a side channel.
 ## Pilot scope discipline
 
 Build the **pilot v1** described in `docs/SPEC.md`. Several capabilities are
-intentionally **deferred** (flexible per-service availability, blog content
-generation, messaging policy tuning, native mobile). Do not build deferred
-items unless asked — when in doubt, plan first and confirm.
+intentionally **deferred** (flexible per-service availability, messaging policy
+tuning, native mobile). Do not build deferred items unless asked — when in
+doubt, plan first and confirm.
+
+## Blog content lives in git, not the database
+
+Blog posts are markdown files at **`apps/web/content/blog/<slug>.md`** with
+YAML frontmatter, rendered through `lib/blog/posts.ts` and
+`lib/blog/markdown.ts`. The filename is the slug. Publishing a post is a commit,
+not a database write — so no agent needs credentials to ship one, and every post
+is reviewable as a diff.
+
+The `blog_posts` table and the `blog-images` bucket still exist but are
+**dormant**: nothing reads or writes them, and the admin Blog page that did was
+removed. Drop them in a separate migration once the file-based blog has proven
+itself.
+
+Full publishing flow: **`docs/blog/PUBLISHING.md`**.
 
 ## Code conventions
 

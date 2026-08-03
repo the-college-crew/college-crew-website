@@ -4,18 +4,22 @@ import Link from "next/link";
 
 import featuredImage from "@/public/blog/featured-neighborhood-coffee.jpg";
 import chicagoSkylineImage from "@/public/blog/chicago-skyline.jpg";
-import type { PublicBlogPost } from "@/lib/db/types";
-import { hasSupabaseEnv } from "@/lib/env";
-import { blogImageUrl } from "@/lib/media/blog-images";
-import { createClient } from "@/lib/supabase/server";
+import { formatPostDate, getAllPosts, type BlogPost } from "@/lib/blog/posts";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Stories from the block",
   description:
     "Neighborhood stories, practical home help, and student spotlights from College Crew.",
+  alternates: { canonical: `${SITE_URL}/blog` },
 };
 
-const TOPICS = [
+/**
+ * Marketplace services, not blog categories — these link to Browse and are
+ * labelled as such. An earlier version presented them as topic filters, which
+ * they never were (docs/internal/audit-fixes-todo.md).
+ */
+const SERVICES = [
   { label: "Pet care", slug: "pet-care" },
   { label: "House management", slug: "house-management" },
   { label: "Hauling", slug: "hauling" },
@@ -24,24 +28,7 @@ const TOPICS = [
   { label: "Coaching", slug: "youth-sports-coaching" },
 ] as const;
 
-function postDate(iso: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(iso));
-}
-
-function StoryPost({
-  post,
-  reverse,
-}: {
-  post: PublicBlogPost;
-  reverse: boolean;
-}) {
-  const imageUrl = blogImageUrl(post.image_path);
-  const paragraphs = post.body.split(/\n\s*\n/).filter(Boolean);
-
+function StoryCard({ post, reverse }: { post: BlogPost; reverse: boolean }) {
   return (
     <article className="grid items-start gap-7 sm:grid-cols-2 sm:gap-8">
       <div
@@ -51,23 +38,21 @@ function StoryPost({
             : "relative aspect-[4/5] overflow-hidden sm:aspect-auto sm:h-[340px]"
         }
       >
-        {imageUrl ? (
-          // CMS images may be bundled legacy artwork or public Supabase media.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageUrl}
-            alt={post.title}
-            className="h-full w-full object-cover"
-          />
-        ) : null}
+        <Image
+          src={post.image}
+          alt={post.imageAlt}
+          fill
+          sizes="(max-width: 640px) 100vw, 460px"
+          className="object-cover"
+        />
       </div>
 
       <div className={reverse ? "sm:order-1" : undefined}>
         <time
-          dateTime={post.updated_at}
+          dateTime={post.publishedAt}
           className="text-[10px] font-bold uppercase tracking-[0.2em] text-viridian"
         >
-          {postDate(post.updated_at)}
+          {formatPostDate(post.publishedAt)}
         </time>
         <h2 className="mt-3 font-[Georgia,'Times_New_Roman',serif] text-[29px] leading-[1.13] font-semibold text-viridian italic">
           <Link
@@ -77,26 +62,26 @@ function StoryPost({
             {post.title}
           </Link>
         </h2>
-        <div className="mt-5 space-y-5 text-[14px] leading-[1.76] text-viridian/80">
-          {paragraphs.map((paragraph, index) => (
-            <p key={`${post.id}-${index}`}>{paragraph}</p>
-          ))}
-        </div>
+        {/*
+          The excerpt, not the body. Printing full posts here duplicated every
+          post verbatim on a second URL and grew the page without bound.
+        */}
+        <p className="mt-5 text-[14px] leading-[1.76] text-viridian/80">
+          {post.description}
+        </p>
+        <Link
+          href={`/blog/${post.slug}`}
+          className="mt-5 inline-block text-[11px] font-bold uppercase tracking-[0.18em] text-viridian transition-colors hover:text-viridian/65"
+        >
+          Read the story →
+        </Link>
       </div>
     </article>
   );
 }
 
 export default async function BlogPage() {
-  let posts: PublicBlogPost[] = [];
-  if (hasSupabaseEnv()) {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("blog_posts")
-      .select("id, slug, title, body, image_path, created_at, updated_at")
-      .order("updated_at", { ascending: false });
-    posts = data ?? [];
-  }
+  const posts = await getAllPosts();
 
   return (
     <div className="relative left-1/2 -my-8 w-screen -translate-x-1/2 bg-card text-viridian">
@@ -135,12 +120,12 @@ export default async function BlogPage() {
           </div>
 
           <nav
-            aria-label="Blog topics"
+            aria-label="Book a service"
             className="overflow-x-auto border-b border-viridian/20"
           >
             <ul className="flex min-w-max items-center py-5 sm:mx-auto sm:w-max sm:py-6">
-              {TOPICS.map((topic, index) => (
-                <li key={topic.slug} className="flex items-center">
+              {SERVICES.map((service, index) => (
+                <li key={service.slug} className="flex items-center">
                   {index > 0 ? (
                     <span
                       aria-hidden="true"
@@ -148,10 +133,10 @@ export default async function BlogPage() {
                     />
                   ) : null}
                   <Link
-                    href={`/browse?service=${topic.slug}`}
+                    href={`/browse?service=${service.slug}`}
                     className="whitespace-nowrap text-[13px] font-medium text-viridian/80 transition-colors hover:text-viridian"
                   >
-                    {topic.label}
+                    {service.label}
                   </Link>
                 </li>
               ))}
@@ -163,7 +148,11 @@ export default async function BlogPage() {
           <div className="space-y-16">
             {posts.length > 0 ? (
               posts.map((post, index) => (
-                <StoryPost key={post.id} post={post} reverse={index % 2 === 1} />
+                <StoryCard
+                  key={post.slug}
+                  post={post}
+                  reverse={index % 2 === 1}
+                />
               ))
             ) : (
               <p className="border-y border-viridian/20 py-10 font-[Georgia,'Times_New_Roman',serif] text-2xl italic text-viridian/70">

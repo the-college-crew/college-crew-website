@@ -16,6 +16,10 @@ export const PILOT_SERVICE_AREA = {
   name: "North Shore and Lincoln Park",
 } as const;
 
+/** Absolute origin, for canonical URLs, OpenGraph tags, and structured data. */
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.thecollegecrew.com";
+
 export { PLATFORM_FEE_BPS };
 
 /**
