@@ -67,11 +67,18 @@ queue. **It binds every agent on this repo, not just the routines**, explicitly
 including approval sessions that flip a `backlog.md` status or append to
 `decisions.md`.
 
-⚠ **The bound is strict and absolute.** If even one path outside `docs/agents/`
-appears in the diff — any file under `apps/`, `supabase/`, `scripts/`, `docs/plans/`,
-this file — do not merge. Leave it for Zach and say so. There is no exception for
-"the code change is tiny." A PR that edits `backlog.md` *and* a component is a
-code PR.
+**One other diff self-merges: published blog content.** A PR confined to
+`apps/web/content/blog/**`, `apps/web/public/blog/**`, and
+`docs/blog/published.md` is prose and a photograph, and it already passed a
+human gate — Gianna approves each draft in the Slack canvas before it is
+committed. This is **rule 7b** in `docs/agents/README.md`.
+
+⚠ **The bound is strict and absolute.** If even one path outside those sets
+appears in the diff — any other file under `apps/`, `supabase/`, `scripts/`,
+`docs/plans/`, this file — do not merge. Leave it for Zach and say so. There is
+no exception for "the code change is tiny." A PR that edits `backlog.md` *and* a
+component is a code PR, and so is one that adds a blog post *and* touches the
+blog renderer.
 
 Why it matters enough to duplicate: an approval sitting in an unmerged PR is
 invisible to everything that reads `main` — including the Worker that runs

@@ -3,6 +3,11 @@
 Blog posts are markdown files in this repo. Publishing one is a commit — there
 is no admin page and no database write, so nothing needs credentials.
 
+Most weeks nobody does this by hand: the weekly blog routine drafts the post,
+Gianna approves it in Slack, and the **next** run publishes it. That loop is at
+the bottom under [The weekly loop](#the-weekly-loop). Everything above it is the
+file format, which both the routine and a human follow.
+
 ## Where things live
 
 | Path | What |
@@ -84,3 +89,53 @@ Nothing below needs to be written by hand — it comes from the frontmatter:
 - An `id` on every heading, so a search result or an AI answer engine can
   deep-link the exact section that answered the question.
 - The post's entry in `/sitemap.xml`.
+
+---
+
+## The weekly loop
+
+One routine runs every Monday morning and does two things in order: publishes
+last week's approved draft, then writes a new one. Everything hinges on a single
+standing Slack canvas in `#weekly-blog` that Gianna edits in place
+([`canvas.md`](./canvas.md)).
+
+```
+Monday 8:03am ─ routine reads the canvas
+                 │
+                 ├─ checkbox ticked AND photo present?
+                 │    ├─ yes → commit the post + photo, mark published.md,
+                 │    │        then overwrite the canvas with a new draft
+                 │    └─ no  → change nothing, post one line saying what's
+                 │             missing. Same draft is still there next week.
+                 ↓
+Gianna, any time ─ edits the draft, fills in [NEEDS …] markers,
+                   drops in a photo, ticks the box
+```
+
+### Gianna's side
+
+1. Read the draft in the canvas. Rewrite it so it sounds like a person — that
+   pass is the point, not a formality.
+2. Clear every **`[NEEDS …]`** marker. Each one is a fact the routine refused to
+   invent: a real student's name, a real price. Fill it in with something true or
+   delete the sentence. **A post with a marker left in it will not publish** —
+   the routine refuses and tells you which one.
+3. Keep the phrases under **Keep these words**. Rewrite freely around them;
+   those are what the post ranks for.
+4. Drop the photo into the canvas.
+5. Tick `I, Gianna, approve this blog for production`.
+
+It goes live on the next Monday run. Nothing is on a clock — an unapproved draft
+just waits, and the routine will not write over it.
+
+### Why it works this way
+
+Gianna does not run Claude Code, and a Slack `@`-mention can't drive a scheduled
+routine. So the canvas *is* the interface: the checkbox is the authorization
+signal, and the routine reads it on its own schedule. No credentials leave the
+sandbox, and the approval is a durable artifact rather than a message someone
+has to remember to send.
+
+The routine self-merges its own publish PR under **rule 7b** in
+`docs/agents/README.md` — permitted only because the diff is confined to blog
+content, artwork, and `published.md`.
