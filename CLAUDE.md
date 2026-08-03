@@ -52,6 +52,33 @@ hardcoded path); it was invisible to git, unreadable by the other agent, and
 scoped to one project's directory. A committed markdown file is legible to both
 agents, to both devs, and to a future venture that shares neither.
 
+### Self-merge PRs confined to `docs/agents/` — don't ask
+
+**A PR whose diff touches nothing outside `docs/agents/` gets merged by whoever
+opened it.** Open it, wait for checks, merge it, then report what landed. Do not
+leave it open for Zach and do not ask permission — the ask is the bug.
+
+This is **rule 7** in `docs/agents/README.md`, which carries the full statement
+and the reasoning. It is repeated here because it is written as a rule for the
+scheduled routines, and every routine prompt is told to read that file — while an
+ad-hoc session (an `@Claude` approval from Slack, a Codex run, a session started
+from a bare request) is not, and so defaults to generic caution and stalls the
+queue. **It binds every agent on this repo, not just the routines**, explicitly
+including approval sessions that flip a `backlog.md` status or append to
+`decisions.md`.
+
+⚠ **The bound is strict and absolute.** If even one path outside `docs/agents/`
+appears in the diff — any file under `apps/`, `supabase/`, `scripts/`, `docs/plans/`,
+this file — do not merge. Leave it for Zach and say so. There is no exception for
+"the code change is tiny." A PR that edits `backlog.md` *and* a component is a
+code PR.
+
+Why it matters enough to duplicate: an approval sitting in an unmerged PR is
+invisible to everything that reads `main` — including the Worker that runs
+overnight. On 2026-08-03 a Slack approval session self-merged two docs-only PRs
+(#154, #155) and then asked permission for a third that was strictly smaller
+(#156), which is the inconsistency this section exists to remove.
+
 ---
 
 ## Stack
