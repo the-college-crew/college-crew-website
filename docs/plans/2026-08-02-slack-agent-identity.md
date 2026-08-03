@@ -193,7 +193,38 @@ per run, usually a skip notice — and it is the one that produced the divergenc
 bug, so it is the right place to prove the fix.
 
 Leave the Proposer and both Workers on the connector until the Planner has run
-cleanly for two consecutive nights. Then move them and update the README.
+cleanly. Then move them and update the README.
+
+**Revised 2026-08-02, after the Stage 1 smoke test.** This step originally said
+"two consecutive nights." That is over-cautious: one Planner run exercises the
+entire mechanism — the run-log block, the `before..after` diff, the change guard,
+`NOTIFY_ROUTINES`, and the extraction regex against real routine-authored content.
+A second identical run teaches almost nothing, and the other prompts use the same
+code path. **One clean run is the bar.**
+
+Migration order, and why:
+
+1. **Planner** — pilot.
+2. **Proposer** — immediately after a clean Planner run. Same shape: one post per
+   run, low stakes.
+3. **Both Workers — last, and as a separate decision.** Not caution about the
+   mechanism, but the heartbeat problem: a Worker's Step 0 start notice exists to
+   prove the routine *launched*, and routing it through commit → PR → checks →
+   self-merge means a Worker that dies during that sequence produces no notice —
+   indistinguishable from one that never started, which is the exact ambiguity the
+   notice was added to remove. Either accept the degradation or leave the start
+   notice on the connector while the end-of-run recap moves. Decide it explicitly
+   rather than inheriting it from this rollout.
+
+**Why staged at all**, since the mechanism is simple: every failure mode here
+produces *silence*, and this system defines silence as "the routine died." A
+delivery bug is therefore indistinguishable from a dead routine, an exhausted
+usage window, or a broken checkout. Migrating one routine at a time keeps a
+control group — "Planner silent, everyone else fine" points straight at the new
+path, where "total silence" points nowhere.
+
+**Zach makes the migration call by hand** (agreed 2026-08-02) rather than it
+triggering automatically on a clean run — the evidence is worth a human look.
 
 ### Step 8 — README updates
 
