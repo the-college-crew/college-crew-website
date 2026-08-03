@@ -1,1 +1,218 @@
-IyBCYWNrbG9nCgpUaGUgcXVldWUuIFNlZSBgUkVBRE1FLm1kYCBmb3Igc3RhdHVzZXMgYW5kIHJ1bGVzLgoKKipUbyBhcHByb3ZlOioqIGNoYW5nZSBgKipTdGF0dXM6KiogcHJvcG9zZWRgIHRvIGAqKlN0YXR1czoqKiBhcHByb3ZlZGAuCioqVG8gcmVqZWN0OioqIGNoYW5nZSBpdCB0byBgKipTdGF0dXM6KiogcmVqZWN0ZWRgIGFuZCBhZGQgYSBsaW5lIHRvCmBkZWNpc2lvbnMubWRgIHNheWluZyB3aHkg4oCUIHRoYXQgbGluZSBpcyB3aGF0IHN0b3BzIGl0IGNvbWluZyBiYWNrLgoKLS0tCgojIyBDQy0wMDEg4oCUIFNwbGl0IFByZXZpZXcgZW52aXJvbm1lbnQgb2ZmIHRoZSBwcm9kdWN0aW9uIFN1cGFiYXNlIHByb2plY3QKCioqU3RhdHVzOioqIHJlamVjdGVkIOKAlCBkZWZlcnJlZCB0byBhIGh1bWFuLCBiZWZvcmUgbGF1bmNoLiBTZWUgYGRlY2lzaW9ucy5tZGAuCioqUHJvcG9zZWQ6KiogMjAyNi0wOC0wMiDigJQgc2VlZGVkIGJ5IGhhbmQsIG5vdCBieSBhbiBhZ2VudAoqKkVmZm9ydDoqKiBMCgpgdmVyY2VsIGVudiBsc2AgY29uZmlybXMgYE5FWFRfUFVCTElDX1NVUEFCQVNFX1VSTGAsCmBORVhUX1BVQkxJQ19TVVBBQkFTRV9BTk9OX0tFWWAsIGFuZCBgU1VQQUJBU0VfU0VSVklDRV9ST0xFX0tFWWAgYXJlIGVhY2ggYQpzaW5nbGUgdmFsdWUgc2NvcGVkIHRvICoqUHJldmlldyBhbmQgUHJvZHVjdGlvbioqLiBFdmVyeSBwcmV2aWV3IGRlcGxveW1lbnQg4oCUCmV2ZXJ5IGJyYW5jaCwgZXZlcnkgUFIg4oCUIHRoZXJlZm9yZSBydW5zIGFnYWluc3QgdGhlIHByb2R1Y3Rpb24gZGF0YWJhc2UgdXNpbmcKdGhlIHNlcnZpY2Utcm9sZSBrZXkgdGhhdCBieXBhc3NlcyBSTFMuCgpDcmVhdGUgYSBzZWNvbmQgKGZyZWUtdGllcikgU3VwYWJhc2UgcHJvamVjdCwgcmVjb25jaWxlIHRoZSBkcmlmdCBiZXR3ZWVuIHRoZQoxMTggZmlsZXMgaW4gYHN1cGFiYXNlL21pZ3JhdGlvbnMvYCBhbmQgdGhlIGxpdmUgc2NoZW1hLCBhcHBseSB0aGVtLCBzZWVkCnN5bnRoZXRpYyBkYXRhLCB0aGVuIHJlcG9pbnQgdGhlIHRocmVlIFByZXZpZXcgdmFyaWFibGVzIGF0IGl0LgoKKipXaHkgaXQgbWF0dGVyczoqKiB0aGlzIGlzIGEgbGl2ZSBleHBvc3VyZSBpbiB0aGUgY3VycmVudCB3b3JrZmxvdywgd2l0aCBvcgp3aXRob3V0IGFnZW50cy4gSXQgaXMgdGhlIG1vc3QgbGlrZWx5IG1lY2hhbmlzbSBiZWhpbmQgc3ludGhldGljIHByb3ZpZGVycwpyZWFjaGluZyB0aGUgbGl2ZSBCcm93c2UgcGFnZSB0d2ljZS4gSXQgYWxzbyB1bmJsb2NrcyBldmVyeXRoaW5nIHRoZSBhZ2VudApzeXN0ZW0gd2FudHMgdG8gZG8gd2l0aCBkYXRhLgoKKipEZXZpbCdzIGFkdm9jYXRlOioqIHRoZSBkcmlmdCByZWNvbmNpbGlhdGlvbiBpcyB1bnNjb3BlZCDigJQgaXQgY291bGQgYmUgYW4KYWZ0ZXJub29uIG9yIGEgd2VlaywgYW5kIG5vYm9keSBrbm93cyB1bnRpbCBwcm9kdWN0aW9uJ3Mgc2NoZW1hIGlzIGR1bXBlZCBhbmQKZGlmZmVkLiBDb3VudGVyOiB0aGUgZXhwb3N1cmUgaXMgcmVhbCB0b2RheSBhbmQgdGhlIGRyaWZ0IGlzIGEgc3RhbmRpbmcgaGF6YXJkCnJlZ2FyZGxlc3MsIHNvIHRoZSB3b3JrIGhhcyB2YWx1ZSBldmVuIGlmIHRoZSBhZ2VudCBzeXN0ZW0gbmV2ZXIgc2hpcHMuCgotLS0KCiMjIENDLTAwMyDigJQgU3VyZmFjZSB0aGUgY2FuY2VsbGF0aW9uIHBvbGljeSBvbiB0aGUgcHJvdmlkZXIgcHJvZmlsZSBwYWdlLCBub3QganVzdCBhdCBjb25maXJtCgoqKlN0YXR1czoqKiBhcHByb3ZlZAoqKlByb3Bvc2VkOioqIDIwMjYtMDgtMDIg4oCUIFByb3Bvc2VyICh0cmlhbCBydW4pCioqRWZmb3J0OioqIFMKCmBsaWIvYm9va2luZy9wb2xpY3kudHNgIGFscmVhZHkgY29tcHV0ZXMgYENVU1RPTUVSX1JFRlVORF9OT1RJQ0VfSE9VUlNgICgxMmgpCmFuZCB0aGUgZnVsbCBwcmUtYXJyaXZhbCBjYW5jZWxsYXRpb24gY2xhc3NpZmljYXRpb24sIGFuZCBpdCdzIHNob3duIHRvIHRoZQpjdXN0b21lciBleGFjdGx5IG9uY2Ug4oCUIGF0IGBhcHAvKGN1c3RvbWVyKS9ib29raW5ncy9baWRdL2NvbmZpcm0vcGFnZS50c3hgLAp2aWEgdGhlIGBib29raW5nLWN1c3RvbWVyLmNvbmZpcm0uY2FuY2VsbGF0aW9uLXBvbGljeWAgY29weSBrZXkuIE5vdGhpbmcKbWVudGlvbnMgaXQgZWFybGllcjogYGNvbXBvbmVudHMvcHJvdmlkZXItcHJvZmlsZS50c3hgLCB0aGUgcGFnZSBhIGN1c3RvbWVyCnJlYWRzIHdoaWxlIGRlY2lkaW5nIHdoZXRoZXIgdG8gYm9vayBhdCBhbGwsIHNob3dzIHJhdGluZywgdmVyaWZpY2F0aW9uCmJhZGdlLCBhbmQgc2VydmljZXMsIGJ1dCBubyBjYW5jZWxsYXRpb24gdGVybXMuCgoyMDI2IG1hcmtldHBsYWNlIHRydXN0LXNpZ25hbCByZXNlYXJjaCBpcyBjb25zaXN0ZW50IHRoYXQgYSB2aXNpYmxlCmNhbmNlbGxhdGlvbi9yZWZ1bmQgcG9saWN5IGlzIGEgZm91bmRhdGlvbmFsIHRydXN0IHNpZ25hbCBmb3IgYSBuZXcKbWFya2V0cGxhY2UncyBmaXJzdC1ib29raW5nIGZ1bm5lbCwgYW5kIHRoYXQgaXQgbmVlZHMgdG8gc2hvdyB1cCBiZWZvcmUgdGhlCmNvbW1pdG1lbnQgc3RlcCwgbm90IG9ubHkgYXQgZmluYWwgcGF5bWVudC4gQWRkIGEgb25lLWxpbmUgIkZyZWUgY2FuY2VsbGF0aW9uCnVwIHRvIDEyIGhvdXJzIGJlZm9yZSIgbm90ZSB0byB0aGUgcHJvZmlsZSBwYWdlLCBzb3VyY2VkIGZyb20gdGhlIHNhbWUKY29uc3RhbnQgYWxyZWFkeSB1c2VkIGF0IGNvbmZpcm0g4oCUIG5vIG5ldyBwb2xpY3ksIG5vIG5ldyBjb3B5IHRvIGludmVudCwganVzdAptb3ZpbmcgYW4gZXhpc3RpbmcgZmFjdCBlYXJsaWVyIGluIHRoZSByZWFkLgoKKipXaHkgdGhpcyBvbmU6KiogaXQncyB0aGUgb25seSBzdXJ2aXZvciB0aGF0IHRvdWNoZXMgYWN0dWFsIGZpcnN0LWJvb2tpbmcKY29udmVyc2lvbiwgd2hpY2ggaXMgdGhlIG9uZSB0aGluZyB0aGlzIDctd2VlayBwaWxvdCBleGlzdHMgdG8gbWVhc3VyZSDigJQgYnV0CnVubGlrZSBhIG1hcmtldGluZy9maW5hbmNpYWwgcHJvcG9zYWwgKGRlbGliZXJhdGVseSBkZWZlcnJlZCBwZXIKYGRlY2lzaW9ucy5tZGAgdW50aWwgdGhlcmUncyByZWFsIGJvb2tpbmcgZGF0YSksIGl0IGRvZXNuJ3QgcmVxdWlyZSBpbnZlbnRpbmcKYSBzdHJhdGVneS4gSXQgc3VyZmFjZXMgYSBmYWN0IHRoZSBjb2RlYmFzZSBhbHJlYWR5IGNvbXB1dGVzIGFuZCBhbHJlYWR5CnRydXN0cyBlbm91Z2ggdG8gc2hvdyBhdCBjb25maXJtOyB0aGUgcmlzayBvZiBiZWluZyB3cm9uZyBpcyBjbG9zZSB0byB6ZXJvLgoKKipEZXZpbCdzIGFkdm9jYXRlOioqIHdpdGggNiBwcm92aWRlcnMgb24gYSBjdXJhdGVkLCBhZG1pbi1hcHByb3ZlZCByb3N0ZXIsCmN1c3RvbWVycyBtYXkgYWxyZWFkeSB0cnVzdCB0aGUgcGxhdGZvcm0gdmlhIHRoZSBjdXJhdGlvbiBpdHNlbGYsIG1ha2luZyB0aGlzCm1hcmdpbmFsLiBJdCBzdXJ2aXZlcyBhbnl3YXkgYmVjYXVzZSBpdCdzIGEgc2FtZS1jb25zdGFudCwgc2FtZS1jb3B5LXBhdHRlcm4sCm5lYXItemVyby1yaXNrIGNoYW5nZSDigJQgdGhlcmUncyBubyByZWFsIGRvd25zaWRlIHRvIHNoaXBwaW5nIGl0IGV2ZW4gaWYgdGhlCmxpZnQgdHVybnMgb3V0IHRvIGJlIHNtYWxsLgoKLS0tCgojIyBDQy0wMDQg4oCUIEdpdmUgcHJvdmlkZXIgcHJvZmlsZSBwYWdlcyByZWFsIG1ldGFkYXRhIGFuZCBTZXJ2aWNlIHN0cnVjdHVyZWQgZGF0YQoKKipTdGF0dXM6KiogYXBwcm92ZWQKKipQcm9wb3NlZDoqKiAyMDI2LTA4LTAyIOKAlCBQcm9wb3NlciAodHJpYWwgcnVuKQoqKkVmZm9ydDoqKiBTL00KKipQbGFuOioqIGRvY3MvYWdlbnRzL3BsYW5zL0NDLTAwNC5tZAoKYGFwcC8oY3VzdG9tZXIpL3Byb3ZpZGVycy9baWRdL3BhZ2UudHN4YCBleHBvcnRzIG9uZSBzdGF0aWMKYG1ldGFkYXRhOiBNZXRhZGF0YSA9IHsgdGl0bGU6ICJQcm92aWRlciBwcm9maWxlIiB9YCBmb3IgZXZlcnkgcHJvdmlkZXIg4oCUCmlkZW50aWNhbCB0aXRsZSBmb3IgYWxsIG9mIHRoZW0g4oCUIGFuZCBhIHJlcG8td2lkZSBzZWFyY2ggdHVybnMgdXAgemVybwpgYXBwbGljYXRpb24vbGQranNvbmAgb3Igc2NoZW1hLm9yZyBtYXJrdXAgYW55d2hlcmUgaW4gdGhlIGFwcC4gTWVhbndoaWxlCmBhcHAvc2l0ZW1hcC50c2AgYWxyZWFkeSBsaXN0cyBldmVyeSBhcHByb3ZlZCBwcm92aWRlcidzIHB1YmxpYyBwcm9maWxlLCBhbmQKYENMQVVERS5tZGAgdHJlYXRzIHByb2R1Y3Rpb24gaW5kZXhpbmcgYXMgYSBzdGFuZGluZyBndWFyZHJhaWwgKCJtdXN0IG5vdCBhZGQKYSBzaXRlLXdpZGUgYG5vaW5kZXhgIikuIFRoZSBpbmZyYXN0cnVjdHVyZSBhc3N1bWVzIHRoZXNlIHBhZ2VzIGFyZSBtZWFudCB0bwpyYW5rOyB0aGUgb24tcGFnZSBzaWduYWxzIHNlYXJjaCBlbmdpbmVzIGFuZCBBSSBhbnN3ZXIgZW5naW5lcyBhY3R1YWxseSB1c2UKYXJlIG1pc3NpbmcuCgpBZGQgYGdlbmVyYXRlTWV0YWRhdGFgIChwcm92aWRlciBuYW1lLCBwcmltYXJ5IHNlcnZpY2UsIHRvd24pIGFuZCBhIGBTZXJ2aWNlYApKU09OLUxEIGJsb2NrIHdpdGggYGFnZ3JlZ2F0ZVJhdGluZ2Agc291cmNlZCBmcm9tIHRoZSByYXRpbmcgZGF0YQpgbGliL2Jyb3dzZS9yYW5raW5nLnRzYCBhbHJlYWR5IGNvbXB1dGVzLiBNZXRhZGF0YS1vbmx5IGNoYW5nZSDigJQgbm8gZGF0YQptdXRhdGlvbiwgbm8gc2NoZW1hIGNoYW5nZS4KCioqV2h5IHRoaXMgb25lOioqIGl0J3MgdGhlIGNoZWFwZXN0IGZpeCBmb3IgYSBndWFyZHJhaWwgdGhlIHByb2plY3QgYWxyZWFkeQpjb21taXR0ZWQgdG8gKGluZGV4aW5nIG9uKSBidXQgbmV2ZXIgZm9sbG93ZWQgdGhyb3VnaCBvbiBmb3IgdGhlIG9uZSBwYWdlCnR5cGUg4oCUIHByb3ZpZGVyIHByb2ZpbGVzIOKAlCB0aGF0J3MgYWN0dWFsbHkgbWVhbnQgdG8gYmUgZm91bmQgZXh0ZXJuYWxseS4KCioqRGV2aWwncyBhZHZvY2F0ZToqKiB3aXRoIH42IHByb3ZpZGVycyBpbiBvbmUgbmVpZ2hib3Job29kLCBubyBhbW91bnQgb2YKbWFya3VwIG1ha2VzIEdvb2dsZSBzZW5kIG1lYW5pbmdmdWwgdHJhZmZpYyBpbiBhIDctd2VlayBwaWxvdCDigJQgdGhpcyBpcyByZWFsLAphbmQgaXQncyB0aGUgc3Ryb25nZXN0IG9iamVjdGlvbiBvZiB0aGUgdGhyZWUgc3Vydml2b3JzLiBJdCBzdXJ2aXZlcyBhbnl3YXkKYmVjYXVzZSB0aGUgZml4IGlzIHdlbGwgdW5kZXIgYSBkYXksIGNhcnJpZXMgemVybyBwcm9kdWN0IHJpc2ssIGFuZCBpcyB0aGUKa2luZCBvZiB0aGluZyB0aGF0J3MgZmFyIGNoZWFwZXIgdG8gZG8gbm93IChvbmUgcHJvZmlsZSB0ZW1wbGF0ZSkgdGhhbiB0bwpyZXRyb2ZpdCBvbmNlIHRoZXJlIGFyZSBkb3plbnMgb2YgcHJvdmlkZXIgcGFnZXMuCgotLS0KCiMjIENDLTAwNSDigJQgQ2FjaGUgdGhlIEJyb3dzZSBwYWdlJ3MgY2F0YWxvZyByZWFkcyB3aXRoIE5leHQgMTYncyBgInVzZSBjYWNoZSJgCgoqKlN0YXR1czoqKiByZWplY3RlZAoqKlByb3Bvc2VkOioqIDIwMjYtMDgtMDIg4oCUIFByb3Bvc2VyICh0cmlhbCBydW4pCioqRWZmb3J0OioqIFMKCmBnZXRMaXZlU2VydmljZXMoKWAgYW5kIGBnZXRTZXJ2aWNlUHJvdmlkZXJDb3VudHMoKWAgaW4gYGxpYi9kYi9xdWVyaWVzLnRzYApiYWNrIGBhcHAvKGN1c3RvbWVyKS9icm93c2UvcGFnZS50c3hgIGFuZCByZWFkIHRoZSBhZG1pbi10b2dnbGVkIGBzZXJ2aWNlc2AKdGFibGUg4oCUIGRhdGEgdGhhdCdzIGlkZW50aWNhbCBmb3IgZXZlcnkgdmlzaXRvciBhbmQgb25seSBjaGFuZ2VzIHdoZW4gYW4KYWRtaW4gZmxpcHMgYSB0b2dnbGUsIHBlciBgQ0xBVURFLm1kYCdzICJrZWVwIHRoZSBjdXJhdGVkIHNlcnZpY2UgbGlzdCBkcml2ZW4KYnkgdGhlIGBzZXJ2aWNlc2AgdGFibGUiIGNvbnZlbnRpb24uIEV2ZXJ5IEJyb3dzZSByZXF1ZXN0IHJlLXF1ZXJpZXMgU3VwYWJhc2UKZm9yIGl0IGFueXdheS4gTmV4dC5qcyAxNidzIGAidXNlIGNhY2hlImAgZGlyZWN0aXZlIGlzIHRoZSBjdXJyZW50IGd1aWRhbmNlCmZvciBleGFjdGx5IHRoaXMgc2hhcGUgb2YgcmVhZCAoZXhwbGljaXQgb3B0LWluLCByZXBsYWNpbmcgdGhlIG9sZCBpbXBsaWNpdApmdWxsLXJvdXRlIGNhY2hlKTsgd3JhcHBpbmcgdGhlc2UgdHdvIGZ1bmN0aW9ucyB3aXRoIGAidXNlIGNhY2hlImAgYW5kIGEgc2hvcnQKcmV2YWxpZGF0ZSAoZS5nLiA2MHMpIGRyb3BzIHRoZSByZWR1bmRhbnQgcm91bmQtdHJpcCB3aXRob3V0IHRvdWNoaW5nIHRoZQpwZXJzb25hbGl6ZWQgcGFydHMgb2YgdGhlIHNhbWUgcGFnZSAoc2Vzc2lvbiwgZ2VvIG9yaWdpbiwgc29ydCksIHdoaWNoIHN0YXkKZHluYW1pYy4KCioqV2h5IHRoaXMgb25lOioqIGl0J3MgdGhlIG9ubHkgc3Vydml2b3IgdGhhdCdzIHB1cmVseSBhZGRpdGl2ZSDigJQgbm8KdXNlci1mYWNpbmcgYmVoYXZpb3IgY2hhbmdlcyBhdCBhbGwg4oCUIHdoaWNoIG1ha2VzIGl0IGEgZ29vZCB0aGlyZCBsZWcKYWxvbmdzaWRlIHR3byBwcm9wb3NhbHMgdGhhdCBkbyBjaGFuZ2Ugd2hhdCdzIGRpc3BsYXllZC4gSXQgYWxzbyBrZWVwcyB0aGUKInNlcnZpY2VzIHRhYmxlLCBuZXZlciBoYXJkLWNvZGVkIiBhcmNoaXRlY3R1cmUgaW50YWN0IHdoaWxlIHJlbW92aW5nIHRoZQpyZWR1bmRhbnQgZmV0Y2gsIHdoaWNoIGlzIGEgYmV0dGVyIHByZWNlZGVudCB0byBzZXQgbm93IHRoYW4gYWZ0ZXIgdHJhZmZpYwpncm93cyBwYXN0IHRoZSBwaWxvdC4KCioqRGV2aWwncyBhZHZvY2F0ZToqKiBhdCA2IHByb3ZpZGVycyBhbmQgb25lIG5laWdoYm9yaG9vZCwgU3VwYWJhc2UgbG9hZCB3YXMKbmV2ZXIgdGhlIGJvdHRsZW5lY2sg4oCUIHRoaXMgb3B0aW1pemVzIHNvbWV0aGluZyB0aGF0IGlzbid0IHNsb3cgeWV0LiBJdApzdXJ2aXZlcyBhbnl3YXkgYmVjYXVzZSB0aGUgZml4IGlzIGNsb3NlIHRvIGZyZWUgKGEgZGlyZWN0aXZlIGFuZCBhIG51bWJlciksCmNhcnJpZXMgbm8gcmlzayB0byBjb3JyZWN0bmVzcyAodGhlIGNhY2hlZCBkYXRhIGNoYW5nZXMgb25seSB2aWEgYWRtaW4KYWN0aW9uKSwgYW5kIHRoZXJlJ3Mgbm8gY29zdCB0byBoYXZpbmcgaXQgaW4gcGxhY2UgYmVmb3JlIGl0J3MgbmVlZGVkLgoKLS0tCgojIyBDQy0wMDYg4oCUIExhYmVsIHJldmlld3MgYXMgIlZlcmlmaWVkIGJvb2tpbmciIG9uIHRoZSBwcm92aWRlciBwcm9maWxlIHBhZ2UKCioqU3RhdHVzOioqIHByb3Bvc2VkCioqUHJvcG9zZWQ6KiogMjAyNi0wOC0wMyDigJQgUHJvcG9zZXIKKipFZmZvcnQ6KiogUwoKYHB1YmxpYy5yZXZpZXdzYCBjYW5ub3QgZXhpc3Qgd2l0aG91dCBhIGNvbXBsZXRlZCBib29raW5nOgpgc3VwYWJhc2UvbWlncmF0aW9ucy8yMDI2MDcxNTIyMTk0M19ob3VybHlfcm9sbG91dF9wdWJsaWNfcmV2aWV3X3NlY3VyaXR5LnNxbGAncwpgc2V0X3Jldmlld19wdWJsaWNfZGltZW5zaW9uc2AgdHJpZ2dlciBkZXJpdmVzIGBwcm92aWRlcl9pZGAvYHNlcnZpY2VfaWRgIGZyb20KYGJvb2tpbmdzYCBhbmQgcmFpc2VzIGBSRVZJRVdfQk9PS0lOR19OT1RfRk9VTkRgIGlmIG5vbmUgZXhpc3RzLCBhbmQKYHN1Ym1pdFJldmlld2AgaW4gYGFwcC8oY3VzdG9tZXIpL2Rhc2hib2FyZC9hY3Rpb25zLnRzYCBvbmx5IGluc2VydHMgb25jZQpgYm9va2luZy5zdGF0dXMgPT09ICJjb21wbGV0ZWQiYCBmb3IgdGhlIHJldmlld2luZyBjdXN0b21lcidzIG93biBib29raW5nCihlbmZvcmNlZCBhZ2FpbiBieSBSTFMpLiBFdmVyeSByZXZpZXcgcmVuZGVyZWQgaW4KYGNvbXBvbmVudHMvcHJvdmlkZXItcHJvZmlsZS50c3hgICh+bGluZXMgMjU3wrEyODkpIGlzIHRoZXJlZm9yZSBhbHJlYWR5LApzdHJ1Y3R1cmFsbHksIHRpZWQgdG8gYSByZWFsIHRyYW5zYWN0aW9uIOKAlCBidXQgbm90aGluZyBpbiB0aGUgVUkgc2F5cyBzbzsgaXQKcmVhZHMgbGlrZSBhbnkgb3BlbiByZXZpZXcgd2lkZ2V0IGEgc3RyYW5nZXIgY291bGQgcG9zdCB0by4KCjIwMjXigJMyMDI2IG1hcmtldHBsYWNlIHRydXN0IHJlc2VhcmNoIGlzIGNvbnNpc3RlbnQgdGhhdCB0YWdnaW5nIHJldmlld3MgYXMKdGllZCB0byBhIGNvbXBsZXRlZCB0cmFuc2FjdGlvbiBpcyBhIGZpcnN0LWJvb2tpbmctY29udmVyc2lvbiB0cnVzdCBzaWduYWwsCmVzcGVjaWFsbHkgZm9yIGEgcGxhdGZvcm0gd2l0aCBubyBlc3RhYmxpc2hlZCBicmFuZCB5ZXQuIEFkZCBhIHNtYWxsCiJWZXJpZmllZCBib29raW5nIiBsYWJlbCBuZXh0IHRvIGVhY2ggcmV2aWV3J3Mgc3RhciByYXRpbmcgaW4KYHByb3ZpZGVyLXByb2ZpbGUudHN4YCDigJQgbm8gbmV3IHF1ZXJ5IGFuZCBubyBzY2hlbWEgY2hhbmdlLCBzaW5jZSB0aGUKZ3VhcmFudGVlIGFscmVhZHkgaG9sZHMgZm9yIGV2ZXJ5IHJvdyBgcHJvdmlkZXJfcmV2aWV3c2AgcmV0dXJucy4KCioqV2h5IHRoaXMgb25lOioqIHVubGlrZSB0aGUgdmVyaWZpY2F0aW9uLWhlYXZ5IGlkZWFzIHRoZSBzYW1lIHJlc2VhcmNoCnN1cmZhY2VkIChiYWNrZ3JvdW5kLWNoZWNrIHRpZXJzLCBjb250aW51b3VzIHJlLXZlcmlmaWNhdGlvbiBzZWxmaWVzKSwgdGhpcwpuZWVkcyBubyBuZXcgaW5mcmFzdHJ1Y3R1cmUgb3IgZGF0YSDigJQgdGhlIGNvZGViYXNlIGFscmVhZHkgZW5mb3JjZXMgdGhlIGV4YWN0Cmd1YXJhbnRlZSB0aGUgbGFiZWwgc3RhdGVzLiBJdCdzIHN0YXRpbmcgYSBmYWN0IHRoZSBkYXRhYmFzZSBhbHJlYWR5IHByb3ZlcywKbm90IGJ1aWxkaW5nIGEgbmV3IG9uZS4KCioqRGV2aWwncyBhZHZvY2F0ZToqKiB3aXRoIDYgcHJvdmlkZXJzIGFuZCBhIGhhbmRmdWwgb2YgcmV2aWV3cyB0b3RhbCB0aGlzCnBpbG90LCBhbG1vc3Qgbm9ib2R5IGhhcyBlbm91Z2ggcmV2aWV3cyB5ZXQgZm9yIHRoZSBsYWJlbCB0byBjb21wb3VuZCBpbnRvIGEKcmVhbCB0cnVzdCBzaWduYWwg4oCUIGl0IG1heSByZWFkIGFzIGEgc29saXRhcnkgdGFnIG9uIG9uZSByZXZpZXcgZm9yIGEgd2hpbGUuCkl0IHN1cnZpdmVzIGFueXdheSBiZWNhdXNlIGl0IGNvc3RzIG5vdGhpbmcgYXMgcmV2aWV3cyBhY2N1bXVsYXRlIGFuZCB0aGVyZSdzCm5vIGZ1dHVyZSBwb2ludCBhdCB3aGljaCBzaGlwcGluZyBpdCBlYXJseSB0dXJucyBvdXQgdG8gaGF2ZSBiZWVuIHdyb25nLgoKLS0tCgojIyBDQy0wMDcg4oCUIEFkZCBgcm9sZT0iYWxlcnQiYCB0byB0aGUgc2hhcmVkIGBGaWVsZEVycm9yYCBjb21wb25lbnQKCioqU3RhdHVzOioqIHByb3Bvc2VkCioqUHJvcG9zZWQ6KiogMjAyNi0wOC0wMyDigJQgUHJvcG9zZXIKKipFZmZvcnQ6KiogUwoKYGNvbXBvbmVudHMvdWkvZmllbGQudHN4YCdzIGBGaWVsZEVycm9yYCByZW5kZXJzIGEgcGxhaW4gYDxwPmAgd2l0aCBubyBBUklBCnJvbGUsIGJ1dCBpdCdzIHRoZSBzaGFyZWQgZXJyb3Igc3VyZmFjZSBmb3IgNDMgZmlsZXMgYWNyb3NzIHRoZSBhcHAg4oCUCmJvb2tpbmcgZm9ybXMsIGBhcHAvKGN1c3RvbWVyKS9kYXNoYm9hcmQvcmV2aWV3LWZvcm0udHN4YCwgdGhlIGRpc3B1dGUgZm9ybSwKb25ib2FyZGluZywgYW5kIG1vcmUuIFNjcmVlbiByZWFkZXJzIG9ubHkgYW5ub3VuY2UgY29udGVudCB0aGF0IGFwcGVhcnMKaW5zaWRlIGEgbGl2ZSByZWdpb24gb3IgY2FycmllcyBgcm9sZT0iYWxlcnQiYC9gcm9sZT0ic3RhdHVzImA7IHdpdGhvdXQgb25lLCBhCnJlamVjdGVkIHN1Ym1pc3Npb24gaXMgc2lsZW50IHRvIGFueW9uZSBub3QgbG9va2luZyBhdCB0aGUgc2NyZWVuLiBUaGUKY29kZWJhc2UgYWxyZWFkeSB0cmVhdHMgYHJvbGU9ImFsZXJ0ImAgYXMgaXRzIHN0YW5kYXJkIGZvciBpbmxpbmUgZXJyb3JzCmVsc2V3aGVyZSDigJQgYGNvbXBvbmVudHMvY2hhdC9jaGF0LXRocmVhZC50c3g6MzE4YCwKYGNvbXBvbmVudHMvbWVzc2FnaW5nL3Jlc29sdmUtYnV0dG9uLnRzeDozMWAsCmBhcHAvKGN1c3RvbWVyKS9zdXBwb3J0L3N1cHBvcnQtZm9ybS50c3g6MjI2YCwgYW5kCmBhcHAvKGN1c3RvbWVyKS9ib29raW5ncy9baWRdL2NvdW50ZXIvY291bnRlci1mb3JtLnRzeDoxNjFgIGFsbCBoYW5kLXJvbGwKdGhlaXIgb3duIGA8cCByb2xlPSJhbGVydCI+YC9gPHNwYW4gcm9sZT0iYWxlcnQiPmAuIGBGaWVsZEVycm9yYCBpcyB0aGUgb25lCnNoYXJlZCBjb21wb25lbnQgdGhhdCBza2lwcGVkIGl0LgoKQWRkIGByb2xlPSJhbGVydCJgIHRvIGBGaWVsZEVycm9yYCBpbiBgY29tcG9uZW50cy91aS9maWVsZC50c3hgLiBPbmUKY29tcG9uZW50LCBvbmUgZmlsZSwgYW5kIGFsbCA0MyBjYWxsIHNpdGVzIGluaGVyaXQgdGhlIGZpeCBpbW1lZGlhdGVseS4KCioqV2h5IHRoaXMgb25lOioqIGl0J3MgYW4gaW50ZXJuYWwgaW5jb25zaXN0ZW5jeSwgbm90IGEgc3BlY3VsYXRpdmUgZXh0ZXJuYWwKc3RhbmRhcmQg4oCUIHRoZSBwcm9qZWN0IGFscmVhZHkgY29tbWl0dGVkIHRvIGByb2xlPSJhbGVydCJgIGZvciBpbmxpbmUgZXJyb3JzCmluIGZvdXIgb3RoZXIgY29tcG9uZW50czsgdGhpcyBjbG9zZXMgdGhlIGdhcCBpbiB0aGUgb25lIGNvbXBvbmVudCBidWlsdCB0bwpiZSByZXVzZWQgZXZlcnl3aGVyZSBlbHNlLCBtYWtpbmcgaXQgdGhlIGhpZ2hlc3QtbGV2ZXJhZ2Ugc2luZ2xlLWxpbmUgZml4CmF2YWlsYWJsZSB0aGlzIHJ1bi4KCioqRGV2aWwncyBhZHZvY2F0ZToqKiBub25lIG9mIHRoZXNlIGZvcm1zIGhhdmUgYSByZXBvcnRlZCBhY2Nlc3NpYmlsaXR5CmNvbXBsYWludCwgc28gdGhpcyBjb3VsZCBsb29rIGxpa2UgZml4aW5nIGEgYnVnIG5vYm9keSBoYXMgaGl0IHlldC4gSXQKc3Vydml2ZXMgYW55d2F5IGJlY2F1c2UgdGhlIGZpeCBpcyBhIG9uZS1saW5lLCB6ZXJvLXJpc2sgYWRkaXRpb24gbWF0Y2hpbmcgYW4KYWxyZWFkeS1hZG9wdGVkIGludGVybmFsIHBhdHRlcm4g4oCUIHRoZXJlJ3Mgbm8gcGxhdXNpYmxlIHdheSBmb3IgaXQgdG8gbWFrZQphbnl0aGluZyB3b3JzZSwgYW5kIHdhaXRpbmcgZm9yIGEgY29tcGxhaW50IG1lYW5zIHNoaXBwaW5nIHRoZSB2aXNpYmxlLW9ubHkKdmVyc2lvbiBvZiBldmVyeSBmb3JtIGluIHRoZSBtZWFudGltZS4KCi0tLQo=
+# Backlog
+
+The queue. See `README.md` for statuses and rules.
+
+**To approve:** change `**Status:** proposed` to `**Status:** approved`.
+**To reject:** change it to `**Status:** rejected` and add a line to
+`decisions.md` saying why — that line is what stops it coming back.
+
+---
+
+## CC-001 — Split Preview environment off the production Supabase project
+
+**Status:** rejected — deferred to a human, before launch. See `decisions.md`.
+**Proposed:** 2026-08-02 — seeded by hand, not by an agent
+**Effort:** L
+
+`vercel env ls` confirms `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are each a
+single value scoped to **Preview and Production**. Every preview deployment —
+every branch, every PR — therefore runs against the production database using
+the service-role key that bypasses RLS.
+
+Create a second (free-tier) Supabase project, reconcile the drift between the
+118 files in `supabase/migrations/` and the live schema, apply them, seed
+synthetic data, then repoint the three Preview variables at it.
+
+**Why it matters:** this is a live exposure in the current workflow, with or
+without agents. It is the most likely mechanism behind synthetic providers
+reaching the live Browse page twice. It also unblocks everything the agent
+system wants to do with data.
+
+**Devil's advocate:** the drift reconciliation is unscoped — it could be an
+afternoon or a week, and nobody knows until production's schema is dumped and
+diffed. Counter: the exposure is real today and the drift is a standing hazard
+regardless, so the work has value even if the agent system never ships.
+
+---
+
+## CC-003 — Surface the cancellation policy on the provider profile page, not just at confirm
+
+**Status:** approved
+**Proposed:** 2026-08-02 — Proposer (trial run)
+**Effort:** S
+
+`lib/booking/policy.ts` already computes `CUSTOMER_REFUND_NOTICE_HOURS` (12h)
+and the full pre-arrival cancellation classification, and it's shown to the
+customer exactly once — at `app/(customer)/bookings/[id]/confirm/page.tsx`,
+via the `booking-customer.confirm.cancellation-policy` copy key. Nothing
+mentions it earlier: `components/provider-profile.tsx`, the page a customer
+reads while deciding whether to book at all, shows rating, verification
+badge, and services, but no cancellation terms.
+
+2026 marketplace trust-signal research is consistent that a visible
+cancellation/refund policy is a foundational trust signal for a new
+marketplace's first-booking funnel, and that it needs to show up before the
+commitment step, not only at final payment. Add a one-line "Free cancellation
+up to 12 hours before" note to the profile page, sourced from the same
+constant already used at confirm — no new policy, no new copy to invent, just
+moving an existing fact earlier in the read.
+
+**Why this one:** it's the only survivor that touches actual first-booking
+conversion, which is the one thing this 7-week pilot exists to measure — but
+unlike a marketing/financial proposal (deliberately deferred per
+`decisions.md` until there's real booking data), it doesn't require inventing
+a strategy. It surfaces a fact the codebase already computes and already
+trusts enough to show at confirm; the risk of being wrong is close to zero.
+
+**Devil's advocate:** with 6 providers on a curated, admin-approved roster,
+customers may already trust the platform via the curation itself, making this
+marginal. It survives anyway because it's a same-constant, same-copy-pattern,
+near-zero-risk change — there's no real downside to shipping it even if the
+lift turns out to be small.
+
+---
+
+## CC-004 — Give provider profile pages real metadata and Service structured data
+
+**Status:** approved
+**Proposed:** 2026-08-02 — Proposer (trial run)
+**Effort:** S/M
+**Plan:** docs/agents/plans/CC-004.md
+
+`app/(customer)/providers/[id]/page.tsx` exports one static
+`metadata: Metadata = { title: "Provider profile" }` for every provider —
+identical title for all of them — and a repo-wide search turns up zero
+`application/ld+json` or schema.org markup anywhere in the app. Meanwhile
+`app/sitemap.ts` already lists every approved provider's public profile, and
+`CLAUDE.md` treats production indexing as a standing guardrail ("must not add
+a site-wide `noindex`"). The infrastructure assumes these pages are meant to
+rank; the on-page signals search engines and AI answer engines actually use
+are missing.
+
+Add `generateMetadata` (provider name, primary service, town) and a `Service`
+JSON-LD block with `aggregateRating` sourced from the rating data
+`lib/browse/ranking.ts` already computes. Metadata-only change — no data
+mutation, no schema change.
+
+**Why this one:** it's the cheapest fix for a guardrail the project already
+committed to (indexing on) but never followed through on for the one page
+type — provider profiles — that's actually meant to be found externally.
+
+**Devil's advocate:** with ~6 providers in one neighborhood, no amount of
+markup makes Google send meaningful traffic in a 7-week pilot — this is real,
+and it's the strongest objection of the three survivors. It survives anyway
+because the fix is well under a day, carries zero product risk, and is the
+kind of thing that's far cheaper to do now (one profile template) than to
+retrofit once there are dozens of provider pages.
+
+---
+
+## CC-005 — Cache the Browse page's catalog reads with Next 16's `"use cache"`
+
+**Status:** rejected
+**Proposed:** 2026-08-02 — Proposer (trial run)
+**Effort:** S
+
+`getLiveServices()` and `getServiceProviderCounts()` in `lib/db/queries.ts`
+back `app/(customer)/browse/page.tsx` and read the admin-toggled `services`
+table — data that's identical for every visitor and only changes when an
+admin flips a toggle, per `CLAUDE.md`'s "keep the curated service list driven
+by the `services` table" convention. Every Browse request re-queries Supabase
+for it anyway. Next.js 16's `"use cache"` directive is the current guidance
+for exactly this shape of read (explicit opt-in, replacing the old implicit
+full-route cache); wrapping these two functions with `"use cache"` and a short
+revalidate (e.g. 60s) drops the redundant round-trip without touching the
+personalized parts of the same page (session, geo origin, sort), which stay
+dynamic.
+
+**Why this one:** it's the only survivor that's purely additive — no
+user-facing behavior changes at all — which makes it a good third leg
+alongside two proposals that do change what's displayed. It also keeps the
+"services table, never hard-coded" architecture intact while removing the
+redundant fetch, which is a better precedent to set now than after traffic
+grows past the pilot.
+
+**Devil's advocate:** at 6 providers and one neighborhood, Supabase load was
+never the bottleneck — this optimizes something that isn't slow yet. It
+survives anyway because the fix is close to free (a directive and a number),
+carries no risk to correctness (the cached data changes only via admin
+action), and there's no cost to having it in place before it's needed.
+
+---
+
+## CC-006 — Label reviews as "Verified booking" on the provider profile page
+
+**Status:** proposed
+**Proposed:** 2026-08-03 — Proposer
+**Effort:** S
+
+`public.reviews` cannot exist without a completed booking:
+`supabase/migrations/20260715221943_hourly_rollout_public_review_security.sql`'s
+`set_review_public_dimensions` trigger derives `provider_id`/`service_id` from
+`bookings` and raises `REVIEW_BOOKING_NOT_FOUND` if none exists, and
+`submitReview` in `app/(customer)/dashboard/actions.ts` only inserts once
+`booking.status === "completed"` for the reviewing customer's own booking
+(enforced again by RLS). Every review rendered in
+`components/provider-profile.tsx` (~lines 257–289) is therefore already,
+structurally, tied to a real transaction — but nothing in the UI says so; it
+reads like any open review widget a stranger could post to.
+
+2025–2026 marketplace trust research is consistent that tagging reviews as
+tied to a completed transaction is a first-booking-conversion trust signal,
+especially for a platform with no established brand yet. Add a small
+"Verified booking" label next to each review's star rating in
+`provider-profile.tsx` — no new query and no schema change, since the
+guarantee already holds for every row `provider_reviews` returns.
+
+**Why this one:** unlike the verification-heavy ideas the same research
+surfaced (background-check tiers, continuous re-verification selfies), this
+needs no new infrastructure or data — the codebase already enforces the exact
+guarantee the label states. It's stating a fact the database already proves,
+not building a new one.
+
+**Devil's advocate:** with 6 providers and a handful of reviews total this
+pilot, almost nobody has enough reviews yet for the label to compound into a
+real trust signal — it may read as a solitary tag on one review for a while.
+It survives anyway because it costs nothing as reviews accumulate and there's
+no future point at which shipping it early turns out to have been wrong.
+
+---
+
+## CC-007 — Add `role="alert"` to the shared `FieldError` component
+
+**Status:** proposed
+**Proposed:** 2026-08-03 — Proposer
+**Effort:** S
+
+`components/ui/field.tsx`'s `FieldError` renders a plain `<p>` with no ARIA
+role, but it's the shared error surface for 43 files across the app —
+booking forms, `app/(customer)/dashboard/review-form.tsx`, the dispute form,
+onboarding, and more. Screen readers only announce content that appears
+inside a live region or carries `role="alert"`/`role="status"`; without one, a
+rejected submission is silent to anyone not looking at the screen. The
+codebase already treats `role="alert"` as its standard for inline errors
+elsewhere — `components/chat/chat-thread.tsx:318`,
+`components/messaging/resolve-button.tsx:31`,
+`app/(customer)/support/support-form.tsx:226`, and
+`app/(customer)/bookings/[id]/counter/counter-form.tsx:161` all hand-roll
+their own `<p role="alert">`/`<span role="alert">`. `FieldError` is the one
+shared component that skipped it.
+
+Add `role="alert"` to `FieldError` in `components/ui/field.tsx`. One
+component, one file, and all 43 call sites inherit the fix immediately.
+
+**Why this one:** it's an internal inconsistency, not a speculative external
+standard — the project already committed to `role="alert"` for inline errors
+in four other components; this closes the gap in the one component built to
+be reused everywhere else, making it the highest-leverage single-line fix
+available this run.
+
+**Devil's advocate:** none of these forms have a reported accessibility
+complaint, so this could look like fixing a bug nobody has hit yet. It
+survives anyway because the fix is a one-line, zero-risk addition matching an
+already-adopted internal pattern — there's no plausible way for it to make
+anything worse, and waiting for a complaint means shipping the visible-only
+version of every form in the meantime.
+
+---
