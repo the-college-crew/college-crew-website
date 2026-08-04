@@ -25,8 +25,21 @@ import {
   getBookingFrom,
   resolveBookingOrigin,
 } from "@/lib/location/booking-from";
+import { browseSeo } from "@/lib/seo/browse-metadata";
 
-export const metadata: Metadata = { title: "Browse providers" };
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ service?: string; sort?: string }>;
+}): Promise<Metadata> {
+  const [{ service }, services] = await Promise.all([
+    searchParams,
+    getLiveServices(),
+  ]);
+  const { title, description, canonical } = browseSeo(services, service);
+
+  return { title, description, alternates: { canonical } };
+}
 
 export default async function BrowsePage({
   searchParams,
