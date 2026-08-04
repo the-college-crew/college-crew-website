@@ -54,5 +54,9 @@ export function FieldError({
   children: React.ReactNode | null | undefined;
 }) {
   if (!children) return null;
-  return <p className="mt-1.5 text-xs font-medium text-red-700">{children}</p>;
+  return (
+    <p role="alert" className="mt-1.5 text-xs font-medium text-red-700">
+      {children}
+    </p>
+  );
 }
