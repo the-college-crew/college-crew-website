@@ -22,18 +22,25 @@ and the connector cannot delete the extra one.
 ## The approval gate
 
 The canvas is not just a handover document; it is the **authorization record**.
-The routine reads two things from it before publishing anything:
+The routine reads **three** things from it before publishing anything:
 
-1. The checkbox `* [x] I, Gianna, approve this blog for production`
-2. An image
+1. `* [x] I, Gianna, approve this blog for production`
+2. `* [x] I inserted a photo below the line`
+3. An actual image in the canvas
 
-Both present → publish. Either missing → skip the week and leave the canvas
+All three → publish. Any one missing → skip the week and leave the canvas
 untouched, so the same draft is still there when she comes back to it.
 
-A checked box reads back through `slack_read_canvas` as
-`* [x] I, Gianna, approve this blog for production`, and an unchecked one as
-`* [ ] …`. That exact-string comparison is the gate — if the line is missing or
-reworded, treat it as **not approved** rather than guessing.
+A checked box reads back through `slack_read_canvas` as `* [x] …` and an
+unchecked one as `* [ ] …`. That exact-string comparison is the gate — if a line
+is missing or reworded, treat it as **not approved** rather than guessing.
+
+**Why the photo gets both a checkbox and a presence check.** They fail
+differently. The image check catches "she forgot the photo entirely"; the
+checkbox catches "there is an image in the canvas, but it is not the one she
+meant for this post" — a leftover from last week, or something pasted into a
+comment. The box is her saying *this* photo is the one. Requiring both means a
+stale image can never be silently published under a new post.
 
 ## Why one canvas and not one per week
 

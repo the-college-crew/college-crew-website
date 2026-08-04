@@ -106,6 +106,25 @@ short enough to still sound like a person wrote it.
   highest-leverage thing in the post for AI answer engines.
 - **2–3 internal links** in the body, woven into sentences. At least one to a
   relevant `/browse?service=<slug>`. Never a bare "click here".
+
+  ⚠ **Every link must point at a page that actually exists.** A confident link
+  to a page we never built is a 404 in published marketing, and it is the kind
+  of error nobody notices until a customer hits it. Link only to these:
+
+  | Path | What it is |
+  |---|---|
+  | `/` | Home |
+  | `/browse` and `/browse?service=<slug>` | Browse, optionally filtered — slugs in the table above |
+  | `/about`, `/about/customers`, `/about/students` | About pages |
+  | `/blog` and `/blog/<slug>` | The blog, and any post listed in `published.md` as `published` |
+  | `/faq` | FAQ |
+  | `/support` | Support form |
+  | `/legal`, `/privacy` | Legal |
+
+  Nothing else. There is no `/pricing`, no `/how-it-works`, no `/services`, no
+  per-service landing page. If the sentence wants one, rewrite the sentence.
+  Confirm anything you are unsure of by looking for the matching
+  `apps/web/app/**/page.tsx` before you link it.
 - **A meta `description`** of roughly 150 characters that reads as a promise of
   what the post answers, not a summary of what it contains.
 - **`imageAlt`** describing the photograph, not restating the title.
@@ -148,6 +167,20 @@ worse than no post.
    `[NEEDS REAL NUMBER: typical window-washing price for a 3-bed in Lincoln Park]`.
    Gianna fills it or cuts it. A plausible-sounding invented price is the single
    worst failure this routine can produce.
+
+   ⚠ **This extends past numbers, to any claim about the marketplace you cannot
+   check.** Scarcity, demand, popularity, how fast things book, what "most"
+   providers charge or "tends to" happen — all of it is invented unless it is in
+   this file or the codebase. The first draft this routine ever wrote passed the
+   number test and then said *"Tuesday and Thursday at 4pm fill up fast once
+   school is in session"* and *"test prep tends to run a little higher."*
+   Nobody knows either of those things. With a handful of providers in a
+   seven-week pilot, there is no booking pattern to describe.
+
+   The tell: if a sentence asserts something about **the world or the market**
+   rather than about **how College Crew works**, and you did not read it in this
+   file or the code, cut it or mark it. Writing "we're new, so book early" is
+   honest. Writing "slots fill up fast" is not.
 2. **Never invent a named person, customer, student, or pet**, and never write a
    quote nobody said. The named-neighbor detail is what makes these posts good,
    so leave a marker where one belongs:
@@ -171,16 +204,27 @@ Everything below goes in the standing Slack canvas
 publishing:
 
 1. **Status** — one line: drafted today, waiting on approval
-2. **Approval gate** — the checkbox, **unchecked**, worded exactly
-   `* [ ] I, Gianna, approve this blog for production`, plus the photo
-   instruction. Next week's run matches that string literally, so changing the
-   wording breaks the gate.
+2. **Approval gate** — **two** checkboxes, both **unchecked**, worded exactly:
+
+   ```
+   * [ ] I, Gianna, approve this blog for production
+   * [ ] I inserted a photo below the line
+   ```
+
+   Next week's run matches both strings literally, so changing the wording
+   breaks the gate. The photo instruction and the line it goes below come after
+   them.
 3. **Title**
 4. **Meta description**
 5. **Slug** — lowercase, hyphens, no date
 6. **Suggested photo** — what the shot should show, from the team's photoshoot
-7. **Alt text**
-8. **Needs from you** — every `[NEEDS …]` marker, listed
+7. **Caption** — one sentence describing what is in the photo. It becomes the
+   image's alt text on the live page: read aloud by screen readers, read by
+   search engines, and shown if the image fails to load. Describe the picture,
+   don't restate the title.
+8. **Needs from you** — **Gianna's to-do list, not yours.** Every `[NEEDS …]`
+   marker you left, with where it appears. These are facts you refused to
+   invent; she supplies them or cuts the sentence.
 9. **Draft** — the body in markdown, editable in place
 10. **FAQ** — the q/a pairs
 11. **Internal links** — which links are in the body and where
