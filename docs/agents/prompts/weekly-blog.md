@@ -46,11 +46,11 @@ Otherwise the gate is open only when **all three** of these hold:
 
 1. The canvas contains the line `* [x] I approve this blog for production` — checked.
 2. The canvas contains the line `* [x] I inserted a photo below the line` — checked.
-3. The canvas contains an image. It appears in the markdown as `![filename](https://…slack.com/files/…/F…/…)`. Extract the file ID (the `F…` segment) and fetch it with `slack_read_file`.
+3. The canvas contains an image. It appears in the markdown as `![filename](https://…slack.com/files/…/F…/…)`. Extract the file ID (the `F…` segment) and fetch it with `slack_read_file`. **Check only that it exists and loads — never judge what it shows.**
 
 Unchecked (`* [ ]`), reworded, or missing all count as **not approved**. Do not interpret intent; match the strings literally.
 
-⚠ Checks 2 and 3 are not redundant — never treat a found image as consent on its own. `canvas.md` explains why.
+⚠ Checks 2 and 3 are not redundant — never treat a found image as consent on its own. But the ticked box **is** consent: the photo's subject matter, quality, and fit are Gianna's call, never yours. `canvas.md` explains why.
 
 **If the gate is closed, publish nothing and change nothing.** Leave the canvas exactly as it is — the same draft must still be there next week. Go to the Slack step and post one line naming which of the three is missing.
 
@@ -61,7 +61,7 @@ Even with the gate open, **do not publish** if any of these is true. Each one me
 
 - The body still contains a `[NEEDS …]` marker. Those are placeholders for facts you could not know; publishing one puts a bracket on the live site.
 - The slug already appears in `docs/blog/published.md` with status `published`. You already shipped this one. Say so and move on to Step 5.
-- The image is larger than 2 MB. Ask for a smaller one; these live in git forever.
+- The image is larger than 2 MB, or will not load. Ask for another; these live in git forever. **Size and readability are the only image reasons to refuse** — what the picture depicts is never one, however unrelated it looks.
 - The title, meta description, or slug is missing or empty.
 
 ## Step 4 — Publish
