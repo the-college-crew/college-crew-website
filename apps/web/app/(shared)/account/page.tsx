@@ -6,6 +6,7 @@ import { SamplePreviewBanner } from "@/components/sample-preview-banner";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { getOwnProviderProfile, getSession, requireUser } from "@/lib/auth/session";
+import { getGoogleIdentityState } from "@/lib/auth/identities";
 import {
   getProviderAvailabilityOverrides,
   getProviderAvailabilityWindows,
@@ -72,9 +73,13 @@ function SettingsLayout({
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stripe?: string; tab?: string }>;
+  searchParams: Promise<{
+    oauth_error?: string;
+    stripe?: string;
+    tab?: string;
+  }>;
 }) {
-  const [{ stripe, tab }] = await Promise.all([
+  const [{ oauth_error: oauthError, stripe, tab }] = await Promise.all([
     searchParams,
     requireUser("/account"),
   ]);
@@ -87,6 +92,7 @@ export default async function AccountPage({
   const session = await getSession();
   if (!session) redirect("/login?next=/account");
   const { profile, user } = session;
+  const googleIdentity = getGoogleIdentityState(user.identities);
 
   // Provider panels render for any account that has started providing (owns a
   // provider profile). Everyone gets Account, Legal, and Delete.
@@ -208,7 +214,13 @@ export default async function AccountPage({
       ) : null}
 
       {activeTab === "account" ? (
-        <AccountPanel profile={profile} email={user.email ?? ""} />
+        <AccountPanel
+          profile={profile}
+          email={user.email ?? ""}
+          googleConnected={googleIdentity.connected}
+          googleEmail={googleIdentity.email}
+          googleLinkError={Boolean(oauthError)}
+        />
       ) : null}
 
       {activeTab === "become-provider" ? <BecomeProviderPanel /> : null}
