@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import type {
   PriceType,
   PriceUnit,
@@ -160,7 +162,13 @@ async function getProviderCompletedJobCounts(
 
 export type ProviderSort = "suggested" | "location" | "rating";
 
-export async function getLiveServices(): Promise<Service[]> {
+/*
+ * Per-request memoized with React cache(): /browse resolves the live service
+ * list twice per request — once in generateMetadata to name the filtered
+ * service in the title and description, once in the page body — and that
+ * should stay one query.
+ */
+export const getLiveServices = cache(async (): Promise<Service[]> => {
   if (!hasSupabaseEnv()) return [];
   const supabase = await createClient();
 
@@ -171,7 +179,7 @@ export async function getLiveServices(): Promise<Service[]> {
     .order("name");
 
   return data ?? [];
-}
+});
 
 const PROVIDER_CARD_SELECT = `
   id, display_name, company_name, bio, provider_type, neighborhood,

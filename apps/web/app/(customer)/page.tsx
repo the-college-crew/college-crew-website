@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -6,7 +7,18 @@ import { getEffectiveRole, getSession } from "@/lib/auth/session";
 import { PARENT_STEPS, STUDENT_STEPS } from "@/lib/content/defaults";
 import { getLiveServices } from "@/lib/db/queries";
 import type { Service } from "@/lib/db/types";
-import { PILOT_SERVICE_AREA } from "@/lib/site";
+import { PILOT_SERVICE_AREA, SITE_URL } from "@/lib/site";
+
+/*
+ * The homepage shipped no metadata export, so it inherited SITE.description
+ * from the root layout — the site's most important page carrying a description
+ * shared with 41 others. Interpolating PILOT_SERVICE_AREA keeps this tracking
+ * the one constant that moves when the pilot area does (#184/#185).
+ */
+export const metadata: Metadata = {
+  description: `Hire verified college students across ${PILOT_SERVICE_AREA.name} for move-out help, hauling, house management, pet care, yard work, and tutoring. Book, message, and pay in one place.`,
+  alternates: { canonical: SITE_URL },
+};
 
 type Cta = { href: string; label: string };
 
