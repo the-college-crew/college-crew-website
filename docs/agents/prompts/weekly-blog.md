@@ -44,7 +44,7 @@ If the canvas holds no draft yet (first ever run), there is nothing to publish. 
 
 Otherwise the gate is open only when **all three** of these hold:
 
-1. The canvas contains the line `* [x] I, Gianna, approve this blog for production` — checked.
+1. The canvas contains the line `* [x] I approve this blog for production` — checked.
 2. The canvas contains the line `* [x] I inserted a photo below the line` — checked.
 3. The canvas contains an image. It appears in the markdown as `![filename](https://…slack.com/files/…/F…/…)`. Extract the file ID (the `F…` segment) and fetch it with `slack_read_file`.
 
@@ -94,7 +94,7 @@ Follow `docs/blog/STRATEGY.md` — it is binding, not advisory. In particular:
 Overwrite the canvas with `slack_update_canvas`. **The full section list is in `STRATEGY.md` under "What the routine hands over" — follow it exactly**, ending with "Keep these words". Two sections are load-bearing and spelled out here:
 
 1. **Status** — one line: drafted today, waiting on approval.
-2. **Approval gate** — **two** checkboxes, both **unchecked**, worded exactly `* [ ] I, Gianna, approve this blog for production` and `* [ ] I inserted a photo below the line`, with the photo instruction and its line beneath them. Getting either string wrong breaks next week's run.
+2. **Approval gate** — **two** checkboxes, both **unchecked**, worded exactly `* [ ] I approve this blog for production` and `* [ ] I inserted a photo below the line`, with the photo instruction and its line beneath them. Getting either string wrong breaks next week's run.
 
 Add the draft to `docs/blog/published.md` with status `drafted` **and its `Shape` filled in** (`<Type> · <broad|niche>`), and commit that with the same branch-and-self-merge rules as Step 4. A blank shape blinds next week's rotation check.
 

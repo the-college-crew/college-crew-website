@@ -289,7 +289,7 @@ publishing:
 2. **Approval gate** — **two** checkboxes, both **unchecked**, worded exactly:
 
    ```
-   * [ ] I, Gianna, approve this blog for production
+   * [ ] I approve this blog for production
    * [ ] I inserted a photo below the line
    ```
 
