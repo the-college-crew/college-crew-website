@@ -37,10 +37,22 @@ is missing or reworded, treat it as **not approved** rather than guessing.
 
 **Why the photo gets both a checkbox and a presence check.** They fail
 differently. The image check catches "she forgot the photo entirely"; the
-checkbox catches "there is an image in the canvas, but it is not the one she
-meant for this post" — a leftover from last week, or something pasted into a
-comment. The box is her saying *this* photo is the one. Requiring both means a
-stale image can never be silently published under a new post.
+checkbox catches "there is an image here, but I hadn't chosen it yet." The box
+is her saying *this* photo is the one.
+
+⚠ **Neither check licenses an opinion about what the photo shows.** The routine
+must not judge subject matter, composition, quality, or whether the image suits
+the post — and must never refuse to publish on those grounds. Editorial choice
+of image is Gianna's, and Zach reviews the post after it is live.
+
+This is a deliberate loosening, made 2026-08-04 after the routine refused two
+consecutive runs on image-content grounds — once for a photo of a meal, once for
+a sheet of handwritten sports stats. Both judgments were defensible and both
+were the wrong call to be making: a week's publication was blocked by an
+opinion, the person who could fix it found out on Monday, and the earlier
+version of this passage is what the routine cited as authority. Refuse on the
+mechanical failures in the prompt's Step 3 — a missing file, an unreadable one,
+one over the size limit — and on nothing else.
 
 ## The weekly Slack message
 
