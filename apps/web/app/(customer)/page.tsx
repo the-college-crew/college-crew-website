@@ -6,6 +6,7 @@ import { getEffectiveRole, getSession } from "@/lib/auth/session";
 import { PARENT_STEPS, STUDENT_STEPS } from "@/lib/content/defaults";
 import { getLiveServices } from "@/lib/db/queries";
 import type { Service } from "@/lib/db/types";
+import { PILOT_SERVICE_AREA } from "@/lib/site";
 
 type Cta = { href: string; label: string };
 
@@ -380,7 +381,7 @@ function PhoneMock({ services }: { services: Service[] }) {
           </Link>
           <p className="mt-3 text-center text-[13px] text-viridian/65">
             <Editable k="home.banner.note">
-              Now booking across the North Shore and Lincoln Park
+              {`Now booking across ${PILOT_SERVICE_AREA.name}`}
             </Editable>
           </p>
         </div>
