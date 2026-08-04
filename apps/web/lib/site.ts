@@ -13,7 +13,7 @@ export const SITE = {
 } as const;
 
 export const PILOT_SERVICE_AREA = {
-  name: "North Shore and Lincoln Park",
+  name: "Chicago's North Side",
 } as const;
 
 /** Absolute origin, for canonical URLs, OpenGraph tags, and structured data. */
