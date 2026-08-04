@@ -1,17 +1,17 @@
 import type { MetadataRoute } from "next";
 
+import { getAllPosts, lastUpdated } from "@/lib/blog/posts";
+import { SITE_URL } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.thecollegecrew.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const supabase = await createClient();
-  const [{ data: providers }, { data: posts }] = await Promise.all([
+  const [{ data: providers }, posts] = await Promise.all([
     supabase
       .from("public_provider_directory")
       .select("provider_id, created_at"),
-    supabase.from("blog_posts").select("slug, updated_at"),
+    getAllPosts(),
   ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -56,9 +56,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }),
   );
-  const blogRoutes: MetadataRoute.Sitemap = (posts ?? []).map((post) => ({
+  const blogRoutes: MetadataRoute.Sitemap = posts.map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}`,
-    lastModified: post.updated_at ? new Date(post.updated_at) : now,
+    lastModified: new Date(`${lastUpdated(post)}T00:00:00Z`),
     changeFrequency: "monthly",
     priority: 0.6,
   }));

@@ -14,7 +14,6 @@ const ADMIN_NAV = [
   { href: "/admin/operations", label: "Operations" },
   { href: "/admin/flagged", label: "Flagged messages" },
   { href: "/admin/support", label: "Support inbox" },
-  { href: "/admin/blog", label: "Blog" },
 ];
 
 /**
@@ -78,9 +77,6 @@ export default async function AdminLayout({
           </Link>
           <Link href="/admin/support" className="hover:text-viridian">
             Support inbox
-          </Link>
-          <Link href="/admin/blog" className="hover:text-viridian">
-            Blog
           </Link>
         </nav>
       </header>
