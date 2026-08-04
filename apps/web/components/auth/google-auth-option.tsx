@@ -15,10 +15,12 @@ export function GoogleAuthOption({
   next,
   returnTo,
   initialError,
+  emailFirst = false,
 }: {
   next?: string;
   returnTo: string;
   initialError?: string;
+  emailFirst?: boolean;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(initialError);
@@ -49,6 +51,13 @@ export function GoogleAuthOption({
 
   return (
     <div>
+      {emailFirst ? (
+        <div className="my-5 flex items-center gap-3" aria-hidden="true">
+          <span className="h-px flex-1 bg-line" />
+          <span className="text-xs font-medium text-mist">or</span>
+          <span className="h-px flex-1 bg-line" />
+        </div>
+      ) : null}
       <button
         type="button"
         className="inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full border border-[#747775] bg-white px-4 py-2.5 text-sm font-medium text-[#1f1f1f] transition duration-200 hover:bg-[#f8f9fa] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
@@ -69,11 +78,13 @@ export function GoogleAuthOption({
       <div aria-live="polite">
         <FieldError>{error}</FieldError>
       </div>
-      <div className="my-5 flex items-center gap-3" aria-hidden="true">
-        <span className="h-px flex-1 bg-line" />
-        <span className="text-xs font-medium text-mist">or use email</span>
-        <span className="h-px flex-1 bg-line" />
-      </div>
+      {!emailFirst ? (
+        <div className="my-5 flex items-center gap-3" aria-hidden="true">
+          <span className="h-px flex-1 bg-line" />
+          <span className="text-xs font-medium text-mist">or use email</span>
+          <span className="h-px flex-1 bg-line" />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -29,12 +29,6 @@ export function LoginForm({
       <FormLoader />
       {next ? <input type="hidden" name="next" value={next} /> : null}
 
-      <GoogleAuthOption
-        next={next}
-        returnTo={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
-        initialError={oauthError}
-      />
-
       <div>
         <Label htmlFor="email">Email</Label>
         <Input
@@ -70,6 +64,13 @@ export function LoginForm({
       <Button type="submit" size="lg" className="w-full" disabled={pending}>
         {pending ? "Logging in…" : "Log in"}
       </Button>
+
+      <GoogleAuthOption
+        next={next}
+        returnTo={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+        initialError={oauthError}
+        emailFirst
+      />
     </form>
   );
 }
