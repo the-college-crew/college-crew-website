@@ -44,9 +44,20 @@ export async function SiteFooter() {
             <p className="mt-5 max-w-[38ch] text-[19px] leading-[1.55] text-shell/90">
               <Editable k="footer.tagline">{SITE.tagline}</Editable>
             </p>
+            {/*
+              Wording matches the live site_content override for this key, on
+              purpose. An override wins over this default (components/content/
+              editable.tsx), so while one exists the footer silently stops
+              following PILOT_SERVICE_AREA — which is how it kept advertising a
+              stale service area after #184/#185 moved it. Aligning the default
+              with the copy already in the DB means resetting the override
+              changes nothing visible and hands the footer back to the
+              constant. If you reword this, reset the override too or the
+              change will not appear.
+            */}
             <p className="mt-4 text-sm text-shell/70">
               <Editable k="footer.pilot-note">
-                {`Now serving ${PILOT_SERVICE_AREA.name}.`}
+                {`Now booking across ${PILOT_SERVICE_AREA.name}, our pilot neighborhood.`}
               </Editable>
             </p>
           </div>
