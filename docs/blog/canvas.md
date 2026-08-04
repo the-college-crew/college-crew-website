@@ -22,18 +22,48 @@ and the connector cannot delete the extra one.
 ## The approval gate
 
 The canvas is not just a handover document; it is the **authorization record**.
-The routine reads two things from it before publishing anything:
+The routine reads **three** things from it before publishing anything:
 
-1. The checkbox `* [x] I, Gianna, approve this blog for production`
-2. An image
+1. `* [x] I, Gianna, approve this blog for production`
+2. `* [x] I inserted a photo below the line`
+3. An actual image in the canvas
 
-Both present → publish. Either missing → skip the week and leave the canvas
+All three → publish. Any one missing → skip the week and leave the canvas
 untouched, so the same draft is still there when she comes back to it.
 
-A checked box reads back through `slack_read_canvas` as
-`* [x] I, Gianna, approve this blog for production`, and an unchecked one as
-`* [ ] …`. That exact-string comparison is the gate — if the line is missing or
-reworded, treat it as **not approved** rather than guessing.
+A checked box reads back through `slack_read_canvas` as `* [x] …` and an
+unchecked one as `* [ ] …`. That exact-string comparison is the gate — if a line
+is missing or reworded, treat it as **not approved** rather than guessing.
+
+**Why the photo gets both a checkbox and a presence check.** They fail
+differently. The image check catches "she forgot the photo entirely"; the
+checkbox catches "there is an image in the canvas, but it is not the one she
+meant for this post" — a leftover from last week, or something pasted into a
+comment. The box is her saying *this* photo is the one. Requiring both means a
+stale image can never be silently published under a new post.
+
+## The weekly Slack message
+
+The routine posts one message to `#weekly-blog` (`C0BMRK02RR8`) at the end of
+every run, always `@`-mentioning Gianna as `<@U0BMH9KBZ2P>` — she is the one who
+has to act. Keep it short and phone-readable.
+
+**Slack mrkdwn is not GitHub markdown:** `*bold*` not `**bold**`,
+`<url|text>` not `[text](url)`, manual `•` bullets.
+
+What to say, by outcome:
+
+| Outcome | The message |
+|---|---|
+| **Published + new draft** | What went live (title + URL), then the new draft's title and a canvas link, then what she does next: edit, fill in the markers, add a photo, tick both boxes. |
+| **Gate closed** | One line naming exactly which of the three checks is missing — approval box, photo box, or the photo itself — and that the draft is untouched and still there. Nothing new was written. |
+| **Refused before publishing** | Exactly what to fix, quoting the `[NEEDS …]` marker or naming the problem. |
+| **First run** | Just the new draft and what to do with it. |
+
+**Do not invent something needing her attention.** If the run was a clean no-op,
+one line saying so is a complete and correct message. This is the counterpart of
+the notification rules the other four routines follow: a weekly ping that always
+manufactures an action item trains her to stop reading it.
 
 ## Why one canvas and not one per week
 
