@@ -138,9 +138,11 @@ investigate before inviting the provider cohort.
 1. Email existing real providers only after the live onboarding link works:
    “Reconnect your bank account through Stripe to appear in Browse and receive
    payouts.” The dashboard shows the same requirement.
-2. Providers re-accept the current Platform Terms, finish Stripe-hosted
-   onboarding, and return to the dashboard. Their public listing appears only
-   after the recipient transfer capability is active.
+2. Providers re-accept the current Platform Terms and finish Stripe-hosted
+   onboarding from the final provider setup step, dashboard, or Payouts
+   settings. They may do this while founder review is pending. Their public
+   listing appears only after founder approval and the recipient transfer
+   capability are both active.
 3. Re-enable `BOOKING_REQUESTS_ENABLED=true`.
 4. Submit the sitemap to Google Search Console and monitor Vercel, Supabase,
    Resend, Stripe event deliveries, failed automation jobs, and founder

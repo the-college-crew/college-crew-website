@@ -72,6 +72,7 @@ export function getSettingsReadiness({
   profile: Pick<
     ProviderProfile,
     | "verification_status"
+    | "onboarding_submitted_at"
     | "stripe_account_id"
     | "stripe_transfers_active"
     | "stripe_transfers_checked_at"
@@ -127,11 +128,12 @@ export function getSettingsReadiness({
     }
   }
 
-  // Stripe is gated behind the ID check, so an unverified provider has nothing
-  // to act on here yet. That waiting state is stated in the Payouts panel
-  // itself, so it deliberately produces no notice (and no badge) here.
   const payouts: ReadinessIssue[] = [];
-  if (profile.verification_status === "approved" && !isPayoutsActive(profile)) {
+  if (
+    profile.onboarding_submitted_at &&
+    profile.verification_status !== "rejected" &&
+    !isPayoutsActive(profile)
+  ) {
     payouts.push({
       key: "payouts",
       message: profile.stripe_account_id

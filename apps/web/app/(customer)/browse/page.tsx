@@ -102,7 +102,7 @@ export default async function BrowsePage({
             action={
               !session ? (
                 <Link
-                  href="/provider/onboarding/account"
+                  href="/provider/onboarding"
                   className={buttonClasses({
                     variant: "secondary",
                     size: "sm",
@@ -177,7 +177,7 @@ function JoinCrewBand() {
           </Editable>
         </p>
         <Link
-          href="/provider/onboarding/account"
+          href="/provider/onboarding"
           className="mt-6 inline-flex items-center justify-center rounded-full border-[1.6px] border-shell bg-shell px-[26px] py-[13px] text-base font-semibold text-viridian transition duration-200 hover:-translate-y-px hover:bg-[#e7e4dc] active:translate-y-0 active:scale-[0.98]"
         >
           Become a provider

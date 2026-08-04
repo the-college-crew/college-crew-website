@@ -8,7 +8,8 @@ const STEPS = [
   "Verify your school (.edu) email and upload your ID so neighbors know you're a real, local student.",
   "Pick the services you offer and set your pricing.",
   "Set the days and hours you're available.",
-  "We review your account, then your storefront goes live on Browse.",
+  "Submit for founder review, then set up Stripe payouts now or later.",
+  "Your storefront goes live once approval and Stripe are both complete.",
 ] as const;
 
 /**
@@ -34,7 +35,7 @@ export function BecomeProviderPanel() {
       </ol>
 
       <Link
-        href="/provider/onboarding/account"
+        href="/provider/onboarding"
         className={buttonClasses({ size: "sm" })}
       >
         Start provider setup

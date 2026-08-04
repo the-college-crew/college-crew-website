@@ -362,7 +362,7 @@ export default async function AboutPage() {
             </Link>
             {!session ? (
               <Link
-                href="/provider/onboarding/account"
+                href="/provider/onboarding"
                 className="inline-flex items-center justify-center rounded-full border-[1.6px] border-shell/45 px-6 py-3.5 text-[15px] font-semibold text-shell transition hover:-translate-y-px hover:bg-shell/10"
               >
                 Become a provider

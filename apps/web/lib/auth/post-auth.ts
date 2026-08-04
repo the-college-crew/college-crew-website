@@ -69,7 +69,7 @@ export async function postAuthDestination(
       ? shape.role === "admin"
         ? "/admin"
         : shape.providerCapable
-          ? "/provider/dashboard"
+          ? "/provider/onboarding"
           : "/dashboard"
       : next;
 

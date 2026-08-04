@@ -198,7 +198,7 @@ export default async function BlogPage() {
               {[
                 { href: "/browse", label: "Book a Student" },
                 {
-                  href: "/provider/onboarding/account",
+                  href: "/provider/onboarding",
                   label: "Become a provider",
                 },
                 { href: "/browse", label: "See All Services" },

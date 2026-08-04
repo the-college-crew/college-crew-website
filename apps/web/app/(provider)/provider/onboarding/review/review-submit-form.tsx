@@ -42,7 +42,7 @@ export function ReviewSubmitForm({
       ) : null}
       <FieldError>{state.error}</FieldError>
       <Button type="submit" size="lg" disabled={!ready || pending}>
-        {pending ? "Submitting…" : "Submit for review"}
+        {pending ? "Submitting…" : "Submit for review →"}
       </Button>
     </form>
   );

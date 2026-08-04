@@ -126,7 +126,7 @@ export default async function LandingPage() {
     ? { href: "/browse", label: "Book a student" }
     : session?.profile.role === "admin"
       ? null
-      : { href: "/provider/onboarding/account", label: "Become a provider" };
+      : { href: "/provider/onboarding", label: "Become a provider" };
 
   return (
     <div className="mx-[calc(50%-50vw)] -mt-8 -mb-8 w-screen max-w-[100vw] overflow-x-clip bg-shell text-viridian">

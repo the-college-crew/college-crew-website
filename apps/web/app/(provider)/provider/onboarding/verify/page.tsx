@@ -140,8 +140,9 @@ export default async function OnboardingVerifyPage({
             </h2>
             <p className="mt-1 text-sm text-ink-soft">
               Take a photo of the front and the back (barcode side). A founder
-              reviews them by hand — usually within a day — and you&apos;ll go live
-              once approved.
+              reviews them by hand — usually within a day. Founder approval and
+              completed Stripe payouts are separate requirements before you go
+              live.
             </p>
 
             {idUploaded ? (

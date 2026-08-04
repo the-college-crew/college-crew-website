@@ -1,10 +1,11 @@
 import {
-  connectStripe,
+  connectStripeFromAccount,
   refreshStripeReadiness,
 } from "@/app/(provider)/provider/actions";
+import Link from "next/link";
 import { FormLoader } from "@/components/form-loader";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import type { ProviderProfile } from "@/lib/db/types";
 import type { ReadinessIssue } from "@/lib/provider/settings-readiness";
 
@@ -28,8 +29,8 @@ export function PayoutsPanel({
     <>
       {stripeConnected ? (
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
-          Stripe onboarding finished. Your profile can appear in Browse and
-          payouts will land in your bank account.
+          Stripe onboarding finished. Payouts are ready; founder approval and
+          the remaining profile checks still control Browse visibility.
         </div>
       ) : null}
       {stripeIncomplete ? (
@@ -42,10 +43,23 @@ export function PayoutsPanel({
       <PanelNotices issues={issues} />
 
       <Section title="Payouts">
-        {providerProfile.verification_status !== "approved" ? (
+        {providerProfile.verification_status === "rejected" ? (
           <p className="text-sm text-ink-soft">
-            Stripe unlocks after your ID is approved. Hang tight.
+            Stripe setup is paused while your student verification is rejected.
+            If a founder reopens it, you can resume the same connected account.
           </p>
+        ) : !providerProfile.onboarding_submitted_at ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/provider/onboarding"
+              className={buttonClasses({ size: "sm" })}
+            >
+              Continue provider setup
+            </Link>
+            <span className="text-xs text-mist">
+              Submit the College Crew forms before connecting Stripe.
+            </span>
+          </div>
         ) : providerProfile.stripe_account_id && payoutsActive ? (
           <div className="flex items-center gap-3">
             <Badge tone="green">✓ Payouts active</Badge>
@@ -56,7 +70,7 @@ export function PayoutsPanel({
         ) : providerProfile.stripe_account_id ? (
           <div className="flex flex-wrap items-center gap-3">
             <Badge tone="gold">Finish Stripe setup</Badge>
-            <form action={connectStripe}>
+            <form action={connectStripeFromAccount}>
               <FormLoader />
               <Button type="submit" size="sm" variant="secondary">
                 Resume onboarding
@@ -73,7 +87,7 @@ export function PayoutsPanel({
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
-            <form action={connectStripe}>
+            <form action={connectStripeFromAccount}>
               <FormLoader />
               <Button type="submit" size="sm">
                 Connect Stripe
