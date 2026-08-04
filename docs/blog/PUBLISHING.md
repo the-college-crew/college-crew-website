@@ -123,7 +123,7 @@ Gianna, any time ─ edits the draft, fills in [NEEDS …] markers,
 3. Keep the phrases under **Keep these words**. Rewrite freely around them;
    those are what the post ranks for.
 4. Drop the photo into the canvas.
-5. Tick `I, Gianna, approve this blog for production`.
+5. Tick `I approve this blog for production`.
 
 It goes live on the next Monday run. Nothing is on a clock — an unapproved draft
 just waits, and the routine will not write over it.

@@ -24,7 +24,7 @@ and the connector cannot delete the extra one.
 The canvas is not just a handover document; it is the **authorization record**.
 The routine reads **three** things from it before publishing anything:
 
-1. `* [x] I, Gianna, approve this blog for production`
+1. `* [x] I approve this blog for production`
 2. `* [x] I inserted a photo below the line`
 3. An actual image in the canvas
 
