@@ -16,7 +16,7 @@ Templates, or update the same fields with the Supabase Management API.
 | Magic link | Your College Crew sign-in link | `supabase/templates/magic_link.html` |
 | Change email address | Confirm your new email for College Crew | `supabase/templates/email_change.html` |
 
-The templates use `{{ .SiteURL }}/college-crew-mark.png` for the logo, so the
+The templates use `{{ .SiteURL }}/college-crew-logo.png` for the logo, so the
 hosted Supabase Auth Site URL must point at the deployed College Crew app.
 
 Auth actions pass an origin-only `redirectTo`. Each template owns the complete

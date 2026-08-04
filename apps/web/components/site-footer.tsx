@@ -32,17 +32,14 @@ export async function SiteFooter() {
       <div className="mx-auto max-w-[1140px] px-5 pb-10 pt-[72px] sm:px-8">
         <div className="grid items-start gap-12 md:grid-cols-[1.4fr_1fr]">
           <div>
-            <Link href="/" className="flex items-center gap-3">
+            <Link href="/" aria-label={`${SITE.name} home`} className="inline-flex">
               <Image
-                src="/college-crew-mark-white.png"
+                src="/college-crew-logo.png"
                 alt=""
-                width={40}
-                height={37}
-                className="h-10 w-10 object-contain"
+                width={88}
+                height={88}
+                className="h-[88px] w-[88px] object-contain"
               />
-              <span className="font-display text-2xl font-bold tracking-[-0.01em] text-shell">
-                College Crew
-              </span>
             </Link>
             <p className="mt-5 max-w-[38ch] text-[19px] leading-[1.55] text-shell/90">
               <Editable k="footer.tagline">{SITE.tagline}</Editable>
