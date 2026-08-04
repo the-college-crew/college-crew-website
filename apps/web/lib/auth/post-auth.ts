@@ -4,15 +4,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, UserRole } from "@/lib/db/types";
 import {
+  needsProfileCompletion,
+  profileCompletionPath,
+  safeNext,
+} from "@/lib/auth/redirects";
+import {
   hasAcceptedCurrentLegalDocument,
   legalDocumentPath,
 } from "@/lib/legal/acceptance";
 import { createClient } from "@/lib/supabase/server";
 
-/** Only ever redirect within the app — never to an attacker-supplied origin. */
-export function safeNext(next: string | null | undefined): string {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
+export { safeNext } from "@/lib/auth/redirects";
 
 /**
  * The signed-in user's account shape in one round trip set: their role
@@ -22,9 +24,17 @@ export function safeNext(next: string | null | undefined): string {
 export async function getAccountShape(
   supabase: SupabaseClient<Database>,
   userId: string,
-): Promise<{ role: UserRole; providerCapable: boolean }> {
+): Promise<{
+  role: UserRole;
+  providerCapable: boolean;
+  profileComplete: boolean;
+}> {
   const [{ data: profile }, { data: providerProfile }] = await Promise.all([
-    supabase.from("profiles").select("role").eq("id", userId).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("role, full_name, address_line1, city, state, postal_code")
+      .eq("id", userId)
+      .maybeSingle(),
     supabase
       .from("provider_profiles")
       .select("id")
@@ -34,6 +44,7 @@ export async function getAccountShape(
   return {
     role: (profile?.role ?? "customer") as UserRole,
     providerCapable: Boolean(providerProfile),
+    profileComplete: Boolean(profile && !needsProfileCompletion(profile)),
   };
 }
 
@@ -42,20 +53,36 @@ export async function getAccountShape(
  * or the common Platform Terms first when they have not accepted them.
  * Shared by the callback route and the confirm interstitial.
  */
-export async function postAuthDestination(next: string): Promise<string> {
+export async function postAuthDestination(
+  requestedNext?: string | null,
+): Promise<string> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const next = safeNext(requestedNext);
   if (!user) return next;
 
   const shape = await getAccountShape(supabase, user.id);
-  if (shape.role === "admin") return next;
+  const destination =
+    requestedNext == null || requestedNext === "/"
+      ? shape.role === "admin"
+        ? "/admin"
+        : shape.providerCapable
+          ? "/provider/dashboard"
+          : "/dashboard"
+      : next;
+
+  if (shape.role === "admin") return destination;
+  if (!shape.profileComplete) return profileCompletionPath(destination);
+  if (destination.startsWith("/legal/master")) return destination;
 
   const accepted = await hasAcceptedCurrentLegalDocument(supabase, {
     userId: user.id,
     kind: "platform_terms",
   });
 
-  return accepted ? next : legalDocumentPath("platform_terms", next);
+  return accepted
+    ? destination
+    : legalDocumentPath("platform_terms", destination);
 }

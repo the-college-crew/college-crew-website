@@ -3,6 +3,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+import {
+  needsProfileCompletion,
+  profileCompletionPath,
+  safeNext,
+} from "@/lib/auth/redirects";
 import type { Profile, ProviderProfile, UserRole } from "@/lib/db/types";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -116,14 +121,29 @@ export function dashboardLabelFor(role: UserRole) {
   return role === "customer" ? "My Bookings" : "Dashboard";
 }
 
-export async function requireUser(nextPath?: string): Promise<User> {
-  const user = await getUser();
-  if (!user) {
+function requireCompleteProfile(session: Session, nextPath?: string) {
+  if (
+    session.profile.role !== "admin" &&
+    needsProfileCompletion(session.profile)
+  ) {
+    redirect(profileCompletionPath(safeNext(nextPath ?? "/dashboard")));
+  }
+}
+
+export async function requireUser(
+  nextPath?: string,
+  options?: { allowIncompleteProfile?: boolean },
+): Promise<User> {
+  const session = await getSession();
+  if (!session) {
     redirect(
       nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : "/login",
     );
   }
-  return user;
+  if (!options?.allowIncompleteProfile) {
+    requireCompleteProfile(session, nextPath);
+  }
+  return session.user;
 }
 
 /**
@@ -142,6 +162,7 @@ export async function requireRole(
       nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : "/login",
     );
   }
+  requireCompleteProfile(session, nextPath);
   if (session.profile.role !== role) {
     // Admins may preview other surfaces' pages via the view-as switcher.
     // (requireRole("admin") never lands here for real admins, so /admin
@@ -173,6 +194,7 @@ export async function requireProviderAccess(
       nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : "/login",
     );
   }
+  requireCompleteProfile(session, nextPath);
   if (session.profile.role === "admin") {
     const effective = await getEffectiveRole();
     if (effective === "provider") return session;
@@ -197,6 +219,7 @@ export async function requireOnboardingUser(
       nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : "/login",
     );
   }
+  requireCompleteProfile(session, nextPath);
   if (session.profile.role === "admin") {
     redirect(homePathFor((await getEffectiveRole()) ?? "admin"));
   }

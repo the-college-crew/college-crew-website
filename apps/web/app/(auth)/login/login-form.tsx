@@ -4,20 +4,21 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { logIn, type AuthFormState } from "@/app/(auth)/actions";
+import { GoogleAuthOption } from "@/components/auth/google-auth-option";
 import { Button } from "@/components/ui/button";
 import { FormLoader } from "@/components/form-loader";
 import { FieldError, Input, Label } from "@/components/ui/field";
 
 export function LoginForm({
   next,
-  initialError,
+  oauthError,
 }: {
   next?: string;
-  initialError?: string;
+  oauthError?: string;
 }) {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
     logIn,
-    initialError ? { error: initialError } : {},
+    {},
   );
 
   return (
@@ -27,6 +28,12 @@ export function LoginForm({
           state and clears it on a failed login that returns an error. */}
       <FormLoader />
       {next ? <input type="hidden" name="next" value={next} /> : null}
+
+      <GoogleAuthOption
+        next={next}
+        returnTo={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+        initialError={oauthError}
+      />
 
       <div>
         <Label htmlFor="email">Email</Label>

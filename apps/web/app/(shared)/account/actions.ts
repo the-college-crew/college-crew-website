@@ -2,14 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
 import { hasServiceRoleEnv } from "@/lib/env";
 import { geocodeProfileAddress } from "@/lib/geocode/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { addressSchema, passwordSchema } from "@/lib/validation/auth";
+import { passwordSchema, profileSchema } from "@/lib/validation/auth";
 
 /**
  * Shared account actions — available to any signed-in user (customer, provider,
@@ -19,15 +18,6 @@ import { addressSchema, passwordSchema } from "@/lib/validation/auth";
  */
 
 export type AccountFormState = { error?: string; success?: string };
-
-const profileSchema = z.object({
-  fullName: z.string().trim().min(1, "Enter your name."),
-  address_line1: addressSchema.shape.address_line1,
-  address_line2: addressSchema.shape.address_line2,
-  city: addressSchema.shape.city,
-  state: addressSchema.shape.state,
-  postal_code: addressSchema.shape.postal_code,
-});
 
 export async function updateProfile(
   _prev: AccountFormState,

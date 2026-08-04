@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  needsProfileCompletion,
+  profileCompletionPath,
+} from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import {
   hasAcceptedCurrentLegalDocument,
@@ -35,6 +39,9 @@ export default async function MasterAgreementPage({
     redirect(`/login?next=${encodeURIComponent(legalNext)}`);
   }
   if (session.profile.role === "admin") redirect(next === "/" ? "/admin" : next);
+  if (needsProfileCompletion(session.profile)) {
+    redirect(profileCompletionPath(next));
+  }
 
   const supabase = await createClient();
   if (
