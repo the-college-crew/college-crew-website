@@ -26,6 +26,7 @@ Newest first. One row per post.
 
 | Date drafted | Slug | Topic / intent | Status |
 |---|---|---|---|
+| 2026-08-04 | `back-to-school-tutoring-cost-lincoln-park` | Cost — back-to-school tutoring pricing in Lincoln Park | `drafted` |
 | 2026-07-16 | `meet-jackson-the-walker-behind-the-leash-be90e9cf` | Student spotlight — dog walking | `published` |
 
 <!--
