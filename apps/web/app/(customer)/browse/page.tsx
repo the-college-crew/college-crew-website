@@ -150,17 +150,17 @@ export default async function BrowsePage({
 
 /**
  * Closes the roster for logged-out visitors the way the homepage's CTA band
- * closes the landing page: same viridian surface, ant watermark, and
+ * closes the landing page: same viridian surface, seal watermark, and
  * "Become a provider" label, scaled down to the browse column.
  */
 function JoinCrewBand() {
   return (
     <section className="relative mt-10 overflow-hidden rounded-2xl bg-viridian px-6 py-10 text-shell sm:px-10">
       <Image
-        src="/college-crew-mark-white.png"
+        src="/college-crew-logo.png"
         alt=""
         width={520}
-        height={478}
+        height={520}
         aria-hidden
         className="pointer-events-none absolute -bottom-20 -right-16 z-0 w-64 max-w-none rotate-[14deg] opacity-15"
       />
