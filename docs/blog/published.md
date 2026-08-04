@@ -1,1 +1,35 @@
-ptbGxvZyBwb3N0IGxvZwoKKipUaGlzIGZpbGUgaXMgdGhlIHJvdXRpbmUncyBvbmx5IG1lbW9yeS4qKiBUaGUgY2xvdWQgZW52aXJvbm1lbnQgaG9sZHMKcGxhY2Vob2xkZXIgU3VwYWJhc2UgY3JlZGVudGlhbHMgYnkgZGVzaWduLCBzbyB0aGUgd2Vla2x5IGJsb2cgcm91dGluZSBjYW5ub3QKcmVhZCB0aGUgbGl2ZSBzaXRlIHRvIHNlZSB3aGF0IGl0IGhhcyBhbHJlYWR5IHdyaXR0ZW4uIElmIGEgcG9zdCBpcyBub3QgbGlzdGVkCmhlcmUsIHRoZSByb3V0aW5lIGRvZXMgbm90IGtub3cgaXQgZXhpc3RzLgoKVHdvIHJ1bGVzIGRlcGVuZCBvbiB0aGlzIGZpbGU6CgotICoqRGVkdXBlKiog4oCUIG5ldmVyIHdyaXRlIGEgdG9waWMgYWxyZWFkeSBsaXN0ZWQgYmVsb3cuCi0gKipUaGUgb3ZlcndyaXRlIGd1YXJkKiog4oCUIGlmIHRoZSBuZXdlc3Qgcm93IGlzIHN0aWxsIGBkcmFmdGVkYCwgdGhlIHJvdXRpbmUKICAqKnNraXBzIHRoZSB3ZWVrIGVudGlyZWx5KiogcmF0aGVyIHRoYW4gb3ZlcndyaXRpbmcgYW4gdW5wdWJsaXNoZWQgZHJhZnQgaW4KICB0aGUgY2FudmFzLiBJdCBwb3N0cyBvbmUgbGluZSBzYXlpbmcgc28gYW5kIHN0b3BzLgoKIyMgU3RhdHVzIHZhbHVlcwoKfCBTdGF0dXMgfCBNZWFuaW5nIHwKfC0tLXwtLS18CnwgYGRyYWZ0ZWRgIHwgV3JpdHRlbiB0byB0aGUgY2FudmFzLCB3YWl0aW5nIG9uIEdpYW5uYS4gQmxvY2tzIG5leHQgd2Vlaydz IHJ1bi4gfAp8IGBwdWJsaXNoZWRgIHwgTGl2ZSBvbiB0aGUgc2l0ZS4gU2V0IGJ5IHRoZSBwdWJsaXNoIGZsb3cgKGBQVUJMSVNISU5HLm1kYCkuIHwKfCBgZHJvcHBlZGAgfCBHaWFubmEgZGVjaWRlZCBhZ2FpbnN0IGl0LiBEb2VzIG5vdCBibG9jazsgc3RpbGwgY291bnRzIGZvciBkZWR1cGUuIHwKCiMjIExvZwoKTmV3ZXN0IGZpcnN0LiBPbmUgcm93IHBlciBwb3N0LgoKfCBEYXRlIGRyYWZ0ZWQgfCBTbHVnIHwgVG9waWMgLyBpbnRlbnQgfCBTdGF0dXMgfAp8LS0tfC0tLXwtLS18LS0tfAp8IDIwMjYtMDgtMDQgfCBgYmFjay10by1zY2hvb2wtdHV0b3JpbmctY29zdC1saW5jb2xuLXBhcmtgIHwgQ29zdCDigJQgYmFjay10by1zY2hvb2wgdHV0b3JpbmcgcHJpY2luZyBpbiBMaW5jb2xuIFBhcmsgfCBgZHJhZnRlZGAgfAp8IDIwMjYtMDctMTYgfCBgbWVldC1qYWNrc29uLXRoZS13YWxrZXItYmVoaW5kLXRoZS1sZWFzaC1iZTkwZTljZmAgfCBTdHVkZW50IHNwb3RsaWdodCDigJQgZG9nIHdhbGtpbmcgfCBgcHVibGlzaGVkYCB8Cgo8IS0tClRoZSBKYWNrc29uIHBvc3QgcHJlZGF0ZXMgdGhpcyByb3V0aW5lOyBpdCBpcyBsaXN0ZWQgc28gdGhlIHJvdXRpbmUgZG9lcyBub3QKcHJvcG9zZSBhIGRvZy13YWxraW5nIHN0dWRlbnQgc3BvdGxpZ2h0IGFzIGlmIGl0IHdlcmUgYW4gdW50b3VjaGVkIHRvcGljLgotLT4K
+# Blog post log
+
+**This file is the routine's only memory.** The cloud environment holds
+placeholder Supabase credentials by design, so the weekly blog routine cannot
+read the live site to see what it has already written. If a post is not listed
+here, the routine does not know it exists.
+
+Two rules depend on this file:
+
+- **Dedupe** — never write a topic already listed below.
+- **The overwrite guard** — if the newest row is still `drafted`, the routine
+  **skips the week entirely** rather than overwriting an unpublished draft in
+  the canvas. It posts one line saying so and stops.
+
+## Status values
+
+| Status | Meaning |
+|---|---|
+| `drafted` | Written to the canvas, waiting on Gianna. Blocks next week's run. |
+| `published` | Live on the site. Set by the publish flow (`PUBLISHING.md`). |
+| `dropped` | Gianna decided against it. Does not block; still counts for dedupe. |
+
+## Log
+
+Newest first. One row per post.
+
+| Date drafted | Slug | Topic / intent | Status |
+|---|---|---|---|
+| 2026-08-04 | `back-to-school-tutoring-cost-lincoln-park` | Cost — back-to-school tutoring pricing in Lincoln Park | `drafted` |
+| 2026-07-16 | `meet-jackson-the-walker-behind-the-leash-be90e9cf` | Student spotlight — dog walking | `published` |
+
+<!--
+The Jackson post predates this routine; it is listed so the routine does not
+propose a dog-walking student spotlight as if it were an untouched topic.
+-->
