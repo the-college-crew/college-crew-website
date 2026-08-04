@@ -72,6 +72,16 @@ export const addressSchema = z.object({
     .regex(/^\d{5}$/, "Enter a 5-digit ZIP code."),
 });
 
+/** Personal details required before any account can use authenticated flows. */
+export const profileSchema = z.object({
+  fullName: z.string().trim().min(1, "Enter your name."),
+  address_line1: addressSchema.shape.address_line1,
+  address_line2: addressSchema.shape.address_line2,
+  city: addressSchema.shape.city,
+  state: addressSchema.shape.state,
+  postal_code: addressSchema.shape.postal_code,
+});
+
 /**
  * Date of birth with a real 18+ gate. Used at provider-intent signup and again
  * when an existing account starts provider onboarding (customers never provide
@@ -102,17 +112,11 @@ export const providerStartSchema = z.object({
 }).and(schoolProfileInputSchema);
 
 /** Customer signup: name + credentials + home address. No date of birth. */
-export const customerSignUpSchema = z
-  .object({
-    fullName: z.string().trim().min(1, "Enter your name."),
+export const customerSignUpSchema = profileSchema
+  .extend({
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
-    address_line1: addressSchema.shape.address_line1,
-    address_line2: addressSchema.shape.address_line2,
-    city: addressSchema.shape.city,
-    state: addressSchema.shape.state,
-    postal_code: addressSchema.shape.postal_code,
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match.",
@@ -124,18 +128,12 @@ export const customerSignUpSchema = z
  * must be 18+. The .edu check stays in the action (it wants a role-specific
  * error message). ID review re-verifies age later.
  */
-export const providerSignUpSchema = z
-  .object({
-    fullName: z.string().trim().min(1, "Enter your name."),
+export const providerSignUpSchema = profileSchema
+  .extend({
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
     dateOfBirth: dateOfBirthSchema,
-    address_line1: addressSchema.shape.address_line1,
-    address_line2: addressSchema.shape.address_line2,
-    city: addressSchema.shape.city,
-    state: addressSchema.shape.state,
-    postal_code: addressSchema.shape.postal_code,
     companyName: z.string().trim().max(120).optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {

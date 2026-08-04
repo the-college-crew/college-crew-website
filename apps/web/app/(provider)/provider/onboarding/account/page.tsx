@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  needsProfileCompletion,
+  profileCompletionPath,
+} from "@/lib/auth/redirects";
 import { getOwnProviderProfile, getSession } from "@/lib/auth/session";
 
 import { WizardSteps } from "../../_components/wizard-steps";
@@ -16,8 +21,20 @@ export const metadata: Metadata = { title: "Provider onboarding — account" };
  * signed-in users (including existing customers — providing is a capability
  * any account can add) continue with the facts signup didn't collect.
  */
-export default async function OnboardingAccountPage() {
+export default async function OnboardingAccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ oauth_error?: string }>;
+}) {
+  const { oauth_error: oauthError } = await searchParams;
   const session = await getSession();
+  if (
+    session &&
+    session.profile.role !== "admin" &&
+    needsProfileCompletion(session.profile)
+  ) {
+    redirect(profileCompletionPath("/provider/onboarding/account"));
+  }
   const providerProfile = session ? await getOwnProviderProfile() : null;
 
   return (
@@ -34,7 +51,7 @@ export default async function OnboardingAccountPage() {
             founders.
           </p>
           <div className="mt-5">
-            <ProviderSignupForm />
+            <ProviderSignupForm oauthError={oauthError} />
           </div>
           <p className="mt-4 text-center text-sm text-ink-soft">
             Already have an account (customer accounts count)?{" "}

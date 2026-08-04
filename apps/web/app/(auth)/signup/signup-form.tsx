@@ -4,12 +4,13 @@ import { useActionState } from "react";
 
 import { signUpCustomer, type AuthFormState } from "@/app/(auth)/actions";
 import { AddressFields } from "@/components/auth/address-fields";
+import { GoogleAuthOption } from "@/components/auth/google-auth-option";
 import { PasswordField } from "@/components/auth/password-field";
 import { SignupSuccess } from "@/components/auth/signup-success";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
 
-export function SignupForm() {
+export function SignupForm({ oauthError }: { oauthError?: string }) {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
     signUpCustomer,
     {},
@@ -27,6 +28,12 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      <GoogleAuthOption
+        next="/dashboard"
+        returnTo="/signup"
+        initialError={oauthError}
+      />
+
       <div>
         <Label htmlFor="fullName">Full name</Label>
         <Input id="fullName" name="fullName" autoComplete="name" required />

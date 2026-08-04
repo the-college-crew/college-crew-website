@@ -17,9 +17,12 @@ export const metadata: Metadata = { title: "Sign up" };
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; oauth_error?: string }>;
 }) {
-  const [{ role }, session] = await Promise.all([searchParams, getSession()]);
+  const [{ role, oauth_error: oauthError }, session] = await Promise.all([
+    searchParams,
+    getSession(),
+  ]);
   const earning = role === "earn";
 
   const tab = (active: boolean) =>
@@ -99,7 +102,7 @@ export default async function SignupPage({
             )}
           </div>
         ) : (
-          <SignupForm />
+          <SignupForm oauthError={oauthError} />
         )}
       </div>
 
