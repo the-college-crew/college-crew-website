@@ -65,36 +65,105 @@ Then pick the highest-value gap, weighing in this order:
 3. **Service coverage.** Prefer a service with no post yet over a fourth post
    about dog walking.
 
-### The intent types worth writing
+⚠ **The rotation rule below outranks all three.** Left alone, this list picks a
+broad cost guide every single week, because a broad cost guide always scores
+highest on it. Choose the shape first, then apply this list *within* that shape.
 
-| Type | Shape | Example |
-|---|---|---|
-| **Cost** | What drives the price, what to expect, what to ask | "What does it cost to get your windows washed in Lincoln Park?" |
-| **Seasonal** | What needs doing this month and what's worth hiring out | "The five yard jobs worth doing before the first frost" |
-| **Hiring guide** | How to pick someone, what to ask, what good looks like | "What to ask before you hand someone your spare key" |
-| **Comparison** | Honest options including ones that aren't us | "Hiring a neighbor's kid vs. a service: what actually differs" |
+### Two axes: what the post is, and how wide it aims
 
-That last one matters more than it looks. A post that names real alternatives
-honestly reads as credible to both people and answer engines; one that pretends
-College Crew is the only option reads as an ad and gets treated like one.
+Every post has a **type** and a **breadth**, and both should vary week to week.
+An archive of nothing but broad cost guides competes for a handful of crowded
+phrases and wins none of them. The long tail is where a new site actually wins:
+"how do I get hard water spots off glass" has one good answer and almost nobody
+competing to give it.
+
+| Type | Breadth | What it does | Example |
+|---|---|---|---|
+| **Cost** | broad | What drives the price, what to expect, what to ask | "What does it cost to get your windows washed in Lincoln Park?" |
+| **Seasonal** | broad | What needs doing this month and what's worth hiring out | "The five yard jobs worth doing before the first frost" |
+| **Hiring guide** | broad | How to pick someone, what to ask, what good looks like | "What to ask before you hand someone your spare key" |
+| **Comparison** | broad | Honest options including ones that aren't us | "Hiring a neighbor's kid vs. a service: what actually differs" |
+| **How-to / method** | niche | One genuinely good technique, explained properly | "One trick that gets streaks off a west-facing window" |
+| **Specific problem** | niche | A single annoying thing and what fixes it | "How to get hard water spots off glass" |
+| **Edge case** | niche | The awkward situation nobody else writes about | "What to do with a couch you can't get down the stairs" |
+
+The comparison post matters more than it looks. A post that names real
+alternatives honestly reads as credible to both people and answer engines; one
+that pretends College Crew is the only option reads as an ad and gets treated
+like one.
+
+### The rotation rule
+
+Read the **Shape** column in [`published.md`](./published.md) and obey both:
+
+- **At least two of any four consecutive posts are niche.**
+- **Never the same type twice in a row.**
+
+If the last two posts were broad, this week is niche. That is a rule, not a
+preference — left to judgment, every week looks like a cost guide, because a
+cost guide always seems like the highest-value gap. Record the shape you chose
+in the log so next week's run can apply the same test.
+
+### Niche posts inspire — they never specify the service
+
+A niche post is **one good idea worth trying**, not a description of what a
+booking gets you. That distinction is load-bearing. Lay out a six-step window
+method and a customer can reasonably expect those six steps; the student who
+shows up never agreed to them. "Five fun things to do while babysitting" reads
+to a parent as the itinerary. Neither post meant to promise anything, and both
+did.
+
+How to stay on the right side of it:
+
+- **One idea, not the method.** "One trick worth trying on a west-facing
+  window", not "the right way to wash a window". Indefinite, offered, singular.
+  A headline may reach further than the body delivers — "the best way to…" is
+  fine as a title, and must not come back in the body as our standard procedure.
+- **Watch the grammatical subject.** Write about the task or about the reader,
+  never about our students performing it. *"A squeegee beats a spray bottle"* is
+  knowledge. *"Our students use a squeegee"* is a spec sheet. The failure hides
+  in one word.
+- **Never describe what a booking includes.** Scope lives in each provider's own
+  listing, because each provider sets it. A post that enumerates it is writing a
+  contract on their behalf.
+- **Close open.** "If you'd rather not spend Saturday on it, you can book
+  someone" plus the link — then stop. Not what they'll bring, not what they'll
+  do, not how long it takes.
+
+⚠ **Never write the disclaimer.** No "results may vary", no "this isn't a
+guarantee", no "we can't promise", no "of course, every home is different". A
+promise named in the negative is still the reader thinking about promises, it
+reads defensively, and it is the tell that gives the whole thing away. You avoid
+making a promise by not making one, not by announcing that you haven't.
+
+The FAQ is where this leaks most, because FAQ questions invite exactly the wrong
+answer. *"What does a babysitter actually do?"* answered as a task list is a
+scope promise. Answered as "you describe what you need when you book, and
+providers set their own rates and availability" it is how the marketplace works
+— true, checkable, and ours to say.
 
 ---
 
 ## The shape of a post
 
-**~600 words. 4 to 7 paragraphs.** Long enough to actually answer the question,
-short enough to still sound like a person wrote it.
+**450 to 850 words — and deliberately not the same length every week.** A broad
+guide runs long because it has ground to cover. A specific-problem post that
+answers the question in 500 words should stop at 500 rather than pad to a
+target. Length follows the question.
 
 1. **Open concrete.** A specific moment, season, or situation — not a definition
-   and not a throat-clear. Never open with "In today's world" or "As a
-   homeowner, you know that…".
+   and not a throat-clear. **Vary the opening move:** a season, a thing that
+   went wrong, the question asked plainly, a single object. Four posts in a row
+   that open on a sidewalk scene read as one post written four times. Never open
+   with "In today's world" or "As a homeowner, you know that…".
 2. **The middle does the work.** This is the part that ranks: the actual
    answer. What it costs and why, what changes the price, when to book, what to
    ask, what to look out for. Be specific enough to be useful to someone who
    will never hire us.
-3. **Two or three `##` subheads.** Phrase them as the question a person would
-   actually type. These become the `id`-anchored sections an AI answer engine
-   can cite.
+3. **Subheads follow the content, not a quota.** Usually two or three; a tight
+   niche post may want one, a broad guide four. Phrase each as the question a
+   person would actually type — these become the `id`-anchored sections an AI
+   answer engine can cite.
 4. **Close short.** Two or three sentences. No hard sell, no "In conclusion", no
    "Ready to get started?".
 
@@ -177,17 +246,30 @@ worse than no post.
    Nobody knows either of those things. With a handful of providers in a
    seven-week pilot, there is no booking pattern to describe.
 
-   The tell: if a sentence asserts something about **the world or the market**
-   rather than about **how College Crew works**, and you did not read it in this
-   file or the code, cut it or mark it. Writing "we're new, so book early" is
-   honest. Writing "slots fill up fast" is not.
+   The tell: if a sentence asserts something about **the market** rather than
+   about **how College Crew works**, and you did not read it in this file or the
+   code, cut it or mark it. Writing "we're new, so book early" is honest.
+   Writing "slots fill up fast" is not.
+
+   ✅ **Craft knowledge is exempt, and the niche posts depend on it.** "Wash
+   windows on an overcast day so the soap doesn't dry before you squeegee it" is
+   widely known, checkable, and stable — write it plainly, in as much detail as
+   the post needs. The ban is on claims about **our marketplace**: prices,
+   demand, scarcity, what most providers charge, how fast things book. A how-to
+   post may explain the job in full and still may not name a price.
+
+   Tell them apart by asking **who could check it**. Anyone can check a squeegee
+   technique against any other source. Only we could check what our providers
+   charge — and we haven't.
 2. **Never invent a named person, customer, student, or pet**, and never write a
    quote nobody said. The named-neighbor detail is what makes these posts good,
    so leave a marker where one belongs:
    `[NEEDS REAL DETAIL: a student who does this — name, school, neighborhood]`.
 3. **Never claim a service, coverage area, guarantee, or feature that isn't in
-   this file.** No background checks, no insurance claims, no "satisfaction
-   guaranteed", no same-day promises.
+   this file** — no background checks, no insurance claims, no "satisfaction
+   guaranteed", no same-day promises — **and never describe what a specific
+   booking includes.** See "Niche posts inspire" above: a task list reads as a
+   promise even when no promise was intended.
 4. **Never name a competitor negatively.** Comparisons describe trade-offs.
 
 Markers are a feature, not a failure — they are how the post gets a real detail

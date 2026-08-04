@@ -42,6 +42,29 @@ meant for this post" — a leftover from last week, or something pasted into a
 comment. The box is her saying *this* photo is the one. Requiring both means a
 stale image can never be silently published under a new post.
 
+## The weekly Slack message
+
+The routine posts one message to `#weekly-blog` (`C0BMRK02RR8`) at the end of
+every run, always `@`-mentioning Gianna as `<@U0BMH9KBZ2P>` — she is the one who
+has to act. Keep it short and phone-readable.
+
+**Slack mrkdwn is not GitHub markdown:** `*bold*` not `**bold**`,
+`<url|text>` not `[text](url)`, manual `•` bullets.
+
+What to say, by outcome:
+
+| Outcome | The message |
+|---|---|
+| **Published + new draft** | What went live (title + URL), then the new draft's title and a canvas link, then what she does next: edit, fill in the markers, add a photo, tick both boxes. |
+| **Gate closed** | One line naming exactly which of the three checks is missing — approval box, photo box, or the photo itself — and that the draft is untouched and still there. Nothing new was written. |
+| **Refused before publishing** | Exactly what to fix, quoting the `[NEEDS …]` marker or naming the problem. |
+| **First run** | Just the new draft and what to do with it. |
+
+**Do not invent something needing her attention.** If the run was a clean no-op,
+one line saying so is a complete and correct message. This is the counterpart of
+the notification rules the other four routines follow: a weekly ping that always
+manufactures an action item trains her to stop reading it.
+
 ## Why one canvas and not one per week
 
 The trade-off is that last week's draft is gone once it is overwritten. That is

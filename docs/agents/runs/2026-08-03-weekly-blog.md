@@ -58,6 +58,29 @@ public routes.
 - "Needs from you" clarified as Gianna's to-do list.
 - A "Definition of done" listing all five required artifacts.
 
+Then a second pass on topic variety (2026-08-04), after the draft came out as a
+by-the-numbers cost guide — which is exactly what the old brief asked for:
+
+- **Shape rotation.** Posts now carry a type *and* a breadth (broad/niche), with
+  new niche types: how-to/method, specific problem, edge case. At least two of
+  any four consecutive posts must be niche, and never the same type twice in a
+  row. `published.md` gained a `Shape` column so the rule has a memory.
+- **Length is a range now** (450–850) instead of "~600 words, 4–7 paragraphs,
+  two or three subheads". That fixed template was what made every post feel the
+  same regardless of topic.
+- **The honesty rule was split.** As written it banned the entire how-to genre —
+  a window-washing method post is nothing but claims about the world. Craft
+  knowledge anyone can check is now explicitly exempt; claims about *our*
+  marketplace stay banned, prices included.
+- **Niche posts must not read as a service spec.** A method post lays out steps
+  a customer then expects, and a "things to do while babysitting" post reads as
+  an itinerary — both promise scope nobody agreed to. The rule is to write about
+  the task, never about what our students do, and never to write the disclaimer
+  either, since naming the absence of a promise is its own tell.
+- **The Slack message spec moved to `canvas.md`.** Not editorial — the routine
+  prompt hit the `RemoteTrigger` input ceiling (truncated at 11,688 bytes), so
+  content had to leave the prompt for a file the routine already reads.
+
 ## Slack
 
 Posted directly to `#weekly-blog` at 19:22:53 CDT tagging Gianna — first draft
