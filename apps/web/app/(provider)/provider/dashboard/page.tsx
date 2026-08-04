@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { JobPhotoGrid } from "@/components/booking/job-photo-grid";
@@ -9,7 +10,7 @@ import {
   type ProviderCalendarBooking,
 } from "@/components/scheduling/provider-schedule-calendar";
 import { SamplePreviewBanner } from "@/components/sample-preview-banner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -402,16 +403,28 @@ function ProviderDashboardView({
       {submitted && !demo ? (
         <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
           Onboarding submitted — a founder is reviewing your ID. You&apos;ll
-          go live in Browse once approved.
+          go live only after approval and Stripe payout setup are both complete.
+        </div>
+      ) : null}
+      {!profile.onboarding_submitted_at && !demo ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold-300 bg-gold-100 p-4 text-sm text-gold-800">
+          <p>Finish your College Crew setup before connecting Stripe payouts.</p>
+          <Link
+            href="/provider/onboarding"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            Continue setup
+          </Link>
         </div>
       ) : null}
       {profile.verification_status === "pending" &&
+      profile.onboarding_submitted_at &&
       onboardingComplete &&
       !submitted &&
       !demo ? (
         <div className="rounded-lg border border-gold-400/60 bg-gold-100 p-4 text-sm text-gold-800">
           Verification under review. You can fine-tune your profile and
-          hourly rates while you wait.
+          rates or finish Stripe payouts while you wait.
         </div>
       ) : null}
       {profile.verification_status === "rejected" && !demo ? (
@@ -420,13 +433,19 @@ function ProviderDashboardView({
           license from the onboarding wizard, or contact the founders.
         </div>
       ) : null}
-      {profile.verification_status === "approved" &&
+      {profile.onboarding_submitted_at &&
+      profile.verification_status !== "rejected" &&
       !profile.stripe_account_id &&
       !demo ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-crew-200 bg-crew-100 p-4 text-sm text-crew-800">
           <p>
-            <span className="font-semibold">You&apos;re approved!</span> Connect
-            your bank account through Stripe to get paid and appear in Browse.
+            <span className="font-semibold">
+              {profile.verification_status === "approved"
+                ? "You're approved!"
+                : "Get payouts ready while we review."}
+            </span>{" "}
+            Connect your bank account through Stripe. Your profile appears in
+            Browse only after both steps are complete.
           </p>
           <form action={connectStripe}>
             <Button type="submit" size="sm">
@@ -435,7 +454,8 @@ function ProviderDashboardView({
           </form>
         </div>
       ) : null}
-      {profile.verification_status === "approved" &&
+      {profile.onboarding_submitted_at &&
+      profile.verification_status !== "rejected" &&
       profile.stripe_account_id &&
       !profile.stripe_transfers_active &&
       !demo ? (
@@ -456,6 +476,16 @@ function ProviderDashboardView({
               </Button>
             </form>
           </div>
+        </div>
+      ) : null}
+      {profile.verification_status === "pending" &&
+      profile.onboarding_submitted_at &&
+      profile.stripe_account_id &&
+      profile.stripe_transfers_active &&
+      !demo ? (
+        <div className="rounded-lg border border-quad-200 bg-quad-50 p-4 text-sm text-quad-800">
+          Stripe payouts are ready. Your profile remains private until a
+          founder approves your student verification.
         </div>
       ) : null}
       {stripe === "pending" && !demo ? (

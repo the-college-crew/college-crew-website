@@ -180,7 +180,7 @@
     <section class="screen active" id="map">
       <div class="board">
         <h2>How the screens connect</h2>
-        <p class="muted" style="margin:0">Three audiences, one app. The provider flow now defers Stripe until <b style="color:var(--green)">after verification</b>.</p>
+        <p class="muted" style="margin:0">Three audiences, one app. Stripe payouts are the optional final provider step and can run <b style="color:var(--green)">while founder review is pending</b>.</p>
         <div class="lane"><div class="ltag">Customer journey</div>
           <div class="flow">
             <div class="node start">Landing</div><span class="arrow">&rarr;</span>
@@ -200,8 +200,8 @@
             <div class="node">Verify (ID upload)</div><span class="arrow">&rarr;</span>
             <div class="node">Set pricing + availability</div><span class="arrow">&rarr;</span>
             <div class="node">Submit</div><span class="arrow">&rarr;</span>
-            <div class="node gate">&check; Approved</div><span class="arrow">&rarr;</span>
             <div class="node">Connect Stripe</div><span class="arrow">&rarr;</span>
+            <div class="node gate">Approval + Stripe ready</div><span class="arrow">&rarr;</span>
             <div class="node">Accept &middot; Arrive &middot; Invoice</div>
           </div>
         </div>
@@ -482,6 +482,7 @@
             <div class="st" data-step="3"><div class="d">3</div>Services</div>
             <div class="st" data-step="4"><div class="d">4</div>Availability</div>
             <div class="st" data-step="5"><div class="d">5</div>Review</div>
+            <div class="st" data-step="6"><div class="d">6</div>Payouts</div>
           </div>
 
           <div class="wstep" data-page="1">
@@ -522,15 +523,25 @@
               <div class="sum"><span class="muted">ID</span><span>uploaded</span></div>
               <div class="sum"><span class="muted">Services</span><span>Window washing · $40/hr</span></div>
               <div class="sum"><span class="muted">Schedule</span><span>Mon, Tue, Sat · 9–6</span></div></div>
-            <div class="muted" style="font-size:12px">Payment setup (Stripe) comes after you're approved.</div>
-            <a class="btn primary" style="margin-top:8px">Submit for approval</a>
+            <div class="muted" style="font-size:12px">Submit for founder review, then optionally set up Stripe while you wait.</div>
+            <a class="btn primary" style="margin-top:8px" data-go="next">Submit for approval &rarr;</a>
+            <a class="btn ghost" data-go="back">&larr; Back</a>
+          </div>
+
+          <div class="wstep hide" data-page="6">
+            <div class="lbl">Step 6 · Set up payouts</div>
+            <div class="card"><div class="sum"><span class="muted">College Crew</span><span>Submitted for review</span></div>
+              <div class="sum"><span class="muted">Stripe</span><span>Not connected</span></div></div>
+            <div class="muted" style="font-size:12px">Connect securely now or return later. Your profile appears only after approval and Stripe are both ready.</div>
+            <a class="btn primary" style="margin-top:8px">Set up payouts with Stripe</a>
+            <a class="btn ghost">Do this later</a>
             <a class="btn ghost" data-go="back">&larr; Back</a>
           </div>
         </div>
       </div></div>
       <div class="note">
         <h4>Onboarding · step-by-step wizard &check; rebuilt</h4>
-        <p>Now a <b>true multi-page wizard</b> — one form per page, Next/Back (click through it). Per your note, <b>Stripe is removed from onboarding</b> and happens <b>after verification/approval</b> (prompted on the dashboard + in settings).</p>
+        <p>A <b>true six-page wizard</b> — one form per page, Next/Back (click through it). Stripe is the optional final step after College Crew submission and can be completed while founder review is pending.</p>
         <span class="q">Hourly rates must be entered explicitly; legacy prices are never converted. Incomplete offerings remain unavailable and show the exact missing requirement.</span>
       </div>
     </section>
@@ -540,7 +551,7 @@
       <div class="phone"><div class="status"></div><div class="app">
         <div class="appbar"><div class="ico">&#9776;</div><div class="title">Dashboard</div><div class="right">&#9678;</div></div>
         <div class="scr">
-          <div class="banner"><div style="flex:1"><div class="t">Connect Stripe to get paid</div><div class="muted" style="font-size:11px">You're approved — set up payouts to start accepting jobs.</div></div><a class="btn sm primary">Connect</a></div>
+          <div class="banner"><div style="flex:1"><div class="t">Connect Stripe to get paid</div><div class="muted" style="font-size:11px">Set up payouts while founder review is pending.</div></div><a class="btn sm primary">Connect</a></div>
           <div class="grid2">
             <div class="card" style="margin:0"><div class="muted" style="font-size:11px">This month</div><div class="h" style="margin:2px 0">$306</div></div>
             <div class="card" style="margin:0"><div class="muted" style="font-size:11px">Pending payout</div><div class="h" style="margin:2px 0">$102</div></div>
@@ -783,7 +794,7 @@
   }
   wiz.addEventListener('click', e=>{
     const g=e.target.closest('[data-go]'); if(!g) return;
-    step += (g.dataset.go==='next'?1:-1); step=Math.max(1,Math.min(5,step)); showStep(step);
+    step += (g.dataset.go==='next'?1:-1); step=Math.max(1,Math.min(6,step)); showStep(step);
   });
 
   const bookings = {

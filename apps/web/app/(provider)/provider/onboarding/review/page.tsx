@@ -39,7 +39,7 @@ import { ReviewSubmitForm } from "./review-submit-form";
 
 export const metadata: Metadata = { title: "Provider onboarding — review" };
 
-/** Wizard step 5: review & submit. Stripe connects later, after approval. */
+/** Wizard step 5: submit for review, then optionally set up Stripe payouts. */
 export default async function OnboardingReviewPage() {
   const session = await requireOnboardingUser("/provider/onboarding/review");
   const profile = await getOwnProviderProfile();
@@ -271,15 +271,15 @@ export default async function OnboardingReviewPage() {
             <dd className="text-right font-medium">
               {profile.stripe_transfers_active
                 ? "Active"
-                : "Connect after founder approval"}
+                : "Next step — optional while we review"}
             </dd>
           </div>
         </dl>
 
         <div className="mt-5 rounded-lg border border-line bg-court p-3 text-xs text-ink-soft">
           {verificationBypassed
-            ? "Your verification was approved by a founder. Finish the remaining setup and accept the Provider Addendum, then connect Stripe from your dashboard."
-            : "What happens next: a founder reviews your license. Once approved, you’ll connect a bank account through Stripe from your dashboard and appear in Browse."}
+            ? "Your verification was approved by a founder. Submit the remaining setup, then connect Stripe so your profile can become bookable."
+            : "What happens next: your application goes to founder review, then you can set up Stripe payouts right away or return to them later. You only appear in Browse after both are complete."}
         </div>
 
         <section className="mt-6 border-t border-line pt-5">

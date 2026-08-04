@@ -21,7 +21,7 @@ export async function SiteFooter() {
     ? EXPLORE
     : [
         EXPLORE[0],
-        { href: "/provider/onboarding/account", label: "Earn as a student" },
+        { href: "/provider/onboarding", label: "Earn as a student" },
         ...EXPLORE.slice(1),
       ];
 

@@ -78,6 +78,7 @@ export const demoProviderProfile: ProviderProfile = {
   bio: "Junior at the local university helping neighbors with yard work, window washing, and weekend odd jobs.",
   provider_type: "business",
   neighborhood: "Pilot neighborhood",
+  onboarding_submitted_at: isoAgoDays(7, 12),
   school_name: "Northwestern University",
   school_scorecard_id: 147767,
   school_domain: "northwestern.edu",

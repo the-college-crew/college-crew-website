@@ -48,7 +48,7 @@ export default async function StudentMissionPage() {
         actions={
           showProviderCta ? (
             <Link
-              href="/provider/onboarding/account"
+              href="/provider/onboarding"
               className={buttonClasses({ size: "sm" })}
             >
               Become a provider

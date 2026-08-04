@@ -57,8 +57,7 @@ import { savePricingRows } from "../_lib/pricing";
 
 /**
  * Onboarding wizard actions (account → verify → services → availability →
- * review).
- * Stripe is deliberately NOT here — it connects after admin approval.
+ * review → optional Stripe payouts).
  */
 
 export type OnboardingFormState = {
@@ -560,5 +559,24 @@ export async function submitForReview(
     }
   }
 
-  redirect("/provider/dashboard?submitted=1");
+  // This server-owned marker is the durable boundary between College Crew's
+  // forms and optional Stripe onboarding. It is intentionally independent of
+  // founder approval so pending providers can set up payouts while they wait.
+  if (!profile.onboarding_submitted_at) {
+    const admin = createAdminClient();
+    const submittedAt = new Date().toISOString();
+    const { data, error } = await admin
+      .from("provider_profiles")
+      .update({ onboarding_submitted_at: submittedAt })
+      .eq("id", profile.id)
+      .select("onboarding_submitted_at")
+      .single();
+    if (error || data?.onboarding_submitted_at !== submittedAt) {
+      return { error: "Could not submit your onboarding. Try again." };
+    }
+  }
+
+  revalidatePath("/provider/onboarding");
+  revalidatePath("/provider/dashboard");
+  redirect("/provider/onboarding/stripe?submitted=1");
 }

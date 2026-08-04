@@ -347,7 +347,8 @@ function ProviderAccountDemo({ tab }: { tab?: string }) {
               Connect Stripe
             </Button>
             <span className="text-xs text-mist">
-              Disabled in sample mode; real providers connect after approval.
+              Disabled in sample mode; submitted providers can connect while
+              founder review is pending.
             </span>
           </div>
         </Section>

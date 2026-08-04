@@ -79,7 +79,7 @@ export default async function SignupPage({
             </p>
             {!session ? (
               <Link
-                href="/provider/onboarding/account"
+                href="/provider/onboarding"
                 className={buttonClasses({ size: "lg", className: "w-full" })}
               >
                 Start provider onboarding
@@ -90,7 +90,7 @@ export default async function SignupPage({
                   Your current account can also become a provider account.
                 </p>
                 <Link
-                  href="/provider/onboarding/account"
+                  href="/provider/onboarding"
                   className={buttonClasses({
                     size: "sm",
                     className: "mt-3 w-full",
