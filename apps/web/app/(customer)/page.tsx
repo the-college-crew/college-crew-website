@@ -13,6 +13,7 @@ import { HowItWorksTabs, type Step } from "./landing-client";
 import { FeatureIcon, ServiceIcon } from "./landing-icons";
 
 const LOGO_SRC = "/college-crew-logo.png";
+const WATERMARK_SRC = "/college-crew-ant.png";
 
 /*
  * Shared section shells for the ant-mascot homepage design: full-bleed color
@@ -210,13 +211,13 @@ function Hero({
       {/* Emerges from the corner like the CTA band's watermark — kept out of
           the phone mock's shadow so it actually reads. */}
       <Image
-        src={LOGO_SRC}
+        src={WATERMARK_SRC}
         alt=""
         width={600}
         height={600}
         priority
         aria-hidden
-        className="pointer-events-none absolute -bottom-[120px] -left-[100px] z-0 hidden w-[430px] max-w-none rotate-[16deg] opacity-60 lg:block"
+        className="pointer-events-none absolute -bottom-[120px] -left-[100px] z-0 hidden w-[430px] max-w-none rotate-[16deg] opacity-30 lg:block"
       />
       <div
         className={`${WRAP} relative z-10 grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]`}
@@ -540,12 +541,12 @@ function FeaturesSection() {
   return (
     <section id="features" className={`${BAND} bg-shell`}>
       <Image
-        src={LOGO_SRC}
+        src={WATERMARK_SRC}
         alt=""
         width={300}
         height={300}
         aria-hidden
-        className="pointer-events-none absolute right-10 top-16 z-0 w-[300px] rotate-[10deg] opacity-50"
+        className="pointer-events-none absolute right-10 top-16 z-0 w-[300px] rotate-[10deg] opacity-20"
       />
       <div className={`${WRAP} reveal-rise relative z-10`}>
         <div className="mb-[52px]">
@@ -598,7 +599,7 @@ function CTASection({
   return (
     <section className={`${BAND} bg-viridian text-shell`}>
       <Image
-        src={LOGO_SRC}
+        src={WATERMARK_SRC}
         alt=""
         width={520}
         height={520}
