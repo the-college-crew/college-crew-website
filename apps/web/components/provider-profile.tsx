@@ -272,7 +272,7 @@ export async function ProviderProfile({
                 key={review.id}
                 className="border-b border-line pb-4 last:border-0"
               >
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span
                     aria-label={`${review.rating} out of 5 stars`}
                     className="text-gold-700"
@@ -282,6 +282,7 @@ export async function ProviderProfile({
                       {"★".repeat(5 - review.rating)}
                     </span>
                   </span>
+                  <Badge tone="green">Verified booking</Badge>
                   {review.service_name ? (
                     <span className="text-xs text-mist">
                       {review.service_name} · {formatDate(review.created_at)}
