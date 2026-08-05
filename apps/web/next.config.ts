@@ -1,6 +1,27 @@
 import type { NextConfig } from "next";
 
+/**
+ * Blog hero photos live in the public `blog-images` Supabase bucket rather than
+ * in git — the weekly routine cannot commit a binary file, so a post's
+ * frontmatter carries a URL. `next/image` refuses a remote src that is not
+ * allow-listed here, so this is what makes those posts render at all.
+ */
+const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+  : undefined;
+
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: supabaseHost
+      ? [
+          {
+            protocol: "https",
+            hostname: supabaseHost,
+            pathname: "/storage/v1/object/public/blog-images/**",
+          },
+        ]
+      : [],
+  },
   // Cache Components stays off: nearly every route is per-user and
   // auth-gated, so the default dynamic model is the right one for the pilot.
   experimental: {

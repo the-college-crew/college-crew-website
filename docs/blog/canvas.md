@@ -22,37 +22,59 @@ and the connector cannot delete the extra one.
 ## The approval gate
 
 The canvas is not just a handover document; it is the **authorization record**.
-The routine reads **three** things from it before publishing anything:
+The routine reads **two** things from it before publishing anything:
 
 1. `* [x] I approve this blog for production`
-2. `* [x] I inserted a photo below the line`
-3. An actual image in the canvas
+2. A non-empty `Image:` line in the **Photo** section
 
-All three → publish. Any one missing → skip the week and leave the canvas
-untouched, so the same draft is still there when she comes back to it.
+Both → publish. Either missing → skip the week and leave the canvas untouched,
+so the same draft is still there when she comes back to it.
 
 A checked box reads back through `slack_read_canvas` as `* [x] …` and an
 unchecked one as `* [ ] …`. That exact-string comparison is the gate — if a line
 is missing or reworded, treat it as **not approved** rather than guessing.
 
-**Why the photo gets both a checkbox and a presence check.** They fail
-differently. The image check catches "she forgot the photo entirely"; the
-checkbox catches "there is an image here, but I hadn't chosen it yet." The box
-is her saying *this* photo is the one.
+## The Photo section
 
-⚠ **Neither check licenses an opinion about what the photo shows.** The routine
-must not judge subject matter, composition, quality, or whether the image suits
-the post — and must never refuse to publish on those grounds. Editorial choice
-of image is Gianna's, and Zach reviews the post after it is live.
+```
+## Photo
+
+Upload at https://www.thecollegecrew.com/admin/blog-photos, tap
+"Copy for the canvas", and paste the key here.
+
+Image:
+```
+
+She uploads a photo, copies the key it gives her (`2026-08-05-tutor-table-a1b2c3.jpg`),
+and pastes it after `Image:`. The routine expands that key against the storage
+base URL in [`PUBLISHING.md`](./PUBLISHING.md) and writes the result into the
+post's frontmatter.
+
+**Why a key and not an attachment.** Attachments were the original design and
+they cannot work: the routine has no way to put a photo into git. GitHub MCP's
+`content` parameter is a text field, and `git push` is blocked from the sandbox
+— so a JPEG cannot travel through it in any encoding. Three consecutive runs
+were lost discovering that. Photos now live in the public `blog-images` Supabase
+bucket and only their **address** goes through git, which means the routine only
+ever writes text.
+
+The key doubles as the photo checkbox that used to sit here. Pasting one is a
+deliberate act; there is nothing left for a second box to confirm.
+
+⚠ **The key licenses no opinion about what the photo shows.** The routine must
+not judge subject matter, composition, quality, or whether the image suits the
+post — and must never refuse to publish on those grounds. Editorial choice of
+image is Gianna's, and Zach reviews the post after it is live.
 
 This is a deliberate loosening, made 2026-08-04 after the routine refused two
 consecutive runs on image-content grounds — once for a photo of a meal, once for
 a sheet of handwritten sports stats. Both judgments were defensible and both
 were the wrong call to be making: a week's publication was blocked by an
 opinion, the person who could fix it found out on Monday, and the earlier
-version of this passage is what the routine cited as authority. Refuse on the
-mechanical failures in the prompt's Step 3 — a missing file, an unreadable one,
-one over the size limit — and on nothing else.
+version of this passage is what the routine cited as authority. The rule now has
+teeth it did not need before — the routine never sees the photo at all — but it
+stays written down, because a filename is enough to tempt a guess. Refuse on a
+malformed key and on nothing else.
 
 ## The weekly Slack message
 
@@ -67,8 +89,8 @@ What to say, by outcome:
 
 | Outcome | The message |
 |---|---|
-| **Published + new draft** | What went live (title + URL), then the new draft's title and a canvas link, then what she does next: edit, fill in the markers, add a photo, tick both boxes. |
-| **Gate closed** | One line naming exactly which of the three checks is missing — approval box, photo box, or the photo itself — and that the draft is untouched and still there. Nothing new was written. |
+| **Published + new draft** | What went live (title + URL), then the new draft's title and a canvas link, then what she does next: edit, fill in the markers, paste a photo key, tick the box. |
+| **Gate closed** | One line naming which of the two checks is missing — the approval box or the image key — and that the draft is untouched and still there. Nothing new was written. |
 | **Refused before publishing** | Exactly what to fix, quoting the `[NEEDS …]` marker or naming the problem. |
 | **First run** | Just the new draft and what to do with it. |
 

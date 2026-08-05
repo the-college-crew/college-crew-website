@@ -42,17 +42,16 @@ Read the canvas with `slack_read_canvas` (ID in `docs/blog/canvas.md`). **Never 
 
 If the canvas holds no draft yet (first ever run), there is nothing to publish. Go straight to Step 5.
 
-Otherwise the gate is open only when **all three** of these hold:
+Otherwise the gate is open only when **both** of these hold:
 
 1. The canvas contains the line `* [x] I approve this blog for production` — checked.
-2. The canvas contains the line `* [x] I inserted a photo below the line` — checked.
-3. The canvas contains an image. It appears in the markdown as `![filename](https://…slack.com/files/…/F…/…)`. Extract the file ID (the `F…` segment) and fetch it with `slack_read_file`. **Check only that it exists and loads — never judge what it shows.**
+2. The canvas **Photo** section carries a non-empty image key on its `Image:` line, shaped `YYYY-MM-DD-<name>-<token>.jpg|png|webp`.
 
 Unchecked (`* [ ]`), reworded, or missing all count as **not approved**. Do not interpret intent; match the strings literally.
 
-⚠ Checks 2 and 3 are not redundant — never treat a found image as consent on its own. But the ticked box **is** consent: the photo's subject matter, quality, and fit are Gianna's call, never yours. `canvas.md` explains why.
+⚠ **Photos are not attachments any more.** Gianna uploads at `/admin/blog-photos` and pastes back a key; the bytes never reach you — you cannot commit a binary file and must not try. Pasting the key **is** her choosing that photo, and its subject matter, quality, and fit are her call, never yours. `canvas.md` explains why.
 
-**If the gate is closed, publish nothing and change nothing.** Leave the canvas exactly as it is — the same draft must still be there next week. Go to the Slack step and post one line naming which of the three is missing.
+**If the gate is closed, publish nothing and change nothing.** Leave the canvas exactly as it is — the same draft must still be there next week. Go to the Slack step and post one line naming which of the two is missing.
 
 
 ## Step 3 — Refuse to publish a broken post
@@ -61,7 +60,7 @@ Even with the gate open, **do not publish** if any of these is true. Each one me
 
 - The body still contains a `[NEEDS …]` marker. Those are placeholders for facts you could not know; publishing one puts a bracket on the live site.
 - The slug already appears in `docs/blog/published.md` with status `published`. You already shipped this one. Say so and move on to Step 5.
-- The image is larger than 2 MB, or will not load. Ask for another; these live in git forever. **Size and readability are the only image reasons to refuse** — what the picture depicts is never one, however unrelated it looks.
+- The image key does not match the shape above. A typo lands a broken hero photo on a live post. Quote what you found and ask her to re-copy it from `/admin/blog-photos`. **A malformed key is the only image reason to refuse** — what the picture depicts is never one, and you cannot see it anyway.
 - The title, meta description, or slug is missing or empty.
 
 ## Step 4 — Publish
@@ -69,13 +68,13 @@ Even with the gate open, **do not publish** if any of these is true. Each one me
 Use the canvas content **as Gianna edited it**, never your original draft.
 
 1. Write `apps/web/content/blog/<slug>.md` — frontmatter exactly per `docs/blog/PUBLISHING.md`, body below it.
-2. Write the image to `apps/web/public/blog/<slug>.<ext>` from the base64 `slack_read_file` returned, and set `image: "/blog/<slug>.<ext>"`.
+2. Set `image:` to the key expanded against the storage base URL in `PUBLISHING.md` — never a `/blog/…` path, and never the bare key.
 3. Set `publishedAt` to today's date.
 4. Add a row to `docs/blog/published.md` with status `published`.
 
 Use **GitHub MCP tools only — `git push` is blocked** from this sandbox. Branch `blog/publish-<slug>`, commit, open a PR, wait for checks, then **merge it yourself**.
 
-⚠ Self-merge is permitted **only because the diff is confined to `apps/web/content/blog/**`, `apps/web/public/blog/**`, and `docs/blog/published.md`.** Verify before merging. Anything else in the diff — any component, config, or other doc — **do not merge**; leave it for Zach and say so in Slack. The bound is absolute.
+⚠ Self-merge is permitted **only because the diff is confined to `apps/web/content/blog/**` and `docs/blog/published.md`.** Verify before merging. Anything else in the diff — any component, config, or other doc — **do not merge**; leave it for Zach and say so in Slack. The bound is absolute.
 
 Then immediately update the canvas Status section to say the post is published and you are writing the next one. If you die after this point, that line is what tells the next run what happened.
 
@@ -94,7 +93,7 @@ Follow `docs/blog/STRATEGY.md` — it is binding, not advisory. In particular:
 Overwrite the canvas with `slack_update_canvas`. **The full section list is in `STRATEGY.md` under "What the routine hands over" — follow it exactly**, ending with "Keep these words". Two sections are load-bearing and spelled out here:
 
 1. **Status** — one line: drafted today, waiting on approval.
-2. **Approval gate** — **two** checkboxes, both **unchecked**, worded exactly `* [ ] I approve this blog for production` and `* [ ] I inserted a photo below the line`, with the photo instruction and its line beneath them. Getting either string wrong breaks next week's run.
+2. **Approval gate** — one **unchecked** checkbox worded exactly `* [ ] I approve this blog for production`, and a **Photo** section holding an empty `Image:` line plus the upload instruction from `canvas.md`. Getting either wrong breaks next week's run.
 
 Add the draft to `docs/blog/published.md` with status `drafted` **and its `Shape` filled in** (`<Type> · <broad|niche>`), and commit that with the same branch-and-self-merge rules as Step 4. A blank shape blinds next week's rotation check.
 
@@ -102,7 +101,7 @@ Add the draft to `docs/blog/published.md` with status `drafted` **and its `Shape
 
 ## Step 6 — Run log
 
-Commit a run log to `docs/agents/runs/<date>-weekly-blog.md` recording: what the gate said (each of the three checks, individually), whether you published and to what URL, what topic and shape you chose and why (name the rotation check you applied), every `[NEEDS …]` marker you left, and the message you are about to send. Rule 2 requires this — routine output is invisible outside the claude.ai UI, so an uncommitted run is a run nobody can review.
+Commit a run log to `docs/agents/runs/<date>-weekly-blog.md` recording: what the gate said (each check, individually), whether you published and to what URL, what topic and shape you chose and why (name the rotation check you applied), every `[NEEDS …]` marker you left, and the message you are about to send. Rule 2 requires this — routine output is invisible outside the claude.ai UI, so an uncommitted run is a run nobody can review.
 
 This diff is confined to `docs/agents/`, so self-merge it under rule 7.
 
@@ -120,8 +119,8 @@ This diff is confined to `docs/agents/`, so self-merge it under rule 7.
 
 A complete run has produced **all** of these. Do not stop early:
 
-1. If the gate was open: the post and photo committed and merged, `published.md` marked `published`.
-2. The new draft in the canvas, with both approval boxes reset to unchecked.
+1. If the gate was open: the post committed and merged, `published.md` marked `published`.
+2. The new draft in the canvas, with the approval box unchecked and the `Image:` line empty.
 3. `published.md` updated with the new draft as `drafted`.
 4. A merged run log at `docs/agents/runs/<date>-weekly-blog.md`.
 5. One message in `#weekly-blog` tagging Gianna.

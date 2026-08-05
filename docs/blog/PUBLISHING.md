@@ -1,7 +1,10 @@
 # Publishing a blog post
 
 Blog posts are markdown files in this repo. Publishing one is a commit — there
-is no admin page and no database write, so nothing needs credentials.
+is no database write and no CMS, so the words need no credentials.
+
+Photos are the one exception: they live in a Supabase bucket, not in git, and
+are uploaded through `/admin/blog-photos`. See [Images](#images) for why.
 
 Most weeks nobody does this by hand: the weekly blog routine drafts the post,
 Gianna approves it in Slack, and the **next** run publishes it. That loop is at
@@ -13,8 +16,10 @@ file format, which both the routine and a human follow.
 | Path | What |
 |---|---|
 | `apps/web/content/blog/<slug>.md` | The post. **The filename is the URL slug.** |
-| `apps/web/public/blog/<slug>.jpg` | Its image. |
+| `blog-images` Supabase bucket | Where photos live. Uploaded at `/admin/blog-photos`. |
+| `apps/web/public/blog/<slug>.jpg` | Older photos, committed before the bucket. Still valid. |
 | `apps/web/lib/blog/posts.ts` | Reads and validates the files. |
+| `apps/web/lib/media/blog-images.ts` | Key shape, size/MIME rules, and the URL builder. |
 | `apps/web/lib/blog/markdown.ts` | Markdown → HTML. |
 
 ## The file
@@ -48,7 +53,7 @@ cannot ship a half-broken `<head>` silently.
 | `description` | 1–200 characters. This is the meta description and the excerpt on `/blog`. Aim for ~150 — Google truncates around 160. Write it deliberately; it is not generated from the body. |
 | `publishedAt` | `YYYY-MM-DD`. Sets the sort order and `datePublished`. |
 | `updatedAt` | `YYYY-MM-DD`, optional. Adds an "Updated" line and sets `dateModified`. |
-| `image` | Must start with `/blog/`. The file goes in `apps/web/public/blog/`. |
+| `image` | Either a `blog-images` public URL (what the routine writes) or a legacy `/blog/…` path served from `apps/web/public/blog/`. Anything else fails the build. |
 | `imageAlt` | Required. Describe the photo, don't restate the title — this is both an accessibility and a ranking signal. |
 | `tags` | Optional list of slugs. |
 | `faq` | Optional `q`/`a` pairs. Rendered visibly **and** emitted as `FAQPage` structured data. |
@@ -65,8 +70,31 @@ database-backed blog generated, and it is live.
 
 ### Images
 
-Downscale to **≤1600px wide and ≤300KB** before committing. These live in git;
-a full-resolution phone photo every week adds up fast.
+Photos are **not** in git. They live in the public `blog-images` Supabase
+bucket, uploaded through `/admin/blog-photos`, which hands back a key:
+
+```
+2026-08-05-tutor-table-a1b2c3.jpg
+```
+
+Expand that key against the storage base URL to get the `image` value:
+
+```
+https://dwnaaffrffdgrautgigw.supabase.co/storage/v1/object/public/blog-images/<key>
+```
+
+That base is not a secret — it is `NEXT_PUBLIC_SUPABASE_URL`, shipped in every
+page's client bundle.
+
+**Why photos left git.** The weekly routine cannot commit a binary file: GitHub
+MCP's `content` parameter is text, and `git push` is blocked from its sandbox.
+It can write an address, so an address is what a post carries. No downscaling
+step is needed either — `next/image` optimizes on delivery, and unlike git these
+files are not permanent repo weight.
+
+Posts committed before this change still point at `/blog/…` paths in
+`apps/web/public/blog/`. Those keep working; don't migrate them. If you are
+hand-publishing one that way, downscale first — those bytes *are* permanent:
 
 ```
 sips -Z 1600 photo.jpg --out apps/web/public/blog/<slug>.jpg
@@ -74,7 +102,8 @@ sips -Z 1600 photo.jpg --out apps/web/public/blog/<slug>.jpg
 
 ## Steps
 
-1. Write `apps/web/content/blog/<slug>.md` and add the image.
+1. Upload the photo at `/admin/blog-photos`, then write
+   `apps/web/content/blog/<slug>.md` with its expanded URL as `image`.
 2. `npm run build` — this is what catches bad frontmatter.
 3. `npm run dev`, open `/blog` and `/blog/<slug>`, read it once on a phone width.
 4. Commit on a branch, open a PR, merge. Vercel deploys.
@@ -102,14 +131,14 @@ standing Slack canvas in `#weekly-blog` that Gianna edits in place
 ```
 Monday 8:03am ─ routine reads the canvas
                  │
-                 ├─ checkbox ticked AND photo present?
-                 │    ├─ yes → commit the post + photo, mark published.md,
-                 │    │        then overwrite the canvas with a new draft
+                 ├─ checkbox ticked AND image key present?
+                 │    ├─ yes → commit the post, mark published.md, then
+                 │    │        overwrite the canvas with a new draft
                  │    └─ no  → change nothing, post one line saying what's
                  │             missing. Same draft is still there next week.
                  ↓
 Gianna, any time ─ edits the draft, fills in [NEEDS …] markers,
-                   drops in a photo, ticks the box
+                   pastes a photo key, ticks the box
 ```
 
 ### Gianna's side
@@ -122,7 +151,9 @@ Gianna, any time ─ edits the draft, fills in [NEEDS …] markers,
    the routine refuses and tells you which one.
 3. Keep the phrases under **Keep these words**. Rewrite freely around them;
    those are what the post ranks for.
-4. Drop the photo into the canvas.
+4. Upload the photo at [`/admin/blog-photos`](https://www.thecollegecrew.com/admin/blog-photos),
+   tap **Copy for the canvas**, and paste the key onto the `Image:` line. An
+   earlier photo can be reused straight from the grid — no upload needed.
 5. Tick `I approve this blog for production`.
 
 It goes live on the next Monday run. Nothing is on a clock — an unapproved draft

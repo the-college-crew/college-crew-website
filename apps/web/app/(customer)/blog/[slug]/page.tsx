@@ -10,6 +10,7 @@ import {
   getAllPosts,
   getPost,
   lastUpdated,
+  postImageUrl,
   type BlogPost,
 } from "@/lib/blog/posts";
 import { SITE, SITE_URL } from "@/lib/site";
@@ -29,7 +30,7 @@ export async function generateMetadata({
   if (!post) return { title: "Post not found" };
 
   const url = `${SITE_URL}/blog/${post.slug}`;
-  const image = `${SITE_URL}${post.image}`;
+  const image = postImageUrl(post);
 
   return {
     title: post.title,
@@ -65,7 +66,7 @@ function schemas(post: BlogPost) {
     url,
     headline: post.title,
     description: post.description,
-    image: [`${SITE_URL}${post.image}`],
+    image: [postImageUrl(post)],
     datePublished: post.publishedAt,
     dateModified: lastUpdated(post),
     author: { "@type": "Organization", name: SITE.name, url: SITE_URL },
