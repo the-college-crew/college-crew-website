@@ -17,7 +17,8 @@
     "test": "npm run test -w web",
     "test:e2e": "npm run test:e2e -w web",
     "email:supabase-payload": "npm run email:supabase-payload -w web",
-    "email:sync-supabase": "npm run email:sync-supabase -w web"
+    "email:sync-supabase": "npm run email:sync-supabase -w web",
+    "seed:preview": "npm run seed:preview -w web"
   },
   "overrides": {
     "postcss": "8.5.22",
