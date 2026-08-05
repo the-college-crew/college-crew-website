@@ -147,7 +147,7 @@ version of every form in the meantime.
 
 ## CC-008 — Add baseline HTTP security headers (no CSP yet)
 
-**Status:** proposed
+**Status:** approved
 **Proposed:** 2026-08-05 — Proposer
 **Effort:** S
 
@@ -190,7 +190,7 @@ for an actual incident before shipping something this cheap and this safe.
 
 ## CC-009 — Add a "Payments secured by Stripe" line next to the pay button
 
-**Status:** proposed
+**Status:** approved
 **Proposed:** 2026-08-05 — Proposer
 **Effort:** S
 
