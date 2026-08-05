@@ -32,11 +32,21 @@ Newest first. One row per post.
 | Date drafted | Slug | Topic / intent | Shape | Status |
 |---|---|---|---|---|
 | 2026-08-05 | `one-drill-before-fall-sports-tryouts` | How-to — one agility drill worth running before fall tryouts | How-to/method · niche | `drafted` |
-| 2026-08-04 | `back-to-school-tutoring-cost-lincoln-park` | Cost — back-to-school tutoring pricing in Lincoln Park | Cost · broad | `published` |
+| 2026-08-04 | `back-to-school-tutoring-cost-lincoln-park` | Cost — back-to-school tutoring pricing in Lincoln Park | Cost · broad | `dropped` |
 | 2026-07-16 | `meet-jackson-the-walker-behind-the-leash-be90e9cf` | Student spotlight — dog walking | Spotlight · broad | `published` |
 
 Write **Shape** as `<Type> · <broad|niche>`, using a type from the table in
 `STRATEGY.md`.
+
+<!--
+The tutoring post was published for real on 2026-08-05 and then pulled the same
+day: it was the end-to-end test of the Storage-photo pipeline, and it went live
+with the College Crew logo as its hero image rather than a real photo. `dropped`
+rather than deleted, so the routine does not propose the topic again as if it
+were untouched. The prose was good and Gianna had approved it — recover it from
+git (`git show 830905b:apps/web/content/blog/back-to-school-tutoring-cost-lincoln-park.md`)
+if it is worth republishing with a proper photo.
+-->
 
 <!--
 The Jackson post predates this routine; it is listed so the routine does not
