@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { getOwnProviderProfile, getSession } from "@/lib/auth/session";
+import { needsProfileCompletion } from "@/lib/auth/redirects";
 import type { Json } from "@/lib/db/types";
 import {
   legalDocumentRole,
@@ -32,6 +33,9 @@ export async function acceptLegalDocument(
   const session = await getSession();
   if (!session) return { error: "Log in before accepting these terms." };
   if (session.profile.role === "admin") redirect("/admin");
+  if (needsProfileCompletion(session.profile)) {
+    return { error: "Complete your profile before accepting these terms." };
+  }
   if (formData.get("acceptLegalDocument") !== "on") {
     return { error: "Check the box to accept these terms." };
   }

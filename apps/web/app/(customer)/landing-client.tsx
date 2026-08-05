@@ -6,7 +6,7 @@ import { useId, useState } from "react";
 /**
  * Interactive landing sections. All copy arrives pre-rendered from the server
  * page (wrapped in <Editable> so admins can edit it inline); only the
- * tab/accordion state lives here. Section shells match the ant-mascot design:
+ * tab/accordion state lives here. Section shells match the College Crew design:
  * full-bleed color bands with a 1140px inner wrap.
  */
 
@@ -65,12 +65,12 @@ export function HowItWorksTabs({
           </div>
         </div>
 
-        {/* Open layout: the numbered circles and the dashed ant-trail run as
+        {/* Open layout: the numbered circles and dashed trail run as
             one continuous path across the section, no card boxes. */}
         <div className="grid gap-10 md:grid-cols-3 md:gap-[22px]">
           {steps.map((step, index) => (
             <div key={step.n} className="group">
-              {/* Number + a dashed trail the ant "walks" toward the next step. */}
+              {/* Number + a dashed trail toward the final brand seal. */}
               <div className="flex items-center gap-4">
                 <div className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-viridian font-display text-xl font-bold text-shell transition duration-200 group-hover:scale-105">
                   {step.n}
@@ -81,11 +81,11 @@ export function HowItWorksTabs({
                 />
                 {index === steps.length - 1 ? (
                   <Image
-                    src="/college-crew-mark.png"
+                    src="/college-crew-logo.png"
                     alt=""
-                    width={36}
-                    height={33}
-                    className="h-6 w-6 shrink-0 object-contain"
+                    width={32}
+                    height={32}
+                    className="h-7 w-7 shrink-0 object-contain"
                     aria-hidden
                   />
                 ) : null}

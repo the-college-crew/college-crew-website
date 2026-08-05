@@ -3,8 +3,19 @@ import type { Metadata } from "next";
 import { SupportForm } from "./support-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSession } from "@/lib/auth/session";
+import { SITE_URL } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Feedback & support" };
+/*
+ * `from` records which page the user opened support from — UI state, not
+ * content. Every variant renders the same page, so they self-canonical to
+ * /support rather than standing as nine near-duplicate URLs.
+ */
+export const metadata: Metadata = {
+  title: "Feedback & support",
+  description:
+    "Report a problem, ask a question, or send the College Crew team feedback about a booking, a provider, or the app.",
+  alternates: { canonical: `${SITE_URL}/support` },
+};
 
 function validSourcePath(value: unknown): value is string {
   return (

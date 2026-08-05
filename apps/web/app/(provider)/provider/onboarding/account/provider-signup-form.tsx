@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { signUpProvider, type AuthFormState } from "@/app/(auth)/actions";
 import { AddressFields } from "@/components/auth/address-fields";
+import { GoogleAuthOption } from "@/components/auth/google-auth-option";
 import { PasswordField } from "@/components/auth/password-field";
 import { SignupSuccess } from "@/components/auth/signup-success";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ function maxDobToday() {
   return d.toISOString().slice(0, 10);
 }
 
-export function ProviderSignupForm() {
+export function ProviderSignupForm({ oauthError }: { oauthError?: string }) {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
     signUpProvider,
     {},
@@ -35,6 +36,12 @@ export function ProviderSignupForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      <GoogleAuthOption
+        next="/provider/onboarding/account"
+        returnTo="/provider/onboarding/account"
+        initialError={oauthError}
+      />
+
       <div>
         <Label htmlFor="fullName">Full name</Label>
         <Input id="fullName" name="fullName" autoComplete="name" required />

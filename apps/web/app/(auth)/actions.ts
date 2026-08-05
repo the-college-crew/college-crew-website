@@ -5,19 +5,20 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { getAccountShape } from "@/lib/auth/post-auth";
-import { homePathFor } from "@/lib/auth/session";
+import {
+  getAccountShape,
+  postAuthDestination,
+  safeNext,
+} from "@/lib/auth/post-auth";
+import { homePathFor, requireUser } from "@/lib/auth/session";
 import { hasServiceRoleEnv, hasSupabaseEnv } from "@/lib/env";
 import { geocodeProfileAddress } from "@/lib/geocode/profile";
-import {
-  hasAcceptedCurrentLegalDocument,
-  legalDocumentPath,
-} from "@/lib/legal/acceptance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
   customerSignUpSchema,
   emailSchema,
+  profileSchema,
   providerSignUpSchema,
   resetPasswordSchema,
 } from "@/lib/validation/auth";
@@ -113,21 +114,62 @@ export async function logIn(
       ? homePathFor("admin")
       : homePathFor(shape.providerCapable ? "provider" : "customer");
 
-  const next = formData.get("next");
+  const requestedNext = formData.get("next");
   const destination =
-    typeof next === "string" && next.startsWith("/") ? next : home;
-  const accepted =
-    shape.role === "admin" ||
-    (await hasAcceptedCurrentLegalDocument(supabase, {
-      userId: data.user.id,
-      kind: "platform_terms",
-    }));
+    typeof requestedNext === "string" && requestedNext
+      ? safeNext(requestedNext)
+      : home;
 
-  redirect(
-    accepted || destination.startsWith("/legal/master")
-      ? destination
-      : legalDocumentPath("platform_terms", destination),
-  );
+  redirect(await postAuthDestination(destination));
+}
+
+/** Save the fields an OAuth provider cannot supply, then resume auth routing. */
+export async function completeProfile(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const user = await requireUser("/complete-profile", {
+    allowIncompleteProfile: true,
+  });
+  const parsed = profileSchema.safeParse({
+    fullName: formData.get("fullName"),
+    address_line1: formData.get("address_line1"),
+    address_line2: formData.get("address_line2") ?? "",
+    city: formData.get("city"),
+    state: formData.get("state"),
+    postal_code: formData.get("postal_code"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: parsed.data.fullName,
+      address_line1: parsed.data.address_line1,
+      address_line2: parsed.data.address_line2,
+      city: parsed.data.city,
+      state: parsed.data.state,
+      postal_code: parsed.data.postal_code,
+    })
+    .eq("id", user.id);
+  if (error) {
+    return { error: "We couldn't save your profile. Please try again." };
+  }
+
+  await geocodeProfileAddress(user.id, {
+    line1: parsed.data.address_line1,
+    city: parsed.data.city,
+    state: parsed.data.state,
+    zip: parsed.data.postal_code,
+  });
+
+  const rawNext = formData.get("next");
+  const next =
+    typeof rawNext === "string" && rawNext !== "/complete-profile"
+      ? safeNext(rawNext)
+      : "/dashboard";
+  redirect(await postAuthDestination(next));
 }
 
 async function signUp(
@@ -422,7 +464,6 @@ export async function checkSignedIn(next: string): Promise<string | null> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  const { postAuthDestination, safeNext } = await import("@/lib/auth/post-auth");
   return postAuthDestination(safeNext(next));
 }
 

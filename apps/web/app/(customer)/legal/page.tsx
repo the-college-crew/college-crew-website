@@ -14,8 +14,14 @@ import {
   PROVIDER_TERMS_VERSION,
   SERVICE_RISK_ADDENDA,
 } from "@/lib/legal/waivers";
+import { SITE_URL } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Legal agreement" };
+export const metadata: Metadata = {
+  title: "Legal agreement",
+  description:
+    "The agreements that govern College Crew: platform terms, customer booking terms, provider terms, payment authorization, and per-service risk addenda.",
+  alternates: { canonical: `${SITE_URL}/legal` },
+};
 
 export default function LegalOverviewPage() {
   return (

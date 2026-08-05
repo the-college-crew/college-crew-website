@@ -57,30 +57,18 @@ export function navBreakpoint(nav: readonly unknown[]): "sm" | "lg" {
   return nav.length > 3 ? "lg" : "sm";
 }
 
-/**
- * College Crew wordmark: the grad-cap ant + name. `tone` flips it for use on
- * dark surfaces (forest provider/admin bars, the footer) vs. light ones.
- */
-export function Wordmark({ tone = "light" }: { tone?: "light" | "dark" }) {
-  const onDark = tone === "dark";
+/** College Crew seal, shared by every site header and auth surface. */
+export function Wordmark() {
   return (
-    <Link href="/" className="flex items-center gap-2.5">
+    <Link href="/" aria-label={`${SITE.name} home`} className="shrink-0">
       <Image
-        src={onDark ? "/college-crew-mark-white.png" : "/college-crew-mark.png"}
+        src="/college-crew-logo.png"
         alt=""
-        width={40}
-        height={37}
-        className={cn("object-contain", onDark ? "h-12 w-12" : "h-9 w-9")}
+        width={48}
+        height={48}
+        className="h-12 w-12 object-contain"
         priority
       />
-      <span
-        className={cn(
-          "font-display text-[22px] font-bold tracking-[-0.01em]",
-          onDark ? "text-shell" : "text-viridian",
-        )}
-      >
-        College Crew
-      </span>
     </Link>
   );
 }

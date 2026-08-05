@@ -27,9 +27,11 @@ Stripe collects **everything up front** in one pass instead of dribbling
 requirements out as earnings grow. The session is slightly longer, but a provider
 who finishes it is done.
 
-Entry points are all on the provider dashboard, post-approval: **Connect
-Stripe** → **Resume Stripe setup** / **Continue Stripe setup** → **Refresh**
-(`app/(provider)/provider/dashboard/page.tsx`).
+The first entry point is the optional final College Crew onboarding step,
+immediately after submission for founder review. Submitted providers can also
+use **Connect Stripe** → **Resume Stripe setup** / **Continue Stripe setup** →
+**Refresh** from their dashboard or Payouts settings while their review is
+pending or approved. Explicit rejection pauses those actions until reopening.
 
 A connected Stripe account is necessary but not sufficient for a public listing —
 `stripe_transfers` must be `active`, and it is one of seven conditions in the
@@ -67,8 +69,10 @@ a link someone texts or emails you.
 
 ### Steps
 
-1. **Sign in to College Crew and open your Provider dashboard.** Click **Connect
-   Stripe**. This only appears after your profile is approved.
+1. **Finish and submit College Crew provider onboarding.** On the final Payouts
+   step, click **Set up payouts with Stripe**. You can do this while founder
+   review is pending, or return later through provider setup, your dashboard,
+   or Payouts settings.
 2. **Wait for Stripe to load.** It can take several seconds. Don't hit back or
    refresh — the link works once. If you land back on your dashboard, just click
    **Resume Stripe setup**.
@@ -90,9 +94,9 @@ a link someone texts or emails you.
 8. **If Stripe asks for a photo ID:** upload a clear, well-lit photo of your
    driver's license (front and back) and take the selfie if prompted. No glare,
    all four corners visible.
-9. **Accept Stripe's agreement and submit.** You'll be sent back to your College
-   Crew dashboard.
-10. **Check your dashboard.** It should say Stripe is connected. If it still says
+9. **Accept Stripe's agreement and submit.** You'll be sent back to the College
+   Crew surface where you started.
+10. **Check the status.** It should say Stripe is connected. If it still says
     setup is incomplete, click **Refresh** — verification is usually instant but
     can take up to a couple of business days. If Stripe needs more information,
     **Continue Stripe setup** takes you straight back to the missing piece.
@@ -133,3 +137,9 @@ Common failures, in rough order of how often they bite:
 
 Never collect SSN, bank, or ID data in a College Crew form or over Slack or
 email. It goes into Stripe's hosted flow or nowhere.
+
+A College Crew rejection never closes Stripe automatically because rejection is
+reversible. It blocks new/resume links and the existing public-listing gate keeps
+the account from receiving work. For a person founders determine can never be
+eligible, close the account manually in Stripe only after confirming it has no
+balance or pending activity.

@@ -21,7 +21,7 @@ export async function SiteFooter() {
     ? EXPLORE
     : [
         EXPLORE[0],
-        { href: "/provider/onboarding/account", label: "Earn as a student" },
+        { href: "/provider/onboarding", label: "Earn as a student" },
         ...EXPLORE.slice(1),
       ];
 
@@ -32,24 +32,32 @@ export async function SiteFooter() {
       <div className="mx-auto max-w-[1140px] px-5 pb-10 pt-[72px] sm:px-8">
         <div className="grid items-start gap-12 md:grid-cols-[1.4fr_1fr]">
           <div>
-            <Link href="/" className="flex items-center gap-3">
+            <Link href="/" aria-label={`${SITE.name} home`} className="inline-flex">
               <Image
-                src="/college-crew-mark-white.png"
+                src="/college-crew-logo.png"
                 alt=""
-                width={40}
-                height={37}
-                className="h-10 w-10 object-contain"
+                width={88}
+                height={88}
+                className="h-[88px] w-[88px] object-contain"
               />
-              <span className="font-display text-2xl font-bold tracking-[-0.01em] text-shell">
-                College Crew
-              </span>
             </Link>
             <p className="mt-5 max-w-[38ch] text-[19px] leading-[1.55] text-shell/90">
               <Editable k="footer.tagline">{SITE.tagline}</Editable>
             </p>
+            {/*
+              Wording matches the live site_content override for this key, on
+              purpose. An override wins over this default (components/content/
+              editable.tsx), so while one exists the footer silently stops
+              following PILOT_SERVICE_AREA — which is how it kept advertising a
+              stale service area after #184/#185 moved it. Aligning the default
+              with the copy already in the DB means resetting the override
+              changes nothing visible and hands the footer back to the
+              constant. If you reword this, reset the override too or the
+              change will not appear.
+            */}
             <p className="mt-4 text-sm text-shell/70">
               <Editable k="footer.pilot-note">
-                {`Now serving ${PILOT_SERVICE_AREA.name}.`}
+                {`Now booking across ${PILOT_SERVICE_AREA.name}, our pilot neighborhood.`}
               </Editable>
             </p>
           </div>

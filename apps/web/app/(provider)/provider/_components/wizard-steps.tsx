@@ -6,6 +6,7 @@ const STEPS = [
   { key: "services", label: "Services" },
   { key: "availability", label: "Availability" },
   { key: "review", label: "Review" },
+  { key: "stripe", label: "Payouts" },
 ] as const;
 
 export type WizardStep = (typeof STEPS)[number]["key"];

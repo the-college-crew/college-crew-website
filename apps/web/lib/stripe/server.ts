@@ -13,7 +13,7 @@ export function getStripe(): Stripe | null {
   if (!key) return null;
   // Pin the version the code was written against (the Accounts v2 GA release)
   // so an SDK bump can't silently change request/response shapes under us.
-  return new Stripe(key, { apiVersion: "2026-06-24.dahlia" });
+  return new Stripe(key, { apiVersion: "2026-07-29.dahlia" });
 }
 
 export function isStripeLiveMode() {

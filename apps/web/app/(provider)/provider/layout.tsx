@@ -33,7 +33,7 @@ async function providerVerifyNudge(
 
   return {
     href: "/provider/onboarding/verify",
-    message: `Almost there — ${missing.join(" and ")} to finish setting up and go live.`,
+    message: `Almost there — ${missing.join(" and ")} to continue provider setup.`,
   };
 }
 
