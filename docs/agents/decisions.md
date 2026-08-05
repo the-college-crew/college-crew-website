@@ -10,6 +10,19 @@ Newest first.
 
 ---
 
+## 2026-08-05 — DONE: CC-007 (add role="alert" to the shared FieldError component)
+
+Merged in PR #173. Added `role="alert"` to `FieldError` in
+`components/ui/field.tsx` — the shared inline-error surface used across 43
+files — matching the pattern already hand-rolled in four other components
+(`chat-thread.tsx`, `resolve-button.tsx`, `support-form.tsx`,
+`counter-form.tsx`). One line, one file; all 43 call sites inherit it. Built
+directly by Worker 1 on 2026-08-04 (pure effort `S`, no plan required).
+`npm run build`/`lint`/`typecheck` all passed before opening the PR; Vercel
+preview deploy was green. Zach merged it 2026-08-05.
+
+---
+
 ## 2026-08-05 — DONE: CC-006 (label reviews as "Verified booking" on the provider profile page)
 
 Merged in PR #172. Added a small green `Badge` reading "Verified booking"
