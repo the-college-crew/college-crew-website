@@ -80,6 +80,51 @@ The prompts do not echo or write either value to shell history. The script
 refuses Production and every unknown project. Do not save these values in the
 repository, Vercel, or `.env.local`.
 
+### Local agent access
+
+Codex and Claude Code may use the durable personas without a human entering a
+password for every test. Each developer stores the shared password once in
+their own macOS login Keychain under:
+
+- service: `college-crew-preview-test-password`
+- account: `shared-personas`
+
+Set up a second Mac by receiving the password through a secure channel, then
+running this locally. The hidden prompt prevents the password from entering
+shell history or terminal output:
+
+```sh
+read -s "PREVIEW_TEST_PASSWORD?Shared Preview persona password: "
+echo
+security add-generic-password -U \
+  -a "shared-personas" \
+  -s "college-crew-preview-test-password" \
+  -w "$PREVIEW_TEST_PASSWORD"
+unset PREVIEW_TEST_PASSWORD
+npm run preview:persona -- --check
+```
+
+To run a trusted local test command as one persona:
+
+```sh
+npm run preview:persona -- customer -- <command> [args...]
+npm run preview:persona -- provider -- <command> [args...]
+npm run preview:persona -- admin -- <command> [args...]
+```
+
+The wrapper sets `COLLEGE_CREW_PREVIEW_PERSONA`,
+`COLLEGE_CREW_PREVIEW_EMAIL`, and `COLLEGE_CREW_PREVIEW_PASSWORD` only in the
+child process. It never prints the password and never provides a Supabase
+service-role key. Test commands must not print their environment, and agents
+must never run `env`, `printenv`, shell tracing, or credential-dumping debug
+code through this wrapper. The credential grants Preview admin access, so run
+only reviewed local test code with it.
+
+This helper is intentionally macOS-local. Each developer configures their own
+Keychain; no credential is synchronized through git. A missing Keychain entry
+must fail closed rather than falling back to a committed, Vercel, or Production
+credential.
+
 The personas are the only permanent exception to Preview fixture cleanup. Tag
 every other test row visibly and remove it after the test.
 

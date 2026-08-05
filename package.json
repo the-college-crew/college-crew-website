@@ -18,6 +18,7 @@
     "test:e2e": "npm run test:e2e -w web",
     "email:supabase-payload": "npm run email:supabase-payload -w web",
     "email:sync-supabase": "npm run email:sync-supabase -w web",
+    "preview:persona": "npm run preview:persona -w web --",
     "seed:preview": "npm run seed:preview -w web"
   },
   "overrides": {
