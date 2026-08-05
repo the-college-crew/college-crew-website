@@ -10,6 +10,20 @@ Newest first.
 
 ---
 
+## 2026-08-05 — DONE: CC-006 (label reviews as "Verified booking" on the provider profile page)
+
+Merged in PR #172. Added a small green `Badge` reading "Verified booking"
+next to each review's star rating in `components/provider-profile.tsx`.
+Every row `provider_reviews` returns is already, structurally, tied to a
+completed booking (`set_review_public_dimensions` trigger + `submitReview`'s
+completed-booking check + RLS) — this just states that existing guarantee in
+the UI. No new query, no schema change. Built directly by Worker 1 on
+2026-08-04 (pure effort `S`, no plan required). `npm run build`/`lint`/`typecheck`
+all passed before opening the PR; Vercel preview deploy was green. Zach
+merged it 2026-08-05.
+
+---
+
 ## 2026-08-03 — DONE: CC-004 (give provider profile pages real metadata and Service structured data)
 
 Merged in PR #149. Replaced the static `{ title: "Provider profile" }`

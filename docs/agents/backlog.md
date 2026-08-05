@@ -69,44 +69,6 @@ action), and there's no cost to having it in place before it's needed.
 
 ---
 
-## CC-006 — Label reviews as "Verified booking" on the provider profile page
-
-**Status:** in-progress — PR #172 open, awaiting Zach's merge
-**Proposed:** 2026-08-03 — Proposer
-**Effort:** S
-
-`public.reviews` cannot exist without a completed booking:
-`supabase/migrations/20260715221943_hourly_rollout_public_review_security.sql`'s
-`set_review_public_dimensions` trigger derives `provider_id`/`service_id` from
-`bookings` and raises `REVIEW_BOOKING_NOT_FOUND` if none exists, and
-`submitReview` in `app/(customer)/dashboard/actions.ts` only inserts once
-`booking.status === "completed"` for the reviewing customer's own booking
-(enforced again by RLS). Every review rendered in
-`components/provider-profile.tsx` (~lines 257–289) is therefore already,
-structurally, tied to a real transaction — but nothing in the UI says so; it
-reads like any open review widget a stranger could post to.
-
-2025–2026 marketplace trust research is consistent that tagging reviews as
-tied to a completed transaction is a first-booking-conversion trust signal,
-especially for a platform with no established brand yet. Add a small
-"Verified booking" label next to each review's star rating in
-`provider-profile.tsx` — no new query and no schema change, since the
-guarantee already holds for every row `provider_reviews` returns.
-
-**Why this one:** unlike the verification-heavy ideas the same research
-surfaced (background-check tiers, continuous re-verification selfies), this
-needs no new infrastructure or data — the codebase already enforces the exact
-guarantee the label states. It's stating a fact the database already proves,
-not building a new one.
-
-**Devil's advocate:** with 6 providers and a handful of reviews total this
-pilot, almost nobody has enough reviews yet for the label to compound into a
-real trust signal — it may read as a solitary tag on one review for a while.
-It survives anyway because it costs nothing as reviews accumulate and there's
-no future point at which shipping it early turns out to have been wrong.
-
----
-
 ## CC-007 — Add `role="alert"` to the shared `FieldError` component
 
 **Status:** in-progress — PR #173 open, awaiting Zach's merge
