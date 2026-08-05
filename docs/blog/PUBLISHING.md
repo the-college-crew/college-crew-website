@@ -52,11 +52,11 @@ cannot ship a half-broken `<head>` silently.
 | `title` | 1–160 characters. |
 | `description` | 1–200 characters. This is the meta description and the excerpt on `/blog`. Aim for ~150 — Google truncates around 160. Write it deliberately; it is not generated from the body. |
 | `publishedAt` | `YYYY-MM-DD`. Sets the sort order and `datePublished`. |
-| `updatedAt` | `YYYY-MM-DD`, optional. Adds an "Updated" line and sets `dateModified`. |
+| `updatedAt` | `YYYY-MM-DD`, optional. Adds an "Updated" line and sets `dateModified`. Use it — refreshing a seasonal post next year beats writing a near-duplicate, and freshness is a ranking and citation signal. |
 | `image` | Either a `blog-images` public URL (what the routine writes) or a legacy `/blog/…` path served from `apps/web/public/blog/`. Anything else fails the build. |
 | `imageAlt` | Required. Describe the photo, don't restate the title — this is both an accessibility and a ranking signal. |
-| `tags` | Optional list of slugs. |
-| `faq` | Optional `q`/`a` pairs. Rendered visibly **and** emitted as `FAQPage` structured data. |
+| `tags` | Optional list of slugs, but write them: they ship as `keywords` in the post's structured data. Put the relevant **service slug first**, then at most two more. They come from the canvas, not from a judgment call at publish time. |
+| `faq` | `q`/`a` pairs. Optional to the build, **required by [`STRATEGY.md`](./STRATEGY.md)** — 3–5 of them, none restating a section of the body. Rendered visibly **and** emitted as `FAQPage` structured data. |
 
 ### Slugs
 
