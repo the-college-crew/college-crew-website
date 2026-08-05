@@ -6,6 +6,9 @@ import { cache } from "react";
 import "server-only";
 import { z } from "zod";
 
+import { isBlogImageUrl } from "@/lib/media/blog-images";
+import { SITE_URL } from "@/lib/site";
+
 /**
  * Blog posts are markdown files in this repo, not database rows.
  *
@@ -25,8 +28,18 @@ const frontmatterSchema = z.object({
   description: z.string().trim().min(1).max(200),
   publishedAt: z.string().regex(ISO_DATE, "Use YYYY-MM-DD"),
   updatedAt: z.string().regex(ISO_DATE, "Use YYYY-MM-DD").optional(),
-  /** Path under `public/`, e.g. `/blog/leaf-cleanup.jpg`. */
-  image: z.string().startsWith("/blog/"),
+  /**
+   * Either a path under `public/` (`/blog/leaf-cleanup.jpg`) or a public URL
+   * in the `blog-images` bucket. The weekly routine always writes the second
+   * kind — it cannot commit a binary file, so photos live in Storage and only
+   * the address travels through git. See `lib/media/blog-images.ts`.
+   */
+  image: z
+    .string()
+    .refine(
+      (value) => value.startsWith("/blog/") || isBlogImageUrl(value),
+      "Use a /blog/… path or a blog-images public URL",
+    ),
   /** Required: alt text is both an accessibility and a ranking signal. */
   imageAlt: z.string().trim().min(1),
   tags: z.array(z.string().trim().min(1)).default([]),
@@ -91,6 +104,18 @@ export const getPost = cache(async (slug: string): Promise<BlogPost | null> => {
   const posts = await getAllPosts();
   return posts.find((post) => post.slug === slug) ?? null;
 });
+
+/**
+ * Absolute URL for the hero photo, for OpenGraph and structured data.
+ *
+ * Never concatenate `SITE_URL` with `post.image` directly: since photos moved
+ * to Storage, that value is already absolute half the time, and gluing the two
+ * together produces a silently broken `og:image` that nothing in the build
+ * catches.
+ */
+export function postImageUrl(post: BlogPost): string {
+  return post.image.startsWith("/") ? `${SITE_URL}${post.image}` : post.image;
+}
 
 /** The date shown to readers and used for `dateModified`. */
 export function lastUpdated(post: BlogPost): string {

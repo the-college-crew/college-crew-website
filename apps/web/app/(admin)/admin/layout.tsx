@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { href: "/admin/services", label: "Service curation" },
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/booking-copy", label: "Booking copy" },
+  { href: "/admin/blog-photos", label: "Blog photos" },
   { href: "/admin/disputes", label: "Disputes" },
   { href: "/admin/operations", label: "Operations" },
   { href: "/admin/flagged", label: "Flagged messages" },
@@ -65,6 +66,9 @@ export default async function AdminLayout({
           </Link>
           <Link href="/admin/booking-copy" className="hover:text-viridian">
             Booking copy
+          </Link>
+          <Link href="/admin/blog-photos" className="hover:text-viridian">
+            Blog photos
           </Link>
           <Link href="/admin/disputes" className="hover:text-viridian">
             Disputes
