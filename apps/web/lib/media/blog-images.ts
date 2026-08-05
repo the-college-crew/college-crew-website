@@ -75,20 +75,30 @@ export function isBlogImageKey(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}-[a-z0-9][a-z0-9-]*\.(jpg|png|webp)$/.test(value);
 }
 
-function publicBaseUrl(): string | null {
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!baseUrl) return null;
-  return `${baseUrl.replace(/\/$/, "")}/storage/v1/object/public/${BLOG_IMAGES_BUCKET}`;
-}
+/**
+ * The one host blog photos are ever served from — pinned, **not** derived from
+ * `NEXT_PUBLIC_SUPABASE_URL`.
+ *
+ * That distinction is load-bearing. Preview deployments point at a separate
+ * Supabase project (`docs/PREVIEW_ENVIRONMENT.md`), so an env-derived host made
+ * a post's validity depend on which environment happened to build it: the same
+ * committed file passed in production and failed the Preview build. A blog post
+ * is static content and must mean the same thing everywhere.
+ *
+ * Not a secret — it is `NEXT_PUBLIC_SUPABASE_URL`, shipped in every page's
+ * client bundle, and the project ref already appears in `.mcp.json`.
+ */
+export const BLOG_IMAGES_HOST = "dwnaaffrffdgrautgigw.supabase.co";
+
+const BLOG_IMAGES_BASE_URL = `https://${BLOG_IMAGES_HOST}/storage/v1/object/public/${BLOG_IMAGES_BUCKET}`;
 
 /**
  * Public URL for a key. Encoded segment-by-segment, the same way
  * `providerAvatarUrl` does it, so a filename can never alter the URL structure.
  */
 export function blogImageUrl(key: string): string | null {
-  const base = publicBaseUrl();
-  if (!base || !key) return null;
-  return `${base}/${key.split("/").map(encodeURIComponent).join("/")}`;
+  if (!key) return null;
+  return `${BLOG_IMAGES_BASE_URL}/${key.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 /**
@@ -96,7 +106,7 @@ export function blogImageUrl(key: string): string | null {
  * schema, which accepts either a local `/blog/…` path or one of these URLs.
  */
 export function isBlogImageUrl(value: string): boolean {
-  const base = publicBaseUrl();
-  if (!base || !value.startsWith(`${base}/`)) return false;
-  return isBlogImageKey(decodeURIComponent(value.slice(base.length + 1)));
+  const prefix = `${BLOG_IMAGES_BASE_URL}/`;
+  if (!value.startsWith(prefix)) return false;
+  return isBlogImageKey(decodeURIComponent(value.slice(prefix.length)));
 }

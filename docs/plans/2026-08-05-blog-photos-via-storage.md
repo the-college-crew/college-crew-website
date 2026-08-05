@@ -65,6 +65,26 @@ prompt now confines itself to `apps/web/content/blog/**` and
 `docs/blog/published.md`. The prompt being stricter than the rule is the safe
 direction.
 
+## Correction, 2026-08-05 (after the first real publish attempt)
+
+The first publish PR (#199) **failed its Preview build**, and the bug was mine.
+`isBlogImageUrl` and `next.config.ts` both derived the expected bucket host from
+`NEXT_PUBLIC_SUPABASE_URL`. Preview now points at a separate Supabase project
+(`docs/PREVIEW_ENVIRONMENT.md`), so the same committed post validated in
+production and was rejected on Preview:
+
+```
+Invalid frontmatter in content/blog/back-to-school-tutoring-cost-lincoln-park.md
+  — image: Use a /blog/… path or a blog-images public URL
+```
+
+A blog post is static content; whether it is valid must not depend on which
+environment happens to build it. The host is now **pinned** in
+`BLOG_IMAGES_HOST`, and `next.config.ts` imports it rather than reading the env.
+Reproduced both ways locally by building with the Preview URL.
+
+The routine itself did nothing wrong — it wrote exactly the right URL.
+
 ## Open questions
 
 - **Can the sandbox reach `supabase.co`?** Its proxy 403'd the Slack CDN. If it
