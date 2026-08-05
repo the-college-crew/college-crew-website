@@ -31,7 +31,7 @@ Newest first. One row per post.
 
 | Date drafted | Slug | Topic / intent | Shape | Status |
 |---|---|---|---|---|
-| 2026-08-04 | `back-to-school-tutoring-cost-lincoln-park` | Cost — back-to-school tutoring pricing in Lincoln Park | Cost · broad | `drafted` |
+| 2026-08-04 | `back-to-school-tutoring-cost-lincoln-park` | Cost — back-to-school tutoring pricing in Lincoln Park | Cost · broad | `published` |
 | 2026-07-16 | `meet-jackson-the-walker-behind-the-leash-be90e9cf` | Student spotlight — dog walking | Spotlight · broad | `published` |
 
 Write **Shape** as `<Type> · <broad|niche>`, using a type from the table in
