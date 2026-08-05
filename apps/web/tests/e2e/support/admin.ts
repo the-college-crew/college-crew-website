@@ -3,9 +3,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../../lib/db/types";
 
 /**
- * Dev and prod share ONE Supabase project, so any row an E2E fixture inserts
- * is live the instant it runs. This has already put a synthetic "approved"
- * provider on the real Browse page (commit 6bac660).
+ * E2E used to fall through to Production, which put a synthetic "approved"
+ * provider on the real Browse page (commit 6bac660). Hosted Preview now has a
+ * separate Supabase project, but this suite remains strictly local: it resets
+ * data and should never mutate either hosted environment.
  *
  * `npm run test:e2e` redirects the suite at the local stack, but the guard
  * lived only in that runner — a bare `npx playwright test`, which is what you
@@ -35,8 +36,8 @@ export function assertLocalSupabase(rawUrl: string | undefined): string {
     throw new Error(
       `E2E REFUSING TO RUN: NEXT_PUBLIC_SUPABASE_URL points at "${hostname}", not the ` +
         "local Supabase stack. This suite inserts synthetic providers, services, and " +
-        "bookings with a service-role key that bypasses RLS — against the shared project " +
-        "that is also production, they would appear on the live Browse page.\n\n" +
+        "bookings with a service-role key that bypasses RLS. Hosted Preview has its own " +
+        "durable fixture command; this destructive suite is local-only.\n\n" +
         "Run `npm run test:e2e` (starts the local stack's env), not `npx playwright test`.",
     );
   }
@@ -106,7 +107,7 @@ type TeardownStep = {
  * Run every teardown step even if an earlier one fails, then throw if any of
  * them did. The previous teardowns discarded the delete errors, so a cleanup
  * blocked by a foreign key finished silently and looked like success — the
- * failure mode that leaves orphaned rows behind in a shared project.
+ * failure mode that leaves orphaned rows behind in a hosted project.
  */
 export async function runTeardown(steps: TeardownStep[]): Promise<void> {
   const failures: string[] = [];

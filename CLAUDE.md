@@ -187,20 +187,20 @@ the separate Stripe sandbox.
 - **Production indexing is enabled.** `app/layout.tsx` must not add a
   site-wide `noindex`. Keep `app/robots.ts` and `app/sitemap.ts` aligned with
   public routes; never include authenticated dashboards or unlisted providers.
-- **Test/synthetic data hygiene.** There is no separate staging Supabase
-  project — dev and prod point at the same database, so any script or test
-  that inserts rows there is live the instant it runs. This has already let a
-  synthetic "provider" account leak onto the real Browse page twice (once via
-  an agent-written E2E test whose cleanup didn't run). To prevent a repeat:
+- **Test/synthetic data hygiene.** Production and hosted Vercel Previews use
+  separate Supabase projects. Local E2E tests still use the local Supabase
+  stack; never point the E2E suite at either hosted project. Before this split,
+  a synthetic provider leaked onto the real Browse page twice, so the original
+  protections remain mandatory:
   - Never rely on a bare `afterAll`/happy-path teardown to delete synthetic
     rows. Wrap setup + teardown so cleanup runs even if an assertion fails or
     the run is interrupted (try/finally or the framework's equivalent).
   - Tag synthetic rows unambiguously (e.g. an `@example.test` email, a
     `synthetic-`/`test-` name or slug prefix) so orphaned rows are easy to
     find and sweep with a query if cleanup ever fails.
-  - Before ending a task that created synthetic data in the shared project,
-    query the affected table(s) back and confirm zero synthetic rows remain
-    — don't just trust that the teardown code ran.
+  - Before ending a task that created temporary synthetic data, query the
+    affected project back and confirm zero temporary rows remain. The three
+    tagged, durable Preview personas are the only cleanup exception.
   - A one-off verification script (an E2E test written to check a single
     feature once, not meant to join the standing suite) must say so in a
     comment, and should be deleted once it's served its purpose — don't
@@ -211,6 +211,8 @@ the separate Stripe sandbox.
     order. E2E specs must build their service-role client with
     `createLocalAdminClient()` from `tests/e2e/support/admin.ts`, which refuses
     any URL that is not localhost.
+  - **Hosted Preview runbook: `docs/PREVIEW_ENVIRONMENT.md`** — project
+    boundaries, schema promotion, fixture setup, and integration secrets.
 
 ## Agent integrations
 

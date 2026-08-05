@@ -1,12 +1,15 @@
 # Shared-database safety
 
-There is no staging Supabase project. Dev and prod are **one database**, and it
-backs a live-mode Stripe Connect platform. Every row a script or test inserts is
-in production the instant it runs.
+Production and hosted Vercel Preview deployments have used **separate Supabase
+projects since 2026-08-05**. Production backs a live-mode Stripe Connect
+platform. Preview contains only tagged synthetic data and uses Stripe test mode.
+The local E2E suite uses the local Supabase stack and is forbidden from writing
+to either hosted project.
 
-This is a playbook for that specific architecture, not general test hygiene. The
-rules below are each tied to something verified in this repo or in the running
-database on 2026-08-01; anything unconfirmed is marked as such.
+This document preserves the production incident playbook and the controls that
+remain in force. Hosted Preview operations live in
+`docs/PREVIEW_ENVIRONMENT.md`. The facts below were verified in this repo or in
+Production on 2026-08-01; anything unconfirmed is marked as such.
 
 ---
 
@@ -95,11 +98,15 @@ recoverable from git history; the second left no trace I could find.
    leak came from a script written to check one feature once, left in the repo
    where a later run could re-trigger it.
 
-6. **Sweep before you call the task done.** Run the query below and confirm zero
-   rows. Do not trust that the teardown ran.
+6. **Sweep before you call the task done.** For Production, run the query below
+   and confirm zero rows. On Preview, exclude only the three documented durable
+   personas and confirm that every other temporary fixture was removed. Do not
+   trust that the teardown ran.
 
-7. **Validate schema work on the local stack**, never against the shared project
-   — `npx supabase db reset --local`, then `npx supabase test db --local`. Note
+7. **Validate schema work on the local stack first**, never by experimenting on
+   a hosted project — `npx supabase db reset --local`, then
+   `npx supabase test db --local`. Promote an approved migration to Preview,
+   verify it, and only then promote the same migration to Production. Note
    ~7 of the 15 pgTAP files fail on a clean local DB as a pre-existing baseline;
    capture a baseline and diff rather than reading those as yours.
 
@@ -156,12 +163,12 @@ under names the spec never knew.
 
 ## What is deliberately not done
 
-- **No staging project.** A second free Supabase project is possible, but the
-  cost is keeping schema, Stripe Connect, and Resend config in sync across two
-  environments — real ongoing work against a 7-week pilot. The localhost guard
-  captures most of the risk for a fraction of the effort. Revisit if a second
-  developer starts writing fixtures.
-- **No CI check.** There is no `.github/workflows/` in this repo at all, so a CI
+- **No automatic hosted schema deployment yet.** The first cutover is manual
+  and documented. Add CI only after the promotion workflow has been exercised.
+- **No E2E against hosted Preview.** The existing suite resets and creates
+  destructive fixtures, so it remains localhost-only. Preview is for durable
+  persona and manual acceptance testing.
+- **No CI guard.** There is no `.github/workflows/` in this repo at all, so a CI
   guard means standing up CI first. The guard runs locally, where the damage
   happens.
 - **RLS does not help here.** The service-role key bypasses it by design. The
@@ -169,7 +176,6 @@ under names the spec never knew.
 
 ## For the next venture
 
-Do not inherit this architecture. A separate staging database from day one costs
-an hour at setup and removes this entire document. The guard, the sweep query,
-and the seven-condition gate are all compensating controls for a decision that
-was cheap to avoid and expensive to live with.
+Start with separate Production and Preview projects. Keep migrations as the
+schema source of truth, keep destructive E2E local, and make environment guards
+fail closed before creating a service-role client.
