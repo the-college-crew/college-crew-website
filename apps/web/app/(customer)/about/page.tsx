@@ -15,9 +15,7 @@ export const metadata: Metadata = {
     "Meet the College Crew founders and learn why we built a trusted marketplace for neighbors and verified college students.",
 };
 
-const MARK_SRC = "/college-crew-mark.png";
-const MARK_STONE_SRC = "/college-crew-mark-stone.png";
-const MARK_WHITE_SRC = "/college-crew-mark-white.png";
+const LOGO_SRC = "/college-crew-logo.png";
 const WRAP = "mx-auto w-full max-w-[1140px] px-5 sm:px-8";
 const SERIF = "font-[Georgia,'Times_New_Roman',serif]";
 
@@ -67,19 +65,13 @@ const FOUNDERS: Founder[] = [
   },
 ];
 
-function AntMark({
-  className = "h-4 w-4",
-  white = false,
-}: {
-  className?: string;
-  white?: boolean;
-}) {
+function BrandMark({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <Image
-      src={white ? MARK_WHITE_SRC : MARK_SRC}
+      src={LOGO_SRC}
       alt=""
       width={36}
-      height={33}
+      height={36}
       className={`${className} object-contain`}
       aria-hidden
     />
@@ -99,17 +91,17 @@ function Eyebrow({
         inverted ? "justify-center text-shell/65" : "text-viridian/55"
       }`}
     >
-      <AntMark white={inverted} />
+      <BrandMark />
       {children}
     </p>
   );
 }
 
-function AntRule() {
+function BrandRule() {
   return (
     <div className="mb-8 flex items-center gap-6" aria-hidden>
       <span className="h-px flex-1 bg-viridian/20" />
-      <AntMark className="h-6 w-6" />
+      <BrandMark className="h-6 w-6" />
       <span className="h-px flex-1 bg-viridian/20" />
     </div>
   );
@@ -127,10 +119,10 @@ export default async function AboutPage() {
     <div className="mx-[calc(50%-50vw)] -my-8 w-screen max-w-[100vw] overflow-x-clip bg-card text-viridian">
       <section className="relative overflow-hidden bg-honeydew py-20 sm:py-24 lg:py-[104px]">
         <Image
-          src={MARK_STONE_SRC}
+          src={LOGO_SRC}
           alt=""
           width={600}
-          height={551}
+          height={600}
           priority
           aria-hidden
           className="pointer-events-none absolute -right-24 top-8 hidden h-auto w-[520px] max-w-none opacity-35 lg:block"
@@ -168,15 +160,15 @@ export default async function AboutPage() {
 
       <section className="relative overflow-hidden bg-card py-[76px] sm:py-24 lg:py-[104px]">
         <Image
-          src={MARK_STONE_SRC}
+          src={LOGO_SRC}
           alt=""
           width={360}
-          height={331}
+          height={360}
           aria-hidden
           className="pointer-events-none absolute -left-24 bottom-0 hidden h-auto w-[340px] opacity-25 md:block"
         />
         <div className={`${WRAP} relative z-10`}>
-          <AntRule />
+          <BrandRule />
           <div className="grid gap-10 md:grid-cols-[0.85fr_1.15fr] md:gap-16 lg:gap-24">
             <div>
               <Eyebrow>
@@ -254,7 +246,7 @@ export default async function AboutPage() {
                 key={item}
                 className="inline-flex items-center gap-2 rounded-full border border-viridian/15 bg-card/75 px-4 py-2.5 text-[13px] font-semibold text-viridian"
               >
-                <AntMark className="h-3.5 w-3.5" />
+                <BrandMark className="h-4 w-4" />
                 <Editable k={`about.reputation.point.${index}`}>
                   {item}
                 </Editable>
@@ -266,7 +258,7 @@ export default async function AboutPage() {
 
       <section className="bg-stone py-[76px] sm:py-24 lg:py-[104px]">
         <div className={WRAP}>
-          <AntRule />
+          <BrandRule />
           <div className="mb-10 sm:mb-12">
             <Eyebrow>
               <Editable k="about.team.eyebrow">Meet the crew</Editable>
@@ -335,10 +327,10 @@ export default async function AboutPage() {
 
       <section className="relative overflow-hidden bg-viridian py-[76px] text-shell sm:py-24">
         <Image
-          src={MARK_WHITE_SRC}
+          src={LOGO_SRC}
           alt=""
           width={520}
-          height={478}
+          height={520}
           aria-hidden
           className="pointer-events-none absolute -bottom-36 -left-28 h-auto w-[470px] max-w-none opacity-15"
         />
@@ -370,7 +362,7 @@ export default async function AboutPage() {
             </Link>
             {!session ? (
               <Link
-                href="/provider/onboarding/account"
+                href="/provider/onboarding"
                 className="inline-flex items-center justify-center rounded-full border-[1.6px] border-shell/45 px-6 py-3.5 text-[15px] font-semibold text-shell transition hover:-translate-y-px hover:bg-shell/10"
               >
                 Become a provider

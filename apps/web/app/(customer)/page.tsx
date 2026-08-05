@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -6,15 +7,26 @@ import { getEffectiveRole, getSession } from "@/lib/auth/session";
 import { PARENT_STEPS, STUDENT_STEPS } from "@/lib/content/defaults";
 import { getLiveServices } from "@/lib/db/queries";
 import type { Service } from "@/lib/db/types";
+import { PILOT_SERVICE_AREA, SITE_URL } from "@/lib/site";
+
+/*
+ * The homepage shipped no metadata export, so it inherited SITE.description
+ * from the root layout — the site's most important page carrying a description
+ * shared with 41 others. Interpolating PILOT_SERVICE_AREA keeps this tracking
+ * the one constant that moves when the pilot area does (#184/#185).
+ */
+export const metadata: Metadata = {
+  description: `Hire verified college students across ${PILOT_SERVICE_AREA.name} for move-out help, hauling, house management, pet care, yard work, and tutoring. Book, message, and pay in one place.`,
+  alternates: { canonical: SITE_URL },
+};
 
 type Cta = { href: string; label: string };
 
 import { HowItWorksTabs, type Step } from "./landing-client";
 import { FeatureIcon, ServiceIcon } from "./landing-icons";
 
-const MARK_SRC = "/college-crew-mark.png";
-const MARK_STONE_SRC = "/college-crew-mark-stone.png";
-const MARK_WHITE_SRC = "/college-crew-mark-white.png";
+const LOGO_SRC = "/college-crew-logo.png";
+const WATERMARK_SRC = "/college-crew-ant.png";
 
 /*
  * Shared section shells for the ant-mascot homepage design: full-bleed color
@@ -126,7 +138,7 @@ export default async function LandingPage() {
     ? { href: "/browse", label: "Book a student" }
     : session?.profile.role === "admin"
       ? null
-      : { href: "/provider/onboarding/account", label: "Become a provider" };
+      : { href: "/provider/onboarding", label: "Become a provider" };
 
   return (
     <div className="mx-[calc(50%-50vw)] -mt-8 -mb-8 w-screen max-w-[100vw] overflow-x-clip bg-shell text-viridian">
@@ -167,30 +179,30 @@ function editableSteps(
   }));
 }
 
-/** Small grad-cap-ant icon used in eyebrows and feature tiles. */
-function AntMark({ className = "h-5 w-5" }: { className?: string }) {
+/** Small College Crew seal used in eyebrows and feature tiles. */
+function BrandMark({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <Image
-      src={MARK_SRC}
+      src={LOGO_SRC}
       alt=""
       width={36}
-      height={33}
+      height={36}
       className={`${className} object-contain`}
       aria-hidden
     />
   );
 }
 
-/** Hairline rule with the ant marching along it — the section divider. */
-function AntRule() {
+/** Hairline rule centered on the College Crew seal. */
+function BrandRule() {
   return (
     <div className="mb-2 flex items-center gap-[22px]" aria-hidden>
       <span className="h-[1.5px] flex-1 bg-viridian/20" />
       <Image
-        src={MARK_SRC}
+        src={LOGO_SRC}
         alt=""
         width={36}
-        height={33}
+        height={36}
         className="h-9 w-9 object-contain"
       />
       <span className="h-[1.5px] flex-1 bg-viridian/20" />
@@ -212,20 +224,20 @@ function Hero({
       {/* Emerges from the corner like the CTA band's watermark — kept out of
           the phone mock's shadow so it actually reads. */}
       <Image
-        src={MARK_STONE_SRC}
+        src={WATERMARK_SRC}
         alt=""
         width={600}
-        height={551}
+        height={600}
         priority
         aria-hidden
-        className="pointer-events-none absolute -bottom-[120px] -left-[100px] z-0 hidden w-[430px] max-w-none rotate-[16deg] opacity-60 lg:block"
+        className="pointer-events-none absolute -bottom-[120px] -left-[100px] z-0 hidden w-[430px] max-w-none rotate-[16deg] opacity-30 lg:block"
       />
       <div
         className={`${WRAP} relative z-10 grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]`}
       >
         <div>
           <div className={EYEBROW}>
-            <AntMark />
+            <BrandMark />
             <Editable k="home.hero.eyebrow">
               Your neighbors, your students
             </Editable>
@@ -307,7 +319,7 @@ function PhoneMock({ services }: { services: Service[] }) {
           <span className="font-display text-[21px] font-semibold text-viridian">
             Book a job
           </span>
-          <AntMark className="h-6 w-6" />
+          <BrandMark className="h-6 w-6" />
         </div>
 
         <div className="px-[18px] pb-1 pt-4">
@@ -381,7 +393,7 @@ function PhoneMock({ services }: { services: Service[] }) {
           </Link>
           <p className="mt-3 text-center text-[13px] text-viridian/65">
             <Editable k="home.banner.note">
-              Now booking across the North Shore and Lincoln Park
+              {`Now booking across ${PILOT_SERVICE_AREA.name}`}
             </Editable>
           </p>
         </div>
@@ -396,7 +408,7 @@ function Comparison() {
   return (
     <section className={`${BAND} bg-sky`}>
       <div className={`${WRAP} reveal-rise`}>
-        <AntRule />
+        <BrandRule />
         <div className="mb-[52px]">
           <h2 className={H2}>
             <Editable k="home.compare.heading">
@@ -496,7 +508,7 @@ function ServicesSection({ services }: { services: Service[] }) {
       <div className={`${WRAP} reveal-rise`}>
         <div className="mb-[52px]">
           <div className={EYEBROW}>
-            <AntMark />
+            <BrandMark />
             <Editable k="home.services.eyebrow">What you can book</Editable>
           </div>
           <h2 className={H2}>
@@ -542,12 +554,12 @@ function FeaturesSection() {
   return (
     <section id="features" className={`${BAND} bg-shell`}>
       <Image
-        src={MARK_STONE_SRC}
+        src={WATERMARK_SRC}
         alt=""
         width={300}
-        height={276}
+        height={300}
         aria-hidden
-        className="pointer-events-none absolute right-10 top-16 z-0 w-[300px] rotate-[10deg] opacity-50"
+        className="pointer-events-none absolute right-10 top-16 z-0 w-[300px] rotate-[10deg] opacity-20"
       />
       <div className={`${WRAP} reveal-rise relative z-10`}>
         <div className="mb-[52px]">
@@ -600,10 +612,10 @@ function CTASection({
   return (
     <section className={`${BAND} bg-viridian text-shell`}>
       <Image
-        src={MARK_WHITE_SRC}
+        src={WATERMARK_SRC}
         alt=""
         width={520}
-        height={478}
+        height={520}
         aria-hidden
         className="pointer-events-none absolute -bottom-[120px] -left-[120px] z-0 w-[520px] max-w-none rotate-[14deg] opacity-15"
       />

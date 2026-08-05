@@ -2,13 +2,20 @@ import type { Profile } from "@/lib/db/types";
 
 import { Section } from "../_components/section";
 import { AccountPasswordForm, AccountProfileForm } from "../account-forms";
+import { GoogleIdentitySettings } from "../google-identity-settings";
 
 export function AccountPanel({
   profile,
   email,
+  googleConnected,
+  googleEmail,
+  googleLinkError,
 }: {
   profile: Profile;
   email: string;
+  googleConnected: boolean;
+  googleEmail: string | null;
+  googleLinkError?: boolean;
 }) {
   return (
     <>
@@ -25,8 +32,21 @@ export function AccountPanel({
         <AccountProfileForm profile={profile} />
       </Section>
 
-      <Section title="Security" description="Change your password.">
-        <AccountPasswordForm />
+      <Section
+        title="Security"
+        description="Manage how you sign in to College Crew."
+      >
+        <div className="space-y-6">
+          <GoogleIdentitySettings
+            connected={googleConnected}
+            email={googleEmail}
+            initialError={googleLinkError}
+          />
+          <div className="border-t border-line pt-5">
+            <h3 className="mb-3 text-sm font-semibold">Password</h3>
+            <AccountPasswordForm />
+          </div>
+        </div>
       </Section>
     </>
   );

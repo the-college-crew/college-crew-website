@@ -24,7 +24,20 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = safeNext(searchParams.get("next"));
+  const requestedNext = searchParams.get("next");
+  const next = safeNext(requestedNext);
+  const returnTo = safeNext(searchParams.get("returnTo"));
+
+  function oauthErrorResponse() {
+    const destination = new URL(returnTo === "/" ? "/login" : returnTo, origin);
+    destination.searchParams.set(
+      "oauth_error",
+      "Google sign-in wasn't completed. Please try again.",
+    );
+    return NextResponse.redirect(destination);
+  }
+
+  if (searchParams.has("error")) return oauthErrorResponse();
 
   if (tokenHash && type) {
     const params = new URLSearchParams({ token_hash: tokenHash, type, next });
@@ -35,8 +48,11 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${await postAuthDestination(next)}`);
+      return NextResponse.redirect(
+        `${origin}${await postAuthDestination(requestedNext)}`,
+      );
     }
+    return oauthErrorResponse();
   }
 
   // No usable token. Route to a surface that can issue a fresh one.

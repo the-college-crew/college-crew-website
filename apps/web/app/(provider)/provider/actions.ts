@@ -27,9 +27,17 @@ import {
 } from "@/lib/messaging/conversation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { createConnectOnboardingLink } from "@/lib/stripe/connect";
+import {
+  createConnectOnboardingLink,
+  createProviderConnectAccount,
+} from "@/lib/stripe/connect";
 import { syncProviderPayoutSnapshot } from "@/lib/provider/payout-readiness";
 import { parseAverageQuoteInput } from "@/lib/provider/setup";
+import {
+  getStripeSurfacePaths,
+  stripeSurfaceStatusPath,
+  type StripeReturnSurface,
+} from "@/lib/provider/stripe-return";
 import { formatMoney } from "@/lib/utils";
 
 /**
@@ -716,17 +724,28 @@ export async function settleQuoteJobInCash(
 }
 
 /**
- * Post-approval "Connect Stripe" (SPEC §6): hosted Express onboarding.
+ * Submitted-provider Stripe onboarding. Founder approval is an independent
+ * public-listing gate, so pending providers can finish payouts while they
+ * wait; explicit rejection pauses this action until an admin reopens them.
+ *
  * The configured key selects Stripe test or live mode. At launch the sandbox
  * account ids are cleared so every provider creates a fresh live account and
  * supplies real payout details before their public listing returns.
  */
-export async function connectStripe() {
+async function connectStripeForSurface(surface: StripeReturnSurface) {
   const session = await requireProviderAccess();
   const profile = await getOwnProviderProfile();
-  if (!profile || profile.verification_status !== "approved") {
+  if (!profile) {
+    redirect("/provider/onboarding/account");
+  }
+  if (!profile.onboarding_submitted_at) {
+    redirect("/provider/onboarding");
+  }
+  if (profile.verification_status === "rejected") {
     redirect("/provider/dashboard");
   }
+  const surfacePaths = getStripeSurfacePaths(surface);
+  const returnPath = surfacePaths.entryPath;
   const supabase = await createClient();
   if (
     !(await hasAcceptedCurrentLegalDocument(supabase, {
@@ -734,7 +753,7 @@ export async function connectStripe() {
       kind: "platform_terms",
     }))
   ) {
-    redirect(legalDocumentPath("platform_terms", "/provider/dashboard"));
+    redirect(legalDocumentPath("platform_terms", returnPath));
   }
   if (
     !(await hasAcceptedCurrentLegalDocument(supabase, {
@@ -742,12 +761,12 @@ export async function connectStripe() {
       kind: "provider_terms",
     }))
   ) {
-    redirect(legalDocumentPath("provider_terms", "/provider/dashboard"));
+    redirect(legalDocumentPath("provider_terms", returnPath));
   }
   // v2 requires a contact email to create the recipient account.
   const contactEmail = session.user.email;
   if (!contactEmail) {
-    redirect("/provider/dashboard?stripe=noemail");
+    redirect(stripeSurfaceStatusPath(surface, "noemail"));
   }
 
   const headerList = await headers();
@@ -755,28 +774,56 @@ export async function connectStripe() {
     headerList.get("origin") ??
     `https://${headerList.get("host") ?? "localhost:3000"}`;
 
+  let stripeAccountId = profile.stripe_account_id;
+  if (!stripeAccountId) {
+    const account = await createProviderConnectAccount({
+      providerId: profile.id,
+      contactEmail,
+    });
+    if (!account.configured) {
+      redirect(stripeSurfaceStatusPath(surface, "pending"));
+    }
+
+    stripeAccountId = account.stripeAccountId;
+    // Persist and verify the mapping before issuing the single-use link. The
+    // stable Stripe idempotency key makes an immediate retry reuse this same
+    // account if the database write fails.
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("provider_profiles")
+      .update({ stripe_account_id: stripeAccountId })
+      .eq("id", profile.id)
+      .select("stripe_account_id")
+      .single();
+    if (error || !data || data.stripe_account_id !== stripeAccountId) {
+      redirect(stripeSurfaceStatusPath(surface, "save"));
+    }
+  }
+
   const result = await createConnectOnboardingLink({
-    stripeAccountId: profile.stripe_account_id,
-    contactEmail,
-    refreshUrl: `${origin}/provider/dashboard?stripe=refresh`,
-    returnUrl: `${origin}/provider/stripe/return`,
+    stripeAccountId,
+    refreshUrl: `${origin}${surfacePaths.refreshPath}`,
+    returnUrl: `${origin}/provider/stripe/return?flow=${surface}`,
   });
 
   if (!result.configured) {
-    redirect("/provider/dashboard?stripe=pending");
-  }
-
-  // stripe_account_id is server-written only (column grant), so persist it
-  // with the service-role client after the ownership checks above.
-  if (result.stripeAccountId !== profile.stripe_account_id) {
-    const admin = createAdminClient();
-    await admin
-      .from("provider_profiles")
-      .update({ stripe_account_id: result.stripeAccountId })
-      .eq("id", profile.id);
+    redirect(stripeSurfaceStatusPath(surface, "pending"));
   }
 
   redirect(result.url);
+}
+
+/** Dashboard entry point retained for existing forms. */
+export async function connectStripe() {
+  return connectStripeForSurface("dashboard");
+}
+
+export async function connectStripeFromAccount() {
+  return connectStripeForSurface("account");
+}
+
+export async function connectStripeFromOnboarding() {
+  return connectStripeForSurface("onboarding");
 }
 
 /** Provider-triggered capability refresh for delayed Stripe requirements. */
@@ -787,6 +834,8 @@ export async function refreshStripeReadiness() {
 
   await syncProviderPayoutSnapshot(profile);
   revalidatePath("/account");
+  revalidatePath("/provider/onboarding");
+  revalidatePath("/provider/onboarding/stripe");
   revalidatePath("/provider/dashboard");
   revalidatePath("/browse");
   revalidatePath(`/providers/${profile.id}`);

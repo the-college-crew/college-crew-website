@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "How College Crew LLC collects, uses, discloses, and protects personal information.",
 };
 
-const EFFECTIVE_DATE = "July 29, 2026";
+const EFFECTIVE_DATE = "August 4, 2026";
 
 function PolicySection({
   id,
@@ -139,7 +139,10 @@ export default function PrivacyPolicyPage() {
                 status, support contact information, and the content of
                 account-recovery or support requests. Passwords are handled by
                 our authentication provider and are stored in hashed form, not
-                as readable passwords.
+                as readable passwords. If you choose Google sign-in, Google
+                provides your name, email address, basic profile information,
+                and an account identifier. We do not receive your Google
+                password.
               </p>
             </div>
 
@@ -333,6 +336,12 @@ export default function PrivacyPolicyPage() {
                 information="Account records, database content, uploaded files, authentication sessions, realtime messages, request metadata, and operational logs."
                 purpose="Authentication, database hosting, private and public file storage, realtime features, server functions, and access controls."
                 method="Through encrypted Supabase client and server APIs, database connections, Storage, Auth, Realtime, and Edge Functions."
+              />
+              <Disclosure
+                name="Google"
+                information="Name, email address, basic Google profile information, an account identifier, and authentication events when you choose Google sign-in."
+                purpose="To let you create or access your College Crew account using your Google account."
+                method="Through Google's OAuth service and Supabase Auth. College Crew receives the approved profile details, not your Google password."
               />
               <Disclosure
                 name="Vercel"

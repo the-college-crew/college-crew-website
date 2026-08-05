@@ -3,6 +3,10 @@ import "server-only";
 import type Stripe from "stripe";
 
 import type { Booking } from "@/lib/db/types";
+import {
+  buildProviderConnectAccountParams,
+  providerConnectIdempotencyKey,
+} from "@/lib/stripe/connect-account";
 import { getStripe } from "@/lib/stripe/server";
 
 /**
@@ -25,54 +29,41 @@ const UNCONFIGURED: StripeUnconfigured = {
     "Stripe isn't configured — set STRIPE_SECRET_KEY in .env.local to enable payments.",
 };
 
+/** Create the provider's Accounts v2 recipient exactly once per retry window. */
+export async function createProviderConnectAccount(input: {
+  providerId: string;
+  contactEmail: string;
+}): Promise<
+  { configured: true; stripeAccountId: string } | StripeUnconfigured
+> {
+  const stripe = getStripe();
+  if (!stripe) return UNCONFIGURED;
+
+  const account = await stripe.v2.core.accounts.create(
+    buildProviderConnectAccountParams(input),
+    { idempotencyKey: providerConnectIdempotencyKey(input.providerId) },
+  );
+  return { configured: true, stripeAccountId: account.id };
+}
+
 /**
- * Hosted onboarding for an APPROVED provider (SPEC §6: Stripe is connected
- * after approval, never during the wizard). Creates the v2 recipient account
- * on first run, then a single-use Account Link into Stripe-hosted onboarding.
+ * Create a single-use Account Link into Stripe-hosted onboarding for an
+ * already-persisted connected account.
  *
  * NOTE: `refreshUrl`/`returnUrl` MUST be HTTPS — the v2 Account Link API
  * rejects http:// even for localhost, so onboarding is exercised against the
  * deployed (preview) URL rather than the local dev server.
  */
 export async function createConnectOnboardingLink(input: {
-  stripeAccountId: string | null;
-  /** Required on account creation — v2 rejects a recipient config without it. */
-  contactEmail: string;
+  stripeAccountId: string;
   refreshUrl: string;
   returnUrl: string;
-}): Promise<
-  { configured: true; url: string; stripeAccountId: string } | StripeUnconfigured
-> {
+}): Promise<{ configured: true; url: string } | StripeUnconfigured> {
   const stripe = getStripe();
   if (!stripe) return UNCONFIGURED;
 
-  const accountId =
-    input.stripeAccountId ??
-    (
-      await stripe.v2.core.accounts.create({
-        contact_email: input.contactEmail,
-        // Pilot is a single US neighborhood; v2 requires identity.country
-        // before a recipient configuration can be set.
-        identity: { country: "US" },
-        dashboard: "express",
-        defaults: {
-          responsibilities: {
-            fees_collector: "application",
-            losses_collector: "application",
-          },
-        },
-        configuration: {
-          recipient: {
-            capabilities: {
-              stripe_balance: { stripe_transfers: { requested: true } },
-            },
-          },
-        },
-      })
-    ).id;
-
   const link = await stripe.v2.core.accountLinks.create({
-    account: accountId,
+    account: input.stripeAccountId,
     use_case: {
       type: "account_onboarding",
       account_onboarding: {
@@ -84,7 +75,7 @@ export async function createConnectOnboardingLink(input: {
     },
   });
 
-  return { configured: true, url: link.url, stripeAccountId: accountId };
+  return { configured: true, url: link.url };
 }
 
 /**

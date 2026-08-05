@@ -1880,6 +1880,7 @@ export type Database = {
           is_active: boolean
           minimum_notice_hours: number
           neighborhood: string
+          onboarding_submitted_at: string | null
           provider_type: Database["public"]["Enums"]["provider_type"]
           school_domain: string | null
           school_name: string
@@ -1920,6 +1921,7 @@ export type Database = {
           is_active?: boolean
           minimum_notice_hours?: number
           neighborhood?: string
+          onboarding_submitted_at?: string | null
           provider_type?: Database["public"]["Enums"]["provider_type"]
           school_domain?: string | null
           school_name?: string
@@ -1960,6 +1962,7 @@ export type Database = {
           is_active?: boolean
           minimum_notice_hours?: number
           neighborhood?: string
+          onboarding_submitted_at?: string | null
           provider_type?: Database["public"]["Enums"]["provider_type"]
           school_domain?: string | null
           school_name?: string

@@ -8,9 +8,9 @@ export const metadata: Metadata = { title: "Log in" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; oauth_error?: string }>;
 }) {
-  const { next, error } = await searchParams;
+  const { next, error, oauth_error: oauthError } = await searchParams;
 
   return (
     <div>
@@ -22,7 +22,7 @@ export default async function LoginPage({
       </p>
 
       <div className="mt-6">
-        <LoginForm next={next} initialError={error} />
+        <LoginForm next={next} oauthError={oauthError ?? error} />
       </div>
 
       <p className="mt-6 text-center text-sm text-ink-soft">

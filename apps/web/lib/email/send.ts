@@ -153,7 +153,7 @@ function escapeHtml(value: string) {
 }
 
 function schoolOtpHtml(code: string) {
-  const logoUrl = `${getPublicSiteUrl()}/college-crew-mark.png`;
+  const logoUrl = `${getPublicSiteUrl()}/college-crew-logo.png`;
   const escapedCode = escapeHtml(code);
 
   return `<!DOCTYPE html>
@@ -186,8 +186,7 @@ function schoolOtpHtml(code: string) {
           </tr>
           <tr>
             <td align="center" style="padding:34px 40px 8px 40px;">
-              <img src="${logoUrl}" width="72" height="66" alt="College Crew" style="display:block; width:72px; height:auto; margin:0 auto 14px auto; border:0; outline:none; text-decoration:none;">
-              <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-size:24px; font-weight:bold; line-height:1.15; color:#344945; text-align:center;">College Crew</p>
+              <img src="${logoUrl}" width="104" height="104" alt="College Crew" style="display:block; width:104px; height:auto; margin:0 auto 14px auto; border:0; outline:none; text-decoration:none;">
             </td>
           </tr>
           <tr>

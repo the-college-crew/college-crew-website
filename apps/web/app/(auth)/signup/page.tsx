@@ -17,9 +17,12 @@ export const metadata: Metadata = { title: "Sign up" };
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; oauth_error?: string }>;
 }) {
-  const [{ role }, session] = await Promise.all([searchParams, getSession()]);
+  const [{ role, oauth_error: oauthError }, session] = await Promise.all([
+    searchParams,
+    getSession(),
+  ]);
   const earning = role === "earn";
 
   const tab = (active: boolean) =>
@@ -76,7 +79,7 @@ export default async function SignupPage({
             </p>
             {!session ? (
               <Link
-                href="/provider/onboarding/account"
+                href="/provider/onboarding"
                 className={buttonClasses({ size: "lg", className: "w-full" })}
               >
                 Start provider onboarding
@@ -87,7 +90,7 @@ export default async function SignupPage({
                   Your current account can also become a provider account.
                 </p>
                 <Link
-                  href="/provider/onboarding/account"
+                  href="/provider/onboarding"
                   className={buttonClasses({
                     size: "sm",
                     className: "mt-3 w-full",
@@ -99,7 +102,7 @@ export default async function SignupPage({
             )}
           </div>
         ) : (
-          <SignupForm />
+          <SignupForm oauthError={oauthError} />
         )}
       </div>
 

@@ -3,10 +3,16 @@ import type { Metadata } from "next";
 import { Editable } from "@/components/content/editable";
 import { PageHeader } from "@/components/ui/page-header";
 import { FAQS } from "@/lib/content/defaults";
+import { SITE_URL } from "@/lib/site";
 
 import { FAQList, type FaqItem } from "../landing-client";
 
-export const metadata: Metadata = { title: "FAQ" };
+export const metadata: Metadata = {
+  title: "FAQ",
+  description:
+    "How booking a College Crew student works: pricing and platform fees, payments, cancellations, background checks, and what happens if a job goes wrong.",
+  alternates: { canonical: `${SITE_URL}/faq` },
+};
 
 export default function FaqPage() {
   return (
