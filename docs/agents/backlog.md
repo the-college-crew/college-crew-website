@@ -69,44 +69,6 @@ action), and there's no cost to having it in place before it's needed.
 
 ---
 
-## CC-007 — Add `role="alert"` to the shared `FieldError` component
-
-**Status:** in-progress — PR #173 open, awaiting Zach's merge
-**Proposed:** 2026-08-03 — Proposer
-**Effort:** S
-
-`components/ui/field.tsx`'s `FieldError` renders a plain `<p>` with no ARIA
-role, but it's the shared error surface for 43 files across the app —
-booking forms, `app/(customer)/dashboard/review-form.tsx`, the dispute form,
-onboarding, and more. Screen readers only announce content that appears
-inside a live region or carries `role="alert"`/`role="status"`; without one, a
-rejected submission is silent to anyone not looking at the screen. The
-codebase already treats `role="alert"` as its standard for inline errors
-elsewhere — `components/chat/chat-thread.tsx:318`,
-`components/messaging/resolve-button.tsx:31`,
-`app/(customer)/support/support-form.tsx:226`, and
-`app/(customer)/bookings/[id]/counter/counter-form.tsx:161` all hand-roll
-their own `<p role="alert">`/`<span role="alert">`. `FieldError` is the one
-shared component that skipped it.
-
-Add `role="alert"` to `FieldError` in `components/ui/field.tsx`. One
-component, one file, and all 43 call sites inherit the fix immediately.
-
-**Why this one:** it's an internal inconsistency, not a speculative external
-standard — the project already committed to `role="alert"` for inline errors
-in four other components; this closes the gap in the one component built to
-be reused everywhere else, making it the highest-leverage single-line fix
-available this run.
-
-**Devil's advocate:** none of these forms have a reported accessibility
-complaint, so this could look like fixing a bug nobody has hit yet. It
-survives anyway because the fix is a one-line, zero-risk addition matching an
-already-adopted internal pattern — there's no plausible way for it to make
-anything worse, and waiting for a complaint means shipping the visible-only
-version of every form in the meantime.
-
----
-
 ## CC-008 — Add baseline HTTP security headers (no CSP yet)
 
 **Status:** approved
