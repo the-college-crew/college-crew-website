@@ -7,6 +7,7 @@
     "build": "next build",
     "email:supabase-payload": "node scripts/supabase-auth-email-templates.mjs --print",
     "email:sync-supabase": "node scripts/supabase-auth-email-templates.mjs",
+    "preview:persona": "node scripts/run-with-preview-persona.mjs",
     "seed:preview": "node scripts/seed-preview-accounts.mjs",
     "start": "next start",
     "test": "vitest run",
