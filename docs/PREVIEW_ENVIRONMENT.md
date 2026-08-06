@@ -84,14 +84,19 @@ repository, Vercel, or `.env.local`.
 
 Codex and Claude Code may use the durable personas without a human entering a
 password for every test. Each developer stores the shared password once in
-their own macOS login Keychain under:
+OS-protected local storage. The helper supports macOS Keychain and Windows
+DPAPI; the credential never enters git or syncs between developers.
+
+#### macOS
+
+Store the password in the current macOS user's login Keychain under:
 
 - service: `college-crew-preview-test-password`
 - account: `shared-personas`
 
-Set up a second Mac by receiving the password through a secure channel, then
-running this locally. The hidden prompt prevents the password from entering
-shell history or terminal output:
+After receiving the password through a secure channel, run this locally. The
+hidden prompt prevents the password from entering shell history or terminal
+output:
 
 ```sh
 read -s "PREVIEW_TEST_PASSWORD?Shared Preview persona password: "
@@ -101,6 +106,31 @@ security add-generic-password -U \
   -s "college-crew-preview-test-password" \
   -w "$PREVIEW_TEST_PASSWORD"
 unset PREVIEW_TEST_PASSWORD
+npm run preview:persona -- --check
+```
+
+#### Windows
+
+From PowerShell in an up-to-date repository checkout, run the block below and
+paste the shared password into the hidden prompt. `ConvertFrom-SecureString`
+uses [Windows Data Protection API (DPAPI)](https://learn.microsoft.com/powershell/module/microsoft.powershell.security/convertfrom-securestring)
+when no explicit key is supplied. The saved file contains ciphertext that only
+the same Windows user on the same machine can decrypt.
+
+```powershell
+$credentialDirectory = Join-Path $env:LOCALAPPDATA "CollegeCrew"
+$credentialPath = Join-Path $credentialDirectory "preview-persona-password.txt"
+$previewPassword = Read-Host "Paste shared Preview password" -AsSecureString
+
+New-Item -ItemType Directory -Force -Path $credentialDirectory | Out-Null
+$encryptedPassword = ConvertFrom-SecureString -SecureString $previewPassword
+[IO.File]::WriteAllText(
+  $credentialPath,
+  $encryptedPassword,
+  [Text.UTF8Encoding]::new($false)
+)
+
+Remove-Variable previewPassword, encryptedPassword
 npm run preview:persona -- --check
 ```
 
@@ -120,10 +150,10 @@ must never run `env`, `printenv`, shell tracing, or credential-dumping debug
 code through this wrapper. The credential grants Preview admin access, so run
 only reviewed local test code with it.
 
-This helper is intentionally macOS-local. Each developer configures their own
-Keychain; no credential is synchronized through git. A missing Keychain entry
-must fail closed rather than falling back to a committed, Vercel, or Production
-credential.
+Each developer configures their own local secure storage. A missing or
+undecryptable credential must fail closed rather than falling back to a
+committed, Vercel, or Production credential. Copying the Windows ciphertext to
+another account or machine does not make the password usable there.
 
 The personas are the only permanent exception to Preview fixture cleanup. Tag
 every other test row visibly and remove it after the test.
