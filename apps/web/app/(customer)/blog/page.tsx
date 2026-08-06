@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import featuredImage from "@/public/blog/featured-neighborhood-coffee.jpg";
-import chicagoSkylineImage from "@/public/blog/chicago-skyline.jpg";
+import foundersImage from "@/public/blog/founders.jpg";
 import { formatPostDate, getAllPosts, type BlogPost } from "@/lib/blog/posts";
 import { SITE_URL } from "@/lib/site";
 
@@ -183,8 +183,8 @@ export default async function BlogPage() {
 
             <div className="relative mt-7 aspect-[3/2] overflow-hidden">
               <Image
-                src={chicagoSkylineImage}
-                alt="The Chicago skyline at dusk with Lake Michigan in the background"
+                src={foundersImage}
+                alt="The four College Crew founders standing together on a tree-lined Chicago street"
                 fill
                 sizes="(max-width: 1023px) 100vw, 350px"
                 className="object-cover"
