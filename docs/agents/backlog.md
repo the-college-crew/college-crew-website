@@ -147,3 +147,42 @@ reader unfamiliar with it reads "payments secured by a named company" as
 more credible than no statement at all.
 
 ---
+
+## CC-010 — Add Open Graph and Twitter Card metadata to the root layout
+
+**Status:** proposed
+**Proposed:** 2026-08-06 — Proposer
+**Effort:** S
+
+`app/layout.tsx` already sets `metadataBase`, a `title` template, and a
+`description` (from `lib/site.ts`'s `SITE` constant) — but a repo-wide search
+finds zero `openGraph` or `twitter` fields anywhere in the app, on any page.
+Every link to College Crew — a flyer QR scan, a text to a neighbor, a share
+in a campus group chat — currently unfurls as a bare URL on iMessage,
+WhatsApp, Slack, Discord, and every other surface that reads Open Graph tags,
+instead of a title, description, and image. `next.config.ts`'s own comments
+describe the flyer/QR rewrite system (`/f/:slug` → `/browse`) as the pilot's
+actual acquisition mechanism — this is a hyperlocal, word-of-mouth-driven
+pilot, and word of mouth today mostly travels as a pasted link.
+
+Add `openGraph` and `twitter` objects to the root `metadata` export in
+`app/layout.tsx`, using the existing `SITE.name`/`SITE.description` and the
+existing `college-crew-mark.png` logo already in `apps/web/public/` as the
+image — no new asset, no new copy to invent. Per-page metadata (browse,
+provider profiles, FAQ, etc.) inherits this by Next.js's normal metadata
+merging unless a page already overrides it, so one change gives every
+existing page a real share card immediately.
+
+**Why this one:** the same "one shared surface, every page inherits it" shape
+as CC-007's `FieldError` fix — a single, verified-zero gap in the one file
+that already holds the site-wide metadata baseline (`metadataBase`, `title`,
+`description`), fixed with data the codebase already has.
+
+**Devil's advocate:** at pilot scale, the number of links actually shared is
+small, so this may not move a measurable number yet. It survives anyway
+because the fix is one metadata block using existing brand assets, costs
+nothing ongoing, and is exactly the kind of thing that's much cheaper to add
+now — before dozens of provider and blog pages exist to (not) inherit it —
+than to retrofit later.
+
+---
