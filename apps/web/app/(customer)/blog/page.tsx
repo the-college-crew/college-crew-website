@@ -5,6 +5,7 @@ import Link from "next/link";
 import featuredImage from "@/public/blog/featured-neighborhood-coffee.jpg";
 import foundersImage from "@/public/blog/founders.jpg";
 import { formatPostDate, getAllPosts, type BlogPost } from "@/lib/blog/posts";
+import { getLiveServices } from "@/lib/db/queries";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -18,15 +19,19 @@ export const metadata: Metadata = {
  * Marketplace services, not blog categories — these link to Browse and are
  * labelled as such. An earlier version presented them as topic filters, which
  * they never were (docs/internal/audit-fixes-todo.md).
+ *
+ * The list itself comes from the services table, so toggling a service off in
+ * admin drops it from this strip too. Only the *labels* are overridden: a few
+ * catalog names are too long for a single-line strip, so they get a short form
+ * here. Anything without an entry falls back to its catalog name, which means
+ * a newly added service still appears without a code change.
  */
-const SERVICES = [
-  { label: "Pet care", slug: "pet-care" },
-  { label: "House management", slug: "house-management" },
-  { label: "Hauling", slug: "hauling" },
-  { label: "Lawn & yard", slug: "lawn-yard-care" },
-  { label: "Tutoring", slug: "tutoring" },
-  { label: "Coaching", slug: "youth-sports-coaching" },
-] as const;
+const SHORT_LABELS: Record<string, string> = {
+  "pet-care": "Pet care",
+  hauling: "Hauling",
+  "lawn-yard-care": "Lawn & yard",
+  "youth-sports-coaching": "Coaching",
+};
 
 function StoryCard({ post, reverse }: { post: BlogPost; reverse: boolean }) {
   return (
@@ -81,7 +86,10 @@ function StoryCard({ post, reverse }: { post: BlogPost; reverse: boolean }) {
 }
 
 export default async function BlogPage() {
-  const posts = await getAllPosts();
+  const [posts, services] = await Promise.all([
+    getAllPosts(),
+    getLiveServices(),
+  ]);
 
   return (
     <div className="relative left-1/2 -my-8 w-screen -translate-x-1/2 bg-card text-viridian">
@@ -119,29 +127,37 @@ export default async function BlogPage() {
             </div>
           </div>
 
-          <nav
-            aria-label="Book a service"
-            className="overflow-x-auto border-b border-viridian/20"
-          >
-            <ul className="flex min-w-max items-center py-5 sm:mx-auto sm:w-max sm:py-6">
-              {SERVICES.map((service, index) => (
-                <li key={service.slug} className="flex items-center">
-                  {index > 0 ? (
-                    <span
-                      aria-hidden="true"
-                      className="mx-5 h-3 w-px bg-viridian/25 sm:mx-6"
-                    />
-                  ) : null}
-                  <Link
-                    href={`/browse?service=${service.slug}`}
-                    className="whitespace-nowrap text-[13px] font-medium text-viridian/80 transition-colors hover:text-viridian"
-                  >
-                    {service.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          {services.length > 0 ? (
+            <nav
+              aria-label="Book a service"
+              className="border-b border-viridian/20"
+            >
+              {/*
+                Wraps rather than scrolls: the full catalog is wider than the
+                page, and a horizontally scrolling bar on desktop just reads as
+                broken. The separator trails each item instead of leading it,
+                so a wrapped line never opens with an orphaned divider.
+              */}
+              <ul className="flex flex-wrap items-center justify-center gap-y-3 py-5 sm:py-6">
+                {services.map((service, index) => (
+                  <li key={service.id} className="flex items-center">
+                    <Link
+                      href={`/browse?service=${service.slug}`}
+                      className="whitespace-nowrap text-[13px] font-medium text-viridian/80 transition-colors hover:text-viridian"
+                    >
+                      {SHORT_LABELS[service.slug] ?? service.name}
+                    </Link>
+                    {index < services.length - 1 ? (
+                      <span
+                        aria-hidden="true"
+                        className="mx-5 h-3 w-px bg-viridian/25 sm:mx-6"
+                      />
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null}
         </section>
 
         <div className="grid gap-14 pb-14 pt-12 md:pb-20 md:pt-14 lg:grid-cols-[1.65fr_0.95fr] lg:gap-14">
