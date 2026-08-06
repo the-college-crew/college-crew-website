@@ -115,7 +115,7 @@ export function ProviderProfileForm({ profile }: { profile: ProviderProfile }) {
             name="providerType"
             defaultValue={profile.provider_type}
           >
-            <option value="individual">Hardworking individual</option>
+            <option value="individual">Individual</option>
             <option value="business">Student business</option>
           </Select>
         </div>

@@ -97,7 +97,7 @@ export async function ProviderProfile({
             <Badge tone={provider.provider_type === "business" ? "blue" : "gray"}>
               {provider.provider_type === "business"
                 ? "Student business"
-                : "Hardworking individual"}
+                : "Individual"}
             </Badge>
             <LocationLine
               town={provider.town}

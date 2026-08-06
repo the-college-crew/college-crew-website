@@ -61,7 +61,7 @@ export function ProviderCardView({
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, flexWrap: "wrap" }}>
             <Badge
               label={
-                provider.provider_type === "business" ? "Student business" : "Hardworking individual"
+                provider.provider_type === "business" ? "Student business" : "Individual"
               }
               tone={provider.provider_type === "business" ? "sky" : "stone"}
             />

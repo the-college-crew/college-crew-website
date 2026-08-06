@@ -220,7 +220,7 @@ export function ProviderDetailModal({
                   >
                     {profile.provider_type === "business"
                       ? "Student business"
-                      : "Hardworking individual"}
+                      : "Individual"}
                   </Badge>
                   {profile.neighborhood ? (
                     <span className="text-xs text-mist">

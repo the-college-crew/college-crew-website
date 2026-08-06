@@ -129,7 +129,7 @@ export function ProviderCard({
               <Badge tone={provider.provider_type === "business" ? "blue" : "green"}>
                 {provider.provider_type === "business"
                   ? "Student business"
-                  : "Hardworking individual"}
+                  : "Individual"}
               </Badge>
               <LocationLine
                 town={provider.town}
