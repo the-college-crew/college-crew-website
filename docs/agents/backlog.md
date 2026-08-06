@@ -114,7 +114,7 @@ for an actual incident before shipping something this cheap and this safe.
 
 ## CC-010 — Add Open Graph and Twitter Card metadata to the root layout
 
-**Status:** proposed
+**Status:** approved
 **Proposed:** 2026-08-06 — Proposer
 **Effort:** S
 
