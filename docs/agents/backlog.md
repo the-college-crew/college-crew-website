@@ -71,7 +71,7 @@ action), and there's no cost to having it in place before it's needed.
 
 ## CC-008 — Add baseline HTTP security headers (no CSP yet)
 
-**Status:** in-progress — PR open, awaiting Zach's merge (see PR)
+**Status:** in-progress — PR #216 open, awaiting Zach's merge
 **Proposed:** 2026-08-05 — Proposer
 **Effort:** S
 
@@ -112,38 +112,41 @@ for an actual incident before shipping something this cheap and this safe.
 
 ---
 
-## CC-009 — Add a "Payments secured by Stripe" line next to the pay button
+## CC-010 — Add Open Graph and Twitter Card metadata to the root layout
 
 **Status:** approved
-**Proposed:** 2026-08-05 — Proposer
+**Proposed:** 2026-08-06 — Proposer
 **Effort:** S
 
-`app/(customer)/bookings/[id]/confirm/page.tsx` already surfaces the
-cancellation policy right next to the payment panel
-(`booking-customer.confirm.cancellation-policy`, added by CC-003), but says
-nothing about payment security at the one moment a customer is about to hand
-over a card number to `HourlyPayPanel`/`ConfirmPayPanel`
-(`@stripe/react-stripe-js`, `lib/stripe/`) — a real, live-in-production
-integration per `CLAUDE.md`, but the confirm page never says so. 2025–2026
-marketplace trust research is consistent that a "secure payments" line is
-one of the core, low-cost trust signals at a payment moment, alongside
-identity verification and reviews.
+`app/layout.tsx` already sets `metadataBase`, a `title` template, and a
+`description` (from `lib/site.ts`'s `SITE` constant) — but a repo-wide search
+finds zero `openGraph` or `twitter` fields anywhere in the app, on any page.
+Every link to College Crew — a flyer QR scan, a text to a neighbor, a share
+in a campus group chat — currently unfurls as a bare URL on iMessage,
+WhatsApp, Slack, Discord, and every other surface that reads Open Graph tags,
+instead of a title, description, and image. `next.config.ts`'s own comments
+describe the flyer/QR rewrite system (`/f/:slug` → `/browse`) as the pilot's
+actual acquisition mechanism — this is a hyperlocal, word-of-mouth-driven
+pilot, and word of mouth today mostly travels as a pasted link.
 
-Add a one-line "Payments secured by Stripe" note next to the pay panel, as a
-new copy key following the same `bookingCopyValue`/admin-editable-copy
-convention CC-003 already used for the cancellation line — no new
-infrastructure, no invented claim, since Stripe genuinely does process every
-charge.
+Add `openGraph` and `twitter` objects to the root `metadata` export in
+`app/layout.tsx`, using the existing `SITE.name`/`SITE.description` and the
+existing `college-crew-mark.png` logo already in `apps/web/public/` as the
+image — no new asset, no new copy to invent. Per-page metadata (browse,
+provider profiles, FAQ, etc.) inherits this by Next.js's normal metadata
+merging unless a page already overrides it, so one change gives every
+existing page a real share card immediately.
 
-**Why this one:** the same shape as CC-003 and CC-006 — surfacing a true,
-already-existing fact at the exact decision point research says it matters
-most, using the codebase's own established copy-key pattern rather than
-inventing a new mechanism.
+**Why this one:** the same "one shared surface, every page inherits it" shape
+as CC-007's `FieldError` fix — a single, verified-zero gap in the one file
+that already holds the site-wide metadata baseline (`metadataBase`, `title`,
+`description`), fixed with data the codebase already has.
 
-**Devil's advocate:** "Stripe" may not mean anything to a customer who
-doesn't recognize the brand. True, but the line costs one copy key, Stripe
-is a recognizable payment brand for a meaningful share of users, and even a
-reader unfamiliar with it reads "payments secured by a named company" as
-more credible than no statement at all.
+**Devil's advocate:** at pilot scale, the number of links actually shared is
+small, so this may not move a measurable number yet. It survives anyway
+because the fix is one metadata block using existing brand assets, costs
+nothing ongoing, and is exactly the kind of thing that's much cheaper to add
+now — before dozens of provider and blog pages exist to (not) inherit it —
+than to retrofit later.
 
 ---

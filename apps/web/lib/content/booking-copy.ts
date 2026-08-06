@@ -941,6 +941,12 @@ export const BOOKING_COPY_SCREENS = [
         style: "muted",
       },
       {
+        key: "booking-customer.confirm.stripe-secured",
+        label: "Payment security note",
+        defaultValue: "Payments secured by Stripe.",
+        style: "muted",
+      },
+      {
         key: "booking-customer.confirm.payment-received",
         label: "Payment received state",
         defaultValue:

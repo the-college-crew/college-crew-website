@@ -290,6 +290,9 @@ export default async function ConfirmPayPage({
                   isQuote ? QUOTE_PAYMENT_CONSENT_LABEL : undefined
                 }
               />
+              <p className="text-xs text-mist">
+                {copy("booking-customer.confirm.stripe-secured")}
+              </p>
               {isDepositQuote ? (
                 <DeclineQuoteOffer bookingId={booking.id} />
               ) : null}
@@ -522,6 +525,9 @@ function HourlyConfirmView({
                 balanceLabel={balanceLabel}
                 consentLabel={BOOKING_CONSENT_LABEL}
               />
+              <p className="text-xs text-mist">
+                {copy("booking-customer.confirm.stripe-secured")}
+              </p>
             </div>
           ) : isAccepted ? (
             <div className="rounded-lg border border-line bg-court p-4 text-sm text-ink-soft">
