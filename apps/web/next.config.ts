@@ -45,6 +45,29 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [{ source: "/f/:slug", destination: "/browse" }];
   },
+  // Baseline security headers — Vercel adds none of its own (just
+  // X-Vercel-Id for tracing), and this app handles login credentials,
+  // driver's-license photos, and live Stripe payments. Deliberately not a
+  // full Content-Security-Policy: current guidance is to roll that out in
+  // report-only mode for weeks before enforcing, and getting it wrong risks
+  // silently breaking Stripe Elements or Supabase Realtime. These four don't
+  // restrict what's allowed to load, so they carry no such risk.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "DENY" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
