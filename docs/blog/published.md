@@ -32,12 +32,26 @@ Newest first. One row per post.
 | Date drafted | Slug | Topic / intent | Shape | Status |
 |---|---|---|---|---|
 | 2026-08-06 | `algae-mold-stains-concrete-patio` | Specific problem — algae/mold stains on a concrete patio, with a CDC-sourced cleaning ratio | Specific problem · niche | `drafted` |
-| 2026-08-05 | `one-drill-before-fall-sports-tryouts` | How-to — one agility drill worth running before fall tryouts | How-to/method · niche | `published` |
+| 2026-08-05 | `one-drill-before-fall-sports-tryouts` | How-to — one agility drill worth running before fall tryouts | How-to/method · niche | `dropped` |
 | 2026-08-04 | `back-to-school-tutoring-cost-lincoln-park` | Cost — back-to-school tutoring pricing in Lincoln Park | Cost · broad | `dropped` |
 | 2026-07-16 | `meet-jackson-the-walker-behind-the-leash-be90e9cf` | Student spotlight — dog walking | Spotlight · broad | `published` |
 
 Write **Shape** as `<Type> · <broad|niche>`, using a type from the table in
 `STRATEGY.md`.
+
+<!--
+The drill post was published for real on 2026-08-06 and pulled the same day, for
+the same reason as the tutoring post below it: it was the end-to-end test of the
+routine after the humanizer + GEO rules landed (#208, #209), and the photo key
+approved for it was the College Crew logo rather than a real photograph. The
+pipeline itself worked — gate, publish, canvas overwrite, run log, Slack — so
+what was wrong here is the picture, not the machinery. `dropped` rather than
+deleted, so the routine does not propose fall-tryout agility work again as if it
+were untouched. Recover the prose with
+`git show 184eb6c:apps/web/content/blog/one-drill-before-fall-sports-tryouts.md`
+if it is worth republishing with a real photo — note it was written under the old
+rules, so it carries em dashes, no outbound citation, and no tags.
+-->
 
 <!--
 The tutoring post was published for real on 2026-08-05 and then pulled the same
