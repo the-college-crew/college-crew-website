@@ -150,7 +150,7 @@ more credible than no statement at all.
 
 ## CC-010 — Add Open Graph and Twitter Card metadata to the root layout
 
-**Status:** proposed
+**Status:** approved
 **Proposed:** 2026-08-06 — Proposer
 **Effort:** S
 
