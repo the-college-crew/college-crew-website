@@ -1,6 +1,6 @@
 # Expandable Help widget and AI support agent
 
-**Status:** implementation complete; rollout pending
+**Status:** remediation complete; rollout pending Preview evaluation
 **Owner:** Zach
 **Branch:** feature/ai-support-widget
 **Updated:** 2026-08-06
@@ -42,7 +42,14 @@ None. The implementation plan was approved before this branch was created.
 - Implemented the Help menu/chat, Responses API route, reviewed support manual,
   allowlisted RLS context, content-free quota metadata, privacy/product/runbook
   documentation, and focused unit/database/browser coverage.
-- Local reset, the new 16-assertion pgTAP test, 288 Vitest assertions, lint,
+- Release remediation corrected the hourly payment copy to reflect the
+  request-time authorization and provider-acceptance capture flow; replaced
+  duplicated onboarding checks with canonical verification, agreement,
+  availability, payout, and next-step rules; filters model-authored links and
+  markup across stream chunks; rejects incomplete streams; and makes Clear chat
+  abort the active request. It also makes the local E2E runner supply the
+  required test-only Resend webhook secret.
+- Local reset, the new 16-assertion pgTAP test, 296 Vitest assertions, lint,
   typecheck, production build, and desktop/mobile browser tests pass. The full
   legacy pgTAP directory still has unrelated pre-existing expectation failures
   around booking/legal evolution; the new AI support test passes in isolation.

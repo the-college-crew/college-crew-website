@@ -1,4 +1,4 @@
-export const SUPPORT_KNOWLEDGE_VERSION = "2026-08-06.1";
+export const SUPPORT_KNOWLEDGE_VERSION = "2026-08-06.2";
 
 export const SUPPORT_MANUAL = `
 # College Crew support manual
@@ -9,7 +9,7 @@ College Crew is a pilot marketplace connecting neighbors with verified college-s
 Provider capability belongs to a regular customer account. Setup proceeds through account/school information, identity and student verification, services and pricing, availability and private service ZIP, review/submission, and Stripe payout setup. College Crew founders manually review identity and approve providers; never promise a timeline or approval. Submitted providers may start Stripe Express setup while founder review is pending. A provider is ready only when required profile, verification, provider agreement, live service/pricing, availability/service area, founder approval, and Stripe payout requirements are satisfied. Stripe may request more information. Never ask for identity documents in chat.
 
 ## Booking and payment
-Hourly services use the provider's listed hourly rate with a one-hour minimum and 15-minute increments. At request time, the customer authorizes the first hour; this is a hold, not a charge. The provider may accept, decline, or counter. When accepted, the first-hour payment must be completed by the shown deadline to confirm the booking. After work, the provider submits actual time; the first-hour payment is credited and any remaining undisputed balance is due by the earlier of customer confirmation or the displayed 24-hour autocharge deadline.
+Hourly services use the provider's listed hourly rate with a one-hour minimum and 15-minute increments. At request time, the customer authorizes the first hour; this is a hold, not a charge. The provider may accept, decline, or counter. When the provider accepts, College Crew captures that existing first-hour hold; a decline or lapsed response window releases it with no charge. After work, the provider submits actual time; the captured first hour is credited and any remaining undisputed balance is due by the earlier of customer confirmation or the displayed 24-hour autocharge deadline.
 
 Quote services begin with a request and provider quote/counter. Once accepted, the displayed deposit/first payment confirms the booking. After work, the remaining quote balance follows invoice review, dispute, recovery, and payout rules shown in the booking. The dashboard is the source of truth for current status and deadlines.
 

@@ -47,7 +47,7 @@ export type SafeNavigationAction = {
 export type SupportPageContext = {
   category: "public" | "provider_onboarding" | "provider" | "customer_dashboard" | "booking" | "messages";
   provider?: {
-    nextStep: string;
+    nextStep: "account" | "verify" | "services" | "availability" | "review" | "stripe" | "dashboard";
     verification: string;
     missingRequirements: string[];
     agreementAccepted: boolean;

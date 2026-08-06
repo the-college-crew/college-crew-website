@@ -3,11 +3,15 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/db/types";
+import { acceptanceSatisfiesLegalDocument } from "@/lib/legal/acceptance";
+import { providerOnboardingPath, resolveProviderOnboardingStep } from "@/lib/provider/onboarding";
+import { isOfferingPricingReady, isPayoutsActive, isServiceZipSet, isStructuredAvailabilityComplete } from "@/lib/provider/setup";
+import { isProviderIdentityVerificationSatisfied } from "@/lib/provider/verification";
 import { SUPPORT_KNOWLEDGE_VERSION, SUPPORT_MANUAL } from "./assistant-manual";
 import type { SafeNavigationAction, SupportPageContext } from "./assistant-contracts";
 
 export const SUPPORT_MODEL = "gpt-5.6-luna";
-export const SUPPORT_PROMPT_VERSION = "2026-08-06.1";
+export const SUPPORT_PROMPT_VERSION = "2026-08-06.2";
 
 export function isAiSupportEnabled() {
   return process.env.AI_SUPPORT_ENABLED === "true";
@@ -30,7 +34,7 @@ export function safeActionsForContext(context: SupportPageContext): SafeNavigati
   const map: Record<SafeNavigationAction["key"], SafeNavigationAction> = {
     dashboard: { key: "dashboard", label: "View my bookings", href: "/dashboard" },
     provider_dashboard: { key: "provider_dashboard", label: "Provider dashboard", href: "/provider/dashboard" },
-    provider_onboarding: { key: "provider_onboarding", label: "Continue provider setup", href: "/provider/onboarding/account" },
+    provider_onboarding: { key: "provider_onboarding", label: "Continue provider setup", href: providerOnboardingPath(context.provider?.nextStep ?? "account") },
     provider_settings: { key: "provider_settings", label: "Provider settings", href: "/provider/settings" },
     browse: { key: "browse", label: "Browse providers", href: "/browse" },
     messages: { key: "messages", label: "Open messages", href: "/messages" },
@@ -53,33 +57,67 @@ export async function buildSupportPageContext(
   const category = classifySupportPath(sourcePath);
 
   if (category === "provider" || category === "provider_onboarding") {
-    const [{ data: profile }, { data: acceptances }] = await Promise.all([
-      supabase.from("provider_profiles").select("id, user_id, verification_status, onboarding_submitted_at, stripe_account_id, stripe_transfers_active, school_name, avatar_image_path, service_zip, availability_weekdays, availability_start_local, availability_end_local").eq("user_id", userId).maybeSingle(),
-      supabase.from("legal_acceptances").select("id").eq("user_id", userId).eq("kind", "provider_terms").eq("role", "provider").limit(1),
-    ]);
+    const { data: profile, error: profileError } = await supabase
+      .from("provider_profiles")
+      .select("id, user_id, verification_status, onboarding_submitted_at, stripe_account_id, stripe_transfers_active, stripe_transfers_checked_at, school_name, avatar_image_path, service_zip, id_document_url, id_document_back_url, verification_bypassed")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (profileError) throw new Error("provider_context_unavailable");
     if (!profile || profile.user_id !== userId) return { category };
-    const { data: offerings } = await supabase
-      .from("provider_services")
-      .select("hourly_rate_cents, average_quote_cents, pricing_mode, service:services(is_live)")
-      .eq("provider_id", profile.id);
+
+    const [schoolEmailResult, offeringsResult, windowsResult, acceptancesResult] = await Promise.all([
+      supabase.from("provider_school_emails").select("user_id").eq("user_id", userId).maybeSingle(),
+      supabase.from("provider_services").select("id, hourly_rate_cents, pricing_mode, service:services(slug, is_live)").eq("provider_id", profile.id),
+      supabase.from("provider_availability_windows").select("weekday, start_local, end_local").eq("provider_id", profile.id),
+      supabase.from("legal_acceptances").select("kind, role, version, content_hash").eq("user_id", userId).in("kind", ["provider_terms", "master_agreement"]),
+    ]);
+    if (schoolEmailResult.error || offeringsResult.error || windowsResult.error || acceptancesResult.error) {
+      throw new Error("provider_context_unavailable");
+    }
+
+    const offerings = offeringsResult.data ?? [];
+    const windows = windowsResult.data ?? [];
+    const identitySatisfied = isProviderIdentityVerificationSatisfied(profile, Boolean(schoolEmailResult.data));
+    const hasReadyOffering = offerings.some((offering) => {
+      const service = Array.isArray(offering.service) ? offering.service[0] : offering.service;
+      return Boolean(service?.is_live) && isOfferingPricingReady({
+        hourly_rate_cents: offering.hourly_rate_cents,
+        pricing_mode: offering.pricing_mode,
+        service_slug: service?.slug,
+      });
+    });
+    const availabilityReady = isStructuredAvailabilityComplete(windows) && isServiceZipSet(profile);
+    const agreementAccepted = (acceptancesResult.data ?? []).some((acceptance) =>
+      acceptanceSatisfiesLegalDocument(acceptance, "provider_terms"),
+    );
+    const nextStep = resolveProviderOnboardingStep({
+      profile,
+      identitySatisfied,
+      hasReadyOffering,
+      availabilityComplete: availabilityReady,
+    });
     const missing: string[] = [];
     if (!profile.school_name?.trim()) missing.push("school information");
+    if (!identitySatisfied) missing.push("identity and student verification");
     if (!profile.avatar_image_path) missing.push("profile photo");
     if (!profile.service_zip) missing.push("service area");
-    if (!profile.availability_weekdays?.length || !profile.availability_start_local || !profile.availability_end_local) missing.push("availability");
-    if (!(offerings ?? []).some((o) => o.service?.is_live && (o.pricing_mode === "quote" ? o.average_quote_cents : o.hourly_rate_cents))) missing.push("active service pricing");
-    if (!acceptances?.length) missing.push("provider agreement");
+    if (!isStructuredAvailabilityComplete(windows)) missing.push("availability");
+    if (!hasReadyOffering) missing.push("active service pricing");
+    if (!agreementAccepted) missing.push("provider agreement");
     if (profile.verification_status !== "approved") missing.push("founder verification approval");
-    if (!profile.stripe_transfers_active) missing.push("Stripe payout setup");
-    const nextStep = !profile.school_name?.trim() ? "account" : !profile.avatar_image_path ? "verify" : !(offerings ?? []).length ? "services" : !profile.service_zip ? "availability" : !profile.onboarding_submitted_at ? "review" : !profile.stripe_transfers_active ? "stripe" : "dashboard";
-    return { category, provider: { nextStep, verification: profile.verification_status, missingRequirements: missing, agreementAccepted: Boolean(acceptances?.length), payoutReady: Boolean(profile.stripe_account_id && profile.stripe_transfers_active) } };
+    if (profile.onboarding_submitted_at && profile.verification_status !== "rejected" && !isPayoutsActive(profile)) missing.push("Stripe payout setup");
+    return { category, provider: { nextStep, verification: profile.verification_status, missingRequirements: missing, agreementAccepted, payoutReady: isPayoutsActive(profile) } };
   }
 
   if (category === "booking" || category === "customer_dashboard") {
+    // A provider request page has no owned booking yet. Do not attach the
+    // customer's unrelated booking history to it.
+    if (sourcePath.startsWith("/book/")) return { category };
     const pathId = sourcePath.match(/^\/bookings\/([0-9a-f-]{36})(?:\/|$)/i)?.[1];
     let query = supabase.from("bookings").select("customer_id, status, booking_flow, service_name_snapshot, provider_display_name_snapshot, scheduled_at, requested_local_date, initial_payment_due_at, price_cents, invoice:booking_invoices(status, remaining_balance_cents, autocharge_at), dispute:booking_disputes(status)").eq("customer_id", userId).order("created_at", { ascending: false }).limit(pathId ? 1 : 5);
     if (pathId) query = query.eq("id", pathId);
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw new Error("booking_context_unavailable");
     const bookings = (data ?? []).filter((row) => row.customer_id === userId).map((row) => {
       const invoice = Array.isArray(row.invoice) ? row.invoice[0] : row.invoice;
       const dispute = Array.isArray(row.dispute) ? row.dispute[0] : row.dispute;
@@ -89,6 +127,47 @@ export async function buildSupportPageContext(
   }
 
   return { category };
+}
+
+/** Removes model-authored markup and external destinations before UI rendering. */
+export function sanitizeSupportText(value: string) {
+  return value
+    .replace(/\[([^\]]{0,200})\]\((?:[^)\s]+)\)/g, "$1")
+    .replace(/\b(?:https?:\/\/|www\.)[^\s<>()]+/gi, "[link removed]")
+    .replace(/<\/?[a-z][^>]*>/gi, "");
+}
+
+/**
+ * Holds incomplete tokens so a URL or tag split across SSE deltas cannot flash
+ * briefly before the complete value is removed.
+ */
+export class SupportPlainTextStreamSanitizer {
+  private pending = "";
+
+  push(delta: string) {
+    this.pending += delta;
+    let boundary = Math.max(this.pending.lastIndexOf(" "), this.pending.lastIndexOf("\n"), this.pending.lastIndexOf("\t"));
+    if (boundary < 0) return "";
+    boundary += 1;
+
+    const openTag = this.pending.lastIndexOf("<");
+    if (openTag > this.pending.lastIndexOf(">") && openTag < boundary) boundary = openTag;
+    const openBracket = this.pending.lastIndexOf("[");
+    if (openBracket > this.pending.lastIndexOf("]") && openBracket < boundary) boundary = openBracket;
+    const url = [...this.pending.matchAll(/(?:https?:\/\/|www\.)/gi)].at(-1);
+    if (url?.index !== undefined && url.index < boundary && !/\s/.test(this.pending.slice(url.index))) boundary = url.index;
+
+    if (boundary <= 0) return "";
+    const complete = this.pending.slice(0, boundary);
+    this.pending = this.pending.slice(boundary);
+    return sanitizeSupportText(complete);
+  }
+
+  flush() {
+    const complete = this.pending;
+    this.pending = "";
+    return sanitizeSupportText(complete);
+  }
 }
 
 export function buildSupportInstructions(context: SupportPageContext) {

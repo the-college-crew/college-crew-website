@@ -277,7 +277,7 @@ test("customer cancels a booked job >12h out with a full refund", async ({
   await page.goto("/dashboard");
 
   const card = page.locator(`[data-booking-id="${cancelJob}"]`);
-  await expect(card.getByText("You’ll be fully refunded.")).toBeVisible();
+  await expect(card.getByText("You'll be fully refunded.")).toBeVisible();
   await card.getByRole("button", { name: "Cancel booking" }).click();
 
   await expect.poll(() => bookingStatus(cancelJob)).toBe("cancelled");

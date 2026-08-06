@@ -24,6 +24,8 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const requestVersionRef = useRef(0);
+  const [liveAnnouncement, setLiveAnnouncement] = useState("");
 
   const supportHref = useMemo(() => `/support?from=${encodeURIComponent(pathname)}`, [pathname]);
   const mailHref = useMemo(() => {
@@ -56,6 +58,7 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
   }, [view]);
 
   function close() {
+    requestVersionRef.current += 1;
     abortRef.current?.abort();
     setBusy(false);
     setView("closed");
@@ -69,6 +72,20 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
 
   function onPanelKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") { event.preventDefault(); close(); }
+    if (event.key !== "Tab") return;
+    const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled])',
+    );
+    if (!focusable?.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   async function send(event: FormEvent) {
@@ -76,8 +93,9 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
     const content = draft.trim();
     if (!content || busy || content.length > 2_000) return;
     const history = [...messages, { role: "user" as const, content }].slice(-23);
+    const requestVersion = ++requestVersionRef.current;
     setMessages([...history, { role: "assistant", content: "" }]);
-    setDraft(""); setBusy(true); setError("");
+    setDraft(""); setBusy(true); setError(""); setLiveAnnouncement("College Crew AI is responding.");
     const abort = new AbortController(); abortRef.current = abort;
     try {
       const response = await fetch("/api/support/assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sourcePath: pathname, messages: history }), signal: abort.signal });
@@ -86,7 +104,7 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
         throw new Error(payload?.error?.message || "College Crew AI is unavailable right now.");
       }
       if (!response.body) throw new Error("College Crew AI is unavailable right now.");
-      const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+      const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = ""; let responseText = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -96,15 +114,29 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
           const dataLine = chunk.split("\n").find((line) => line.startsWith("data: "));
           if (!dataLine) continue;
           const streamEvent = JSON.parse(dataLine.slice(6)) as SupportStreamEvent;
+          if (requestVersion !== requestVersionRef.current) return;
           if (streamEvent.type === "meta") setActions(streamEvent.actions);
-          if (streamEvent.type === "delta") setMessages((current) => current.map((message, index) => index === current.length - 1 ? { ...message, content: message.content + streamEvent.text } : message));
+          if (streamEvent.type === "delta") {
+            responseText += streamEvent.text;
+            setMessages((current) => current.map((message, index) => index === current.length - 1 ? { ...message, content: message.content + streamEvent.text } : message));
+          }
+          if (streamEvent.type === "done") setLiveAnnouncement(`College Crew AI: ${responseText}`);
           if (streamEvent.type === "error") throw new Error(streamEvent.code === "timeout" ? "The AI response took too long. Please try again or contact support." : "The AI response was interrupted. Please try again or contact support.");
         }
       }
     } catch (caught) {
-      if (!abort.signal.aborted) setError(caught instanceof Error ? caught.message : "College Crew AI is unavailable right now.");
-      setMessages((current) => current.at(-1)?.role === "assistant" && !current.at(-1)?.content ? current.slice(0, -1) : current);
-    } finally { setBusy(false); abortRef.current = null; }
+      if (!abort.signal.aborted && requestVersion === requestVersionRef.current) {
+        const message = caught instanceof Error ? caught.message : "College Crew AI is unavailable right now.";
+        setError(message);
+        setLiveAnnouncement(message);
+        setMessages((current) => current.at(-1)?.role === "assistant" && !current.at(-1)?.content ? current.slice(0, -1) : current);
+      }
+    } finally {
+      if (requestVersion === requestVersionRef.current) {
+        setBusy(false);
+        abortRef.current = null;
+      }
+    }
   }
 
   if (pathname === "/support" || pathname.startsWith("/admin") || pathname === "/messages" || pathname.startsWith("/messages/")) return null;
@@ -112,7 +144,7 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
   return (
     <aside className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-end sm:inset-x-auto sm:bottom-[max(1rem,env(safe-area-inset-bottom))] sm:right-4" aria-label="Help and support">
       {view !== "closed" ? (
-        <div ref={panelRef} onKeyDown={onPanelKeyDown} role="dialog" aria-modal="false" aria-labelledby="help-title" className="mb-0 flex max-h-[min(78dvh,42rem)] w-full flex-col overflow-hidden rounded-t-[1.75rem] border border-viridian/15 bg-shell shadow-2xl shadow-viridian/20 sm:mb-3 sm:w-[25rem] sm:rounded-[1.5rem]">
+        <div ref={panelRef} onKeyDown={onPanelKeyDown} role="dialog" aria-modal="true" aria-labelledby="help-title" className="mb-0 flex max-h-[min(78dvh,42rem)] w-full flex-col overflow-hidden rounded-t-[1.75rem] border border-viridian/15 bg-shell shadow-2xl shadow-viridian/20 sm:mb-3 sm:w-[25rem] sm:rounded-[1.5rem]">
           <header className="flex items-center justify-between border-b border-viridian/10 px-5 py-4">
             <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-viridian/60">Support</p><h2 id="help-title" className="font-display text-xl font-semibold text-viridian">{view === "chat" ? "College Crew AI" : "How can we help?"}</h2></div>
             <button type="button" onClick={close} className="rounded-full p-2 text-viridian transition hover:bg-viridian/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-viridian" aria-label="Close help">✕</button>
@@ -128,19 +160,20 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
 
           {view === "chat" ? <>
             <div className="border-b border-viridian/10 bg-white/45 px-5 py-3 text-xs leading-relaxed text-viridian/70"><strong className="text-viridian">AI assistant.</strong> Don’t share passwords, card details, or identity documents. Chat text and limited verified page/account context go to OpenAI. College Crew does not save this transcript; OpenAI’s standard abuse-monitoring retention may apply.</div>
-            <div className="min-h-48 flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite" aria-busy={busy}>
+            <p className="sr-only" aria-live="polite">{liveAnnouncement}</p>
+            <div className="min-h-48 flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-busy={busy}>
               {messages.length === 0 ? <p className="rounded-2xl bg-white/70 p-4 text-sm leading-relaxed text-viridian">Hi — I’m College Crew AI. I can explain provider setup, bookings, payments, and where to go next. What can I help with?</p> : messages.map((message, index) => <div key={index} className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed ${message.role === "user" ? "ml-auto bg-viridian text-shell" : "bg-white/80 text-viridian"}`}>{message.content || (busy && index === messages.length - 1 ? "Thinking…" : "")}</div>)}
               {error ? <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
               {actions.length ? <nav aria-label="Suggested pages" className="flex flex-wrap gap-2">{actions.map((action) => <Link key={action.key} href={action.href} className="rounded-full border border-viridian/20 bg-white px-3 py-1.5 text-xs font-semibold text-viridian">{action.label}</Link>)}</nav> : null}
             </div>
             <div className="border-t border-viridian/10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4">
               <form onSubmit={send} className="flex items-end gap-2"><textarea ref={inputRef} value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} maxLength={2000} rows={2} placeholder="Ask a question" aria-label="Message College Crew AI" className="min-h-12 flex-1 resize-none rounded-2xl border border-viridian/20 bg-white px-4 py-3 text-sm text-viridian outline-none focus:border-viridian"/><button type="submit" disabled={busy || !draft.trim()} className="rounded-full bg-viridian px-4 py-3 text-sm font-semibold text-shell disabled:opacity-40">Send</button></form>
-              <div className="mt-3 flex items-center justify-between text-xs"><button type="button" onClick={() => { setMessages([]); setActions([]); setError(""); sessionStorage.removeItem(CHAT_KEY); }} className="font-semibold text-viridian/65 underline-offset-2 hover:underline">Clear chat</button><span className="flex gap-3"><Link href={supportHref} className="text-viridian/75 hover:underline">Ticket</Link><a href={mailHref} className="text-viridian/75 hover:underline">Email</a></span></div>
+              <div className="mt-3 flex items-center justify-between text-xs"><button type="button" onClick={() => { requestVersionRef.current += 1; abortRef.current?.abort(); abortRef.current = null; setBusy(false); setMessages([]); setActions([]); setError(""); setLiveAnnouncement("Chat cleared."); sessionStorage.removeItem(CHAT_KEY); }} className="font-semibold text-viridian/65 underline-offset-2 hover:underline">Clear chat</button><span className="flex gap-3"><Link href={supportHref} className="text-viridian/75 hover:underline">Ticket</Link><a href={mailHref} className="text-viridian/75 hover:underline">Email</a></span></div>
             </div>
           </> : null}
         </div>
       ) : null}
-      <button ref={launcherRef} type="button" onClick={() => setView(view === "closed" ? "menu" : "closed")} aria-expanded={view !== "closed"} className="mb-[max(1rem,env(safe-area-inset-bottom))] mr-4 inline-flex items-center gap-2 rounded-full bg-viridian px-4 py-2.5 text-sm font-semibold text-shell shadow-lg shadow-viridian/20 transition hover:bg-viridian-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-viridian sm:mb-0 sm:mr-0"><span aria-hidden="true">?</span>Help</button>
+      <button ref={launcherRef} type="button" onClick={() => setView(view === "closed" ? "menu" : "closed")} aria-expanded={view !== "closed"} className="mb-[max(1rem,env(safe-area-inset-bottom))] mr-4 inline-flex items-center gap-2 rounded-full bg-viridian px-4 py-2.5 text-sm font-semibold text-shell shadow-lg shadow-viridian/20 transition motion-reduce:transition-none hover:bg-viridian-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-viridian sm:mb-0 sm:mr-0"><span aria-hidden="true">?</span>Help</button>
     </aside>
   );
 }

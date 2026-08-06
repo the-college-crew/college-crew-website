@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSupportInstructions, classifySupportPath, hashSafetyIdentifier, safeActionsForContext } from "./assistant";
+// The support module reuses server-only legal snapshot rules; this unit suite
+// exercises its pure helpers without invoking a Server Component runtime.
+import { vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
+import { buildSupportInstructions, buildSupportPageContext, classifySupportPath, hashSafetyIdentifier, safeActionsForContext, sanitizeSupportText, SupportPlainTextStreamSanitizer } from "./assistant";
 import { supportAssistantRequestSchema } from "./assistant-contracts";
 
 describe("AI support request validation", () => {
@@ -29,6 +35,19 @@ describe("AI support routing and prompt safety", () => {
     expect(actions.every((action) => action.href.startsWith("/") && !action.href.startsWith("//"))).toBe(true);
   });
 
+  it("uses the resolved provider onboarding destination", () => {
+    expect(safeActionsForContext({
+      category: "provider_onboarding",
+      provider: {
+        nextStep: "stripe",
+        verification: "pending",
+        missingRequirements: ["Stripe payout setup"],
+        agreementAccepted: true,
+        payoutReady: false,
+      },
+    })[0]).toMatchObject({ href: "/provider/onboarding/stripe" });
+  });
+
   it("hashes stable nonidentifying safety identifiers", () => {
     const hash = hashSafetyIdentifier("user@example.test");
     expect(hash).toHaveLength(64);
@@ -41,5 +60,64 @@ describe("AI support routing and prompt safety", () => {
     expect(prompt).toContain("VERIFIED PAGE CONTEXT");
     expect(prompt).toContain("untrusted content");
     expect(prompt).toContain("plain text only");
+  });
+
+  it("removes model-authored external links and HTML", () => {
+    expect(sanitizeSupportText("Try [this](https://evil.example) or https://evil.example <a href='https://evil.example'>now</a>.")).toBe("Try this or [link removed] now.");
+  });
+
+  it("does not reveal a URL split across stream deltas", () => {
+    const sanitizer = new SupportPlainTextStreamSanitizer();
+    expect(sanitizer.push("Use https://evil")).toBe("Use ");
+    expect(sanitizer.push(".example for help ")).toBe("[link removed] for help ");
+    expect(sanitizer.flush()).toBe("");
+  });
+
+  it("uses canonical rejected-provider routing and never reads unrelated bookings on a request page", async () => {
+    const tables: Record<string, { data: unknown; error: null }> = {
+      provider_profiles: {
+        data: {
+          id: "provider-id",
+          user_id: "user-id",
+          verification_status: "rejected",
+          onboarding_submitted_at: "2026-08-01T00:00:00.000Z",
+          stripe_account_id: "acct_private",
+          stripe_transfers_active: true,
+          stripe_transfers_checked_at: "2026-08-01T00:00:00.000Z",
+          school_name: "Northwestern",
+          avatar_image_path: "private/path",
+          service_zip: "60201",
+          id_document_url: "private/front",
+          id_document_back_url: "private/back",
+          verification_bypassed: false,
+        },
+        error: null,
+      },
+      provider_school_emails: { data: { user_id: "user-id" }, error: null },
+      provider_services: { data: [], error: null },
+      provider_availability_windows: { data: [], error: null },
+      legal_acceptances: { data: [], error: null },
+    };
+    const from = vi.fn((table: string) => {
+      const result = tables[table];
+      const query = {
+        select: () => query,
+        eq: () => query,
+        in: () => query,
+        order: () => query,
+        limit: () => query,
+        maybeSingle: async () => result,
+        then: <T>(resolve: (value: typeof result) => T) => Promise.resolve(result).then(resolve),
+      };
+      return query;
+    });
+
+    const providerContext = await buildSupportPageContext({ from } as never, "user-id", "/provider/onboarding/stripe");
+    expect(providerContext.provider).toMatchObject({ nextStep: "dashboard", payoutReady: true });
+
+    from.mockClear();
+    const requestContext = await buildSupportPageContext({ from } as never, "user-id", "/book/00000000-0000-4000-8000-000000000099");
+    expect(requestContext).toEqual({ category: "booking" });
+    expect(from).not.toHaveBeenCalled();
   });
 });

@@ -23,7 +23,7 @@ export const PARENT_STEPS = [
   {
     n: "3",
     title: "Book, pay, rebook",
-    body: "Pay the first hour after acceptance, review the actual-time invoice, and rebook students you trust.",
+    body: "Authorize the first-hour hold when you request, review the actual-time invoice, and rebook students you trust.",
   },
 ];
 
@@ -52,7 +52,7 @@ export const FAQS = [
   },
   {
     q: "How does payment work?",
-    a: "For hourly work, requesting authorizes a temporary hold for the first hour; it is not a charge. If the provider accepts, you complete that first-hour payment by the shown deadline, then review the actual-time invoice and any remaining balance in the app.",
+    a: "For hourly work, requesting authorizes a temporary hold for the first hour; it is not a charge. If the provider accepts, College Crew captures that existing hold. You then review the actual-time invoice and any remaining balance in the app.",
   },
   {
     q: "Does the customer pay a platform fee?",

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "How College Crew LLC collects, uses, discloses, and protects personal information.",
 };
 
-const EFFECTIVE_DATE = "August 4, 2026";
+const EFFECTIVE_DATE = "August 6, 2026";
 
 function PolicySection({
   id,
@@ -371,7 +371,7 @@ export default function PrivacyPolicyPage() {
                 name="OpenAI"
                 information="For moderation, the message or provider-profile text being evaluated and limited surrounding context. If you voluntarily use College Crew AI, your chat text and a limited, server-verified page/account-status summary. We do not intentionally send payment credentials, government-identification images, addresses, job photos, or private messages for AI support."
                 purpose="To assist with content moderation and to provide optional, read-only product and account guidance."
-                method="Through an authenticated server-to-server API. AI support uses store: false. Automated results do not determine payment, credit, employment, provider approval, dispute, refund, or legal eligibility. OpenAI's standard abuse-monitoring retention may still apply under its policies."
+                method="Through an authenticated server-to-server API. AI support uses store: false. Automated results do not determine payment, credit, employment, provider approval, dispute, refund, or legal eligibility. OpenAI may retain API content for abuse monitoring for up to 30 days, and may use up to 24-hour prompt caching when its zero-data-retention controls do not apply."
               />
               <Disclosure
                 name="U.S. Census Bureau geocoder"
@@ -471,8 +471,10 @@ export default function PrivacyPolicyPage() {
               database. We retain content-free AI request metadata—such as
               status, page category, model, token counts, and latency—for up to
               30 days for quotas, reliability, and cost monitoring. OpenAI may
-              separately retain API content for standard abuse monitoring even
-              though College Crew sends requests with storage disabled.
+              separately retain API content for abuse monitoring for up to 30
+              days. Where OpenAI&apos;s zero-data-retention controls do not apply,
+              it may also use up to 24-hour prompt caching, even though College
+              Crew sends requests with storage disabled.
             </p>
             <p>
               When information is no longer reasonably needed, we delete it,
