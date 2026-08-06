@@ -66,12 +66,11 @@ export function createLocalAdminClient(): SupabaseClient<Database> {
 }
 
 /**
- * Delete every booking a synthetic customer owns, and its payments first.
+ * Delete every booking a synthetic customer owns, and its dependent records first.
  *
- * `booking_payments.booking_id` is ON DELETE RESTRICT (verified against
- * pg_constraint), so deleting bookings while payment rows exist raises 23503.
- * The old teardowns deleted bookings directly and discarded the error, so any
- * spec that inserted a `booking_payments` row left both tables behind.
+ * Several operational and financial tables reference bookings with ON DELETE
+ * RESTRICT, so deleting bookings while any fixture-dependent record exists
+ * raises 23503. Keep this list in child-before-parent order.
  *
  * Booking ids are read back rather than passed in because the browser journeys
  * create bookings the spec never names.
@@ -88,11 +87,18 @@ export async function deleteCustomerBookings(
 
   const bookingIds = (data ?? []).map((row) => row.id);
   if (bookingIds.length > 0) {
-    const { error: paymentsError } = await admin
-      .from("booking_payments")
-      .delete()
-      .in("booking_id", bookingIds);
-    if (paymentsError) return { error: paymentsError };
+    for (const table of [
+      "email_outbox",
+      "booking_automation_jobs",
+      "booking_provider_payouts",
+      "booking_disputes",
+      "booking_refunds",
+      "booking_payments",
+      "booking_invoices",
+    ] as const) {
+      const { error } = await admin.from(table).delete().in("booking_id", bookingIds);
+      if (error) return { error };
+    }
   }
 
   return admin.from("bookings").delete().eq("customer_id", customerId);

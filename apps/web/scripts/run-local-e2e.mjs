@@ -34,6 +34,7 @@ const result = spawnSync("npx", ["playwright", "test", ...process.argv.slice(2)]
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_local_e2e_placeholder",
     STRIPE_WEBHOOK_SECRET: "whsec_local_e2e_placeholder",
     RESEND_API_KEY: "re_local_e2e_placeholder",
+    RESEND_WEBHOOK_SECRET: "whsec_local_e2e_placeholder",
     EMAIL_FROM: "College Crew Tests <no-reply@example.test>",
     NEXT_PUBLIC_SITE_URL: "https://example.test",
     BOOKING_CRON_SECRET: "local-e2e-cron-secret-at-least-32-characters",

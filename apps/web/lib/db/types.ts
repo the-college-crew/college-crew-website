@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_support_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          input_tokens: number | null
+          knowledge_version: string
+          latency_ms: number | null
+          output_tokens: number | null
+          page_category: string
+          prompt_version: string
+          requested_model: string
+          returned_model: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          knowledge_version: string
+          latency_ms?: number | null
+          output_tokens?: number | null
+          page_category: string
+          prompt_version: string
+          requested_model: string
+          returned_model?: string | null
+          status: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          knowledge_version?: string
+          latency_ms?: number | null
+          output_tokens?: number | null
+          page_category?: string
+          prompt_version?: string
+          requested_model?: string
+          returned_model?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_allowlist: {
         Row: {
           created_at: string
@@ -2739,6 +2787,19 @@ export type Database = {
       }
     }
     Functions: {
+      reserve_ai_support_request: {
+        Args: {
+          p_knowledge_version: string
+          p_page_category: string
+          p_prompt_version: string
+          p_requested_model: string
+          p_user_id: string
+        }
+        Returns: {
+          request_id: string | null
+          retry_after_seconds: number
+        }[]
+      }
       accept_booking_request: {
         Args: { p_booking_id: string }
         Returns: string

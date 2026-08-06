@@ -26,6 +26,15 @@ Preview; there are no longer shared Production+Preview entries:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+AI Help adds `AI_SUPPORT_ENABLED` and a server-only
+`OPENAI_SUPPORT_API_KEY`. Preview must use a dedicated capped OpenAI project
+key. Validate the representative provider/customer questions, adversarial
+cross-user and prompt-injection cases, latency, and project budget in Preview
+before enabling Production. Production may omit `OPENAI_SUPPORT_API_KEY` and
+use the existing `OPENAI_API_KEY` fallback, but deploy first with
+`AI_SUPPORT_ENABLED=false`, then enable and redeploy only after Preview passes.
+Disabling the flag hides only the AI choice; ticket and email support remain.
+
 Never add any Preview Supabase variable to Production or vice versa. A variable
 change affects only new deployments, so redeploy Preview after changing one.
 Local `.env.local` should normally point to the local Supabase stack.
