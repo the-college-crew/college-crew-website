@@ -10,6 +10,22 @@ Newest first.
 
 ---
 
+## 2026-08-06 — DONE: CC-009 (add "Payments secured by Stripe" line next to the pay button)
+
+Merged in PR #217. Added a new admin-editable copy key,
+`booking-customer.confirm.stripe-secured` (default "Payments secured by
+Stripe."), to `lib/content/booking-copy.ts`, following the same
+`bookingCopyValue` pattern CC-003 used for the cancellation line. Rendered
+next to both live Stripe payment panels on the confirm page —
+`HourlyPayPanel` (hourly flow) and `ConfirmPayPanel` (quote/fixed-price
+flow). No new infrastructure, no invented claim, no schema change. Built
+directly by Worker 1 on 2026-08-06 (pure effort `S`, no plan required).
+`npm run build`/`lint`/`typecheck` and the booking-copy vitest suite all
+passed before opening the PR; Vercel preview deploy was green. Zach merged
+it the same day.
+
+---
+
 ## 2026-08-05 — DONE: CC-007 (add role="alert" to the shared FieldError component)
 
 Merged in PR #173. Added `role="alert"` to `FieldError` in
