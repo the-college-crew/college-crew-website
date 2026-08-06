@@ -69,9 +69,9 @@ silent on schema, not disapproving of it.
 2. **`/services/<slug>`** — the main organic play, still unbuilt. Order stands:
    hauling → house-management → pet-care → babysitting. Zach's module;
    coordinate first.
-3. **P3 cheap wins** — link both `/about` sub-pages from `/about`, normalize the
-   homepage sitemap trailing slash. Closes all 3 orphan notices. **Folded into
-   item 1's PR**, since the orphan fix *is* the inbound-link fix.
+3. **P3 cheap wins** — link both `/about` sub-pages from `/about`. **Folded into
+   item 1's PR**, since the orphan fix *is* the inbound-link fix. Closes 2 of
+   the 3 orphan notices; the homepage one is deliberately left alone (see P3).
 4. **Seed the Position Tracking campaign** — re-confirmed empty 2026-08-06
    (`campaigns` returns `targets: null`). Zero code; the 25-keyword list is
    below and must be pasted in the Semrush UI by hand.
@@ -302,12 +302,23 @@ citable in AI answers — not pilot-window traffic.
 
 ## P3 — housekeeping
 
-- [ ] **3 orphaned sitemap pages** — still exactly 3 as of 2026-08-06, confirmed
-  via `issue_details` (issue 207): `/about/customers`, `/about/students`, and
-  the homepage. The first two have no internal links pointing at them — link
-  them from `/about`. The homepage flag is the trailing-slash mismatch (the
-  sitemap emits `SITE_URL` bare, with no trailing slash); harmless but cheap to
-  normalize. **In progress on `fix/seo-about-students`.**
+- [x] **2 of the 3 orphaned sitemap pages** — confirmed still exactly 3 on
+  2026-08-06 via `issue_details` (issue 207). `/about/customers` and
+  `/about/students` genuinely had no internal links pointing at them; both are
+  now linked from the "Two places. One reputation." section of `/about`, with
+  descriptive anchor text rather than "Learn more". Shipped on
+  `fix/seo-about-students`.
+- [ ] ~~**Homepage orphan flag** — normalize the sitemap trailing slash.~~
+  **Attempted and deliberately reverted.** The doc guessed the cause was the
+  sitemap emitting `SITE_URL` bare while internal links resolve to `/`. Adding
+  the slash to the sitemap does not fix it, because **Next normalizes
+  `alternates.canonical` back to the bare origin when `trailingSlash` is
+  false** (verified by rendering the page: the sitemap emitted
+  `https://www.thecollegecrew.com/` while the canonical still served
+  `https://www.thecollegecrew.com`). The change therefore traded a cosmetic
+  notice for a real sitemap/canonical disagreement. The homepage is linked from
+  every header on the site and is not orphaned in any sense that matters.
+  **Do not retry this without first verifying the actual cause.**
 - [ ] **~~8~~ 14 pages reachable by only one internal link** (issue 213).
   ⚠️ **The prediction that "this is resolved by the `/support` canonical" was
   wrong.** The canonical shipped and the count went 8 → 14. A canonical tells a

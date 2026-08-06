@@ -253,6 +253,51 @@ export default async function AboutPage() {
               </li>
             ))}
           </ul>
+
+          {/*
+           * Both sub-pages sit in sitemap.xml with no internal link pointing at
+           * them, which Semrush flags as orphaned. This section is the natural
+           * parent: it is the one that talks about both sides at once. Anchor
+           * text is deliberately descriptive rather than "Learn more".
+           */}
+          <div className="mt-10 grid max-w-[900px] gap-4 sm:grid-cols-2">
+            <Link
+              href="/about/customers"
+              className="rounded-[18px] border border-viridian/15 bg-card/75 p-6 transition hover:-translate-y-px hover:bg-card"
+            >
+              <h3
+                className={`${SERIF} text-[22px] leading-tight font-semibold text-viridian`}
+              >
+                <Editable k="about.paths.customers.title">
+                  How it works for neighbors
+                </Editable>
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.6] text-viridian/70">
+                <Editable k="about.paths.customers.body">
+                  Who you are booking, how we verify them, and what a job looks
+                  like from request to payment.
+                </Editable>
+              </p>
+            </Link>
+            <Link
+              href="/about/students"
+              className="rounded-[18px] border border-viridian/15 bg-card/75 p-6 transition hover:-translate-y-px hover:bg-card"
+            >
+              <h3
+                className={`${SERIF} text-[22px] leading-tight font-semibold text-viridian`}
+              >
+                <Editable k="about.paths.students.title">
+                  How students earn with College Crew
+                </Editable>
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.6] text-viridian/70">
+                <Editable k="about.paths.students.body">
+                  Set your services and pricing, get verified, and pick up paid
+                  work close to campus.
+                </Editable>
+              </p>
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -15,6 +15,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
+    // No trailing slash, deliberately. Semrush flags the homepage as an
+    // "orphaned sitemap page" and the theory was that internal links resolve to
+    // `/` while this emitted the bare origin. Adding the slash here does not
+    // fix it: Next normalizes `alternates.canonical` back to the bare origin
+    // when trailingSlash is false, so the sitemap would then disagree with the
+    // page's own canonical, which is worse than the cosmetic notice. The
+    // homepage is linked from every header on the site and is plainly not
+    // orphaned. Left as-is on purpose.
     { url: SITE_URL, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/browse`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
     { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
