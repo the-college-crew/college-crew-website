@@ -6,6 +6,7 @@ import NextTopLoader from "nextjs-toploader";
 import { DevBanner } from "@/components/dev-banner";
 import { FeedbackLauncher } from "@/components/feedback-launcher";
 import { SITE } from "@/lib/site";
+import { isAiSupportEnabled } from "@/lib/support/assistant";
 
 import "./globals.css";
 
@@ -65,7 +66,7 @@ export default function RootLayout({
         />
         <DevBanner />
         {children}
-        <FeedbackLauncher />
+        <FeedbackLauncher aiEnabled={isAiSupportEnabled()} />
         <Analytics />
       </body>
     </html>

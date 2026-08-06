@@ -52,7 +52,7 @@ export const FAQS = [
   },
   {
     q: "How does payment work?",
-    a: "A request is free. After acceptance you pay the first hour, then review the actual-time invoice and remaining balance in the app.",
+    a: "For hourly work, requesting authorizes a temporary hold for the first hour; it is not a charge. If the provider accepts, you complete that first-hour payment by the shown deadline, then review the actual-time invoice and any remaining balance in the app.",
   },
   {
     q: "Does the customer pay a platform fee?",

@@ -210,6 +210,18 @@ export default function PrivacyPolicyPage() {
             </div>
 
             <div>
+              <h3 className="font-semibold text-ink">AI support information</h3>
+              <p>
+                If you choose College Crew AI, we process the text you submit
+                and a limited, server-verified summary of the current page and
+                relevant account, provider-onboarding, or owned-booking status.
+                That summary excludes addresses, email, date of birth, identity
+                documents, job details and photos, chat messages, payment
+                methods, Stripe identifiers, and raw database identifiers.
+              </p>
+            </div>
+
+            <div>
               <h3 className="font-semibold text-ink">
                 Payment and payout information
               </h3>
@@ -357,9 +369,9 @@ export default function PrivacyPolicyPage() {
               />
               <Disclosure
                 name="OpenAI"
-                information="The message or provider-profile text being evaluated and limited surrounding conversation context when needed for moderation. We do not intentionally send payment credentials or government-identification images for this purpose."
-                purpose="To assist with detecting prohibited contact channels, abusive or inappropriate content, and other safety concerns."
-                method="Through an authenticated server-to-server API. Automated results may cause redaction or a flag for founder review; they do not determine payment, credit, employment, or legal eligibility."
+                information="For moderation, the message or provider-profile text being evaluated and limited surrounding context. If you voluntarily use College Crew AI, your chat text and a limited, server-verified page/account-status summary. We do not intentionally send payment credentials, government-identification images, addresses, job photos, or private messages for AI support."
+                purpose="To assist with content moderation and to provide optional, read-only product and account guidance."
+                method="Through an authenticated server-to-server API. AI support uses store: false. Automated results do not determine payment, credit, employment, provider approval, dispute, refund, or legal eligibility. OpenAI's standard abuse-monitoring retention may still apply under its policies."
               />
               <Disclosure
                 name="U.S. Census Bureau geocoder"
@@ -452,6 +464,15 @@ export default function PrivacyPolicyPage() {
               dispute, fraud, backup, or security records when reasonably
               necessary or legally required. Information already made public or
               copied by another person may remain outside our control.
+            </p>
+            <p>
+              College Crew AI transcripts remain only in the current browser
+              tab&apos;s session storage and are not written to College Crew&apos;s
+              database. We retain content-free AI request metadata—such as
+              status, page category, model, token counts, and latency—for up to
+              30 days for quotas, reliability, and cost monitoring. OpenAI may
+              separately retain API content for standard abuse monitoring even
+              though College Crew sends requests with storage disabled.
             </p>
             <p>
               When information is no longer reasonably needed, we delete it,

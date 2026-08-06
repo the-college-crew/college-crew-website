@@ -1,6 +1,6 @@
 # Expandable Help widget and AI support agent
 
-**Status:** in progress
+**Status:** implementation complete; rollout pending
 **Owner:** Zach
 **Branch:** feature/ai-support-widget
 **Updated:** 2026-08-06
@@ -39,3 +39,17 @@ None. The implementation plan was approved before this branch was created.
 - The project uses imperative Supabase migrations (`schema_paths = []`).
 - Production rollout and secret provisioning remain operational steps after
   the code PR; no secrets are written to this public repository.
+- Implemented the Help menu/chat, Responses API route, reviewed support manual,
+  allowlisted RLS context, content-free quota metadata, privacy/product/runbook
+  documentation, and focused unit/database/browser coverage.
+- Local reset, the new 16-assertion pgTAP test, 288 Vitest assertions, lint,
+  typecheck, production build, and desktop/mobile browser tests pass. The full
+  legacy pgTAP directory still has unrelated pre-existing expectation failures
+  around booking/legal evolution; the new AI support test passes in isolation.
+- Supabase advisors report only existing performance warnings on older RLS
+  policies; the AI support table/function introduced no advisor finding.
+- Preview key provisioning, real-model persona evaluation, budget validation,
+  migration promotion, and Production enablement require deployment credentials
+  and remain deliberately pending after code review.
+- `docs/SPEC.md` was updated in the working copy, but the repository explicitly
+  ignores that product-spec file; it is not force-added to the public repo.
