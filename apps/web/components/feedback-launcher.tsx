@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const CHAT_KEY = "college-crew-ai-support-chat";
 const REOPEN_KEY = "college-crew-ai-support-reopen";
+const DRAFT_KEY = "college-crew-ai-support-draft";
 
 type View = "closed" | "menu" | "signin" | "chat";
 
@@ -38,6 +39,14 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
       try {
         const saved = sessionStorage.getItem(CHAT_KEY);
         if (saved) setMessages(JSON.parse(saved));
+        // A question typed before an expired session sent the user to /login
+        // survives the round trip, so they come back to a filled composer
+        // rather than retyping it.
+        const savedDraft = sessionStorage.getItem(DRAFT_KEY);
+        if (savedDraft) {
+          setDraft(savedDraft);
+          sessionStorage.removeItem(DRAFT_KEY);
+        }
         if (aiEnabled && sessionStorage.getItem(REOPEN_KEY) === "1") {
           sessionStorage.removeItem(REOPEN_KEY);
           setView("chat");
@@ -97,10 +106,33 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
     setMessages([...history, { role: "assistant", content: "" }]);
     setDraft(""); setBusy(true); setError(""); setLiveAnnouncement("College Crew AI is responding.");
     const abort = new AbortController(); abortRef.current = abort;
+    // When nothing streamed back, roll the whole failed turn out of the
+    // transcript — the placeholder *and* the user message that produced it.
+    // Leaving the user message stranded makes the next send two user turns in a
+    // row, which the API rejects as nonalternating, so every retry failed
+    // differently until the chat was cleared.
+    const rollBackFailedTurn = () => {
+      setMessages((current) => {
+        const last = current.at(-1);
+        if (last?.role !== "assistant" || last.content) return current;
+        return current.slice(0, -2);
+      });
+      setDraft((current) => current || content);
+    };
     try {
       const response = await fetch("/api/support/assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sourcePath: pathname, messages: history }), signal: abort.signal });
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
+        if (response.status === 401) {
+          // The session is gone, not the service. Offer the sign-in path and
+          // keep the message so it survives the round trip.
+          rollBackFailedTurn();
+          try { sessionStorage.setItem(DRAFT_KEY, content); } catch { /* storage may be unavailable */ }
+          setError("");
+          setLiveAnnouncement("Please sign in again to continue.");
+          setView("signin");
+          return;
+        }
         throw new Error(payload?.error?.message || "College Crew AI is unavailable right now.");
       }
       if (!response.body) throw new Error("College Crew AI is unavailable right now.");
@@ -129,17 +161,7 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
         const message = caught instanceof Error ? caught.message : "College Crew AI is unavailable right now.";
         setError(message);
         setLiveAnnouncement(message);
-        // When nothing streamed back, roll the whole failed turn out of the
-        // transcript — the placeholder *and* the user message that produced it.
-        // Leaving the user message stranded makes the next send two user turns
-        // in a row, which the API rejects as nonalternating, so every retry
-        // failed differently until the chat was cleared.
-        setMessages((current) => {
-          const last = current.at(-1);
-          if (last?.role !== "assistant" || last.content) return current;
-          return current.slice(0, -2);
-        });
-        setDraft((current) => current || content);
+        rollBackFailedTurn();
       }
     } finally {
       if (requestVersion === requestVersionRef.current) {
