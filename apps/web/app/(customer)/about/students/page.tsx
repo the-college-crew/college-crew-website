@@ -6,9 +6,26 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSession, isProviderCapable } from "@/lib/auth/session";
-import { PLATFORM_FEE_RATE, SITE } from "@/lib/site";
+import { getLiveServices } from "@/lib/db/queries";
+import {
+  PILOT_SERVICE_AREA,
+  PLATFORM_FEE_RATE,
+  SITE,
+  SITE_URL,
+} from "@/lib/site";
 
-export const metadata: Metadata = { title: "Our mission for students" };
+/*
+ * This page carries the supply side of the marketplace, and the recruiting
+ * queries are the cheapest on the board: "babysitting jobs chicago" (KD 10) and
+ * "dog walking jobs chicago" (KD 0), against KD 50+ for the customer-side
+ * equivalents. It previously shipped a title and nothing else, so it competed
+ * for nothing. See docs/plans/2026-08-04-seo-audit-followups.md.
+ */
+export const metadata: Metadata = {
+  title: "Student jobs in Chicago",
+  description: `Paid local work for verified college students in ${PILOT_SERVICE_AREA.name}: babysitting, dog walking, hauling, yard work and tutoring. Set your prices and hours.`,
+  alternates: { canonical: `${SITE_URL}/about/students` },
+};
 
 const PRINCIPLES = [
   {
@@ -26,7 +43,10 @@ const PRINCIPLES = [
 ] as const;
 
 export default async function StudentMissionPage() {
-  const session = await getSession();
+  const [session, services] = await Promise.all([
+    getSession(),
+    getLiveServices(),
+  ]);
   const showProviderCta =
     !session ||
     (session.profile.role !== "admin" && !(await isProviderCapable()));
@@ -37,12 +57,12 @@ export default async function StudentMissionPage() {
       <PageHeader
         title={
           <Editable k="about-students.header.title">
-            A better way for students to earn locally
+            Student jobs that fit around class
           </Editable>
         }
         description={
           <Editable k="about-students.header.description">
-            {`${SITE.name} is here to help verified college students turn skill, reliability, and local trust into real work.`}
+            {`${SITE.name} helps verified college students turn skill, reliability, and local trust into paid work close to campus.`}
           </Editable>
         }
         actions={
@@ -65,13 +85,45 @@ export default async function StudentMissionPage() {
         </p>
         <p>
           <Editable k="about-students.intro.p2">
-            The pilot is intentionally curated. We approve student providers
-            manually, keep the service list focused, and start in the North
-            Shore and Lincoln Park so students can serve real demand close to
-            home or campus.
+            {`The pilot is intentionally curated. We approve student providers manually, keep the service list focused, and start in ${PILOT_SERVICE_AREA.name} so students can serve real demand close to home or campus.`}
           </Editable>
         </p>
       </section>
+
+      {/*
+       * The page named no actual work, which left it thin and competing for
+       * nothing. Pulled from getLiveServices() rather than hard-coded, per the
+       * services-table rule in CLAUDE.md, so an admin toggling a service off
+       * removes it here with no code change.
+       */}
+      {services.length > 0 ? (
+        <section aria-labelledby="student-work">
+          <h2 id="student-work" className="font-display text-2xl font-semibold">
+            <Editable k="about-students.work.heading">
+              The work students pick up
+            </Editable>
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+            <Editable k="about-students.work.body">
+              These are the services neighbors are booking right now. Pick the
+              ones you are good at, set your own rate for each, and leave the
+              rest off your profile.
+            </Editable>
+          </p>
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {services.map((service) => (
+              <li key={service.id}>
+                <Link
+                  href={`/browse?service=${service.slug}`}
+                  className="inline-flex rounded-full border border-stone bg-paper px-4 py-2 text-[13px] font-semibold text-viridian transition hover:-translate-y-px hover:bg-honeydew"
+                >
+                  {service.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section aria-labelledby="student-principles">
         <h2
