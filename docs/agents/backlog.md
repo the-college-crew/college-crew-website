@@ -71,7 +71,7 @@ action), and there's no cost to having it in place before it's needed.
 
 ## CC-008 — Add baseline HTTP security headers (no CSP yet)
 
-**Status:** approved
+**Status:** in-progress — PR #216 open, awaiting Zach's merge
 **Proposed:** 2026-08-05 — Proposer
 **Effort:** S
 
@@ -114,7 +114,7 @@ for an actual incident before shipping something this cheap and this safe.
 
 ## CC-009 — Add a "Payments secured by Stripe" line next to the pay button
 
-**Status:** approved
+**Status:** in-progress — PR open, awaiting Zach's merge (see PR)
 **Proposed:** 2026-08-05 — Proposer
 **Effort:** S
 
