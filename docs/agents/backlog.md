@@ -112,42 +112,6 @@ for an actual incident before shipping something this cheap and this safe.
 
 ---
 
-## CC-009 — Add a "Payments secured by Stripe" line next to the pay button
-
-**Status:** in-progress — PR open, awaiting Zach's merge (see PR)
-**Proposed:** 2026-08-05 — Proposer
-**Effort:** S
-
-`app/(customer)/bookings/[id]/confirm/page.tsx` already surfaces the
-cancellation policy right next to the payment panel
-(`booking-customer.confirm.cancellation-policy`, added by CC-003), but says
-nothing about payment security at the one moment a customer is about to hand
-over a card number to `HourlyPayPanel`/`ConfirmPayPanel`
-(`@stripe/react-stripe-js`, `lib/stripe/`) — a real, live-in-production
-integration per `CLAUDE.md`, but the confirm page never says so. 2025–2026
-marketplace trust research is consistent that a "secure payments" line is
-one of the core, low-cost trust signals at a payment moment, alongside
-identity verification and reviews.
-
-Add a one-line "Payments secured by Stripe" note next to the pay panel, as a
-new copy key following the same `bookingCopyValue`/admin-editable-copy
-convention CC-003 already used for the cancellation line — no new
-infrastructure, no invented claim, since Stripe genuinely does process every
-charge.
-
-**Why this one:** the same shape as CC-003 and CC-006 — surfacing a true,
-already-existing fact at the exact decision point research says it matters
-most, using the codebase's own established copy-key pattern rather than
-inventing a new mechanism.
-
-**Devil's advocate:** "Stripe" may not mean anything to a customer who
-doesn't recognize the brand. True, but the line costs one copy key, Stripe
-is a recognizable payment brand for a meaningful share of users, and even a
-reader unfamiliar with it reads "payments secured by a named company" as
-more credible than no statement at all.
-
----
-
 ## CC-010 — Add Open Graph and Twitter Card metadata to the root layout
 
 **Status:** proposed
