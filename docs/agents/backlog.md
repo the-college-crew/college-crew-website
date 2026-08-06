@@ -71,7 +71,7 @@ action), and there's no cost to having it in place before it's needed.
 
 ## CC-008 — Add baseline HTTP security headers (no CSP yet)
 
-**Status:** approved
+**Status:** in-progress — PR open, awaiting Zach's merge (see PR)
 **Proposed:** 2026-08-05 — Proposer
 **Effort:** S
 
