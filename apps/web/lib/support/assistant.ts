@@ -49,15 +49,25 @@ export function safeActionsForContext(context: SupportPageContext): SafeNavigati
 
 type RlsClient = SupabaseClient<Database>;
 
+/**
+ * Service-role client, used only where RLS cannot serve the read.
+ * `provider_profiles` and `provider_services` grant no SELECT to the
+ * `authenticated` role — every other reader in the app reaches them through the
+ * admin client — so the provider branch does too, scoped to the caller's own
+ * rows and re-checked for ownership below.
+ */
+type AdminClient = SupabaseClient<Database>;
+
 export async function buildSupportPageContext(
   supabase: RlsClient,
+  admin: AdminClient,
   userId: string,
   sourcePath: string,
 ): Promise<SupportPageContext> {
   const category = classifySupportPath(sourcePath);
 
   if (category === "provider" || category === "provider_onboarding") {
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await admin
       .from("provider_profiles")
       .select("id, user_id, verification_status, onboarding_submitted_at, stripe_account_id, stripe_transfers_active, stripe_transfers_checked_at, school_name, avatar_image_path, service_zip, id_document_url, id_document_back_url, verification_bypassed")
       .eq("user_id", userId)
@@ -67,7 +77,7 @@ export async function buildSupportPageContext(
 
     const [schoolEmailResult, offeringsResult, windowsResult, acceptancesResult] = await Promise.all([
       supabase.from("provider_school_emails").select("user_id").eq("user_id", userId).maybeSingle(),
-      supabase.from("provider_services").select("id, hourly_rate_cents, pricing_mode, service:services(slug, is_live)").eq("provider_id", profile.id),
+      admin.from("provider_services").select("id, hourly_rate_cents, pricing_mode, service:services(slug, is_live)").eq("provider_id", profile.id),
       supabase.from("provider_availability_windows").select("weekday, start_local, end_local").eq("provider_id", profile.id),
       supabase.from("legal_acceptances").select("kind, role, version, content_hash").eq("user_id", userId).in("kind", ["provider_terms", "master_agreement"]),
     ]);

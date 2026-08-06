@@ -27,6 +27,7 @@ export async function POST(request: Request) {
   const parsed = supportAssistantRequestSchema.safeParse(body);
   if (!parsed.success) return jsonError(400, "invalid_request", parsed.error.issues[0]?.message || "Invalid request.");
 
+  const admin = createAdminClient();
   let supabase: Awaited<ReturnType<typeof createClient>>;
   let user: { id: string } | null;
   let context: Awaited<ReturnType<typeof buildSupportPageContext>>;
@@ -36,11 +37,10 @@ export async function POST(request: Request) {
     if (error) throw error;
     user = data.user;
     if (!user) return jsonError(401, "sign_in_required", "Please sign in to use AI support.");
-    context = await buildSupportPageContext(supabase, user.id, parsed.data.sourcePath);
+    context = await buildSupportPageContext(supabase, admin, user.id, parsed.data.sourcePath);
   } catch {
     return jsonError(503, "context_unavailable", "AI support is currently unavailable.");
   }
-  const admin = createAdminClient();
   const { data: quotaRows, error: quotaError } = await admin.rpc("reserve_ai_support_request", {
     p_user_id: user.id,
     p_page_category: context.category,

@@ -129,7 +129,17 @@ export function FeedbackLauncher({ aiEnabled }: { aiEnabled: boolean }) {
         const message = caught instanceof Error ? caught.message : "College Crew AI is unavailable right now.";
         setError(message);
         setLiveAnnouncement(message);
-        setMessages((current) => current.at(-1)?.role === "assistant" && !current.at(-1)?.content ? current.slice(0, -1) : current);
+        // When nothing streamed back, roll the whole failed turn out of the
+        // transcript — the placeholder *and* the user message that produced it.
+        // Leaving the user message stranded makes the next send two user turns
+        // in a row, which the API rejects as nonalternating, so every retry
+        // failed differently until the chat was cleared.
+        setMessages((current) => {
+          const last = current.at(-1);
+          if (last?.role !== "assistant" || last.content) return current;
+          return current.slice(0, -2);
+        });
+        setDraft((current) => current || content);
       }
     } finally {
       if (requestVersion === requestVersionRef.current) {
