@@ -78,33 +78,32 @@ describe("AI support routing and prompt safety", () => {
     expect(sanitizer.flush()).toBe("");
   });
 
-  it("uses canonical rejected-provider routing and never reads unrelated bookings on a request page", async () => {
-    const tables: Record<string, { data: unknown; error: null }> = {
-      provider_profiles: {
-        data: {
-          id: "provider-id",
-          user_id: "user-id",
-          verification_status: "rejected",
-          onboarding_submitted_at: "2026-08-01T00:00:00.000Z",
-          stripe_account_id: "acct_private",
-          stripe_transfers_active: true,
-          stripe_transfers_checked_at: "2026-08-01T00:00:00.000Z",
-          school_name: "Northwestern",
-          avatar_image_path: "private/path",
-          service_zip: "60201",
-          id_document_url: "private/front",
-          id_document_back_url: "private/back",
-          verification_bypassed: false,
-        },
-        error: null,
-      },
-      provider_school_emails: { data: { user_id: "user-id" }, error: null },
-      provider_services: { data: [], error: null },
-      provider_availability_windows: { data: [], error: null },
-      legal_acceptances: { data: [], error: null },
-    };
+  const providerProfileRow = {
+    id: "provider-id",
+    user_id: "user-id",
+    verification_status: "rejected",
+    onboarding_submitted_at: "2026-08-01T00:00:00.000Z",
+    stripe_account_id: "acct_private",
+    stripe_transfers_active: true,
+    stripe_transfers_checked_at: "2026-08-01T00:00:00.000Z",
+    school_name: "Northwestern",
+    avatar_image_path: "private/path",
+    service_zip: "60201",
+    id_document_url: "private/front",
+    id_document_back_url: "private/back",
+    verification_bypassed: false,
+  };
+
+  type FakeResult = { data: unknown; error: unknown };
+
+  /**
+   * Any table not listed answers the way Postgres does when the role holds no
+   * SELECT grant. Reading a provider table off the wrong client is therefore a
+   * test failure rather than a silently different result.
+   */
+  function createFakeClient(tables: Record<string, FakeResult>) {
     const from = vi.fn((table: string) => {
-      const result = tables[table];
+      const result: FakeResult = tables[table] ?? { data: null, error: { message: `permission denied for table ${table}` } };
       const query = {
         select: () => query,
         eq: () => query,
@@ -112,17 +111,78 @@ describe("AI support routing and prompt safety", () => {
         order: () => query,
         limit: () => query,
         maybeSingle: async () => result,
-        then: <T>(resolve: (value: typeof result) => T) => Promise.resolve(result).then(resolve),
+        then: <T>(resolve: (value: FakeResult) => T) => Promise.resolve(result).then(resolve),
       };
       return query;
     });
+    const tablesRead = () => from.mock.calls.map(([table]) => table);
+    return { client: { from } as never, from, tablesRead };
+  }
 
-    const providerContext = await buildSupportPageContext({ from } as never, "user-id", "/provider/onboarding/stripe");
+  const rlsProviderTables = {
+    provider_school_emails: { data: { user_id: "user-id" }, error: null },
+    provider_availability_windows: { data: [], error: null },
+    legal_acceptances: { data: [], error: null },
+  };
+  const adminProviderTables = {
+    provider_profiles: { data: providerProfileRow, error: null },
+    provider_services: { data: [], error: null },
+  };
+
+  it("uses canonical rejected-provider routing and never reads unrelated bookings on a request page", async () => {
+    const rls = createFakeClient({ ...rlsProviderTables, ...adminProviderTables });
+    const admin = createFakeClient(adminProviderTables);
+
+    const providerContext = await buildSupportPageContext(rls.client, admin.client, "user-id", "/provider/onboarding/stripe");
     expect(providerContext.provider).toMatchObject({ nextStep: "dashboard", payoutReady: true });
 
-    from.mockClear();
-    const requestContext = await buildSupportPageContext({ from } as never, "user-id", "/book/00000000-0000-4000-8000-000000000099");
+    rls.from.mockClear();
+    admin.from.mockClear();
+    const requestContext = await buildSupportPageContext(rls.client, admin.client, "user-id", "/book/00000000-0000-4000-8000-000000000099");
     expect(requestContext).toEqual({ category: "booking" });
-    expect(from).not.toHaveBeenCalled();
+    expect(rls.from).not.toHaveBeenCalled();
+    expect(admin.from).not.toHaveBeenCalled();
+  });
+
+  it("reads the ungranted provider tables through the service-role client only", async () => {
+    // `provider_profiles` and `provider_services` grant no SELECT to the
+    // `authenticated` role, so an RLS-client read fails outright — which is how
+    // the provider dashboard returned 503 instead of an answer.
+    const rls = createFakeClient(rlsProviderTables);
+    const admin = createFakeClient(adminProviderTables);
+
+    const context = await buildSupportPageContext(rls.client, admin.client, "user-id", "/provider/dashboard");
+
+    expect(context.category).toBe("provider");
+    expect(context.provider).toBeDefined();
+    expect(admin.tablesRead()).toEqual(expect.arrayContaining(["provider_profiles", "provider_services"]));
+    expect(rls.tablesRead()).not.toContain("provider_profiles");
+    expect(rls.tablesRead()).not.toContain("provider_services");
+    // The owner-scoped tables keep RLS as a real guard.
+    expect(rls.tablesRead()).toEqual(expect.arrayContaining(["provider_school_emails", "provider_availability_windows", "legal_acceptances"]));
+  });
+
+  it("keeps booking context on the RLS client so a customer cannot reach another customer's rows", async () => {
+    const bookingRow = {
+      customer_id: "user-id",
+      status: "confirmed",
+      booking_flow: "instant",
+      service_name_snapshot: "Lawn mowing",
+      provider_display_name_snapshot: "Sam",
+      scheduled_at: "2026-08-10T15:00:00.000Z",
+      requested_local_date: null,
+      initial_payment_due_at: null,
+      price_cents: 4500,
+      invoice: null,
+      dispute: null,
+    };
+    const rls = createFakeClient({ bookings: { data: [bookingRow], error: null } });
+    const admin = createFakeClient({});
+
+    const context = await buildSupportPageContext(rls.client, admin.client, "user-id", "/dashboard");
+
+    expect(context.bookings).toHaveLength(1);
+    expect(context.bookings?.[0]).toMatchObject({ service: "Lawn mowing", amountCents: 4500 });
+    expect(admin.from).not.toHaveBeenCalled();
   });
 });

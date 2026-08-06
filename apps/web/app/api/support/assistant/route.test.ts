@@ -96,6 +96,45 @@ describe("AI support route", () => {
     await expect(response.json()).resolves.toMatchObject({ error: { code: "context_unavailable" } });
   });
 
+  it("tells an expired session to sign in again instead of reporting an outage", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: Object.assign(new Error("invalid JWT"), { status: 401 }) });
+    const response = await POST(request({ sourcePath: "/provider/dashboard", messages: [{ role: "user", content: "Help" }] }));
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "session_expired" } });
+    expect(mocks.buildContext).not.toHaveBeenCalled();
+  });
+
+  it("separates an auth outage from an expired session", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: Object.assign(new Error("service unreachable"), { status: 500 }) });
+    const response = await POST(request({ sourcePath: "/provider/dashboard", messages: [{ role: "user", content: "Help" }] }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "auth_unavailable" } });
+  });
+
+  it("returns 503 when the quota reservation itself errors", async () => {
+    mocks.reserveRequest.mockResolvedValue({ data: null, error: { message: "rpc unavailable" } });
+    const response = await POST(request({ sourcePath: "/dashboard", messages: [{ role: "user", content: "Help" }] }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "quota_unavailable" } });
+  });
+
+  it("logs every pre-flight failure under a searchable stable prefix", async () => {
+    // The caller only ever sees "AI support is currently unavailable", so the
+    // distinguishing code has to reach the server log or the next report is
+    // undiagnosable without database forensics.
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      mocks.buildContext.mockRejectedValue(new Error("permission denied for table provider_profiles"));
+      await POST(request({ sourcePath: "/provider/dashboard", messages: [{ role: "user", content: "Help" }] }));
+
+      expect(logged).toHaveBeenCalledWith("[ai-support] context_unavailable", expect.stringContaining("context_unavailable"));
+      expect(logged.mock.calls.at(-1)?.[1]).toContain("provider");
+      expect(logged.mock.calls.at(-1)?.[1]).toContain("permission denied for table provider_profiles");
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
   it("streams sanitized text and marks a completed OpenAI response", async () => {
     mocks.responsesCreate.mockResolvedValue(streamEvents([
       { type: "response.output_text.delta", delta: "Open https://evil" },
