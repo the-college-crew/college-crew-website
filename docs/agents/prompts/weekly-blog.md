@@ -14,20 +14,7 @@
 | **Model** | `claude-sonnet-5` |
 | **Connectors** | Slack |
 | **Captured** | 2026-08-03 |
-
-> 🔴 **OUT OF SYNC — this file is ahead of the live routine.** Edited 2026-08-05
-> to add the humanizer skill to Step 1, the length/citation rules to Step 5, and
-> the self-check to Step 6 and the definition of done. **The live routine has
-> none of it**, so until it is updated, Monday's run works from the old prompt.
->
-> It will still pick up most of the change regardless: `STRATEGY.md` is read
-> every run and is binding, and that is where the substance lives. What is
-> missed without a re-sync is the skill being read by path and the self-check
-> landing in the run log — the enforcement half.
->
-> Re-sync with `RemoteTrigger {action: "update", trigger_id:
-> "trig_01EvgEGuhKANPq89NtWs2Kwp"}`, sending the **full** `job_config.ccr` —
-> a partial update replaces it wholesale. Then delete this banner.
+| **Last synced** | 2026-08-05 — humanizer skill in Step 1, length/citation rules in Step 5, self-check in Step 6 and the definition of done |
 
 ---
 
@@ -102,8 +89,8 @@ Follow `docs/blog/STRATEGY.md` — it is binding, not advisory. In particular:
 - **Run the humanizer skill on the draft before it goes in the canvas**, in its Embedded mode — the draft → audit → final loop internally, only the finished prose into the canvas, never its audit bullets. `STRATEGY.md` scopes it against our rules; the em-dash ban covers published prose only, not our docs or Slack.
 - **Cite outward: 1–2 named, checkable sources per post**, with the source named inside the sentence. This is the strongest single thing you can do for AI-answer visibility and it does not touch the honesty rules, which ban claims about *our marketplace*, not facts anyone can verify. An invented citation is worse than none — mark it `[NEEDS REAL SOURCE: …]` if you are not certain.
 - ⚠ **A niche post is one good idea, not a spec of the service.** Write about the task or the reader, never about what our students do or what a booking includes — "a squeegee beats a spray bottle", not "our students use a squeegee". A task list reads as a promise even when none was meant. Close by offering the link, then stop. And **never write the disclaimer**: no "results may vary", no "we can't promise" — naming the absence of a promise is the tell.
-- 2–4 FAQ entries, each answering completely enough to stand alone when quoted. Scope promises leak here: answer "what does a babysitter do?" with how booking works, not a task list.
-- 2–3 internal links, at least one to `/browse?service=<slug>`. **Only link to pages that exist** — the allowed list is in `STRATEGY.md`.
+- 3–5 FAQ entries, each answering completely enough to stand alone when quoted, and **none restating a section of the body** — the FAQ is extra surface, not a summary. Scope promises leak here: answer "what does a babysitter do?" with how booking works, not a task list.
+- 2–3 internal links, at least one to `/browse?service=<slug>` and at least one to another published post when `published.md` holds a relevant one. Vary the anchor text between posts. **Only link to pages that exist** — the allowed list is in `STRATEGY.md`, and it governs internal links only, not outbound citations.
 - **Never invent a price, a statistic, or a named person.** Leave a `[NEEDS …]` marker instead and list every one under **Needs from you** — that section is Gianna's to-do list, not yours. Markers are correct behaviour; a plausible invented number is the worst thing you can produce.
 - ⚠ **The ban covers any unverifiable claim about the marketplace**, not just numbers: scarcity, demand, how fast things book, what "most" providers charge, what "tends to" happen. If a sentence asserts something about the market rather than about how College Crew works, and you did not read it in `STRATEGY.md` or the code, cut it or mark it. **Craft knowledge is exempt** — a how-to may explain the job in full; it still may not name a price.
 
