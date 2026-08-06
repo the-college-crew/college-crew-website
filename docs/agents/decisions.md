@@ -10,6 +10,22 @@ Newest first.
 
 ---
 
+## 2026-08-06 — DONE: CC-008 (add baseline HTTP security headers, no CSP yet)
+
+Merged in PR #216. Added `async headers()` to `apps/web/next.config.ts`,
+applying four baseline security headers to every route:
+`X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, and a conservative
+`Permissions-Policy` (camera/microphone/geolocation disabled). Verified-zero
+gap before this change: no `headers()` export existed, and no
+`middleware.ts` either. Deliberately no Content-Security-Policy — that needs
+a report-only rollout period first, out of scope for this item. Built
+directly by Worker 1 on 2026-08-06 (pure effort `S`, no plan required).
+`npm run build`/`lint`/`typecheck` all passed before opening the PR; Vercel
+preview deploy was green. Zach merged it the same day.
+
+---
+
 ## 2026-08-06 — DONE: CC-009 (add "Payments secured by Stripe" line next to the pay button)
 
 Merged in PR #217. Added a new admin-editable copy key,

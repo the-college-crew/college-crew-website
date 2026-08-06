@@ -69,49 +69,6 @@ action), and there's no cost to having it in place before it's needed.
 
 ---
 
-## CC-008 — Add baseline HTTP security headers (no CSP yet)
-
-**Status:** in-progress — PR #216 open, awaiting Zach's merge
-**Proposed:** 2026-08-05 — Proposer
-**Effort:** S
-
-`apps/web/next.config.ts` ships zero HTTP security headers — no `headers()`
-export at all, and there's no `middleware.ts` in the app either (confirmed
-by grep across `apps/web`). Vercel does not add any of its own; the only
-header it appends is `X-Vercel-Id` for request tracing, so the app currently
-sends whatever Next.js sends by default for these, which is nothing. This is
-the app that collects login credentials, driver's-license photos (the
-`serverActions.bodySizeLimit` comment in the same file references the ID
-upload flow directly), and live Stripe payments — exactly the surface 2026
-guidance says shouldn't ship without the baseline header set.
-
-Add `async headers()` to `next.config.ts` returning `X-Content-Type-Options:
-nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
-`X-Frame-Options: DENY`, and a conservative `Permissions-Policy` (disable
-camera/microphone/geolocation, none of which the app uses). All four are the
-"safe pack" every 2026 guide recommends without caveats — unlike a full
-Content-Security-Policy, none of them restrict which scripts, styles, or
-connections are allowed to load, so there's no risk of silently breaking
-Stripe Elements, Supabase Realtime websockets, Google OAuth redirects, or the
-Brandfetch logo fetches already in the app.
-
-**Why this one:** a genuine, verified-zero gap on a payment- and
-ID-upload-handling site, fixable in one function in one file, with no
-interaction risk against the third-party embeds already in use. A full CSP
-is the more complete fix, but current guidance says to roll it out in
-report-only mode for 2–4 weeks before enforcing — real ongoing work, not a
-same-day change, and getting it wrong risks silently breaking the Stripe
-checkout flow, a live-money path. This candidate deliberately stops short of
-that.
-
-**Devil's advocate:** at 6 providers and a handful of users, this pilot
-isn't a realistic clickjacking/MIME-sniffing target yet. True — but the fix
-costs one function, carries no ongoing maintenance burden, and has zero
-interaction risk with anything else in the app, so there's no reason to wait
-for an actual incident before shipping something this cheap and this safe.
-
----
-
 ## CC-010 — Add Open Graph and Twitter Card metadata to the root layout
 
 **Status:** approved
