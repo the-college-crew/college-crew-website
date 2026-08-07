@@ -22,15 +22,34 @@ const displayFont = Bricolage_Grotesque({
   variable: "--font-bricolage",
 });
 
+const defaultTitle = `${SITE.name} · student help for your home`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://www.thecollegecrew.com",
   ),
   title: {
-    default: `${SITE.name} · student help for your home`,
+    default: defaultTitle,
     template: `%s · ${SITE.name}`,
   },
   description: SITE.description,
+  // og:image/twitter:image come from the opengraph-image.png file
+  // convention (app/opengraph-image.png + opengraph-image.alt.txt) — no
+  // `images` field needed here, and none should be added: Next.js recommends
+  // the file convention over syncing a config path with an actual file.
+  openGraph: {
+    title: defaultTitle,
+    description: SITE.description,
+    url: "/",
+    siteName: SITE.name,
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: defaultTitle,
+    description: SITE.description,
+  },
 };
 
 export const viewport: Viewport = {
