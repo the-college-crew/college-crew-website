@@ -71,7 +71,7 @@ action), and there's no cost to having it in place before it's needed.
 
 ## CC-010 — Add Open Graph and Twitter Card metadata to the root layout
 
-**Status:** approved
+**Status:** in-progress — PR open, awaiting Zach's merge (see PR)
 **Proposed:** 2026-08-06 — Proposer
 **Effort:** S
 
