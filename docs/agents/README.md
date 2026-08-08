@@ -1,5 +1,11 @@
 # Agent loop
 
+> ⏸ **PAUSED since 2026-08-08.** The Proposer, Planner, and both Workers are
+> disabled to save usage. Everything below still describes how they work and is
+> still binding when they run — but they are not running. See
+> **`PAUSED.md`** for the state and the one-line call that turns each back on.
+> The weekly blog routine is unaffected and still runs Mondays.
+
 State for the scheduled cloud agents. Design and rationale live in
 `docs/plans/2026-08-02-autonomous-agent-system.md`; this directory is the
 running state those agents read and write.
@@ -34,6 +40,7 @@ to say.
 | `decisions.md` | Append-only. Why things were rejected or how they turned out. Read this before proposing, so dead ideas stay dead. |
 | `plans/<id>.md` | One implementation plan per approved item. |
 | `runs/<date>-<routine>.md` | Run log, one per firing. |
+| `PAUSED.md` | Present only while the loop is paused. Which routines are off, and how to restore them. |
 
 ## Statuses
 
