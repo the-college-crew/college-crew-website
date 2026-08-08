@@ -107,3 +107,39 @@ now — before dozens of provider and blog pages exist to (not) inherit it —
 than to retrofit later.
 
 ---
+
+## CC-011 — Add BreadcrumbList structured data to provider profile pages
+
+**Status:** proposed
+**Proposed:** 2026-08-08 — Proposer
+**Effort:** S
+
+`app/(customer)/providers/[id]/page.tsx` already emits one JSON-LD block (a
+`Service` schema, from CC-004) but nothing else — no `BreadcrumbList`
+anywhere in the app (repo-wide search confirms zero). BreadcrumbList is
+widely recommended as one of the highest-value, lowest-risk schema types
+precisely because it applies to nearly every page and rarely causes
+validation issues: it tells search engines (and increasingly AI answer
+engines) the navigational path to a page, which can replace the raw URL with
+a breadcrumb trail in search results.
+
+Add a second `<script type="application/ld+json">` block to the same file,
+alongside the existing `serviceSchema` object, encoding Home → Browse →
+`[provider name]` using data already in scope on that page (`SITE_URL`, the
+provider's display/company name) — no new query, no schema change, no new
+copy.
+
+**Why this one:** it's the natural next increment on CC-004's already-shipped
+pattern (one more `<script>` tag in a file that already emits one), not a
+new mechanism — the same file, the same JSON-LD approach, a different and
+genuinely distinct schema type serving a different purpose (navigational
+context vs. service/rating description).
+
+**Devil's advocate:** schema markup isn't a direct ranking factor, and
+BreadcrumbList's effect is specifically on how a URL renders in a search
+result snippet — invisible until Google actually indexes and serves these
+pages, which may be a while at this pilot's current size. It survives anyway
+because the fix is a few minutes of work riding on infrastructure this file
+already has, with no realistic downside.
+
+---
