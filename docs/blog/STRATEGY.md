@@ -554,22 +554,30 @@ Everything below goes in the standing Slack canvas
 publishing:
 
 1. **Status** — one line: drafted today, waiting on approval
-2. **Approval gate** — **one** checkbox, **unchecked**, worded exactly:
+2. **Approval gate** — **two** checkboxes, both **unchecked**, worded exactly:
 
    ```
    * [ ] I approve this blog for production
+   * [ ] I rewrote this myself, publish it as written
    ```
 
    followed by the **Photo** section carrying an empty `Image:` line and the
-   upload instruction. Next week's run matches that checkbox string literally
-   and reads the `Image:` line for a photo key, so changing either wording
-   breaks the gate.
+   upload instruction. Next week's run matches both checkbox strings literally
+   and reads the `Image:` line for a photo key, so changing any of the three
+   wordings breaks the gate.
 
-   ⚠ There is **no second checkbox.** A `* [ ] I inserted a photo below the
-   line` box was the original design and is gone — pasting the key *is* the
-   confirmation. [`canvas.md`](./canvas.md) has the full reasoning. Writing a
-   second box back into the canvas would leave Gianna ticking something the
-   routine never reads.
+   The first box is the gate. The second is the **rewrite bypass**: it says she
+   wrote this post herself rather than editing the draft, and the routine then
+   ignores sections 12 and 13 below entirely. [`canvas.md`](./canvas.md) has the
+   full semantics and the incident it came from.
+
+   ⚠ **Every box in the canvas must be read by the routine.** A
+   `* [ ] I inserted a photo below the line` box was the original design and is
+   gone, because pasting the key *is* the confirmation and it left Gianna ticking
+   something nothing read. That rule stands; it just never barred a *second*
+   box, only a decorative one. Both boxes above are matched in Step 2 of the
+   prompt and branched on in Step 3. Add a third only if you can say where it is
+   read.
 3. **Title**
 4. **Meta description**
 5. **Slug** — lowercase, hyphens, no date
@@ -608,6 +616,13 @@ Phrases, not a word list. She can rewrite everything around them.
 Now that posts carry outbound citations, add any **source** the post leans on to
 this list too — a named authority is exactly the kind of thing a rewrite drops
 as clutter, and it is load-bearing.
+
+**She is allowed to ignore all of it.** If she replaces the post rather than
+editing it, these phrases and the Links section above belong to a draft that no
+longer exists, and the rewrite-bypass box tells the routine to drop them instead
+of stalling on the mismatch. This section is a handover, not a contract. Losing
+the keywords costs a post some search surface; refusing to publish her work costs
+the week.
 
 ---
 
