@@ -31,13 +31,37 @@ Newest first. One row per post.
 
 | Date drafted | Slug | Topic / intent | Shape | Status |
 |---|---|---|---|---|
-| 2026-08-06 | `algae-mold-stains-concrete-patio` | Specific problem — algae/mold stains on a concrete patio, with a CDC-sourced cleaning ratio | Specific problem · niche | `drafted` |
+| 2026-08-10 | `college-student-dog-sitters-chicago` | Hiring guide — why college students work as dog sitters and what to look for | Hiring guide · broad | `published` |
+| 2026-08-06 | `algae-mold-stains-concrete-patio` | Specific problem — algae/mold stains on a concrete patio, with a CDC-sourced cleaning ratio | Specific problem · niche | `dropped` |
 | 2026-08-05 | `one-drill-before-fall-sports-tryouts` | How-to — one agility drill worth running before fall tryouts | How-to/method · niche | `dropped` |
 | 2026-08-04 | `back-to-school-tutoring-cost-lincoln-park` | Cost — back-to-school tutoring pricing in Lincoln Park | Cost · broad | `dropped` |
 | 2026-07-16 | `meet-jackson-the-walker-behind-the-leash-be90e9cf` | Student spotlight — dog walking | Spotlight · broad | `published` |
 
 Write **Shape** as `<Type> · <broad|niche>`, using a type from the table in
 `STRATEGY.md`.
+
+<!--
+The dog-sitter post was written end to end by Gianna, not by the routine. She
+replaced the patio draft in the canvas with her own story rather than editing it,
+which is a legitimate thing to do and which the routine had no way to be told
+about — it held on 2026-08-10 because the canvas Links and "Keep these words"
+sections still described the post she had replaced. Zach published it by hand the
+same day under the terms the rewrite-bypass checkbox now encodes: her prose
+verbatim, the stale keywords and CDC citation dropped, and exactly one internal
+link added so the post is not a dead end. Nothing here came from a routine draft,
+so do not read its shape or voice as a precedent for what the routine produces.
+-->
+
+<!--
+The patio draft never existed outside the standing canvas, and Gianna's rewrite
+overwrote it. Its prose is not in git and is not recoverable from here; only the
+intent survives, in `docs/agents/runs/2026-08-06-weekly-blog.md` — algae and mold
+on a concrete patio, built around the CDC's mold clean-up guidance (the bleach
+ratio and the ammonia warning). `dropped` rather than deleted so the routine does
+not re-propose it as an untouched topic. Worth knowing: `pressure-washing` is
+still the service with no coverage at all, which is why that topic was picked in
+the first place. It remains a good gap to fill.
+-->
 
 <!--
 The drill post was published for real on 2026-08-06 and pulled the same day, for
