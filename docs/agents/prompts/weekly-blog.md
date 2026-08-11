@@ -14,7 +14,7 @@
 | **Model** | `claude-sonnet-5` |
 | **Connectors** | Slack |
 | **Captured** | 2026-08-03 |
-| **Last synced** | 2026-08-05 — humanizer skill in Step 1, length/citation rules in Step 5, self-check in Step 6 and the definition of done |
+| **Last synced** | 2026-08-11 — the rewrite bypass: read in Step 2, enumerated as a refusal (and the list closed) in Step 3, its publish behaviour in Step 4, both boxes written in Step 5 and the definition of done |
 
 ---
 
