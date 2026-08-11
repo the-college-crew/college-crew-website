@@ -31,6 +31,7 @@ Newest first. One row per post.
 
 | Date drafted | Slug | Topic / intent | Shape | Status |
 |---|---|---|---|---|
+| 2026-08-11 | `lawn-dead-or-just-dormant` | Specific problem — telling a dormant August lawn from a dead one, with Illinois Extension's watering and mowing guidance | Specific problem · niche | `drafted` |
 | 2026-08-10 | `college-student-dog-sitters-chicago` | Hiring guide — why college students work as dog sitters and what to look for | Hiring guide · broad | `published` |
 | 2026-08-06 | `algae-mold-stains-concrete-patio` | Specific problem — algae/mold stains on a concrete patio, with a CDC-sourced cleaning ratio | Specific problem · niche | `dropped` |
 | 2026-08-05 | `one-drill-before-fall-sports-tryouts` | How-to — one agility drill worth running before fall tryouts | How-to/method · niche | `dropped` |
@@ -39,6 +40,16 @@ Newest first. One row per post.
 
 Write **Shape** as `<Type> · <broad|niche>`, using a type from the table in
 `STRATEGY.md`.
+
+<!--
+The lawn dormancy draft was written by hand on 2026-08-11, not by the Monday
+routine, because the 08-10 run held on the canvas mismatch and so never reached
+its Step 5. Rotation check applied: the previous post was `Hiring guide`, so this
+one is a different type, and three of the last four shapes are niche. It covers
+`lawn-yard-care`, which had no post at all. The outbound citation is University
+of Illinois Extension's "Managing Lawns During Drought", fetched directly rather
+than taken from a search snippet.
+-->
 
 <!--
 The dog-sitter post was written end to end by Gianna, not by the routine. She
