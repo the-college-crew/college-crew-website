@@ -51,6 +51,12 @@ Otherwise the gate is open only when **both** of these hold:
 
 Unchecked (`* [ ]`), reworded, or missing all count as **not approved**. Do not interpret intent; match the strings literally.
 
+Read a **third** line in the same pass. It is not part of the gate — it changes *how* you publish, never *whether*:
+
+3. `* [x] I rewrote this myself, publish it as written` — the **rewrite bypass**. Same literal match. Unticked, reworded, or missing means it is not set.
+
+Ticking it is Gianna saying she wrote this post herself rather than editing yours. Step 3 says what that changes.
+
 ⚠ **Photos are not attachments any more.** Gianna uploads at `/admin/blog-photos` and pastes back a key; the bytes never reach you — you cannot commit a binary file and must not try. Pasting the key **is** her choosing that photo, and its subject matter, quality, and fit are her call, never yours. `canvas.md` explains why.
 
 **If the gate is closed, publish nothing and change nothing.** Leave the canvas exactly as it is — the same draft must still be there next week. Go to the Slack step and post one line naming which of the two is missing.
@@ -64,10 +70,22 @@ Even with the gate open, **do not publish** if any of these is true. Each one me
 - The slug already appears in `docs/blog/published.md` with status `published`. You already shipped this one. Say so and move on to Step 5.
 - The image key does not match the shape above. A typo lands a broken hero photo on a live post. Quote what you found and ask her to re-copy it from `/admin/blog-photos`. **A malformed key is the only image reason to refuse** — what the picture depicts is never one, and you cannot see it anyway.
 - The title, meta description, or slug is missing or empty.
+- **The body is a different post than the Links and Keep these words sections describe** — a wholesale replacement rather than an edit — **and the rewrite bypass is not ticked.** Say in Slack that the post reads as a rewrite, name one keyword or link that no longer fits, and tell her that ticking `I rewrote this myself, publish it as written` publishes it as-is next run.
+
+⚠ **That list is exhaustive. Refuse on it and on nothing else.** If something about the canvas bothers you and it is not written above, publish anyway and raise it in Slack. A week's publication blocked by an unlisted opinion is the failure this routine has now had twice: once on what a photo depicted (`canvas.md`), once on a canvas whose keywords no longer matched its body (2026-08-10, the run this bypass came from). Both judgments were defensible. Both were the wrong call to be making, because the person who could resolve them only found out on Monday. **A refusal you have to reason your way to is a refusal you should not be making.**
 
 ## Step 4 — Publish
 
 Use the canvas content **as Gianna edited it**, never your original draft.
+
+**If the rewrite bypass is ticked**, she wrote this post herself and owes you no keywords, no links, and no citation:
+
+- **Ignore the Links, Keep these words, and outbound-citation sections completely.** They describe the draft she replaced. Do not re-insert phrases, do not carry the old citation over, do not check the body against any of them.
+- Add **at most one** internal link — `/browse?service=<slug>` for the service the post is about — anchored on words already in her prose. Write no new sentences to hold it. If the service is not obvious, add no link at all.
+- If the **Caption** section is gone, write the `imageAlt` yourself from what the post is about, and say so in the Slack message so she can correct it. **Never refuse over missing alt text.** A non-empty string beats a blocked week, and alt text is a one-line follow-up.
+- The other four refusals in Step 3 are untouched — a `[NEEDS …]` marker, a published slug, a malformed key, a missing title or description or slug all still stop you. The bypass waives polish, never a broken post.
+
+Then, bypass or not:
 
 1. Write `apps/web/content/blog/<slug>.md` — frontmatter exactly per `docs/blog/PUBLISHING.md`, body below it.
 2. Set `image:` to the key expanded against the storage base URL in `PUBLISHING.md` — never a `/blog/…` path, and never the bare key.
@@ -97,7 +115,14 @@ Follow `docs/blog/STRATEGY.md` — it is binding, not advisory. In particular:
 Overwrite the canvas with `slack_update_canvas`. **The full section list is in `STRATEGY.md` under "What the routine hands over" — follow it exactly**, ending with "Keep these words". Two sections are load-bearing and spelled out here:
 
 1. **Status** — one line: drafted today, waiting on approval.
-2. **Approval gate** — one **unchecked** checkbox worded exactly `* [ ] I approve this blog for production`, and a **Photo** section holding an empty `Image:` line plus the upload instruction from `canvas.md`. Getting either wrong breaks next week's run.
+2. **Approval gate** — **two** checkboxes, both **unchecked**, worded exactly:
+
+   ```
+   * [ ] I approve this blog for production
+   * [ ] I rewrote this myself, publish it as written
+   ```
+
+   then a **Photo** section holding an empty `Image:` line plus the upload instruction from `canvas.md`. Both boxes are matched literally next run, so rewording either one breaks it. Write the second box every week, ticked by nobody — it is only useful sitting there before she starts.
 
 Add the draft to `docs/blog/published.md` with status `drafted` **and its `Shape` filled in** (`<Type> · <broad|niche>`), and commit that with the same branch-and-self-merge rules as Step 4. A blank shape blinds next week's rotation check.
 
@@ -126,7 +151,7 @@ This diff is confined to `docs/agents/`, so self-merge it under rule 7.
 A complete run has produced **all** of these. Do not stop early:
 
 1. If the gate was open: the post committed and merged, `published.md` marked `published`.
-2. The new draft in the canvas, with the approval box unchecked and the `Image:` line empty.
+2. The new draft in the canvas, with **both** boxes unchecked and the `Image:` line empty.
 3. `published.md` updated with the new draft as `drafted`.
 4. A merged run log at `docs/agents/runs/<date>-weekly-blog.md`, **including the five self-check answers**.
 5. One message in `#weekly-blog` tagging Gianna.

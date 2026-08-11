@@ -132,13 +132,21 @@ standing Slack canvas in `#weekly-blog` that Gianna edits in place
 Monday 8:03am ─ routine reads the canvas
                  │
                  ├─ checkbox ticked AND image key present?
-                 │    ├─ yes → commit the post, mark published.md, then
-                 │    │        overwrite the canvas with a new draft
-                 │    └─ no  → change nothing, post one line saying what's
-                 │             missing. Same draft is still there next week.
+                 │    ├─ no  → change nothing, post one line saying what's
+                 │    │        missing. Same draft is still there next week.
+                 │    └─ yes → is the body a from-scratch rewrite?
+                 │         ├─ no, an edit → publish as drafted
+                 │         └─ yes → rewrite box ticked?
+                 │              ├─ yes → publish as written, drop the
+                 │              │        keywords, links and citation
+                 │              └─ no  → hold, ask her to tick it
+                 │                  ↓
+                 │        commit the post, mark published.md, then
+                 │        overwrite the canvas with a new draft
                  ↓
 Gianna, any time ─ edits the draft, fills in [NEEDS …] markers,
-                   pastes a photo key, ticks the box
+                   pastes a photo key, ticks the box (or both boxes,
+                   if she wrote the post herself)
 ```
 
 ### Gianna's side
@@ -155,6 +163,20 @@ Gianna, any time ─ edits the draft, fills in [NEEDS …] markers,
    tap **Copy for the canvas**, and paste the key onto the `Image:` line. An
    earlier photo can be reused straight from the grid — no upload needed.
 5. Tick `I approve this blog for production`.
+
+**Wrote your own post instead?** Then step 3 doesn't apply — the keywords, the
+links, and the citation all belong to the draft you replaced, and there is no
+reason to work them back in. Tick the second box as well:
+
+```
+* [x] I rewrote this myself, publish it as written
+```
+
+That publishes your version as written. The routine drops the stale keywords and
+citation, adds at most one link back to Browse, and writes the photo caption if
+you removed that section. Without it, a from-scratch rewrite stalls: the routine
+sees a canvas describing two different posts and holds rather than guess which
+one you meant.
 
 It goes live on the next Monday run. Nothing is on a clock — an unapproved draft
 just waits, and the routine will not write over it.
