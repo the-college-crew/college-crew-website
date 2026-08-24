@@ -31,7 +31,8 @@ Newest first. One row per post.
 
 | Date drafted | Slug | Topic / intent | Shape | Status |
 |---|---|---|---|---|
-| 2026-08-11 | `lawn-dead-or-just-dormant` | Specific problem — telling a dormant August lawn from a dead one, with Illinois Extension's watering and mowing guidance | Specific problem · niche | `drafted` |
+| 2026-08-23 | `college-coaches-better-youth-tennis` | Hiring guide — why college students make better tennis coaches for kids than pros or high schoolers | Hiring guide · broad | `published` |
+| 2026-08-11 | `lawn-dead-or-just-dormant` | Specific problem — telling a dormant August lawn from a dead one, with Illinois Extension's watering and mowing guidance | Specific problem · niche | `dropped` |
 | 2026-08-10 | `college-student-dog-sitters-chicago` | Hiring guide — why college students work as dog sitters and what to look for | Hiring guide · broad | `published` |
 | 2026-08-06 | `algae-mold-stains-concrete-patio` | Specific problem — algae/mold stains on a concrete patio, with a CDC-sourced cleaning ratio | Specific problem · niche | `dropped` |
 | 2026-08-05 | `one-drill-before-fall-sports-tryouts` | How-to — one agility drill worth running before fall tryouts | How-to/method · niche | `dropped` |
@@ -42,6 +43,29 @@ Write **Shape** as `<Type> · <broad|niche>`, using a type from the table in
 `STRATEGY.md`.
 
 <!--
+The tennis-coach post was written end to end by Gianna under the rewrite-bypass
+checkbox, not by the routine: both `I approve this blog for production` and
+`I rewrote this myself, publish it as written` were ticked on the 2026-08-24 run,
+with a valid photo key already in place, so it published the same morning. Per
+the bypass rule, the routine ignored her Links, Keep these words, and citation
+sections entirely (even though they matched the body this time) and added
+exactly one link back to Browse instead of the two she proposed. It named a real
+coach (Stephen, a DePaul senior) and real price figures; those are her claims to
+make, not the routine's to verify or invent, and the bypass exists precisely so
+the routine does not hold a human-authored post over them. No FAQ section was
+included and none was added — STRATEGY.md requires one for routine-authored
+drafts, but a missing FAQ is not one of the routine's enumerated refusal
+reasons, so this shipped without one. Rotation check: the previous post
+(`lawn-dead-or-just-dormant`) is niche, so a broad post is due, and this one
+lands as `Hiring guide`, different from the prior routine-written type
+(`Specific problem`). It covers `youth-sports-coaching`, which had no post yet.
+Its arrival is also why the lawn-dormancy row below moved from `drafted` to
+`dropped`: Gianna wrote this post directly into the canvas rather than editing
+the lawn one, which overwrote it before it was ever approved. See that row's own
+comment for the detail.
+-->
+
+<!--
 The lawn dormancy draft was written by hand on 2026-08-11, not by the Monday
 routine, because the 08-10 run held on the canvas mismatch and so never reached
 its Step 5. Rotation check applied: the previous post was `Hiring guide`, so this
@@ -49,6 +73,15 @@ one is a different type, and three of the last four shapes are niche. It covers
 `lawn-yard-care`, which had no post at all. The outbound citation is University
 of Illinois Extension's "Managing Lawns During Drought", fetched directly rather
 than taken from a search snippet.
+
+It never got approved. On 2026-08-24 Gianna wrote the tennis-coach post directly
+into the standing canvas rather than editing this draft, the same move that
+overwrote the patio draft below — the canvas holds one draft at a time and there
+is no way to have told the routine to hold this one in reserve. Its prose is not
+in git and is not recoverable from here, same as the patio post. Marked `dropped`
+rather than left `drafted` so the overwrite guard does not block every future run
+over a draft that no longer exists anywhere. `lawn-yard-care` is again a service
+with no post.
 -->
 
 <!--
