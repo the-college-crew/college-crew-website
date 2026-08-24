@@ -31,6 +31,7 @@ Newest first. One row per post.
 
 | Date drafted | Slug | Topic / intent | Shape | Status |
 |---|---|---|---|---|
+| 2026-08-24 | `window-ac-wont-come-out` | Edge case — freeing a window AC that's stuck in the frame, with a CPSC citation on the weight and fall risk | Edge case · niche | `drafted` |
 | 2026-08-23 | `college-coaches-better-youth-tennis` | Hiring guide — why college students make better tennis coaches for kids than pros or high schoolers | Hiring guide · broad | `published` |
 | 2026-08-11 | `lawn-dead-or-just-dormant` | Specific problem — telling a dormant August lawn from a dead one, with Illinois Extension's watering and mowing guidance | Specific problem · niche | `dropped` |
 | 2026-08-10 | `college-student-dog-sitters-chicago` | Hiring guide — why college students work as dog sitters and what to look for | Hiring guide · broad | `published` |
@@ -41,6 +42,20 @@ Newest first. One row per post.
 
 Write **Shape** as `<Type> · <broad|niche>`, using a type from the table in
 `STRATEGY.md`.
+
+<!--
+The window-AC draft was written by the routine on 2026-08-24, the same run that
+published the tennis-coach post above it. Rotation check: of the last four
+shapes counting this one (Edge case, Hiring guide, Specific problem, Hiring
+guide), two are niche and the type differs from the immediately prior post
+(`Hiring guide`), so both rules hold. `Edge case` had not been used yet in this
+log. It covers `hauling`, which had no post at all. The outbound citation is the
+U.S. Consumer Product Safety Commission's 2008 press release on window air
+conditioners falling from windows, sourced from a WebSearch summary rather than
+a direct fetch: WebFetch was blocked network-wide this run (every domain tried,
+not one), so the claim was kept to what the search results actually supported
+rather than any specific figure or quote from the page itself.
+-->
 
 <!--
 The tennis-coach post was written end to end by Gianna under the rewrite-bypass
